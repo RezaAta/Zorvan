@@ -27,3 +27,4 @@ class Node(ABC):
 
     def __repr__(self):
         return f"Node(name={self.name}, value={self.value}, type={self.topologicalType}, predecessors={len(self.predecessors)})"
+
