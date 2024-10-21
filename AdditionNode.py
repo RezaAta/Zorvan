@@ -5,6 +5,7 @@ class AdditionNode(BasicNode):
         super().__init__(name,value)
         self.inputCount = 2  # Set how many inputs the addition node expects
         self.batchSize = 2
+        self.inclusive = False
 
     def Operation(self, a, b):
         """

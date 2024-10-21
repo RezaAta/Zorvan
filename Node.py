@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 class Node(ABC):
-    def __init__(self, name: str, inclusive=False):
+    def __init__(self, name: str, inclusive=True):
         self.name = name
         self.predecessors = []  # List of predecessor nodes
         self.inputs = []        # Store the inputs to be processed
