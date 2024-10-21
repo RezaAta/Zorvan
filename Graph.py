@@ -36,14 +36,15 @@ class Graph:
                     pred_index = self.nodes.index(predecessor)
                     self.adjacencyMatrix[pred_index][node_index] = 1  # Connection from predecessor to new node
 
-    def ConnectPreNode(self, node, pre_node):
-        """Manually connect a predecessor to a node and update the adjacency matrix."""
-        node.AddPreNode(pre_node)  # Add the predecessor to the node's list
+    def ConnectPreNode(self, node, *preNodes):
+        for preNode in preNodes:
+            """Manually connect a predecessor to a node and update the adjacency matrix."""
+            node.AddPreNode(preNode)  # Add the predecessor to the node's list
 
-        # Update adjacency matrix for the new connection
-        node_index = self.nodes.index(node)
-        pre_node_index = self.nodes.index(pre_node)
-        self.adjacencyMatrix[pre_node_index][node_index] = 1  # Connection from predecessor to node
+            # Update adjacency matrix for the new connection
+            node_index = self.nodes.index(node)
+            preNode_index = self.nodes.index(preNode)
+            self.adjacencyMatrix[preNode_index][node_index] = 1  # Connection from predecessor to node
 
     def UpdateAdjacencyMatrix(self):
         """Rebuild the adjacency matrix by iterating over all nodes and their connections."""
