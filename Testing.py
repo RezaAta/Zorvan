@@ -1,27 +1,28 @@
-from platform import node
-from ComputationalGraphs.Graph import Graph
-from ComputationalGraphs.AdditionNode import AdditionNode
-
-node1 = AdditionNode("a")
-node2 = AdditionNode("b",value = 5)
-node3 = AdditionNode("c",value = 3)
-                     
-node1.add_pre_node(node2)
-node1.add_pre_node(node3)
-
-print(node1.predecessors)
-
-result = node1.operation()
-
-print(f"Result: {result}")
+from Node import Node
+from Graph import Graph
+from AdditionNode import AdditionNode
+from MultiplicationNode import MultiplicationNode
+from GraphProcessor import GraphProcessor
 
 
-graph = Graph();
+# Example setup
+graph = Graph()
 
-graph.AddNode(node1)
-graph.AddNode(node2)
-graph.AddNode(node3)
-print(graph)
+node1 = AdditionNode(name="A", value=10)
+node2 = AdditionNode(name="B", value=20)
+node3 = MultiplicationNode(name="C", value=30)
 
-graph.update_adjacency_matrix()
-print(graph.adjacencyMatrix)
+graph.AddNode(node1,node2,node3)
+# graph.AddNode(node2)
+# graph.AddNode(node3)
+# graph.ConnectPreNode(node2, node1)  # A -> B
+# graph.ConnectPreNode(node3, node2)  # C -> B
+# graph.ConnectPreNode(node1, node3)  # B -> C
+# graph.ConnectPreNode(node1, node2)  # A -> B
+# graph.ConnectPreNode(node3, node1)  # A -> B
+# graph.ConnectPreNode(node2, node3)  # A -> B
+
+
+# Initialize processor with parallel execution
+processor = GraphProcessor(graph, max_workers=4)
+processor.ComputeGraph(iterations=5)
