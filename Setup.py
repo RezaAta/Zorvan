@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="ComputationalGraphs",  # Name of your library
+    id="ComputationalGraphs",  # Name of your library
     version="0.1",
     packages=find_packages(),
     description="A library of computational graph node classes",

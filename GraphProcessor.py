@@ -1,4 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
+from AbstractNode import AbstractNode
+from CompressedNode import CompressedNode 
 
 class GraphProcessor:
     def __init__(self, graph, max_workers=4):
@@ -6,12 +8,19 @@ class GraphProcessor:
         self.time = 0  # Initialize time for tracking iterations
         self.max_workers = max_workers  # Maximum number of threads for parallelism
 
+
     def ComputeGraph(self, iterations=1):
         """
         Perform synchronous parallel computation for the graph over a number of iterations.
         Each node first updates its inputs, then performs operations in two separate parallel loops.
         """
         print(f"Starting graph computation for {iterations} iterations...")
+
+        print(f"\n--- Time Step 0 ---")
+        # Print node values after processing
+        for node in self.graph.nodes:
+            print(f"Node {node.id} has new value: {node.value}")
+
 
         for t in range(iterations):
             print(f"\n--- Time Step {t+1} ---")
@@ -30,7 +39,7 @@ class GraphProcessor:
 
             # Print node values after processing
             for node in self.graph.nodes:
-                print(f"Node {node.name} has new value: {node.value}")
+                print(f"Node {node.id} has new value: {node.value}")
 
             # Increment time after completing the time step
             self.time += 1
