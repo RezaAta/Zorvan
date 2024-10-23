@@ -4,11 +4,17 @@ from AbstractNode import AbstractNode
 
 # BasicNode class (Abstract)
 class BasicNode(Node, ABC):  # Inherits from both Node and ABC
-    def __init__(self, id: str, value=0):
-        super().__init__(id)  # Call Node's constructor
+    def __init__(self, name: str, value=0):
+        super().__init__(name)  # Call Node's constructor
         self.value = value  # Node's value
         self.inputCount = 0  # Number of inputs
         self.computationType = 'basic'  # Type of computation for the node
+
+    def SetComputationStructure(self):
+        self.computationStructure = self.id  # If no nodes are present, return an empty string
+
+    def UpdateComputationTime(self):
+        self.computationTime = 1
 
     @abstractmethod
     def Operation(self, inputs):

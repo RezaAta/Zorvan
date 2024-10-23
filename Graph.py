@@ -136,4 +136,10 @@ class Graph:
         return abstract
 
     def CompressNodes(self, nodes):
-        pass
+        """
+        Create a CompressedNode from a set of nodes.
+        """
+        compressed = CompressedNode("", nodes)
+        self.RemoveNode(*nodes)
+        self.AddNode(compressed)
+        return compressed

@@ -1,32 +1,32 @@
 from Node import Node
 from concurrent.futures import ThreadPoolExecutor
 
-class AbstractNode(Node):
 
+# CompressedNode: A Node with a list of nodes
+class CompressedNode(Node):
     def __init__(self, name: str = "", nodes=None):
-        self.nodes = nodes if nodes else set()  # Set of nodes
-        self.computationalType = "complex"  # Computational type is complex
+        self.listOfNodes = nodes if nodes else []
+        self.value = self.listOfNodes[-1].value if self.listOfNodes else 0
         super().__init__(name)
+        self.computationType = 'complex'
 
     def SetComputationStructure(self):
         """
-        Generate a string that represents the computation structure of the AbstractNode.
-        The structure is represented as (node1, node2, ...).
+        Generate a string that represents the computation structure of the CompressedNode.
+        The structure is represented as the concatenation of all node names in the list.
         """
-        if self.nodes:
-            node_ids = [node.id for node in self.nodes]
-            self.computationalStructure = f"({', '.join(node_ids)})"
+        if self.listOfNodes:
+            self.computationStructure = ''.join(node.id for node in self.listOfNodes)
         else:
-            self.computationalStructure = self.id
-        
+            self.computationStructure = self.id  # If no nodes are present, return an empty string
 
     def UpdateComputationTime(self):
         """
         Update the computation time of the AbstractNode.
-        The computation time is set to the max computation time of all its nodes.
+        The computation time is set to the sum computation time of all its nodes.
         """
-        if self.nodes:
-            self.computationTime = max(node.computationTime for node in self.nodes)
+        if self.listOfNodes:
+            self.computationTime = sum(node.computationTime for node in self.listOfNodes)
         else:
             self.computationTime = 1
 
@@ -39,7 +39,7 @@ class AbstractNode(Node):
         that each node performs its own operation independently.
         """
         with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(node.ProcessBatch) for node in self.nodes]
+            futures = [executor.submit(node.ProcessBatch) for node in self.listOfNodes]
             # Wait for all nodes to complete their operations in parallel
             for future in futures:
                 future.result()  # Retrieve the result of each operation (if needed)
@@ -49,7 +49,7 @@ class AbstractNode(Node):
         Update the inputs array with the values from all nodes in the set.
         """
         with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(node.UpdateInputs) for node in self.nodes]
+            futures = [executor.submit(node.UpdateInputs) for node in self.listOfNodes]
             # Wait for all nodes to complete their operations in parallel
             for future in futures:
                 future.result()  # Retrieve the result of each operation (if needed)

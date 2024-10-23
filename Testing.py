@@ -14,9 +14,13 @@ n3 = AdditionNode(id="C", value=30)
 
 graph.AddNode(n1,n2,n3)
 
-abstractNode = graph.AbstractNodes([n1,n2,n3])
+# abstractNode = graph.AbstractNodes([n1,n2,n3])
+compressedNode = graph.CompressNodes([n1,n2,n3])
 
-        
+#print(abstractNode.name)
+print(compressedNode.value)
+
+
 print(graph.adjacencyMatrix)
 
 # Initialize processor with parallel execution

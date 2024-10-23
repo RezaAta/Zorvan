@@ -6,11 +6,21 @@ class Node(ABC):
         self.id = ""
         self.predecessors = []  # List of predecessor nodes
         self.inputs = []        # Store the inputs to be processed
-        self.value = 0.0        # Initial value of the node
         self.midCalculation = False  # Tracks if node is mid-calculation
         self.batchSize = 2  # Set batch size to 2 to match your node's logic
         self.inclusive = inclusive  # Determines if node's result is added to next batch
         self.computationTime = 1
+        self.computationalStructure = ""
+        self.UpdateComputationTime()
+        self.SetComputationStructure()
+
+    @abstractmethod
+    def SetComputationStructure(self):
+        pass
+
+    @abstractmethod
+    def UpdateComputationTime(self):
+        pass
 
     @abstractmethod
     def Operation(self, *inputs):
