@@ -4,9 +4,15 @@ from concurrent.futures import ThreadPoolExecutor
 class AbstractNode(Node):
 
     def __init__(self, name: str = "", nodes=None):
-        self.nodes = nodes if nodes else set()  # Set of nodes
-        self.computationalType = "complex"  # Computational type is complex
+        if nodes:
+            self.nodes = nodes
+            self.predecessors = [node for node in nodes]
+        else:
+            self.nodes = set()  # Set of nodes
+            
         super().__init__(name)
+        self.computationalType = "complex"  # Computational type is complex
+        self.value = [node.value for node in self.nodes]
 
     def SetComputationStructure(self):
         """
@@ -18,7 +24,12 @@ class AbstractNode(Node):
             self.computationalStructure = f"({', '.join(node_ids)})"
         else:
             self.computationalStructure = self.id
-        
+
+    def UpdateValues(self):
+        for node in self.nodes:
+            if isinstance(node, AbstractNode):
+                node.UpdateValues()
+            self.value = [node.value for node in self.nodes]
 
     def UpdateComputationTime(self):
         """

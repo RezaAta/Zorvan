@@ -1,3 +1,4 @@
+from Node import Node
 from BasicNode import BasicNode  # Import the abstract BasicNode class
 from AbstractNode import AbstractNode
 from CompressedNode import CompressedNode
@@ -93,35 +94,24 @@ class Graph:
         """Remove nodes from the graph by object, id, or index."""
         for identifier in identifiers:
             # identify the node to remove based on its type (index, id, or object)
-            if isinstance(identifier, int):
-                node_to_remove = self.nodes[identifier]
-            elif isinstance(identifier, str):
-                node_to_remove = self.idToNodeDictionary.get(identifier)
-                if node_to_remove is None:
-                    raise ValueError(f"Node with id '{identifier}' not found.")
-            else:
-                node_to_remove = identifier
+            nodeToRemove = self.__IdentifyNode(identifier)
 
-            if node_to_remove in self.nodes:
+            if nodeToRemove in self.nodes:
                 # Get the index of the node to be removed
-                index = self.nodes.index(node_to_remove)
+                index = self.nodes.index(nodeToRemove)
 
                 # Update the adjacency matrix: remove connections to the node
-                for i in range(len(self.adjacencyMatrix)):
-                    # Remove node from predecessors
-                    if self.adjacencyMatrix[i][index] == 1:
-                        self.nodes[i].predecessors.remove(node_to_remove)
+                self.__RemoveNodeConnectionsInMatrix(nodeToRemove, index)
 
                 # Remove the node from the adjacency matrix
-                del self.adjacencyMatrix[index]  # Remove the row
-                for row in self.adjacencyMatrix:
-                    del row[index]  # Remove the column
+                self.__RemoveNodeFromAdjacencyMatrix(index)
 
                 # Remove the node from the graph and the id-to-node dictionary
-                self.nodes.remove(node_to_remove)
-                del self.idToNodeDictionary[node_to_remove.id]
+                self.nodes.remove(nodeToRemove)
+                del self.idToNodeDictionary[nodeToRemove.id]
             else:
-                raise ValueError(f"Node '{node_to_remove}' not found in the graph.")
+                raise ValueError(f"Node '{nodeToRemove}' not found in the graph.")
+
 
     def __repr__(self):
         return f"Graph with {len(self.nodes)} nodes."
@@ -131,9 +121,28 @@ class Graph:
         Create an AbstractNode from a set of nodes.
         """
         abstract = AbstractNode("", nodes)
-        self.RemoveNode(*nodes)
-        self.AddNode(abstract)
+        self.ReplaceNode(abstract, *nodes)
         return abstract
+
+    def ReplaceNode(self, newNode, *oldNode):
+        self.AddNode(newNode)
+        self.ReplicateConnections(newNode,*oldNode)
+        self.RemoveNode(*oldNode)
+        self.UpdateAdjacencyMatrix()
+
+    def ReplicateConnections(self,newNode: Node,*oldNodes: Node):
+        """
+        Replicate the connections of old nodes in the graph to the new node.
+        - newNode: The node that will take over connections from old nodes.
+        - oldNodes: One or more old nodes whose connections are transferred to the new node.
+        """
+        for oldNode in oldNodes:
+            oldNodeIndex = self.nodes.index(oldNode)
+            # Replicate outgoing connections (connections from the old node to others)
+            for j in range(len(self.adjacencyMatrix[oldNodeIndex])):
+                if self.adjacencyMatrix[oldNodeIndex][j] == 1:  # If old node connects to another node
+                    self.nodes[j].AddPreNode(newNode)
+            
 
     def CompressNodes(self, nodes):
         """
@@ -143,3 +152,30 @@ class Graph:
         self.RemoveNode(*nodes)
         self.AddNode(compressed)
         return compressed
+    
+    def __RemoveNodeFromAdjacencyMatrix(self, index):
+        del self.adjacencyMatrix[index]
+        for row in self.adjacencyMatrix:
+            del row[index]
+
+    def __RemoveNodeConnectionsInMatrix(self, nodeToRemove, index):
+        for i in range(len(self.adjacencyMatrix)):
+            # Remove node from predecessors
+            if self.adjacencyMatrix[index][i] == 1:
+                self.nodes[i].predecessors.remove(nodeToRemove)
+
+    def __IdentifyNode(self, identifier):
+        if isinstance(identifier, int):
+            node_to_remove = self.nodes[identifier]
+        elif isinstance(identifier, str):
+            node_to_remove = self.idToNodeDictionary.get(identifier)
+            if node_to_remove is None:
+                raise ValueError(f"Node with id '{identifier}' not found.")
+        else:
+            node_to_remove = identifier
+        return node_to_remove
+    
+
+    # any node that old nodes are in its pred list
+    # put the new abstract node in its pred list
+    

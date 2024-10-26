@@ -27,7 +27,8 @@ class BasicNode(Node, ABC):  # Inherits from both Node and ABC
         # Fetch values from predecessors and only store valid inputs
         for predecessor in self.predecessors:
             if isinstance(predecessor, AbstractNode):
-                for value in predecessor.values:
+                predecessor.UpdateValues()
+                for value in predecessor.value:
                     if self.IsValidInput(value):
                         self.inputs.append(value)
             else:

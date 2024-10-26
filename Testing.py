@@ -4,25 +4,23 @@ from AdditionNode import AdditionNode
 from MultiplicationNode import MultiplicationNode
 from GraphProcessor import GraphProcessor
 from AbstractNode import AbstractNode
+from DisplayNode import DisplayNode
 
 # Example setup
 graph = Graph()
 
-n1 = AdditionNode(id="A", value=10)
-n2 = AdditionNode(id="B", value=20)
-n3 = AdditionNode(id="C", value=30)
+n1 = DisplayNode(value = 10)
+n2 = DisplayNode(value = 20)
+n3 = DisplayNode(value = 30)
+n4 = AdditionNode(value = 0)
 
-graph.AddNode(n1,n2,n3)
+graph.AddNode(n1,n2,n3,n4)
+graph.ConnectPreNode(n4,n1,n2,n3)
 
-# abstractNode = graph.AbstractNodes([n1,n2,n3])
-compressedNode = graph.CompressNodes([n1,n2,n3])
+abstractNode = graph.AbstractNodes([n1,n2,n3])
 
-#print(abstractNode.name)
-print(compressedNode.value)
-
-
-print(graph.adjacencyMatrix)
+#compressedNode = graph.CompressNodes([n1,n2,n3])
 
 # Initialize processor with parallel execution
-processor = GraphProcessor(graph, max_workers=4)
-processor.ComputeGraph(iterations=5)
+processor = GraphProcessor(graph, max_workers = 4)
+processor.ComputeGraph(iterations = 5)
