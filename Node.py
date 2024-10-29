@@ -7,6 +7,7 @@ class Node(ABC):
         self.inputs = []        # Store the inputs to be processed
         self.value = 0.0        # Initial value of the node
         self.midCalculation = False  # Tracks if node is mid-calculation
+        self.midCalculationValue = 0
         self.batchSize = 2  # Set batch size to 2 to match your node's logic
         self.inclusive = inclusive  # Determines if node's result is added to next batch
 
@@ -38,20 +39,22 @@ class Node(ABC):
         if self.midCalculation:
             # Insert the node's value at the start of the inputs if inclusive
             if self.inclusive:
-                self.inputs.insert(0, self.value)
+                self.inputs.insert(0, self.midCalculationValue)
 
             # Check if there are enough inputs to process a batch
             if len(self.inputs) < self.batchSize:
                 self.midCalculation = False  # Not enough inputs, finish calculation
+                self.value = self.midCalculationValue
                 return
 
             # Process the batch
             batch = self.inputs[:self.batchSize]
-            self.value = self.Operation(*batch)
+            self.midCalculationValue = self.Operation(*batch)
             self.inputs = self.inputs[self.batchSize:]  # Remove processed inputs
 
             if not self.inputs:
                 self.midCalculation = False  # Finished processing all inputs
+                self.value = self.midCalculationValue
         else:
             # Start processing the first batch
             if self.inputs:
@@ -61,8 +64,10 @@ class Node(ABC):
                     return
 
                 batch = self.inputs[:self.batchSize]
-                self.value = self.Operation(*batch)
+                self.midCalculationValue = self.Operation(*batch)
                 self.inputs = self.inputs[self.batchSize:]  # Remove processed inputs
 
                 if self.inputs:
                     self.midCalculation = True  # Set mid-calculation for remaining inputs
+                else:
+                    self.value = self.midCalculationValue
