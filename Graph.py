@@ -166,14 +166,14 @@ class Graph:
 
     def __IdentifyNode(self, identifier):
         if isinstance(identifier, int):
-            node_to_remove = self.nodes[identifier]
+            node = self.nodes[identifier]
         elif isinstance(identifier, str):
-            node_to_remove = self.idToNodeDictionary.get(identifier)
-            if node_to_remove is None:
+            node = self.idToNodeDictionary.get(identifier)
+            if node is None:
                 raise ValueError(f"Node with id '{identifier}' not found.")
         else:
-            node_to_remove = identifier
-        return node_to_remove
+            node = identifier
+        return node
     
 
     # any node that old nodes are in its pred list
