@@ -16,7 +16,7 @@ class GraphProcessor:
         print("\n--- Time Step 0 ---")
         # Print node values after processing
         for node in self.graph.nodes:
-            print(f"Node {node.id} has new value: {node.value}")
+            print(f"Node {node.name} has new value: {node.value}")
 
         for t in range(iterations):
             print(f"\n--- Time Step {t+1} ---")
@@ -36,7 +36,7 @@ class GraphProcessor:
 
             # Print node values after processing
             for node in self.graph.nodes:
-                print(f"Node {node.id} has new value: {node.value}")
+                print(f"Node {node.name} has new value: {node.value}")
 
             # Increment time after completing the time step
             self.time += 1
