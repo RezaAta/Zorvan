@@ -2,6 +2,7 @@ from Node import Node
 from BasicNode import BasicNode  # Import the abstract BasicNode class
 from AbstractNode import AbstractNode
 from CompressedNode import CompressedNode
+from graphviz import Digraph
 
 class Graph:
     def __init__(self):
@@ -153,6 +154,18 @@ class Graph:
         self.AddNode(compressed)
         return compressed
     
+    def DisplayGraph(self):
+        """Visualize the MLP graph using Graphviz."""
+        dot = Digraph(format='png')
+        for node in self.nodes:
+            dot.node(node.name, label=f"{node.name}\n({type(node).__name__})")
+        for i, row in enumerate(self.adjacencyMatrix):
+            for j, connection in enumerate(row):
+                if connection == 1:
+                    dot.edge(self.nodes[i].name, self.nodes[j].name)
+        dot.render(filename='mlp_graph', view=True)
+
+
     def __RemoveNodeFromAdjacencyMatrix(self, index):
         del self.adjacencyMatrix[index]
         for row in self.adjacencyMatrix:
