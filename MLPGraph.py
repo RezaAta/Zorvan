@@ -3,7 +3,6 @@ from DisplayNode import DisplayNode
 from AdditionNode import AdditionNode
 from MultiplicationNode import MultiplicationNode
 from SigmoidNode import SigmoidNode
-from graphviz import Digraph
 
 class MLPGraph(Graph):
     def __init__(self, numInputs, numOutputs, numLayers, learningRate, activationFunction=SigmoidNode):
@@ -30,6 +29,7 @@ class MLPGraph(Graph):
         self._connect_input_layer()
         self._connect_hidden_layers()
         self._connect_output_layer()
+        self.UpdateAdjacencyMatrix()
 
     def _create_input_layer(self):
         """Initialize the input layer with DisplayNodes for each input."""
@@ -131,17 +131,6 @@ class MLPGraph(Graph):
                 multNode.AddPreNode(weightNode)
                 outputAddNode.AddPreNode(multNode)
                 self.AddNode(multNode)
-
-    def DisplayGraph(self):
-        """Visualize the MLP graph using Graphviz."""
-        dot = Digraph(format='png')
-        for node in self.nodes:
-            dot.node(node.name, label=f"{node.name}\n({type(node).__name__})")
-        for i, row in enumerate(self.adjacencyMatrix):
-            for j, connection in enumerate(row):
-                if connection == 1:
-                    dot.edge(self.nodes[i].name, self.nodes[j].name)
-        dot.render(filename='mlp_graph', view=True)
 
     def GetLayerNodes(self, layerType, layerIndex):
         """Retrieve nodes from a specified layer type and index."""
