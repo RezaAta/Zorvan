@@ -163,7 +163,7 @@ class Graph:
             for j, connection in enumerate(row):
                 if connection == 1:
                     dot.edge(self.nodes[i].name, self.nodes[j].name)
-        dot.render(filename='mlp_graph', view=True)
+        dot.render(filename='ComputationalGraph', view=True)
 
 
     def __RemoveNodeFromAdjacencyMatrix(self, index):
