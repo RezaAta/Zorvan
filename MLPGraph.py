@@ -3,6 +3,9 @@ from DisplayNode import DisplayNode
 from AdditionNode import AdditionNode
 from MultiplicationNode import MultiplicationNode
 from SigmoidNode import SigmoidNode
+from DataStreamNode import DataStreamNode
+from MeanSquaredErrorNode import MeanSquaredErrorNode  # Import the node for calculating error
+
 
 class MLPGraph(Graph):
     def __init__(self, numInputs, numOutputs, numLayers, learningRate, activationFunction=SigmoidNode):
@@ -17,42 +20,68 @@ class MLPGraph(Graph):
         self.outputLayer = []
         self.hiddenLayers = []
         self.weightLayers = []  # Separate layers for weights to facilitate weight management
+        self.labelLayer = []
 
     def BuildMLP(self):
         """Build the MLP architecture by initializing and connecting layers."""
-        self._create_input_layer()
-        self._create_hidden_layers()
-        self._create_output_layer()
-        self._create_weight_layers()  # Create all weight layers after other layers are initialized
+        self._CreateInputLayer()
+        self._CreateHiddenLayers()
+        self._CreateOutputLayer()
+        self._CreateWeightLayers()  # Create all weight layers after other layers are initialized
+        self._CreateLabelLayer()      # Add the label layer
+        self._CreateErrorLayer()      # Add the error layer
         
         # Connect layers in sequence
-        self._connect_input_layer()
-        self._connect_hidden_layers()
-        self._connect_output_layer()
+        self._ConnectInputLayer()
+        self._ConnectHiddenLayers()
+        self._ConnectOutputLayer()
         self.UpdateAdjacencyMatrix()
 
-    def _create_input_layer(self):
+    def LoadData(self, inputData, labelsData):
+        if len(inputData) != self.numInputs:
+            raise ValueError("Data size must match the number of input nodes.")
+
+        for i, row in enumerate(inputData):
+            self.inputLayer[i].data = row  # Assign the data list to the node's data attribute
+            self.inputLayer[i].iteration = 0  # Reset iteration to start from the beginning
+            self.inputLayer[i].streamIndex = 0  # Reset stream index for new data
+        
+        for i, row in enumerate(labelsData):
+            self.labelLayer[i].data = row  # Assign the data list to the node's data attribute
+            self.labelLayer[i].iteration = 0  # Reset iteration to start from the beginning
+            self.labelLayer[i].streamIndex = 0  # Reset stream index for new data
+
+    def _CreateInputLayer(self):
         """Initialize the input layer with DisplayNodes for each input."""
-        self.inputLayer = [DisplayNode(name=f"Input_{i}") for i in range(self.numInputs)]
+        self.inputLayer = [DataStreamNode(name=f"x{i}") for i in range(self.numInputs)]
         for node in self.inputLayer:
             self.AddNode(node)
 
-    def _create_hidden_layers(self):
+    def _CreateHiddenLayers(self):
         """Initialize hidden layers with addition and activation nodes."""
         for layerNum in range(self.numLayers):
             hiddenLayer = []
             for i in range(self.numInputs):
-                additionNode = AdditionNode(name=f"Addition_L{layerNum}_N{i}")
-                activationNode = self.activationFunction(name=f"Activation_L{layerNum}_N{i}")
+                additionNode = AdditionNode(name=f"Add_L{layerNum}N{i}")
+                activationNode = self.activationFunction(name=f"Act_L{layerNum}N{i}")
                 activationNode.AddPreNode(additionNode)
                 hiddenLayer.append((additionNode, activationNode))
                 self.AddNode(additionNode, activationNode)
             self.hiddenLayers.append(hiddenLayer)
 
-    def _create_weight_layers(self):
+    def _CreateOutputLayer(self):
+        """Initialize the output layer with addition and activation nodes."""
+        for i in range(self.numOutputs):
+            additionNode = AdditionNode(name=f"Add_y{i}")
+            activationNode = self.activationFunction(name=f"y{i}")
+            activationNode.AddPreNode(additionNode)
+            self.outputLayer.append((additionNode, activationNode))
+            self.AddNode(additionNode, activationNode)
+
+    def _CreateWeightLayers(self):
         """Initialize weight layers to connect each subsequent layer pair."""
         # First weight layer connects input to the first hidden layer
-        weightLayer = [[DisplayNode(name=f"Weight_Input{i}_to_Hidden0_{j}", value=1.0)
+        weightLayer = [[DisplayNode(name=f"W_x{i}H0N{j}", value=1.0)
                         for j in range(self.numInputs)]
                        for i in range(self.numInputs)]
         self.weightLayers.append(weightLayer)
@@ -62,7 +91,7 @@ class MLPGraph(Graph):
 
         # Weight layers between hidden layers
         for layerNum in range(self.numLayers - 1):
-            weightLayer = [[DisplayNode(name=f"Weight_Hidden{layerNum}_N{i}_to_Hidden{layerNum+1}_N{j}", value=1.0)
+            weightLayer = [[DisplayNode(name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}", value=1.0)
                             for j in range(self.numInputs)]
                            for i in range(self.numInputs)]
             self.weightLayers.append(weightLayer)
@@ -71,7 +100,7 @@ class MLPGraph(Graph):
                     self.AddNode(weightNode)
 
         # Last weight layer connects the last hidden layer to the output layer
-        weightLayer = [[DisplayNode(name=f"Weight_Hidden{self.numLayers-1}_N{i}_to_Output{j}", value=1.0)
+        weightLayer = [[DisplayNode(name=f"W_H{self.numLayers-1}N{i}y{j}", value=1.0)
                         for j in range(self.numOutputs)]
                        for i in range(self.numInputs)]
         self.weightLayers.append(weightLayer)
@@ -79,16 +108,23 @@ class MLPGraph(Graph):
             for weightNode in row:
                 self.AddNode(weightNode)
 
-    def _create_output_layer(self):
-        """Initialize the output layer with addition and activation nodes."""
-        for i in range(self.numOutputs):
-            additionNode = AdditionNode(name=f"Addition_Output_N{i}")
-            activationNode = self.activationFunction(name=f"Output_Activation_N{i}")
-            activationNode.AddPreNode(additionNode)
-            self.outputLayer.append((additionNode, activationNode))
-            self.AddNode(additionNode, activationNode)
+    def _CreateLabelLayer(self):
+        """Create the label layer with DataStreamNodes for expected output values."""
+        self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay = self.numLayers*3) for i in range(self.numOutputs)]
+        for node in self.labelLayer:
+            self.AddNode(node)
 
-    def _connect_input_layer(self):
+    def _CreateErrorLayer(self):
+        """Create the error layer using MeanSquaredErrorNodes for calculating errors."""
+        self.errorLayer = []
+        for i, (outputAddNode, outputActNode) in enumerate(self.outputLayer):
+            errorNode = MeanSquaredErrorNode(name=f"Error_y{i}")
+            errorNode.AddPreNode(outputActNode)  # Connect output activation to error node
+            errorNode.AddPreNode(self.labelLayer[i])  # Connect corresponding label node
+            self.errorLayer.append(errorNode)
+            self.AddNode(errorNode)
+
+    def _ConnectInputLayer(self):
         """Connect the input layer to the first hidden layer with weight nodes."""
         firstHiddenLayer = self.hiddenLayers[0]
         weightLayer = self.weightLayers[0]
@@ -96,13 +132,13 @@ class MLPGraph(Graph):
         for i, inputNode in enumerate(self.inputLayer):
             for j, (nextAddNode, _) in enumerate(firstHiddenLayer):
                 weightNode = weightLayer[i][j]
-                multNode = MultiplicationNode(name=f"Mult_Input{i}_to_Hidden{j}")
+                multNode = MultiplicationNode(name=f"Mul_x{i}H{j}")
                 multNode.AddPreNode(inputNode)
                 multNode.AddPreNode(weightNode)
                 nextAddNode.AddPreNode(multNode)
                 self.AddNode(multNode)
 
-    def _connect_hidden_layers(self):
+    def _ConnectHiddenLayers(self):
         """Connect each hidden layer to the next hidden layer using weight nodes."""
         for layerNum in range(self.numLayers - 1):
             prevLayer = self.hiddenLayers[layerNum]
@@ -112,13 +148,13 @@ class MLPGraph(Graph):
             for i, (_, prevActNode) in enumerate(prevLayer):
                 for j, (nextAddNode, _) in enumerate(nextLayer):
                     weightNode = weightLayer[i][j]
-                    multNode = MultiplicationNode(name=f"Mult_Hidden{layerNum}_N{i}_to_Hidden{layerNum+1}_N{j}")
+                    multNode = MultiplicationNode(name=f"Mul_H{layerNum}N{i}H{layerNum+1}N{j}")
                     multNode.AddPreNode(prevActNode)
                     multNode.AddPreNode(weightNode)
                     nextAddNode.AddPreNode(multNode)
                     self.AddNode(multNode)
 
-    def _connect_output_layer(self):
+    def _ConnectOutputLayer(self):
         """Connect the last hidden layer to the output layer with weight nodes."""
         lastHiddenLayer = self.hiddenLayers[-1]
         weightLayer = self.weightLayers[-1]
@@ -126,21 +162,8 @@ class MLPGraph(Graph):
         for i, (_, lastActNode) in enumerate(lastHiddenLayer):
             for j, (outputAddNode, _) in enumerate(self.outputLayer):
                 weightNode = weightLayer[i][j]
-                multNode = MultiplicationNode(name=f"Mult_Hidden{self.numLayers-1}_N{i}_to_Output{j}")
+                multNode = MultiplicationNode(name=f"Mul_H{self.numLayers-1}N{i}y{j}")
                 multNode.AddPreNode(lastActNode)
                 multNode.AddPreNode(weightNode)
                 outputAddNode.AddPreNode(multNode)
                 self.AddNode(multNode)
-
-    def GetLayerNodes(self, layerType, layerIndex):
-        """Retrieve nodes from a specified layer type and index."""
-        if layerType == 'input':
-            return self.inputLayer
-        elif layerType == 'output':
-            return self.outputLayer
-        elif layerType == 'hidden' and 0 <= layerIndex < len(self.hiddenLayers):
-            return self.hiddenLayers[layerIndex]
-        elif layerType == 'weight' and 0 <= layerIndex < len(self.weightLayers):
-            return self.weightLayers[layerIndex]
-        else:
-            raise ValueError("Invalid layer type or index.")
