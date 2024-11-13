@@ -1,7 +1,7 @@
 from BasicNode import BasicNode
 
 class MultiplicationNode(BasicNode):
-    def __init__(self, name: str, value = 0):
+    def __init__(self, name: str = "", value = 0):
         super().__init__(name, value)  # Call the parent BasicNode constructor
         self.inputCount = 2  # Default input count for the multiplication node
         self.batchSize = 2
