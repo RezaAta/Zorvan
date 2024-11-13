@@ -16,10 +16,11 @@ class Node(ABC):
         """Perform the node's operation on the given inputs."""
         pass
 
-    def AddPreNode(self, predecessor):
+    def AddPreNode(self, *predecessors):
         """Add a predecessor node to this node."""
-        if predecessor not in self.predecessors:
-            self.predecessors.append(predecessor)
+        for predecessor in predecessors:
+            if predecessor not in self.predecessors:
+                self.predecessors.append(predecessor)
 
     def UpdateInputs(self):
         """Update the inputs array with the valid values of predecessor nodes."""
