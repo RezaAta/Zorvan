@@ -1,5 +1,6 @@
 from Graph import Graph
 from DisplayNode import DisplayNode
+from ContainerNode import ContainerNode
 from AdditionNode import AdditionNode
 from MultiplicationNode import MultiplicationNode
 from SigmoidNode import SigmoidNode
@@ -8,12 +9,11 @@ from MeanSquaredErrorNode import MeanSquaredErrorNode  # Import the node for cal
 
 
 class MLPGraph(Graph):
-    def __init__(self, numInputs, numOutputs, numLayers, learningRate, activationFunction=SigmoidNode):
+    def __init__(self, numInputs, numOutputs, numLayers, activationFunction=SigmoidNode):
         super().__init__()
         self.numInputs = numInputs
         self.numOutputs = numOutputs
         self.numLayers = numLayers
-        self.learningRate = learningRate
         self.activationFunction = activationFunction
         
         self.inputLayer = []
@@ -21,6 +21,7 @@ class MLPGraph(Graph):
         self.hiddenLayers = []
         self.weightLayers = []  # Separate layers for weights to facilitate weight management
         self.labelLayer = []
+        self.errorLayer = []
 
     def BuildMLP(self):
         """Build the MLP architecture by initializing and connecting layers."""
@@ -81,7 +82,7 @@ class MLPGraph(Graph):
     def _CreateWeightLayers(self):
         """Initialize weight layers to connect each subsequent layer pair."""
         # First weight layer connects input to the first hidden layer
-        weightLayer = [[DisplayNode(name=f"W_x{i}H0N{j}", value=1.0)
+        weightLayer = [[ContainerNode(name=f"W_x{i}H0N{j}", value=1.0)
                         for j in range(self.numInputs)]
                        for i in range(self.numInputs)]
         self.weightLayers.append(weightLayer)
@@ -91,7 +92,7 @@ class MLPGraph(Graph):
 
         # Weight layers between hidden layers
         for layerNum in range(self.numLayers - 1):
-            weightLayer = [[DisplayNode(name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}", value=1.0)
+            weightLayer = [[ContainerNode(name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}", value=1.0)
                             for j in range(self.numInputs)]
                            for i in range(self.numInputs)]
             self.weightLayers.append(weightLayer)
@@ -100,7 +101,7 @@ class MLPGraph(Graph):
                     self.AddNode(weightNode)
 
         # Last weight layer connects the last hidden layer to the output layer
-        weightLayer = [[DisplayNode(name=f"W_H{self.numLayers-1}N{i}y{j}", value=1.0)
+        weightLayer = [[ContainerNode(name=f"W_H{self.numLayers-1}N{i}y{j}", value=1.0)
                         for j in range(self.numOutputs)]
                        for i in range(self.numInputs)]
         self.weightLayers.append(weightLayer)
