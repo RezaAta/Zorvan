@@ -12,6 +12,9 @@ class DisplayNode(BasicNode):  # Inherits from both Node and ABC
     def Operation(self, input):
         return input
 
-    def IsValidInput(self, inputs):
+    def IsValidInput(self, input):
         """Check if the inputs are valid. To be defined by subclasses."""
-        return True
+        if input is not None:
+            return True
+        else:
+            return False
