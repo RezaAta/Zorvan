@@ -14,7 +14,10 @@ class BufferNode(BasicNode):
         self.buffer.append(input)
         if len(self.buffer) > self.bufferSize:
             self.buffer.pop(0)
-        return self.buffer[0]  # Set value to the oldest element
+        if len(self.buffer) == 0:
+            return None
+        else:
+            return self.buffer[0]  # Set value to the oldest element
 
     def IsValidInput(self, input):
         return True
