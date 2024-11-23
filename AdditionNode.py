@@ -18,3 +18,8 @@ class AdditionNode(BasicNode):
         Check if inputs are valid for addition (e.g., must be numbers).
         """
         return isinstance(input, (int, float))
+    def ProcessBatch(self):
+        if (len(self.inputs) == 1) and (self.midCalculation is False):
+            self.value = self.Operation(0,self.inputs[0])
+        else:
+            return super().ProcessBatch()
