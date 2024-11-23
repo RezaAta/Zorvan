@@ -11,7 +11,9 @@ class MeanSquaredErrorNode(BasicNode):
         if self.value is None:
             return squared_error
         else:
-            return (squared_error + self.value) / 2
+            # return (squared_error + self.value) / 2
+            return squared_error
+
 
     def IsValidInput(self, inp):
         """Check if the input is a valid number (int or float)."""
