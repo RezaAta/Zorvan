@@ -158,7 +158,7 @@ class Graph:
         """Visualize the MLP graph using Graphviz."""
         dot = Digraph(format='png')
         for node in self.nodes:
-            dot.node(node.name, label=f"{node.name}\n({type(node).__name__})")
+            dot.node(node.name, label=f"{node.name}\n({type(node).__name__})\n{node.value}")
         for i, row in enumerate(self.adjacencyMatrix):
             for j, connection in enumerate(row):
                 if connection == 1:
