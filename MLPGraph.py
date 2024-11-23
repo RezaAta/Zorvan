@@ -1,5 +1,5 @@
 from Graph import Graph
-from DisplayNode import DisplayNode
+from BufferNode import BufferNode
 from ContainerNode import ContainerNode
 from AdditionNode import AdditionNode
 from MultiplicationNode import MultiplicationNode
@@ -9,11 +9,11 @@ from MeanSquaredErrorNode import MeanSquaredErrorNode  # Import the node for cal
 
 
 class MLPGraph(Graph):
-    def __init__(self, numInputs, numOutputs, numLayers, activationFunction=SigmoidNode):
+    def __init__(self, numInputs, numOutputs, numHiddenLayers, activationFunction=SigmoidNode):
         super().__init__()
         self.numInputs = numInputs
         self.numOutputs = numOutputs
-        self.numLayers = numLayers
+        self.numHiddenLayers = numHiddenLayers
         self.activationFunction = activationFunction
         
         self.inputLayer = []
@@ -43,9 +43,9 @@ class MLPGraph(Graph):
             raise ValueError("Data size must match the number of input nodes.")
 
         for i, row in enumerate(inputData):
-            self.inputLayer[i].data = row  # Assign the data list to the node's data attribute
-            self.inputLayer[i].iteration = 0  # Reset iteration to start from the beginning
-            self.inputLayer[i].streamIndex = 0  # Reset stream index for new data
+            self.inputLayer[i][0].data = row  # Assign the data list to the node's data attribute
+            self.inputLayer[i][0].iteration = 0  # Reset iteration to start from the beginning
+            self.inputLayer[i][0].streamIndex = 0  # Reset stream index for new data
         
         for i, row in enumerate(labelsData):
             self.labelLayer[i].data = row  # Assign the data list to the node's data attribute
@@ -53,27 +53,36 @@ class MLPGraph(Graph):
             self.labelLayer[i].streamIndex = 0  # Reset stream index for new data
 
     def _CreateInputLayer(self):
-        """Initialize the input layer with DisplayNodes for each input."""
-        self.inputLayer = [DataStreamNode(name=f"x{i}") for i in range(self.numInputs)]
-        for node in self.inputLayer:
-            self.AddNode(node)
+        """Initialize the input layer with DataStreamNode for each input."""
+        self.inputLayer = [(DataStreamNode(name=f"x{i}"), BufferNode(name = f"Buff_x{i}", size = ((self.numHiddenLayers + 1) * 6)- 1)) for i in range(self.numInputs)]
+        for (inputNode, bufferNode) in self.inputLayer:
+            bufferNode.AddPreNode(inputNode)
+            self.AddNode(inputNode, bufferNode)
 
     def _CreateHiddenLayers(self):
         """Initialize hidden layers with addition and activation nodes."""
-        for layerNum in range(self.numLayers):
+        for layerNum in range(self.numHiddenLayers):
             hiddenLayer = []
             for i in range(self.numInputs):
+
                 additionNode = AdditionNode(name=f"Add_L{layerNum}N{i}")
+                additionNode.forcedBatchProcessing = True
                 activationNode = self.activationFunction(name=f"Act_L{layerNum}N{i}")
                 activationNode.AddPreNode(additionNode)
-                hiddenLayer.append((additionNode, activationNode))
-                self.AddNode(additionNode, activationNode)
-            self.hiddenLayers.append(hiddenLayer)
+                layersAhead = (self.numHiddenLayers + 2) - (layerNum + 2)
+                bufferNode = BufferNode(name = f"Buff_H{layerNum}N{i}", size = (layersAhead * 6) - 1)
+                bufferNode.AddPreNode(activationNode)
 
+                hiddenLayer.append((additionNode, activationNode, bufferNode))
+                self.AddNode(additionNode, activationNode, bufferNode)
+
+            self.hiddenLayers.append(hiddenLayer)
+            
     def _CreateOutputLayer(self):
         """Initialize the output layer with addition and activation nodes."""
         for i in range(self.numOutputs):
             additionNode = AdditionNode(name=f"Add_y{i}")
+            additionNode.forcedBatchProcessing = True
             activationNode = self.activationFunction(name=f"y{i}")
             activationNode.AddPreNode(additionNode)
             self.outputLayer.append((additionNode, activationNode))
@@ -82,7 +91,7 @@ class MLPGraph(Graph):
     def _CreateWeightLayers(self):
         """Initialize weight layers to connect each subsequent layer pair."""
         # First weight layer connects input to the first hidden layer
-        weightLayer = [[ContainerNode(name=f"W_x{i}H0N{j}", value=1.0)
+        weightLayer = [[ContainerNode(name=f"W_x{i}H0N{j}", value=0.5)
                         for j in range(self.numInputs)]
                        for i in range(self.numInputs)]
         self.weightLayers.append(weightLayer)
@@ -91,8 +100,8 @@ class MLPGraph(Graph):
                 self.AddNode(weightNode)
 
         # Weight layers between hidden layers
-        for layerNum in range(self.numLayers - 1):
-            weightLayer = [[ContainerNode(name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}", value=1.0)
+        for layerNum in range(self.numHiddenLayers - 1):
+            weightLayer = [[ContainerNode(name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}", value=0.5)
                             for j in range(self.numInputs)]
                            for i in range(self.numInputs)]
             self.weightLayers.append(weightLayer)
@@ -101,7 +110,7 @@ class MLPGraph(Graph):
                     self.AddNode(weightNode)
 
         # Last weight layer connects the last hidden layer to the output layer
-        weightLayer = [[ContainerNode(name=f"W_H{self.numLayers-1}N{i}y{j}", value=1.0)
+        weightLayer = [[ContainerNode(name=f"W_H{self.numHiddenLayers-1}N{i}y{j}", value=0.5)
                         for j in range(self.numOutputs)]
                        for i in range(self.numInputs)]
         self.weightLayers.append(weightLayer)
@@ -111,7 +120,7 @@ class MLPGraph(Graph):
 
     def _CreateLabelLayer(self):
         """Create the label layer with DataStreamNodes for expected output values."""
-        self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay = self.numLayers*3) for i in range(self.numOutputs)]
+        self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay = self.numHiddenLayers*3) for i in range(self.numOutputs)]
         for node in self.labelLayer:
             self.AddNode(node)
 
@@ -130,8 +139,8 @@ class MLPGraph(Graph):
         firstHiddenLayer = self.hiddenLayers[0]
         weightLayer = self.weightLayers[0]
         
-        for i, inputNode in enumerate(self.inputLayer):
-            for j, (nextAddNode, _) in enumerate(firstHiddenLayer):
+        for i, (inputNode,bufferNode) in enumerate(self.inputLayer):
+            for j, (nextAddNode, nextActNode, nextBufferNode) in enumerate(firstHiddenLayer):
                 weightNode = weightLayer[i][j]
                 multNode = MultiplicationNode(name=f"Mul_x{i}H{j}")
                 multNode.AddPreNode(inputNode)
@@ -141,13 +150,13 @@ class MLPGraph(Graph):
 
     def _ConnectHiddenLayers(self):
         """Connect each hidden layer to the next hidden layer using weight nodes."""
-        for layerNum in range(self.numLayers - 1):
+        for layerNum in range(self.numHiddenLayers - 1):
             prevLayer = self.hiddenLayers[layerNum]
             nextLayer = self.hiddenLayers[layerNum + 1]
             weightLayer = self.weightLayers[layerNum + 1]
             
-            for i, (_, prevActNode) in enumerate(prevLayer):
-                for j, (nextAddNode, _) in enumerate(nextLayer):
+            for i, (_, prevActNode, bufferNode) in enumerate(prevLayer):
+                for j, (nextAddNode, _, bufferNode) in enumerate(nextLayer):
                     weightNode = weightLayer[i][j]
                     multNode = MultiplicationNode(name=f"Mul_H{layerNum}N{i}H{layerNum+1}N{j}")
                     multNode.AddPreNode(prevActNode)
@@ -160,10 +169,10 @@ class MLPGraph(Graph):
         lastHiddenLayer = self.hiddenLayers[-1]
         weightLayer = self.weightLayers[-1]
         
-        for i, (_, lastActNode) in enumerate(lastHiddenLayer):
-            for j, (outputAddNode, _) in enumerate(self.outputLayer):
+        for i, (lastAddNode, lastActNode, lastbuffNode) in enumerate(lastHiddenLayer):
+            for j, (outputAddNode, outputActNode) in enumerate(self.outputLayer):
                 weightNode = weightLayer[i][j]
-                multNode = MultiplicationNode(name=f"Mul_H{self.numLayers-1}N{i}y{j}")
+                multNode = MultiplicationNode(name=f"Mul_H{self.numHiddenLayers-1}N{i}y{j}")
                 multNode.AddPreNode(lastActNode)
                 multNode.AddPreNode(weightNode)
                 outputAddNode.AddPreNode(multNode)
