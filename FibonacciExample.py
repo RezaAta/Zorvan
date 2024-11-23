@@ -7,8 +7,8 @@ from GraphProcessor import GraphProcessor
 # Example setup
 graph = Graph()
 
-fib1 = DisplayNode(id="Fibonacci n-1", value=1)
-fibn = AdditionNode(id="Fibonacci n", value=1)
+fib1 = DisplayNode(name="Fibonacci n-1", value=1)
+fibn = AdditionNode(name="Fibonacci n", value=1)
 
 graph.AddNode(fib1, fibn)
 
@@ -19,4 +19,6 @@ graph.ConnectPreNode(fib1, fibn)
 
 # Initialize processor with parallel execution
 processor = GraphProcessor(graph, max_workers=4)
-processor.ComputeGraph(iterations=500)
+processor.ComputeGraph(iterations=10)
+
+graph.DisplayGraph()
