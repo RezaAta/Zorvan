@@ -7,11 +7,11 @@ class ContainerNode(BasicNode):
         self.batchSize = 1
         self.inclusive = False
 
-    def Operation(self, input):
+    def Operation(self, i):
         """
         Perform Sum on the given inputs. Ensure inputs length matches inputCount.
         """
-        return input + self.value
+        return self.value - i
 
     def IsValidInput(self, input):
         """

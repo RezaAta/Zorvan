@@ -1,3 +1,4 @@
+import random
 from Graph import Graph
 from BufferNode import BufferNode
 from ContainerNode import ContainerNode
@@ -6,6 +7,7 @@ from MultiplicationNode import MultiplicationNode
 from SigmoidNode import SigmoidNode
 from DataStreamNode import DataStreamNode
 from MeanSquaredErrorNode import MeanSquaredErrorNode  # Import the node for calculating error
+from SubtractionNode import SubtractionNode  # Import the node for calculating error
 
 class MLPGraph(Graph):
     def __init__(self, numInputs, numOutputs, numHiddenLayers, activationFunction=SigmoidNode, hiddenLayerSizes=None):
@@ -44,17 +46,19 @@ class MLPGraph(Graph):
 
         for i, row in enumerate(inputData):
             self.inputLayer[i][0].data = row  # Assign the data list to the node's data attribute
+            self.inputLayer[i][0].value = row[0]
             self.inputLayer[i][0].iteration = 0  # Reset iteration to start from the beginning
             self.inputLayer[i][0].streamIndex = 0  # Reset stream index for new data
         
         for i, row in enumerate(labelsData):
             self.labelLayer[i].data = row  # Assign the data list to the node's data attribute
+            self.labelLayer[i].value = row[0]
             self.labelLayer[i].iteration = 0  # Reset iteration to start from the beginning
             self.labelLayer[i].streamIndex = 0  # Reset stream index for new data
 
     def _CreateInputLayer(self):
         """Initialize the input layer with DataStreamNode for each input."""
-        self.inputLayer = [(DataStreamNode(name=f"x{i}"), BufferNode(name=f"Buff_x{i}", size=((self.numHiddenLayers + 1) * 6) - 1)) for i in range(self.numInputs)]
+        self.inputLayer = [(DataStreamNode(name=f"x{i}"), BufferNode(name=f"Buff_x{i}", size=((self.numHiddenLayers + 1) * 6))) for i in range(self.numInputs)]
         for (inputNode, bufferNode) in self.inputLayer:
             bufferNode.AddPreNode(inputNode)
             self.AddNode(inputNode, bufferNode)
@@ -69,7 +73,7 @@ class MLPGraph(Graph):
                 activationNode = self.activationFunction(name=f"Act_L{layerNum}N{i}")
                 activationNode.AddPreNode(additionNode)
                 layersAhead = (self.numHiddenLayers + 2) - (layerNum + 2)
-                bufferNode = BufferNode(name=f"Buff_H{layerNum}N{i}", size=(layersAhead * 6) - 1)
+                bufferNode = BufferNode(name=f"Buff_H{layerNum}N{i}", size=(layersAhead * 6))
                 bufferNode.AddPreNode(activationNode)
 
                 hiddenLayer.append((additionNode, activationNode, bufferNode))
@@ -88,10 +92,15 @@ class MLPGraph(Graph):
             self.AddNode(additionNode, activationNode)
 
     def _CreateWeightLayers(self):
-        """Initialize weight layers to connect each subsequent layer pair."""
+        """Initialize weight layers with random weights between -1 and 1."""
+        def random_weight():
+            return 1
+            return random.uniform(-1, 1)
+
         # First weight layer connects input to the first hidden layer
         firstHiddenLayerSize = self.hiddenLayerSizes[0]
-        weightLayer = [[ContainerNode(name=f"W_x{i}H0N{j}", value=0.5) for j in range(firstHiddenLayerSize)]
+        weightLayer = [[ContainerNode(name=f"W_x{i}H0N{j}", value=random_weight())
+                        for j in range(firstHiddenLayerSize)]
                        for i in range(self.numInputs)]
         self.weightLayers.append(weightLayer)
         for row in weightLayer:
@@ -100,7 +109,7 @@ class MLPGraph(Graph):
 
         # Weight layers between hidden layers
         for layerNum in range(self.numHiddenLayers - 1):
-            weightLayer = [[ContainerNode(name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}", value=0.5)
+            weightLayer = [[ContainerNode(name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}", value=random_weight())
                             for j in range(self.hiddenLayerSizes[layerNum + 1])]
                            for i in range(self.hiddenLayerSizes[layerNum])]
             self.weightLayers.append(weightLayer)
@@ -110,7 +119,7 @@ class MLPGraph(Graph):
 
         # Last weight layer connects the last hidden layer to the output layer
         lastHiddenLayerSize = self.hiddenLayerSizes[-1]
-        weightLayer = [[ContainerNode(name=f"W_H{self.numHiddenLayers - 1}N{i}y{j}", value=0.5)
+        weightLayer = [[ContainerNode(name=f"W_H{self.numHiddenLayers - 1}N{i}y{j}", value=random_weight())
                         for j in range(self.numOutputs)]
                        for i in range(lastHiddenLayerSize)]
         self.weightLayers.append(weightLayer)
@@ -120,7 +129,8 @@ class MLPGraph(Graph):
 
     def _CreateLabelLayer(self):
         """Create the label layer with DataStreamNodes for expected output values."""
-        self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay = self.numHiddenLayers*3) for i in range(self.numOutputs)]
+        labelLayerDelay = ((self.numHiddenLayers + 1) * 3)
+        self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay = labelLayerDelay) for i in range(self.numOutputs)]
         for node in self.labelLayer:
             self.AddNode(node)
 
@@ -128,7 +138,7 @@ class MLPGraph(Graph):
         """Create the error layer using MeanSquaredErrorNodes for calculating errors."""
         self.errorLayer = []
         for i, (outputAddNode, outputActNode) in enumerate(self.outputLayer):
-            errorNode = MeanSquaredErrorNode(name=f"Error_y{i}")
+            errorNode = SubtractionNode(name=f"Error_y{i}")
             errorNode.AddPreNode(outputActNode)  # Connect output activation to error node
             errorNode.AddPreNode(self.labelLayer[i])  # Connect corresponding label node
             self.errorLayer.append(errorNode)

@@ -95,7 +95,8 @@ class BackpropGraph(Graph):
                 nextLayer = self.errorGradientLayers[0] if layerNum == len(self.hiddenLayers) - 1 else self.errorGradientLayers[1]
                 for k, gradientNode in enumerate(nextLayer):
                     weightNode = self.weightLayers[layerNum + 1][n][k]
-                    weightNodeBuffer = BufferNode(name = f"WNBuff_H{layerNum}WN{n}K{k}", size = (layersAhead*6) - 2)
+                    weightNodeBuffer = BufferNode(name = f"WNBuff_H{layerNum}WN{n}K{k}", size = (layersAhead*6)-1)
+                    # weightNodeBuffer = BufferNode(name = f"WNBuff_H{layerNum}WN{n}K{k}", size = 6)
                     weightNodeBuffer.AddPreNode(weightNode)
 
                     weightedGradient = MultiplicationNode(name=f"WG_H{layerNum}N{n}W{k}")

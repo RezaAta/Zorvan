@@ -1,4 +1,3 @@
-import math
 from BasicNode import BasicNode
 
 class SigmoidDerivativeNode(BasicNode):

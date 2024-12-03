@@ -14,6 +14,7 @@ class BufferNode(BasicNode):
         self.buffer.append(input)
         if len(self.buffer) > self.bufferSize:
             self.buffer.pop(0)
+
         if len(self.buffer) == 0:
             return None
         else:

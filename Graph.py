@@ -155,8 +155,9 @@ class Graph:
         return compressed
     
     def DisplayGraph(self):
-        """Visualize the MLP graph using Graphviz."""
+        """Visualize the MLP graph in a left-to-right layout using Graphviz."""
         dot = Digraph(format='png')
+        dot.attr(rankdir='LR')  # Set the layout to be left-to-right
         for node in self.nodes:
             dot.node(node.name, label=f"{node.name}\n({type(node).__name__})\n{node.value}")
         for i, row in enumerate(self.adjacencyMatrix):
@@ -164,7 +165,6 @@ class Graph:
                 if connection == 1:
                     dot.edge(self.nodes[i].name, self.nodes[j].name)
         dot.render(filename='ComputationalGraph', view=True)
-
 
     def __RemoveNodeFromAdjacencyMatrix(self, index):
         del self.adjacencyMatrix[index]
