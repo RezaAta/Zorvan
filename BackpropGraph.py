@@ -53,7 +53,8 @@ class BackpropGraph(Graph):
         
         for i, (outputAddNode, outputActNode) in enumerate(self.outputLayer):
             # Derivative node for the activation function
-            derivativeNode = SigmoidDerivativeNode(name=f"SigD_y{i}")
+            dervativeNodeType = outputActNode.derivative
+            derivativeNode = dervativeNodeType(name=f"D_y{i}")
             derivativeNode.AddPreNode(outputActNode)
             
             # Gradient node (Error * Derivative)
@@ -78,7 +79,8 @@ class BackpropGraph(Graph):
 
             for n in range(len(self.hiddenLayers[layerNum])):
                 # Derivative node for hidden activation
-                hiddenDerivNode = SigmoidDerivativeNode(name=f"SigD_H{layerNum}N{n}")
+                dervativeNodeType = self.hiddenLayers[layerNum][n][1].derivative
+                hiddenDerivNode = dervativeNodeType(name=f"D_H{layerNum}N{n}")
                 hiddenDerivNode.AddPreNode(self.hiddenLayers[layerNum][n][2]) #Adding the buffer node of the layer as the prenode
                 
                 # Error gradient for hidden layer node

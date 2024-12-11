@@ -6,17 +6,21 @@ from AdditionNode import AdditionNode
 from MultiplicationNode import MultiplicationNode
 from SigmoidNode import SigmoidNode
 from DataStreamNode import DataStreamNode
+from DisplayNode import DisplayNode
 from MeanSquaredErrorNode import MeanSquaredErrorNode  # Import the node for calculating error
 from SubtractionNode import SubtractionNode  # Import the node for calculating error
 
 class MLPGraph(Graph):
-    def __init__(self, numInputs, numOutputs, numHiddenLayers, activationFunction=SigmoidNode, hiddenLayerSizes=None):
+    def __init__(self, numInputs, numOutputs, numHiddenLayers, activationFunction=SigmoidNode, hiddenLayerSizes=None, outputLayerType = DisplayNode):
         super().__init__()
         self.numInputs = numInputs
         self.numOutputs = numOutputs
         self.numHiddenLayers = numHiddenLayers
         self.activationFunction = activationFunction
         self.hiddenLayerSizes = hiddenLayerSizes if hiddenLayerSizes else [numInputs] * numHiddenLayers
+        self.outputLayerFunction = outputLayerType
+        self.predictionBuffers = []
+        self.errorBuffers = []
         
         self.inputLayer = []
         self.outputLayer = []
@@ -56,6 +60,49 @@ class MLPGraph(Graph):
             self.labelLayer[i].iteration = 0  # Reset iteration to start from the beginning
             self.labelLayer[i].streamIndex = 0  # Reset stream index for new data
 
+    def FlushNetwork(self):
+        for nodes in self.inputLayer:
+            nodes[0].ResetValue()
+            nodes[1].ResetValue()
+        
+        for nodes in self.outputLayer:
+            nodes[0].ResetValue()
+            nodes[1].ResetValue()
+        
+        for nodes in self.errorLayer:
+            nodes.ResetValue()
+
+        for layer in self.hiddenLayers:
+            for nodes in layer:
+                nodes[0].ResetValue()
+                nodes[1].ResetValue()
+                nodes[2].ResetValue()
+
+    
+    def PrepareForTest(self, xTest:list , yTest:list):
+        self.FlushNetwork()
+        self.LoadData(xTest, yTest)
+        self._MountPredictionBuffers(predictionSize = len(xTest[0]))
+
+
+    def CreateErrorBuffers(self, bufferSize):
+        self.errorBuffers = []
+
+        for node in self.errorLayer:
+            errorBuffer = BufferNode(size = bufferSize)
+            errorBuffer.AddPreNode(node)
+            self.errorBuffers.append(errorBuffer)
+            self.AddNode(errorBuffer)
+
+    def _MountPredictionBuffers(self, predictionSize):
+        self.predictionBuffers = []
+        for outputNodes in self.outputLayer:
+            predictionBuffer = BufferNode(size = predictionSize)
+            predictionBuffer.AddPreNode(outputNodes[1])
+            self.predictionBuffers.append(predictionBuffer)
+            self.AddNode(predictionBuffer)
+
+
     def _CreateInputLayer(self):
         """Initialize the input layer with DataStreamNode for each input."""
         self.inputLayer = [(DataStreamNode(name=f"x{i}"), BufferNode(name=f"Buff_x{i}", size=((self.numHiddenLayers + 1) * 6))) for i in range(self.numInputs)]
@@ -86,7 +133,7 @@ class MLPGraph(Graph):
         for i in range(self.numOutputs):
             additionNode = AdditionNode(name=f"Add_y{i}")
             additionNode.forcedBatchProcessing = True
-            activationNode = self.activationFunction(name=f"y{i}")
+            activationNode = self.outputLayerFunction(name=f"y{i}")
             activationNode.AddPreNode(additionNode)
             self.outputLayer.append((additionNode, activationNode))
             self.AddNode(additionNode, activationNode)
@@ -94,7 +141,7 @@ class MLPGraph(Graph):
     def _CreateWeightLayers(self):
         """Initialize weight layers with random weights between -1 and 1."""
         def random_weight():
-            return 1
+            # return 1
             return random.uniform(-1, 1)
 
         # First weight layer connects input to the first hidden layer
@@ -187,3 +234,10 @@ class MLPGraph(Graph):
                 multNode.AddPreNode(weightNode)
                 outputAddNode.AddPreNode(multNode)
                 self.AddNode(multNode)
+
+
+
+
+
+
+
