@@ -9,6 +9,9 @@ class BufferNode(BasicNode):
         self.batchSize = 1
         self.inclusive = False
 
+    def ResetValue(self):
+        self.buffer = []
+
     def Operation(self, input):
         """Add new input to buffer and maintain size constraint."""
         self.buffer.append(input)

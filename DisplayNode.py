@@ -1,4 +1,5 @@
 from BasicNode import BasicNode
+from DisplayNodeDerivative import DisplayNodeDerivative
 
 # BasicNode class (Abstract)
 class DisplayNode(BasicNode):  # Inherits from both Node and ABC
@@ -8,6 +9,7 @@ class DisplayNode(BasicNode):  # Inherits from both Node and ABC
         self.batchSize = 1  # Number of inputs
         self.computationType = 'basic'  # Type of computation for the node
         self.inclusive = False
+        self.derivative = DisplayNodeDerivative
 
     def Operation(self, input):
         return input

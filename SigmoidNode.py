@@ -1,12 +1,13 @@
 import math
 from BasicNode import BasicNode
-
+from SigmoidDerivativeNode import SigmoidDerivativeNode
 class SigmoidNode(BasicNode):
     def __init__(self, name: str = "", value = 0):
         super().__init__(name, value)
         self.inputCount = 1
         self.batchSize = 1
         self.inclusive = False
+        self.derivative = SigmoidDerivativeNode
 
     def Operation(self, x):
         return 1 / (1 + math.exp(-x))

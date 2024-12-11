@@ -189,6 +189,11 @@ class Graph:
         return node
     
 
+    def ResetNodeValues(self):
+        for node in self.nodes:
+            node.ResetValue()
+
+
     # any node that old nodes are in its pred list
     # put the new abstract node in its pred list
     

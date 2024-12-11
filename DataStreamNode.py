@@ -14,6 +14,11 @@ class DataStreamNode(BasicNode):
         else:
             self.value = None  # Default to None if data is empty
 
+    def ResetValue(self):
+        self.data = None
+        self.iteration = 0
+        self.lastStream = 0
+
     def Operation(self):
         if self.initialDelay - self.iteration <= 0:
             if self.iteration - self.lastStream >= self.streamDelay:

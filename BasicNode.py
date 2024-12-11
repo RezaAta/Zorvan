@@ -10,6 +10,9 @@ class BasicNode(Node, ABC):  # Inherits from both Node and ABC
         self.inputCount = 0  # Number of inputs
         self.computationType = 'basic'  # Type of computation for the node
 
+    def ResetValue(self):
+        self.value = 0
+
     def SetComputationStructure(self):
         self.computationStructure = self.id  # If no nodes are present, return an empty string
 
