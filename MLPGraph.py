@@ -102,17 +102,17 @@ class MLPGraph(Graph):
     def CreateErrorBuffers(self, bufferSize):
         self.errorBuffers = []
 
-        for node in self.errorLayer:
-            errorBuffer = BufferNode(size = bufferSize)
-            errorBuffer.AddPreNode(node)
+        for i in range (len(self.errorLayer)):
+            errorBuffer = BufferNode( name = f"errorBuffer{i}",size = bufferSize)
+            errorBuffer.AddPreNode(self.errorLayer[i])
             self.errorBuffers.append(errorBuffer)
             self.AddNode(errorBuffer)
 
     def _MountPredictionBuffers(self, predictionSize):
         self.predictionBuffers = []
-        for outputNodes in self.outputLayer:
-            predictionBuffer = BufferNode(size = predictionSize)
-            predictionBuffer.AddPreNode(outputNodes[1])
+        for i in range (len(self.outputLayer)):
+            predictionBuffer = BufferNode(name = f"prediction{i}", size = predictionSize)
+            predictionBuffer.AddPreNode(self.outputLayer[i][1])
             self.predictionBuffers.append(predictionBuffer)
             self.AddNode(predictionBuffer)
 
