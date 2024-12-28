@@ -10,7 +10,8 @@ class BufferNode(BasicNode):
         self.inclusive = False
 
     def ResetValue(self):
-        self.buffer = []
+        self.buffer.clear()
+        self.value = 0
 
     def Operation(self, input):
         """Add new input to buffer and maintain size constraint."""
