@@ -60,23 +60,36 @@ class MLPGraph(Graph):
             self.labelLayer[i].iteration = 0  # Reset iteration to start from the beginning
             self.labelLayer[i].streamIndex = 0  # Reset stream index for new data
 
-    def FlushNetwork(self):
-        for nodes in self.inputLayer:
-            nodes[0].ResetValue()
-            nodes[1].ResetValue()
-        
-        for nodes in self.outputLayer:
-            nodes[0].ResetValue()
-            nodes[1].ResetValue()
-        
-        for nodes in self.errorLayer:
-            nodes.ResetValue()
 
-        for layer in self.hiddenLayers:
-            for nodes in layer:
-                nodes[0].ResetValue()
-                nodes[1].ResetValue()
-                nodes[2].ResetValue()
+    def FlushNetwork(self):
+        """
+        Resets all nodes in the graph except for the weight nodes.
+        Collects all nodes, removes weight nodes (accounting for 2D structure),
+        and then resets the remaining nodes.
+        """
+        # Collect all nodes
+        allNodes = set(self.nodes)  # Use a set for efficient removal
+
+        # Collect weight nodes from the 2D weightLayers structure
+        weightNodes = set()
+        for weightLayer in self.weightLayers:
+            for weightNodeList in weightLayer:
+                for weightNode in weightNodeList:
+                    weightNodes.add(weightNode)
+
+        # Get nodes to reset by removing weight nodes
+        nodesToReset = allNodes - weightNodes
+
+        # Reset all nodes in nodesToReset
+        for node in nodesToReset:
+            node.ResetValue()
+
+    def ResetWeightInputs(self):
+        for weightLayer in self.weightLayers:
+            for weightNodeList in weightLayer:
+                for weightNode in weightNodeList:
+                    for weightInput in weightNode.predecessors:
+                        weightInput.ResetValue()
 
     
     def PrepareForTest(self, xTest:list , yTest:list):
