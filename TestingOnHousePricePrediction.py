@@ -1,5 +1,4 @@
 from MLPGraph import MLPGraph
-from BufferNode import BufferNode
 from Graph import Graph
 from BackpropGraph import BackpropGraph
 from GraphProcessor import GraphProcessor
@@ -7,34 +6,60 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
 from ReLUNode import ReLUNode
+from SigmoidNode import SigmoidNode
+from sklearn.preprocessing import StandardScaler
 
-# Load California Housing Dataset
+# Load Diabetes Dataset
 data = fetch_california_housing()
-inputData = data.data.T  # Transpose to fit the column-based input expectation
-targetData = data.target.reshape(1, -1)  # Target values as a single row
+inputData = data.data  # Features
+targetData = data.target  # Target reshaped to 2D
 
+# Detect and remove outliers using IQR
+q1 = np.percentile(targetData, 25, axis=0)  # First quartile
+q3 = np.percentile(targetData, 75, axis=0)  # Third quartile
+iqr = q3 - q1  # Interquartile range
+lower_bound = q1 - 1.5 * iqr
+upper_bound = q3 + 1.5 * iqr
 
-# Normalize features using MinMaxScaler
-scaler = MinMaxScaler()
-inputData = scaler.fit_transform(inputData)  # Scale features, keep the row-column structure
-targetData = scaler.fit_transform(targetData)  # Normalize targets
+# Mask for filtering non-outliers
+non_outlier_mask = (targetData >= lower_bound) & (targetData <= upper_bound)
+inputData = inputData[non_outlier_mask.flatten()]
+targetData = targetData[non_outlier_mask.flatten()]
+
+targetData = targetData.reshape(-1, 1)
 
 # Split into train and test sets
-train_size = int(0.8 * inputData.shape[1])
-X_train, X_test = inputData[:, :train_size], inputData[:, train_size:]
-y_train, y_test = targetData[:, :train_size], targetData[:, train_size:]
+X_train, X_test, y_train, y_test = train_test_split(inputData, targetData, test_size=0.2, random_state=42)
+
+# Scale the features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Reshape target data for compatibility with MLPGraph
+# Transform y_train to a list of arrays, one for each output node
+y_train = y_train.T.tolist()  # Shape: (1, n_samples)
+y_test = y_test.T.tolist()    # Shape: (1, n_samples)
+X_train = X_train.T.tolist()
+X_test = X_test.T.tolist()
 
 # Initialize MLP Graph and Backpropagation Graph
-mlpGraph = MLPGraph(numInputs=X_train.shape[0], numOutputs=1, numHiddenLayers=3, hiddenLayerSizes=[16, 8, 4],activationFunction = ReLUNode)
+mlpGraph = MLPGraph(
+    numInputs=len(X_train),
+    numOutputs=1,
+    numHiddenLayers=3,
+    hiddenLayerSizes=[8, 4, 2],
+    activationFunction=SigmoidNode  # Use ReLU activation for hidden layers
+)
 mlpGraph.BuildMLP()
 
-backprop_graph = BackpropGraph(mlpGraph, learningRate=0.01)
+backprop_graph = BackpropGraph(mlpGraph, learningRate=0.00001)
 backprop_graph.BuildBackprop()
 
 # Load Training Data into the MLP
-mlpGraph.LoadData(X_train.tolist(), y_train.tolist())
+mlpGraph.LoadData(X_train, y_train)  # Inputs must also be transposed and converted to lists
+
 
 # Combine MLP and Backpropagation graphs into a complete graph
 fullMLPGraph = Graph()
@@ -52,58 +77,57 @@ fullGraphProcessor = GraphProcessor(fullMLPGraph, max_workers=32, verbose=False)
 
 # Network warmup
 networkLength = 3 * (len(mlpGraph.hiddenLayers) + 1)
-mlpProcessor.ComputeGraph(networkLength)
-
+mlpProcessor.ComputeGraphSingleThread(networkLength)
 
 # Training
-epochs = 100 #=X_train.shape[1]*5
+fakeBatchSize = 1
+epochs = 10 
+numberOfIterationsInEpochs = len(X_train[0])
+totalIterations = epochs * numberOfIterationsInEpochs * fakeBatchSize
 MSEOverEpochs = []
-mlpGraph.CreateErrorBuffers(epochs)
+mlpGraph.CreateErrorBuffers(totalIterations)
 errorBuffers = mlpGraph.errorBuffers
 fullMLPGraph.AddNode(*errorBuffers)
 
-# Create a buffer node to keep all the errors of the training time
+fullGraphProcessor.ComputeGraphSingleThread(totalIterations + networkLength + 1)# +2 is for the error buffers
 
-fullGraphProcessor.ComputeGraph(epochs + networkLength + 1)
-
-
-#Calculate the mseOverEpochs
-for i in range(epochs):
+# Calculate the MSE over epochs
+for i in range(totalIterations):
     mse = 0
     for errorBuffer in errorBuffers:
         mse += (errorBuffer.buffer[i])**2
-    mse = mse/len(errorBuffers)
+    mse = mse / len(errorBuffers)
     MSEOverEpochs.append(mse)
 
+MSEOverEpochs = np.array(MSEOverEpochs)
+newMSEOverEpochs = MSEOverEpochs.reshape(-1, fakeBatchSize * numberOfIterationsInEpochs)
+newMSEOverEpochs = np.mean(newMSEOverEpochs, axis=1)
+
+
 # Plotting Error Over Epochs
-plt.plot(range(epochs), MSEOverEpochs, label='Mean Squared Error')
-plt.xlabel('Epochs')
-plt.ylabel('Error')
-plt.title('Error Change Over Epochs (California Housing Prediction)')
+plt.plot(range(len(newMSEOverEpochs)), newMSEOverEpochs, label="Mean Squared Error")
+plt.xlabel("Epochs")
+plt.ylabel("Error")
+plt.title("Error Change Over Epochs (Diabetes Prediction)")
 plt.legend()
 plt.show()
 
-mlpGraph.PrepareForTest(X_test.tolist(), y_test.tolist())
+# Testing phase
+mlpGraph.PrepareForTest(X_test, y_test)  # Inputs must be transposed
 predictionBuffers = mlpGraph.predictionBuffers
 
-testingEpochs = X_test.shape[1] + networkLength + 1 # extra epochs to flush forward the network
-mlpProcessor.ComputeGraph(testingEpochs)  # Run forward pass for each input
+testingEpochs = len(X_test[0]) + networkLength # Extra epochs to flush forward the network
+mlpProcessor.ComputeGraphSingleThread(testingEpochs)
 
+# Collect predictions
 predictionValues = []
 for predictionBuffer in predictionBuffers:
-    predictionValues.append(predictionBuffer.buffer)
+    predictionValues.extend(predictionBuffer.buffer)
 
-# Rescale predictions back to the original scale
-predictionsRescaled = np.array(predictionValues)#[:,::-1]
-predictionsRescaled = scaler.inverse_transform(predictionsRescaled).reshape(-1, 1).flatten()
-yTestRescaled = scaler.inverse_transform(y_test.T).flatten()
+# Convert to NumPy array and reshape
+predictionValues = np.array(predictionValues)
+
 
 # Calculate Mean Absolute Error (MAE)
-mae = np.mean(np.abs(yTestRescaled - predictionsRescaled))
+mae = np.mean(np.abs(np.array(y_test).flatten() - predictionValues.flatten()))
 print(f"Mean Absolute Error on Test Set: {mae:.4f}")
-
-
-# # Display Predictions vs Ground Truth
-# print("\nPredictions vs Ground Truth (Rescaled):")
-# for i in range(len(yTestRescaled)):
-#     print(f"Predicted: {predictionsRescaled[i]:.4f}, Actual: {yTestRescaled[i]:.4f}")
