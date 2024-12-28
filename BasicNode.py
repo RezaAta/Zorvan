@@ -26,7 +26,7 @@ class BasicNode(Node, ABC):  # Inherits from both Node and ABC
 
     def UpdateInputs(self):
         """Update the inputs array with the valid values of predecessor nodes."""
-        self.inputs = []  # Clear previous inputs
+        self.inputs.clear()  # Clear previous inputs
         # Fetch values from predecessors and only store valid inputs
         for predecessor in self.predecessors:
             if isinstance(predecessor, AbstractNode):
@@ -43,41 +43,3 @@ class BasicNode(Node, ABC):  # Inherits from both Node and ABC
     def IsValidInput(self, inp):
         """Check if an input is valid. Must be overridden by subclasses."""
         pass
-
-    # def ProcessBatch(self):
-    #     """
-    #     Process the next batch of inputs. If `inclusive` is True, the node's new value
-    #     is appended to the inputs at the beginning and used in the next batch.
-    #     If the number of inputs is less than `batchSize`, finish the calculation early.
-    #     """
-    #     if self.midCalculation:
-    #         # Insert the node's value at the start of the inputs if inclusive
-    #         if self.inclusive:
-    #             self.inputs.insert(0, self.value)
-
-    #         # Check if there are enough inputs to process a batch
-    #         if len(self.inputs) < self.batchSize:
-    #             self.midCalculation = False  # Not enough inputs, finish calculation
-    #             return
-
-    #         # Process the batch
-    #         batch = self.inputs[:self.batchSize]
-    #         self.value = self.Operation(*batch)
-    #         self.inputs = self.inputs[self.batchSize:]  # Remove processed inputs
-
-    #         if not self.inputs:
-    #             self.midCalculation = False  # Finished processing all inputs
-    #     else:
-    #         # Start processing the first batch
-    #         if self.inputs:
-    #             # Check if there are enough inputs to process a batch
-    #             if len(self.inputs) < self.batchSize:
-    #                 self.midCalculation = False  # Not enough inputs, finish calculation
-    #                 return
-
-    #             batch = self.inputs[:self.batchSize]
-    #             self.value = self.Operation(*batch)
-    #             self.inputs = self.inputs[self.batchSize:]  # Remove processed inputs
-
-    #             if self.inputs:
-    #                 self.midCalculation = True  # Set mid-calculation for remaining inputs
