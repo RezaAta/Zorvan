@@ -8,9 +8,6 @@ class SubtractionNode(BasicNode):
         self.inclusive = True
 
     def Operation(self, a, b):
-        """
-        Perform Sum on the given inputs. Ensure inputs length matches inputCount.
-        """
         return a - b
 
     def IsValidInput(self, input):
