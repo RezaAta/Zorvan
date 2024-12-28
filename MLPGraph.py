@@ -94,6 +94,7 @@ class MLPGraph(Graph):
     
     def PrepareForTest(self, xTest:list , yTest:list):
         self.FlushNetwork()
+        self.ResetWeightInputs()
         self.LoadData(xTest, yTest)
         self._MountPredictionBuffers(predictionSize = len(xTest[0]))
 
