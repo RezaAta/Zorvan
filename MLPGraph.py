@@ -6,12 +6,12 @@ from AdditionNode import AdditionNode
 from MultiplicationNode import MultiplicationNode
 from SigmoidNode import SigmoidNode
 from DataStreamNode import DataStreamNode
-from DisplayNode import DisplayNode
+from LinearNode import LinearNode
 from MeanSquaredErrorNode import MeanSquaredErrorNode  # Import the node for calculating error
 from SubtractionNode import SubtractionNode  # Import the node for calculating error
 
 class MLPGraph(Graph):
-    def __init__(self, numInputs, numOutputs, numHiddenLayers, activationFunction=SigmoidNode, hiddenLayerSizes=None, outputLayerType = DisplayNode):
+    def __init__(self, numInputs, numOutputs, numHiddenLayers, activationFunction=SigmoidNode, hiddenLayerSizes=None, outputLayerType = LinearNode):
         super().__init__()
         self.numInputs = numInputs
         self.numOutputs = numOutputs
@@ -155,7 +155,7 @@ class MLPGraph(Graph):
     def _CreateWeightLayers(self):
         """Initialize weight layers with random weights between -1 and 1."""
         def random_weight():
-            # return 1
+            # return 1.0
             return random.uniform(-1, 1)
 
         # First weight layer connects input to the first hidden layer

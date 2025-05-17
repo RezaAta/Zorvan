@@ -1,6 +1,6 @@
 from BasicNode import BasicNode
 
-class DisplayNodeDerivative(BasicNode):
+class LinearNodeDerivative(BasicNode):
     def __init__(self, name: str = "", value = 0):
         super().__init__(name, value)
         self.inputCount = 1

@@ -8,6 +8,7 @@ from sklearn.metrics import precision_score, recall_score, f1_score
 import numpy as np
 import matplotlib.pyplot as plt
 from ReLUNode import ReLUNode
+from LinearNode import LinearNode
 from SigmoidNode import SigmoidNode
 
 
