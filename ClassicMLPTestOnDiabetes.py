@@ -40,31 +40,29 @@ def ones_initializer(shape, dtype=None):
 # Define the model with weights initialized to 1
 model = Sequential([
     Dense(8, activation='sigmoid', input_shape=(X_train.shape[1],), 
-          kernel_initializer=ones_initializer, use_bias = False),
+          kernel_initializer=ones_initializer, use_bias=False),
     Dense(4, activation='sigmoid', 
-          kernel_initializer=ones_initializer, use_bias = False),
+          kernel_initializer=ones_initializer, use_bias=False),
     Dense(2, activation='sigmoid', 
-          kernel_initializer=ones_initializer, use_bias = False),
+          kernel_initializer=ones_initializer, use_bias=False),
     Dense(1, activation='linear', 
-          kernel_initializer=ones_initializer, use_bias = False)
+          kernel_initializer=ones_initializer, use_bias=False)
 ])
 
 # Compile the model with SGD optimizer (no momentum, similar to your code)
 optimizer = SGD(learning_rate=0.00001)  # Same behavior as your custom backprop
 model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
 
-# Train the model and capture the history
-history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=500 , batch_size=1)
+# Train the model (without validation data)
+history = model.fit(X_train, y_train, epochs=500, batch_size=1)
 
-# Evaluate the model
+# Evaluate the model on the test set
 loss, mae = model.evaluate(X_test, y_test)
 print(f"Test Loss (MSE): {loss:.4f}, Test MAE: {mae:.4f}")
 
-
-# Plot training and validation loss
+# Plot training loss
 plt.plot(history.history['loss'], label='Training Loss (MSE)')
-# plt.plot(history.history['val_loss'], label='Validation Loss (MSE)')
-plt.title('Loss Curve')
+plt.title('Training Loss Curve')
 plt.xlabel('Epochs')
 plt.ylabel('Loss (MSE)')
 plt.legend()
