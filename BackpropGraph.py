@@ -2,7 +2,6 @@ from Graph import Graph
 from MultiplicationNode import MultiplicationNode
 from AdditionNode import AdditionNode
 from DisplayNode import DisplayNode
-from SigmoidDerivativeNode import SigmoidDerivativeNode  # Import custom derivative node
 from BufferNode import BufferNode
 
 class BackpropGraph(Graph):
@@ -38,19 +37,61 @@ class BackpropGraph(Graph):
         self.AddNode(self.lrNode)
 
     def _CreateGradientLayers(self):
-        """Create gradient layers for backpropagation, handling both the output and hidden layers."""
+        self._CreateOutputGradientLayer()
+        self._CreateHiddenGradientLayer()
+
+    def _CreateHiddenGradientLayer(self):
+        for layerNum in range(len(self.hiddenLayers) - 1, -1, -1):
+            layerErrorGradients = []
+            layerLrMultiplications = []
+
+            for n in range(len(self.hiddenLayers[layerNum])):
+                # Derivative node for hidden activation
+                dervativeNodeType = self.hiddenLayers[layerNum][n][1].derivative
+                hiddenDerivNode = dervativeNodeType(name=f"D_H{layerNum}N{n}")
+                hiddenDerivNode.AddPreNode(self.hiddenLayers[layerNum][n][2]) #Adding the buffer node of the layer as the prenode
+                
+                # Error gradient for hidden layer node
+                hiddenErrorGradNode = MultiplicationNode(name=f"EG_H{layerNum}N{n}")
+                hiddenErrorGradNode.AddPreNode(hiddenDerivNode)
+
+                # Sum of weighted gradients from the next layer
+                weightedGradientSum = AdditionNode(name=f"WGS_H{layerNum}N{n}")
+                weightedGradientSum.forcedBatchProcessing = True
+
+                layersAhead = (len(self.hiddenLayers) + 2) - (layerNum + 2)
+                
+                # Collect gradients from connected nodes in the next layer
+                nextLayer = self.errorGradientLayers[0] if layerNum == len(self.hiddenLayers) - 1 else self.errorGradientLayers[1]
+                for k, gradientNode in enumerate(nextLayer):
+                    weightNode = self.weightLayers[layerNum + 1][n][k]
+                    weightNodeBuffer = BufferNode(name = f"WNBuff_H{layerNum}WN{n}K{k}", size = (layersAhead*6)-1)
+                    weightNodeBuffer.AddPreNode(weightNode)
+
+                    weightedGradient = MultiplicationNode(name=f"WG_H{layerNum}N{n}W{k}")
+                    weightedGradient.AddPreNode(weightNodeBuffer)
+                    weightedGradient.AddPreNode(gradientNode)
+                    weightedGradientSum.AddPreNode(weightedGradient)
+                    self.AddNode(weightedGradient, weightNodeBuffer)
+                
+                hiddenErrorGradNode.AddPreNode(weightedGradientSum)
+
+                # LR multiplier for hidden gradient
+                lrMultNode = MultiplicationNode(name=f"LRMult_H{layerNum}N{n}")
+                lrMultNode.AddPreNode(self.lrNode)
         
-        # Create gradient layer for the output layer
+                layerErrorGradients.append(hiddenErrorGradNode)
+                layerLrMultiplications.append(lrMultNode)
+                
+                self.AddNode(hiddenDerivNode, hiddenErrorGradNode, weightedGradientSum, lrMultNode)
+                
+            self.errorGradientLayers.insert(0, layerErrorGradients)
+            self.lrMultiplicationNodes.insert(0, layerLrMultiplications)
+
+    def _CreateOutputGradientLayer(self):
         outputErrorGradients = []
         outputLrMultiplications = []
 
-        # for i in range(len(self.errorLayer)):
-        #     self.AddNode(self.errorLayer[i])
-            # delayNode = DisplayNode(name = f"e{i}")
-            # delayNode.AddPreNode(self.errorLayer[i])
-            # self.AddNode(delayNode)
-            # self.errorBuffer.append(delayNode)
-        
         for i, (outputAddNode, outputActNode) in enumerate(self.outputLayer):
             # Derivative node for the activation function
             dervativeNodeType = outputActNode.derivative
@@ -71,56 +112,6 @@ class BackpropGraph(Graph):
         
         self.errorGradientLayers.insert(0, outputErrorGradients)
         self.lrMultiplicationNodes.insert(0, outputLrMultiplications)
-        
-        # Create gradient layers for each hidden layer in reverse order
-        for layerNum in range(len(self.hiddenLayers) - 1, -1, -1):
-            layerErrorGradients = []
-            layerLrMultiplications = []
-
-            for n in range(len(self.hiddenLayers[layerNum])):
-                # Derivative node for hidden activation
-                dervativeNodeType = self.hiddenLayers[layerNum][n][1].derivative
-                hiddenDerivNode = dervativeNodeType(name=f"D_H{layerNum}N{n}")
-                hiddenDerivNode.AddPreNode(self.hiddenLayers[layerNum][n][2]) #Adding the buffer node of the layer as the prenode
-                
-                # Error gradient for hidden layer node
-                hiddenErrorGradNode = MultiplicationNode(name=f"EG_H{layerNum}N{n}")
-                hiddenErrorGradNode.AddPreNode(hiddenDerivNode)
-                
-                # Sum of weighted gradients from the next layer
-                weightedGradientSum = AdditionNode(name=f"WGS_H{layerNum}N{n}")
-                weightedGradientSum.forcedBatchProcessing = True
-
-                layersAhead = (len(self.hiddenLayers) + 2) - (layerNum + 2)
-                
-                # Collect gradients from connected nodes in the next layer
-                nextLayer = self.errorGradientLayers[0] if layerNum == len(self.hiddenLayers) - 1 else self.errorGradientLayers[1]
-                for k, gradientNode in enumerate(nextLayer):
-                    weightNode = self.weightLayers[layerNum + 1][n][k]
-                    weightNodeBuffer = BufferNode(name = f"WNBuff_H{layerNum}WN{n}K{k}", size = (layersAhead*6)-1)
-                    # weightNodeBuffer = BufferNode(name = f"WNBuff_H{layerNum}WN{n}K{k}", size = 6)
-                    weightNodeBuffer.AddPreNode(weightNode)
-
-                    weightedGradient = MultiplicationNode(name=f"WG_H{layerNum}N{n}W{k}")
-                    weightedGradient.AddPreNode(weightNodeBuffer)
-                    weightedGradient.AddPreNode(gradientNode)
-                    weightedGradientSum.AddPreNode(weightedGradient)
-                    self.AddNode(weightedGradient, weightNodeBuffer)
-                
-                hiddenErrorGradNode.AddPreNode(weightedGradientSum)
-                
-                # LR multiplier for hidden gradient
-                lrMultNode = MultiplicationNode(name=f"LRMult_H{layerNum}N{n}")
-                lrMultNode.AddPreNode(hiddenErrorGradNode)
-                lrMultNode.AddPreNode(self.lrNode)
-                
-                layerErrorGradients.append(hiddenErrorGradNode)
-                layerLrMultiplications.append(lrMultNode)
-                
-                self.AddNode(hiddenDerivNode, hiddenErrorGradNode, weightedGradientSum, lrMultNode)
-                
-            self.errorGradientLayers.insert(0, layerErrorGradients)
-            self.lrMultiplicationNodes.insert(0, layerLrMultiplications)
     
     def _CreateWeightRecalculationLayers(self):
         """Create weight recalculation nodes to update weights based on the gradients."""
@@ -135,9 +126,6 @@ class BackpropGraph(Graph):
                     layerBufferNode = (self.inputLayer[i][1] if layerNum == 0
                                     else self.hiddenLayers[layerNum - 1][i][2])  # Activation node's buffer
                     
-                    # singleDelay = DisplayNode(f"dwDelay_L{layerNum}_W{i}{j}")
-                    # singleDelay.AddPreNode(layerBufferNode)
-
                     # Multiply gradient input with the error gradient scaled by learning rate
                     lrMultiplicationNode = self.lrMultiplicationNodes[layerNum][j]  # Use corresponding LR multiplication node
                     dW = MultiplicationNode(name=f"dw_L{layerNum}_W{i}{j}")
