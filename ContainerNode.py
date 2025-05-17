@@ -11,7 +11,7 @@ class ContainerNode(BasicNode):
         """
         Perform Sum on the given inputs. Ensure inputs length matches inputCount.
         """
-        return self.value - i
+        return (self.value - i)
 
     def IsValidInput(self, input):
         """
