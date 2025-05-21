@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: ComputationalGraphs
+Version: 0.1.0
+Summary: A python package to create and run computational graphs.
+Home-page: https://github.com/RezaAta/ComputationalGraphs.git
+Author: Reza Ataei
+Author-email: reza.a1999@yahoo.com
+Requires-Python: >=3.6
+Dynamic: author
+Dynamic: author-email
+Dynamic: home-page
+Dynamic: requires-python
+Dynamic: summary
