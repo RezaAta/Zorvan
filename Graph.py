@@ -156,7 +156,7 @@ class Graph:
     
     def DisplayGraph(self, fileName = "ComputationalGraph"):
         """Visualize the MLP graph in a left-to-right layout using Graphviz."""
-        dot = Digraph(format='png')
+        dot = Digraph(format='svg')
         dot.attr(rankdir='LR')  # Set the layout to be left-to-right
         for node in self.nodes:
             dot.node(node.name, label=f"{node.name}\n({type(node).__name__})\n{node.value}")
