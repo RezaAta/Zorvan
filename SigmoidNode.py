@@ -1,4 +1,4 @@
-import math
+import numpy as np
 from BasicNode import BasicNode
 from SigmoidDerivativeNode import SigmoidDerivativeNode
 class SigmoidNode(BasicNode):
@@ -10,7 +10,7 @@ class SigmoidNode(BasicNode):
         self.derivative = SigmoidDerivativeNode
 
     def Operation(self, x):
-        return 1 / (1 + math.exp(-x))
+        return (1 / (1 + np.exp(-x)))
 
     def IsValidInput(self, inp):
         """
