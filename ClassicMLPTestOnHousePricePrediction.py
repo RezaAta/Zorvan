@@ -28,6 +28,10 @@ mlp = ClassicMLP(
 # Create and train the MLP
 errors = mlp.train(X_train, y_train, epochs=100, batch_size=1)
 
+# Evaluate the model
+mae = mlp.evaluate(X_test, y_test)
+print(f"Test MAE: {mae:.4f}")
+
 # Plot the error over epochs
 plt.plot(range(len(errors)), errors)
 plt.title("Error over Epochs for California Housing (MLP with ReLU and Mini-Batching)")
@@ -35,7 +39,4 @@ plt.xlabel("Epoch")
 plt.ylabel("Mean Squared Error")
 plt.show()
 
-# Evaluate the model on the test set
-predictions = mlp.forward(X_test)
-mse = np.mean((y_test - predictions)**2)
-print(f"Mean Squared Error on Test Set: {mse:.4f}")
+

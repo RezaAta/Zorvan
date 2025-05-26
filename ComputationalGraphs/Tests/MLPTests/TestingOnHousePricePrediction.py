@@ -8,6 +8,7 @@ from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from ComputationalGraphs.Nodes.LinearNode import LinearNode
 from sklearn.preprocessing import StandardScaler
 
 # Load Diabetes Dataset
@@ -50,8 +51,10 @@ mlpGraph = MLPGraph(
     numOutputs=1,
     numHiddenLayers=3,
     hiddenLayerSizes=[8, 4, 2],
-    activationFunction=SigmoidNode  # Use ReLU activation for hidden layers
+    activationFunction=SigmoidNode,  # Use ReLU activation for hidden layers
+    outputLayerType=LinearNode
 )
+
 mlpGraph.BuildMLP()
 
 backprop_graph = BackpropGraph(mlpGraph, learningRate=0.00001)
@@ -81,7 +84,7 @@ mlpProcessor.ComputeGraphSingleThread(networkLength)
 
 # Training
 fakeBatchSize = 1
-epochs = 10 
+epochs = 50
 numberOfIterationsInEpochs = len(X_train[0])
 totalIterations = epochs * numberOfIterationsInEpochs * fakeBatchSize
 MSEOverEpochs = []
