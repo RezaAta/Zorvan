@@ -31,6 +31,7 @@ ComputationalGraphs/Nodes/SigmoidDerivativeNode.py
 ComputationalGraphs/Nodes/SigmoidNode.py
 ComputationalGraphs/Nodes/SubtractionNode.py
 ComputationalGraphs/Nodes/__init__.py
+ComputationalGraphs/Tests/DrawioIOTesting.py
 ComputationalGraphs/Tests/MultiThreadTest.py
 ComputationalGraphs/Tests/MultiThreadTestForComputaionalGraph.py
 ComputationalGraphs/Tests/TestingForcedBatchProcessing.py
