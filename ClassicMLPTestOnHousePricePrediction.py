@@ -26,7 +26,7 @@ mlp = ClassicMLP(
     use_bias=False
 )
 # Create and train the MLP
-errors = mlp.train(X_train, y_train, epochs=100, batch_size=1)
+errors = mlp.train(X_train, y_train, epochs=50, batch_size=1)
 
 # Evaluate the model
 mae = mlp.evaluate(X_test, y_test)
