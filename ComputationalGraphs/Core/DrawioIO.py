@@ -2,37 +2,29 @@ import xml.etree.ElementTree as ET
 import subprocess
 import inspect
 from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.Nodes.AbstractNode import AbstractNode
-from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
-from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.LinearNodeDerivative import LinearNodeDerivative
-from ComputationalGraphs.Nodes.MeanSquaredErrorNode import MeanSquaredErrorNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
-from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
-from ComputationalGraphs.Nodes.SigmoidDerivativeNode import SigmoidDerivativeNode
-from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
+from ComputationalGraphs.Nodes import *
 
 # Map draw.io node_type attribute to Python classes
 NODE_TYPE_MAP = {
-    'AdditionNode': AdditionNode,
-    'DataStreamNode': DataStreamNode,
-    'DisplayNode': DisplayNode,
-    'AbstractNode': AbstractNode,
-    'CompressedNode': CompressedNode,
-    'ContainerNode': ContainerNode,
-    'LinearNode': LinearNode,
-    'LinearNodeDerivative': LinearNodeDerivative,
-    'MeanSquaredErrorNode': MeanSquaredErrorNode,
-    'MultiplicationNode': MultiplicationNode,
-    'ReLUNode': ReLUNode,
-    'SigmoidNode': SigmoidNode,
-    'SigmoidDerivativeNode': SigmoidDerivativeNode,
-    'SubtractionNode': SubtractionNode,
+    'Addition': AdditionNode,
+    'DataStream': DataStreamNode,
+    'Display': DisplayNode,
+    'Abstract': AbstractNode,
+    'Compressed': CompressedNode,
+    'Container': ContainerNode,
+    'Linear': LinearNode,
+    'LinearDerivative': LinearNodeDerivative,
+    'MeanSquaredError': MeanSquaredErrorNode,
+    'Multiplication': MultiplicationNode,
+    'ReLU': ReLUNode,
+    'Sigmoid': SigmoidNode,
+    'SigmoidDerivative': SigmoidDerivativeNode,
+    'Subtraction': SubtractionNode,
+    'PiecewiseLinear': PiecewiseLinearNode,
+    'Min': MinNode,
+    'Max': MaxNode,
+    'Gaussian': GaussianNode,
+    'Division': DivisionNode,
 }
 
 
