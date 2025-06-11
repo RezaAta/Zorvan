@@ -7,6 +7,7 @@ ComputationalGraphs.egg-info/dependency_links.txt
 ComputationalGraphs.egg-info/top_level.txt
 ComputationalGraphs/Core/BackpropGraph.py
 ComputationalGraphs/Core/BufferNode.py
+ComputationalGraphs/Core/DrawioIO.py
 ComputationalGraphs/Core/Graph.py
 ComputationalGraphs/Core/GraphProcessor.py
 ComputationalGraphs/Core/MLPGraph.py
@@ -20,11 +21,16 @@ ComputationalGraphs/Nodes/CompressedNode.py
 ComputationalGraphs/Nodes/ContainerNode.py
 ComputationalGraphs/Nodes/DataStreamNode.py
 ComputationalGraphs/Nodes/DisplayNode.py
+ComputationalGraphs/Nodes/DivisionNode.py
+ComputationalGraphs/Nodes/GaussianNode.py
 ComputationalGraphs/Nodes/LinearNode.py
 ComputationalGraphs/Nodes/LinearNodeDerivative.py
+ComputationalGraphs/Nodes/MaxNode.py
 ComputationalGraphs/Nodes/MeanSquaredErrorNode.py
+ComputationalGraphs/Nodes/MinNode.py
 ComputationalGraphs/Nodes/MultiplicationNode.py
 ComputationalGraphs/Nodes/Node.py
+ComputationalGraphs/Nodes/PiecewiseLinearNode.py
 ComputationalGraphs/Nodes/ReLUDerivativeNode.py
 ComputationalGraphs/Nodes/ReLUNode.py
 ComputationalGraphs/Nodes/SigmoidDerivativeNode.py
@@ -36,6 +42,8 @@ ComputationalGraphs/Tests/MultiThreadTest.py
 ComputationalGraphs/Tests/MultiThreadTestForComputaionalGraph.py
 ComputationalGraphs/Tests/TestingForcedBatchProcessing.py
 ComputationalGraphs/Tests/__init__.py
+ComputationalGraphs/Tests/FuzzySytemTests/TempreatureControlExample.py
+ComputationalGraphs/Tests/FuzzySytemTests/__init__.py
 ComputationalGraphs/Tests/MLPTests/1x1x1Test.py
 ComputationalGraphs/Tests/MLPTests/TestingOnDiabetes.py
 ComputationalGraphs/Tests/MLPTests/TestingOnHousePricePrediction.py
