@@ -1,4 +1,4 @@
-from ComputationalGraphs.Core.BufferNode import BufferNode
+from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode

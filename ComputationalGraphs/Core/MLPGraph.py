@@ -1,6 +1,6 @@
 import random
 from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.BufferNode import BufferNode
+from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode

@@ -2,7 +2,7 @@ from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.Core.BufferNode import BufferNode
+from ComputationalGraphs.Nodes.BufferNode import BufferNode
 
 class BackpropGraph(Graph):
     def __init__(self, mlpGraph, learningRate=0.01):
