@@ -1,9 +1,10 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
+from copy import deepcopy
 
 class BufferNode(BasicNode):
     def __init__(self, name: str = "", data=None, size: int = 1):
         super().__init__(name, 0)
-        self.buffer = data if data else []  # Start with given data or an empty list
+        self.buffer = list(data) if data is not None else [None] * size  # Start with given data or a list of None of length size
         self.bufferSize = max(size, len(self.buffer))  # Set buffer size based on max of size or initial data length
         self.value = self.buffer[0] if self.buffer else None
         self.batchSize = 1
@@ -15,7 +16,8 @@ class BufferNode(BasicNode):
 
     def Operation(self, input):
         """Add new input to buffer and maintain size constraint."""
-        self.buffer.append(input)
+        item = deepcopy(input)
+        self.buffer.append(item)
         if len(self.buffer) > self.bufferSize:
             self.buffer.pop(0)
 
