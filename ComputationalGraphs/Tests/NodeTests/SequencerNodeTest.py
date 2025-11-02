@@ -1,9 +1,9 @@
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
-from ComputationalGraphs.Nodes.DynamicBuffer import DynamicBuffer
+from ComputationalGraphs.Nodes.SequencerNode import SequencerNode
 
-dynamicBufferNode = DynamicBuffer("Dynamic Buffer")
+dynamicBufferNode = SequencerNode("Dynamic Buffer")
 datastreamNode1 = DataStreamNode(name = "data 1", data = [1,2,3,4,5])
 datastreamNode2 = DataStreamNode(name = "data 2", data = [1,2,3,4,5])
 datastreamNode3 = DataStreamNode(name = "data 3", data = [1,2,3,4,5])

@@ -1,6 +1,6 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 
-class DynamicBuffer(BasicNode):
+class SequencerNode(BasicNode):
     def __init__(self, name: str = "", data=None):
         super().__init__(name, 0)
         self.buffer = data if data else []  # Start with given data or an empty list
@@ -12,7 +12,7 @@ class DynamicBuffer(BasicNode):
     def ResetValue(self):
         self.buffer.clear()
         self.value = 0
-
+    # This node can take multiple inputs, streamline them inside a buffer, and output them one by one in each iteration.
     def Operation(self, input):
         # if input is not None:
         if not self.midCalculation and not len(self.buffer) == 0:
