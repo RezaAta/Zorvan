@@ -40,7 +40,8 @@ def evolve(
         best_idx = min(range(len(fitnesses)), key=lambda i: fitnesses[i])
         print(f"Gen {gen}: Best Fitness = {fitnesses[best_idx]:.4f}")
 
-        new_population = [population[best_idx]]  # elitism
+        # new_population = [population[best_idx]]  # elitism
+        new_population = []  # No elitism
         while len(new_population) < pop_size:
             p1, p2 = tournament_selection(population, fitnesses)
             c1, c2 = crossover(p1, p2, crossover_rate)
