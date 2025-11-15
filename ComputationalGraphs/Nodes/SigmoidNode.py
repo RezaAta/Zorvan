@@ -14,6 +14,6 @@ class SigmoidNode(BasicNode):
 
     def IsValidInput(self, inp):
         """
-        Check if the input is valid for multiplication (must be a number).
+        Check if the input is valid for sigmoid (must be a number, including numpy types).
         """
-        return isinstance(inp, (int, float))
+        return isinstance(inp, (int, float, np.integer, np.floating))

@@ -25,7 +25,12 @@ class SingleInputCrossover(BasicNode):  # Inherits from both Node and ABC
                     self.selectedPopulation.clear()
                     if random.random() > self.rate:
                         return [p1[:], p2[:]]
-                    point = random.randint(1, len(p) - 1)
+                    # Use the actual parent length, ensure it's valid
+                    parent_len = len(p1)
+                    if parent_len < 2:
+                        # If genome is too short, just return copies
+                        return [p1[:], p2[:]]
+                    point = random.randint(1, parent_len - 1)
                     return [p1[:point] + p2[point:], p2[:point] + p1[point:]]
                 
                 else:

@@ -10,6 +10,7 @@ from ComputationalGraphs.Nodes.LinearNode import LinearNode
 from ComputationalGraphs.Nodes.LinearNodeDerivative import LinearNodeDerivative
 from ComputationalGraphs.Nodes.MaxNode import MaxNode
 from ComputationalGraphs.Nodes.MinNode import MinNode
+from ComputationalGraphs.Nodes.MovingAverageNode import MovingAverageNode
 from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 from ComputationalGraphs.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
 from ComputationalGraphs.Nodes.MeanSquaredErrorNode import MeanSquaredErrorNode
@@ -33,6 +34,7 @@ __all__ = [
     "LinearNodeDerivative",
     "MaxNode",
     "MinNode",
+    "MovingAverageNode",
     "MultiplicationNode",
     "PiecewiseLinearNode",
     "MeanSquaredErrorNode",

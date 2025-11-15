@@ -15,9 +15,10 @@ class AdditionNode(BasicNode):
 
     def IsValidInput(self, input):
         """
-        Check if inputs are valid for addition (e.g., must be numbers).
+        Check if inputs are valid for addition (must be numbers, including numpy types).
         """
-        return isinstance(input, (int, float))
+        import numpy as np
+        return isinstance(input, (int, float, np.integer, np.floating))
     def ProcessBatch(self):
         if (len(self.inputs) == 1) and (self.midCalculation is False):
             self.value = self.Operation(0,self.inputs[0])

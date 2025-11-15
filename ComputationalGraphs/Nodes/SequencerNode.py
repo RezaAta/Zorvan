@@ -19,7 +19,14 @@ class SequencerNode(BasicNode):
             self.buffer.pop(0)
         
         if input is not None:
-            self.buffer.append(input)
+            # If input is a list of lists (multiple genomes/individuals), extend to add each
+            # If input is a single list (one genome/individual) or other type, append as-is
+            if isinstance(input, list) and len(input) > 0 and isinstance(input[0], list):
+                # List of lists - extend to add each individual
+                self.buffer.extend(input)
+            else:
+                # Single item (could be a genome, which is a list) - append as single unit
+                self.buffer.append(input)
     
         if len(self.buffer) == 0:
             return None
