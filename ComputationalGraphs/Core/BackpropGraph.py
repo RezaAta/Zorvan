@@ -78,7 +78,7 @@ class BackpropGraph(Graph):
 
                 # LR multiplier for hidden gradient
                 lrMultNode = MultiplicationNode(name=f"LRMult_H{layerNum}N{n}")
-                lrMultNode.AddPreNode(self.lrNode)
+                lrMultNode.AddPreNode(hiddenErrorGradNode, self.lrNode)  # FIXED: Connect EG -> LRMult
         
                 layerErrorGradients.append(hiddenErrorGradNode)
                 layerLrMultiplications.append(lrMultNode)

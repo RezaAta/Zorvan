@@ -26,6 +26,9 @@ class MLPGraph(Graph):
         self.outputLayer = []
         self.hiddenLayers = []
         self.weightLayers = []  # Separate layers for weights to facilitate weight management
+        # Graph-level stopping nodes: nodes that should not self-initiate cycles
+        # (used by forward-processing scheduler). Populate with weight ContainerNodes.
+        self.stopping_nodes = []
         self.labelLayer = []
         self.errorLayer = []
 
@@ -43,6 +46,14 @@ class MLPGraph(Graph):
         self._ConnectHiddenLayers()
         self._ConnectOutputLayer()
         self.UpdateAdjacencyMatrix()
+        
+        # Set starting nodes for execution
+        # Input stream nodes + label stream nodes are the entry points
+        self.starting_nodes = []
+        for input_buffer_pair in self.inputLayer:
+            self.starting_nodes.append(input_buffer_pair[0])  # DataStreamNode
+        for label_node in self.labelLayer:
+            self.starting_nodes.append(label_node)  # DynamicDataStreamNode
 
     def LoadData(self, inputData, labelsData):
         if len(inputData) != self.numInputs:
@@ -167,6 +178,7 @@ class MLPGraph(Graph):
         for row in weightLayer:
             for weightNode in row:
                 self.AddNode(weightNode)
+                self.stopping_nodes.append(weightNode)
 
         # Weight layers between hidden layers
         for layerNum in range(self.numHiddenLayers - 1):
@@ -177,6 +189,7 @@ class MLPGraph(Graph):
             for row in weightLayer:
                 for weightNode in row:
                     self.AddNode(weightNode)
+                    self.stopping_nodes.append(weightNode)
 
         # Last weight layer connects the last hidden layer to the output layer
         lastHiddenLayerSize = self.hiddenLayerSizes[-1]
@@ -187,6 +200,7 @@ class MLPGraph(Graph):
         for row in weightLayer:
             for weightNode in row:
                 self.AddNode(weightNode)
+                self.stopping_nodes.append(weightNode)
 
     def _CreateLabelLayer(self):
         """Create the label layer with DataStreamNodes for expected output values."""

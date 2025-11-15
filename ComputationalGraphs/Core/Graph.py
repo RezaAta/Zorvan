@@ -9,6 +9,7 @@ class Graph:
         self.nodes = []  # List to hold nodes
         self.adjacencyMatrix = []  # Adjacency matrix for node connections
         self.idToNodeDictionary = {}  # Map node ids to node objects
+        self.starting_nodes = []  # Entry points for graph execution (e.g., input nodes)
         
         # Counters for the first naming convention
         self.abstract_counter = 1
@@ -193,6 +194,22 @@ class Graph:
         for node in self.nodes:
             node.ResetValue()
 
+    def BuildSuccessorMap(self):
+        """
+        Build a dictionary mapping each node to its list of successor nodes.
+        A successor is any node that has this node as a predecessor.
+        
+        Returns:
+            dict: {node: [list of successor nodes]}
+        """
+        successor_map = {node: [] for node in self.nodes}
+        
+        for node in self.nodes:
+            for predecessor in node.predecessors:
+                if predecessor in successor_map:
+                    successor_map[predecessor].append(node)
+        
+        return successor_map
 
     # any node that old nodes are in its pred list
     # put the new abstract node in its pred list
