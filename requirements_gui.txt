@@ -1,0 +1,3 @@
+# GUI Requirements for ComputationalGraphs
+PyQt6>=6.4.0
+networkx>=2.8.0  # For automatic layout algorithms
