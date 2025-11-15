@@ -1,10 +1,29 @@
 import numpy as np
 
 class ClassicMLP:
-    def __init__(self, input_size, output_size, hidden_layers, hidden_activation="sigmoid", output_activation="linear", learning_rate=0.001, initial_weight=None, use_bias=True):
+    def __init__(self, input_size, output_size, hidden_layers=None, num_hidden_layers=1, hidden_activation="sigmoid", output_activation="linear", learning_rate=0.001, initial_weight=None, use_bias=True):
+        """
+        Initialize Classic MLP with flexible hidden layer architecture.
+        
+        Args:
+            input_size: Number of input features
+            output_size: Number of output neurons
+            hidden_layers: List specifying neurons per hidden layer (e.g., [10, 5, 3])
+                          If None, will create num_hidden_layers with input_size neurons each
+            num_hidden_layers: Number of hidden layers (only used if hidden_layers=None)
+            hidden_activation: Activation function for hidden layers ("sigmoid", "relu", "linear")
+            output_activation: Activation function for output layer
+            learning_rate: Learning rate for gradient descent
+            initial_weight: If specified, initialize all weights to this value (for testing)
+            use_bias: Whether to use bias terms
+        """
         self.input_size = input_size
         self.output_size = output_size
-        self.hidden_layers = hidden_layers
+        # Support both old API (hidden_layers as list) and new flexible API
+        if hidden_layers is not None:
+            self.hidden_layers = hidden_layers if isinstance(hidden_layers, list) else [hidden_layers] * num_hidden_layers
+        else:
+            self.hidden_layers = [input_size] * num_hidden_layers
         self.hidden_activation = hidden_activation
         self.output_activation = output_activation
         self.learning_rate = learning_rate
