@@ -1,5 +1,19 @@
 # ComputationalGraphs - AI Coding Agent Instructions
 
+## Agent Guidance for Copilot
+
+These quick, actionable rules are intended for AI coding assistants (Copilot/agents) working on this repository.
+
+- **Respect Node-Centric Design:** Prefer fixes that preserve the node-as-actor philosophy. Avoid refactoring that converts node logic into large centralized operations.
+- **Small, Focused Edits:** Make minimal, surgical changes. Fix root causes where practical, but avoid unrelated refactors.
+- **Don't change buffer timing lightly:** Buffer sizing and timing (e.g., `(layersAhead * 6)`) are delicate — do not modify buffer formulas without understanding timing and testing consequences.
+- **Forward processing is preferred for training:** If making changes that affect training stability, consider the forward-processing implementation first (see `MLPGraphForwardProcessing.py`).
+- **Mark ContainerNodes and source nodes carefully:** Forward-processing setup requires marking source nodes and `ContainerNode`s as processed for the initial forward pass. Preserve or follow `PrepareForForwardProcessing` behavior.
+- **Follow repository editing rules:** Use `apply_patch` for edits, run tests when possible, and keep changes minimal and well-documented.
+- **Testing:** When modifying core graph or backprop code, run the small example tests (e.g., `ClassicMLPTestOnXOR.py`, `CompareThreeApproaches.py`) to validate behavior.
+- **Naming conventions matter:** When programmatically accessing weights, use the `W_x...` / `W_H...` patterns in node names.
+- **Ask before major design changes:** If a change impacts core execution model (concurrent vs forward processing), propose the design and get confirmation before implementing.
+
 ## Research Context & Thesis
 
 This framework proves that **all computational models can be implemented as computational graphs** - a unified framework spanning from simple automata to complex neural networks. The thesis enables:
