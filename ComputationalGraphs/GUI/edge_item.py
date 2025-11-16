@@ -93,6 +93,13 @@ class EdgeItem(QGraphicsPathItem):
     
     def paint(self, painter, option, widget):
         """Paint the edge with an arrow head."""
+        # Choose pen color/width based on selection state
+        pen = QPen(self.pen())
+        if self.isSelected():
+            pen.setColor(QColor(255, 200, 0))  # Yellow when selected
+            pen.setWidth(max(2, pen.width() + 1))
+        painter.setPen(pen)
+
         # Draw the path (the line) but prevent the default dotted selection bbox
         try:
             opt = QStyleOptionGraphicsItem(option)
@@ -100,6 +107,7 @@ class EdgeItem(QGraphicsPathItem):
                 opt.state &= ~QStyle.StateFlag.State_Selected
             except Exception:
                 opt.state &= ~QStyle.State.State_Selected
+            # Use the painter's pen (we already set it) and call base paint
             super().paint(painter, opt, widget)
         except Exception:
             super().paint(painter, option, widget)
@@ -140,11 +148,21 @@ class EdgeItem(QGraphicsPathItem):
             arrow_pos.y() - self.arrow_size * math.sin(angle + math.pi / 6)
         )
         
-        # Draw filled arrow head
+        # Draw filled arrow head using the same selected color
         arrow_head = QPolygonF([arrow_p1, arrow_p2, arrow_p3])
-        painter.setBrush(QBrush(self.pen().color()))
+        painter.setBrush(QBrush(pen.color()))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawPolygon(arrow_head)
+
+    def itemChange(self, change, value):
+        """Handle item changes to update visuals when selection changes."""
+        from PyQt6.QtWidgets import QGraphicsItem
+        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedHasChanged:
+            try:
+                self.update()
+            except Exception:
+                pass
+        return super().itemChange(change, value)
     
     def remove(self):
         """Remove this edge from the scene and unregister from nodes."""
