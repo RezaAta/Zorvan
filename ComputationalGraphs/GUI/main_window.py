@@ -434,6 +434,11 @@ class MainWindow(QMainWindow):
         self.apply_colors_btn = QPushButton("Apply to All Nodes")
         self.apply_colors_btn.clicked.connect(self.apply_node_colors)
         layout.addWidget(self.apply_colors_btn)
+
+        # Apply to selected nodes button
+        self.apply_selected_colors_btn = QPushButton("Apply to Selected")
+        self.apply_selected_colors_btn.clicked.connect(self.apply_node_colors_selected)
+        layout.addWidget(self.apply_selected_colors_btn)
         
         layout.addStretch()
         
@@ -1249,6 +1254,26 @@ class MainWindow(QMainWindow):
             node_item.update()
         
         self.status_bar.showMessage(f"Applied colors to {len(self.canvas.node_items)} nodes")
+
+    def apply_node_colors_selected(self):
+        """Apply selected colors only to currently selected node items on the canvas."""
+        from .node_item import NodeItem
+
+        selected_items = self.canvas.scene.selectedItems()
+        node_items = [item for item in selected_items if isinstance(item, NodeItem)]
+
+        if not node_items:
+            QMessageBox.information(self, "No Selection", "Please select node(s) on the canvas first.")
+            return
+
+        for node_item in node_items:
+            node_item.default_color = self.default_node_color
+            node_item.setBrush(QBrush(self.default_node_color))
+            node_item.label.setDefaultTextColor(self.default_text_color)
+            node_item.value_label.setDefaultTextColor(self.default_text_color)
+            node_item.update()
+
+        self.status_bar.showMessage(f"Applied colors to {len(node_items)} selected node(s)")
     
     def open_plot_window(self):
         """Open the plot configuration dialog and create plot window."""
