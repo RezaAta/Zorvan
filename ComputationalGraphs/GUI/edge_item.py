@@ -107,8 +107,14 @@ class EdgeItem(QGraphicsPathItem):
                 opt.state &= ~QStyle.StateFlag.State_Selected
             except Exception:
                 opt.state &= ~QStyle.State.State_Selected
-            # Use the painter's pen (we already set it) and call base paint
-            super().paint(painter, opt, widget)
+            # Temporarily set the item's pen so QGraphicsPathItem.paint uses our selected color
+            old_pen = self.pen()
+            try:
+                self.setPen(pen)
+                super().paint(painter, opt, widget)
+            finally:
+                # Restore original pen
+                self.setPen(old_pen)
         except Exception:
             super().paint(painter, option, widget)
         
