@@ -2,7 +2,7 @@
 GraphicsItem representation of edges connecting nodes.
 """
 
-from PyQt6.QtWidgets import QGraphicsPathItem
+from PyQt6.QtWidgets import QGraphicsPathItem, QStyleOptionGraphicsItem, QStyle
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QPen, QPainterPath, QColor, QBrush, QPolygonF
 import math
@@ -89,8 +89,16 @@ class EdgeItem(QGraphicsPathItem):
     
     def paint(self, painter, option, widget):
         """Paint the edge with an arrow head."""
-        # Draw the path (the line)
-        super().paint(painter, option, widget)
+        # Draw the path (the line) but prevent the default dotted selection bbox
+        try:
+            opt = QStyleOptionGraphicsItem(option)
+            try:
+                opt.state &= ~QStyle.StateFlag.State_Selected
+            except Exception:
+                opt.state &= ~QStyle.State.State_Selected
+            super().paint(painter, opt, widget)
+        except Exception:
+            super().paint(painter, option, widget)
         
         # Calculate arrow head position and angle
         source_center = self.source_node.scenePos()

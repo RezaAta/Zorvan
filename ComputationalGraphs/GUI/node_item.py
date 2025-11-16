@@ -2,7 +2,7 @@
 GraphicsItem representation of a computational graph node.
 """
 
-from PyQt6.QtWidgets import QGraphicsEllipseItem, QGraphicsTextItem, QGraphicsItem
+from PyQt6.QtWidgets import QGraphicsEllipseItem, QGraphicsTextItem, QGraphicsItem, QStyleOptionGraphicsItem, QStyle
 from PyQt6.QtCore import Qt, QRectF, QPointF
 from PyQt6.QtGui import QBrush, QColor, QPen, QFont, QCursor
 import colorsys
@@ -237,7 +237,19 @@ class NodeItem(QGraphicsEllipseItem):
             # Restore default color when deselected
             self.setBrush(QBrush(self.default_color))
         
-        super().paint(painter, option, widget)
+        # Call base paint but avoid drawing the default selected bounding box
+        try:
+            opt = QStyleOptionGraphicsItem(option)
+            # Clear the Selected state flag so Qt won't draw the dotted bbox
+            try:
+                opt.state &= ~QStyle.StateFlag.State_Selected
+            except Exception:
+                # Fallback for some PyQt6 builds
+                opt.state &= ~QStyle.State.State_Selected
+            super().paint(painter, opt, widget)
+        except Exception:
+            # If anything goes wrong, fall back to default behavior
+            super().paint(painter, option, widget)
         
         # If hovering over edge, draw a highlighted ring
         if self.hover_edge:

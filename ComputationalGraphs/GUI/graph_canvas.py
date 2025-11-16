@@ -112,9 +112,12 @@ class GraphCanvas(QGraphicsView):
     
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts."""
+        # Fit view
         if event.key() == Qt.Key.Key_F:
-            # Fit all nodes in view
             self.fit_all_nodes_in_view()
+        # Delete selected nodes/edges
+        elif event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            self.remove_selected_items()
         else:
             super().keyPressEvent(event)
     
