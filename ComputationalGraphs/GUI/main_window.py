@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (QMainWindow, QToolBar, QStatusBar, QDockWidget,
                              QCheckBox, QColorDialog, QComboBox, QScrollArea, QListWidget,
                              QDialog, QApplication)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QKeySequence, QColor, QBrush
+from PyQt6.QtGui import QAction, QKeySequence, QColor, QBrush, QFont
 
 from .graph_canvas import GraphCanvas
 from .node_palette import NodePalette
@@ -22,11 +22,63 @@ from .plot_window import PlotWindow, PlotConfigDialog
 from ComputationalGraphs.Core.Graph import Graph
 
 
+from PyQt6.QtWidgets import QToolButton, QSizePolicy
+
+
+class CollapsibleSection(QWidget):
+    """A simple collapsible section widget with a header button.
+
+    The header is a checkable QToolButton that toggles visibility of the
+    provided content widget. Keeps layout margins consistent.
+    """
+    def __init__(self, title: str, content_widget: QWidget, expanded: bool = True):
+        super().__init__()
+        self.toggle_button = QToolButton()
+        self.toggle_button.setText(title)
+        self.toggle_button.setCheckable(True)
+        self.toggle_button.setChecked(expanded)
+        self.toggle_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        # Make header occupy the full horizontal width and style the active state
+        self.toggle_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.toggle_button.setStyleSheet(
+            "QToolButton { text-align: left; padding: 6px 8px; border-radius: 6px; font-weight: bold; }"
+            "QToolButton:checked { background-color: #239483; color: white; }"
+        )
+        # Ensure arrow and text align nicely and font weight is clear
+        self.toggle_button.setFont(QFont(self.toggle_button.font().family(), self.toggle_button.font().pointSize(), QFont.Weight.Bold))
+        # Use small arrow to indicate expand/collapse
+        self.toggle_button.setArrowType(Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow)
+
+        self.content = content_widget
+
+        # Layout
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.addWidget(self.toggle_button)
+        v.addWidget(self.content)
+
+        # Connect
+        self.toggle_button.toggled.connect(self.on_toggled)
+
+        # Initial state
+        self.content.setVisible(expanded)
+
+    def on_toggled(self, checked: bool):
+        self.content.setVisible(checked)
+        self.toggle_button.setArrowType(Qt.ArrowType.DownArrow if checked else Qt.ArrowType.RightArrow)
+
+
 class MainWindow(QMainWindow):
     """Main application window for the graph editor."""
     
     def __init__(self):
         super().__init__()
+        # Set a consistent application font for UI (adjustable)
+        try:
+            QApplication.setFont(QFont("Segoe UI", 10))
+        except Exception:
+            # If QApplication not available or font fails, ignore silently
+            pass
         
         self.setWindowTitle("Computational Graphs Visual Editor")
         self.resize(1200, 800)
@@ -79,19 +131,36 @@ class MainWindow(QMainWindow):
         """Create the control panel dock."""
         dock = QDockWidget("Controls", self)
         dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.LeftDockWidgetArea)
-        
+
         # Create a scroll area
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        
+
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        
-        # Execution controls
+
+        # Create section containers
+        exec_container = QWidget()
+        exec_layout = QVBoxLayout(exec_container)
+        exec_layout.setContentsMargins(0, 0, 0, 0)
+
+        viz_container = QWidget()
+        viz_layout = QVBoxLayout(viz_container)
+        viz_layout.setContentsMargins(0, 0, 0, 0)
+
+        layout_container = QWidget()
+        layout_layout = QVBoxLayout(layout_container)
+        layout_layout.setContentsMargins(0, 0, 0, 0)
+
+        plot_container = QWidget()
+        plot_layout = QVBoxLayout(plot_container)
+        plot_layout.setContentsMargins(0, 0, 0, 0)
+
+        # --- Execution controls (includes starting/stopping nodes for forward processing)
         exec_label = QLabel("<b>Execution Controls</b>")
-        layout.addWidget(exec_label)
-        
+        exec_layout.addWidget(exec_label)
+
         # Processor type selection
         processor_layout = QHBoxLayout()
         processor_layout.addWidget(QLabel("Processor:"))
@@ -100,68 +169,61 @@ class MainWindow(QMainWindow):
         self.processor_combo.setCurrentIndex(1)  # Default to Concurrent
         self.processor_combo.currentIndexChanged.connect(self.on_processor_type_changed)
         processor_layout.addWidget(self.processor_combo)
-        layout.addLayout(processor_layout)
-        
+        exec_layout.addLayout(processor_layout)
+
         # Threading mode selection (only for Concurrent mode)
         threading_layout = QHBoxLayout()
         threading_layout.addWidget(QLabel("Threading:"))
         self.threading_combo = QComboBox()
         self.threading_combo.addItems(["Single Thread", "Multi Thread"])
         self.threading_combo.setCurrentIndex(0)
-        self.threading_combo.setEnabled(True)  # Enabled by default (Concurrent is default)
+        self.threading_combo.setEnabled(True)
         self.threading_combo.currentIndexChanged.connect(self.on_threading_mode_changed)
         threading_layout.addWidget(self.threading_combo)
-        layout.addLayout(threading_layout)
-        
+        exec_layout.addLayout(threading_layout)
+
         # Starting nodes management (for Forward Processing)
-        # Wrap in a widget so we can show/hide the entire section
         self.starting_nodes_widget = QWidget()
-        self.starting_nodes_widget.setVisible(False)  # Hidden by default (Concurrent is default)
+        self.starting_nodes_widget.setVisible(False)
         starting_nodes_group = QVBoxLayout(self.starting_nodes_widget)
         starting_nodes_group.setContentsMargins(0, 0, 0, 0)
         starting_nodes_label = QLabel("<b>Starting Nodes</b>")
         starting_nodes_group.addWidget(starting_nodes_label)
-        
+
         # List widget to show starting nodes
         self.starting_nodes_list = QListWidget()
         self.starting_nodes_list.setMaximumHeight(120)
         self.starting_nodes_list.setStyleSheet("QListWidget { background-color: #2a2a2a; border: 1px solid #555; }")
         starting_nodes_group.addWidget(self.starting_nodes_list)
-        
+
         # Buttons for managing starting nodes
         starting_nodes_btn_layout = QHBoxLayout()
-        
         self.add_to_starting_btn = QPushButton("Add Selected")
         self.add_to_starting_btn.setToolTip("Add selected node(s) from canvas to starting nodes list")
         self.add_to_starting_btn.clicked.connect(self.add_selected_to_starting_nodes)
         starting_nodes_btn_layout.addWidget(self.add_to_starting_btn)
-        
+
         self.remove_from_starting_btn = QPushButton("Remove")
         self.remove_from_starting_btn.setToolTip("Remove selected node(s) from starting nodes list")
         self.remove_from_starting_btn.clicked.connect(self.remove_from_starting_nodes)
         starting_nodes_btn_layout.addWidget(self.remove_from_starting_btn)
-        
         starting_nodes_group.addLayout(starting_nodes_btn_layout)
-        
-        # Auto-detect and clear buttons
+
         starting_nodes_btn_layout2 = QHBoxLayout()
-        
         self.auto_detect_starting_btn = QPushButton("Auto-Detect")
         self.auto_detect_starting_btn.setToolTip("Auto-detect nodes with no predecessors")
         self.auto_detect_starting_btn.clicked.connect(self.auto_detect_starting_nodes)
         starting_nodes_btn_layout2.addWidget(self.auto_detect_starting_btn)
-        
+
         self.clear_starting_btn = QPushButton("Clear All")
         self.clear_starting_btn.setToolTip("Clear all starting nodes")
         self.clear_starting_btn.clicked.connect(self.clear_starting_nodes)
         starting_nodes_btn_layout2.addWidget(self.clear_starting_btn)
-        
         starting_nodes_group.addLayout(starting_nodes_btn_layout2)
-        
-        # Add the wrapped widget to main layout
-        layout.addWidget(self.starting_nodes_widget)
-        
-        # Stopping nodes management (repurposed mechanic)
+
+        exec_layout.addWidget(self.starting_nodes_widget)
+
+        # Stopping nodes management
         self.stopping_nodes_widget = QWidget()
         self.stopping_nodes_widget.setVisible(False)
         stopping_nodes_group = QVBoxLayout(self.stopping_nodes_widget)
@@ -169,15 +231,12 @@ class MainWindow(QMainWindow):
         stopping_nodes_label = QLabel("<b>Stopping Nodes</b>")
         stopping_nodes_group.addWidget(stopping_nodes_label)
 
-        # List widget to show stopping nodes
         self.stopping_nodes_list = QListWidget()
         self.stopping_nodes_list.setMaximumHeight(120)
         self.stopping_nodes_list.setStyleSheet("QListWidget { background-color: #2a2a2a; border: 1px solid #555; }")
         stopping_nodes_group.addWidget(self.stopping_nodes_list)
 
-        # Buttons for managing stopping nodes
         stopping_nodes_btn_layout = QHBoxLayout()
-
         self.add_to_stopping_btn = QPushButton("Add Selected")
         self.add_to_stopping_btn.setToolTip("Add selected node(s) from canvas to stopping nodes list")
         self.add_to_stopping_btn.clicked.connect(self.add_selected_to_stopping_nodes)
@@ -187,12 +246,9 @@ class MainWindow(QMainWindow):
         self.remove_from_stopping_btn.setToolTip("Remove selected node(s) from stopping nodes list")
         self.remove_from_stopping_btn.clicked.connect(self.remove_from_stopping_nodes)
         stopping_nodes_btn_layout.addWidget(self.remove_from_stopping_btn)
-
         stopping_nodes_group.addLayout(stopping_nodes_btn_layout)
 
-        # Auto-detect and clear buttons for stopping nodes
         stopping_nodes_btn_layout2 = QHBoxLayout()
-
         self.auto_detect_stopping_btn = QPushButton("Auto-Detect")
         self.auto_detect_stopping_btn.setToolTip("Auto-detect candidate stopping nodes (e.g., ContainerNodes)")
         self.auto_detect_stopping_btn.clicked.connect(self.auto_detect_stopping_nodes)
@@ -202,121 +258,102 @@ class MainWindow(QMainWindow):
         self.clear_stopping_btn.setToolTip("Clear all stopping nodes")
         self.clear_stopping_btn.clicked.connect(self.clear_stopping_nodes)
         stopping_nodes_btn_layout2.addWidget(self.clear_stopping_btn)
-
         stopping_nodes_group.addLayout(stopping_nodes_btn_layout2)
 
-        layout.addWidget(self.stopping_nodes_widget)
+        exec_layout.addWidget(self.stopping_nodes_widget)
 
-        # Debug helper: mark container (weight) nodes as processed
+        # Mark weights button (kept in Execution panel for visibility)
         self.mark_weights_processed_btn = QPushButton("Mark Weights Processed (Debug)")
         self.mark_weights_processed_btn.setToolTip("Mark all ContainerNode weights as processed (debug)")
         self.mark_weights_processed_btn.clicked.connect(self.mark_weights_processed)
-        layout.addWidget(self.mark_weights_processed_btn)
-        
-        layout.addWidget(QLabel(""))  # Spacer
-        
-        # Play/Pause buttons
+        exec_layout.addWidget(self.mark_weights_processed_btn)
+
+        exec_layout.addWidget(QLabel(""))  # Spacer
+
+        # Play/Pause/Step/Reset and speed controls
         btn_layout = QHBoxLayout()
-        
         self.play_btn = QPushButton("▶ Start")
         self.play_btn.clicked.connect(self.play_graph)
         btn_layout.addWidget(self.play_btn)
-        
         self.pause_btn = QPushButton("⏸ Pause")
         self.pause_btn.clicked.connect(self.pause_graph)
         self.pause_btn.setEnabled(False)
         btn_layout.addWidget(self.pause_btn)
-        
-        layout.addLayout(btn_layout)
-        
-        # Step button
+        exec_layout.addLayout(btn_layout)
+
         self.step_btn = QPushButton("Step →")
         self.step_btn.clicked.connect(self.step_graph)
-        layout.addWidget(self.step_btn)
-        
-        # Stop/Reset button
+        exec_layout.addWidget(self.step_btn)
+
         self.reset_btn = QPushButton("⏹ Reset")
         self.reset_btn.clicked.connect(self.reset_graph)
-        layout.addWidget(self.reset_btn)
-        
-        # Max steps
+        exec_layout.addWidget(self.reset_btn)
+
         steps_layout = QHBoxLayout()
         steps_layout.addWidget(QLabel("Max Steps:"))
         self.max_steps_spin = QSpinBox()
         self.max_steps_spin.setRange(1, 10000)
         self.max_steps_spin.setValue(100)
         steps_layout.addWidget(self.max_steps_spin)
-        layout.addLayout(steps_layout)
-        
-        # Speed control
+        exec_layout.addLayout(steps_layout)
+
         speed_layout = QVBoxLayout()
-        
-        # Max speed button
         self.max_speed_btn = QPushButton("⚡ Max Speed")
         self.max_speed_btn.setCheckable(True)
         self.max_speed_btn.setToolTip("Run at maximum speed (no delay between steps)")
         self.max_speed_btn.clicked.connect(self.on_max_speed_toggled)
         speed_layout.addWidget(self.max_speed_btn)
-        
-        # Skip graph visualization checkbox
+
         self.skip_viz_check = QCheckBox("Skip Graph Visualization")
         self.skip_viz_check.setToolTip("Run all steps without updating graph visuals, then update at the end (faster)")
         self.skip_viz_check.stateChanged.connect(self.on_skip_viz_changed)
         speed_layout.addWidget(self.skip_viz_check)
-        
-        # Skip plotting checkbox
+
         self.skip_plot_check = QCheckBox("Skip Plot Updates")
         self.skip_plot_check.setToolTip("Run without updating plot window during execution (faster)")
         self.skip_plot_check.stateChanged.connect(self.on_skip_plot_changed)
         speed_layout.addWidget(self.skip_plot_check)
-        
-        # Verbose output checkbox
+
         self.verbose_check = QCheckBox("Verbose Terminal Output")
         self.verbose_check.setToolTip("Enable detailed logging to terminal (may slow down execution)")
         self.verbose_check.stateChanged.connect(self.on_verbose_changed)
         speed_layout.addWidget(self.verbose_check)
-        
-        # Dim processed nodes checkbox (debugging aid)
+
         self.dim_processed_check = QCheckBox("Dim Processed Nodes (Debug)")
         self.dim_processed_check.setToolTip("Dim nodes that are marked 'processed' by the forward processor")
         self.dim_processed_check.stateChanged.connect(self.on_dim_processed_changed)
         speed_layout.addWidget(self.dim_processed_check)
-        
-        # Speed slider
+
         speed_layout.addWidget(QLabel("Speed (ms/step):"))
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
         self.speed_slider.setRange(10, 2000)
         self.speed_slider.setValue(500)
         self.speed_slider.valueChanged.connect(self.on_speed_changed)
         speed_layout.addWidget(self.speed_slider)
-        
+
         self.speed_label = QLabel("500 ms")
         speed_layout.addWidget(self.speed_label)
-        layout.addLayout(speed_layout)
-        
-        # Current step display
+        exec_layout.addLayout(speed_layout)
+
         self.step_label = QLabel("Step: 0")
-        layout.addWidget(self.step_label)
-        
-        layout.addWidget(QLabel(""))  # Spacer
-        
-        # Visualization controls
+        exec_layout.addWidget(self.step_label)
+
+        exec_layout.addWidget(QLabel(""))  # Spacer
+
+        # --- Visualization controls
         viz_label = QLabel("<b>Visualization</b>")
-        layout.addWidget(viz_label)
-        
+        viz_layout.addWidget(viz_label)
+
         self.colorize_check = QCheckBox("Colorize by Value")
         self.colorize_check.stateChanged.connect(self.on_colorize_changed)
-        layout.addWidget(self.colorize_check)
-        
-        # Auto min/max button
+        viz_layout.addWidget(self.colorize_check)
+
         self.auto_range_btn = QPushButton("Auto Detect Min/Max")
         self.auto_range_btn.clicked.connect(self.auto_detect_range)
         self.auto_range_btn.setEnabled(False)
-        layout.addWidget(self.auto_range_btn)
-        
-        # Color range (read-only display)
+        viz_layout.addWidget(self.auto_range_btn)
+
         color_range_layout = QVBoxLayout()
-        
         min_layout = QHBoxLayout()
         min_layout.addWidget(QLabel("Min Value:"))
         self.min_value_label = QLabel("0.0")
@@ -324,7 +361,7 @@ class MainWindow(QMainWindow):
         min_layout.addWidget(self.min_value_label)
         min_layout.addStretch()
         color_range_layout.addLayout(min_layout)
-        
+
         max_layout = QHBoxLayout()
         max_layout.addWidget(QLabel("Max Value:"))
         self.max_value_label = QLabel("1.0")
@@ -332,12 +369,10 @@ class MainWindow(QMainWindow):
         max_layout.addWidget(self.max_value_label)
         max_layout.addStretch()
         color_range_layout.addLayout(max_layout)
-        
-        layout.addLayout(color_range_layout)
-        
-        # Color pickers for gradient
+
+        viz_layout.addLayout(color_range_layout)
+
         gradient_layout = QVBoxLayout()
-        
         min_color_layout = QHBoxLayout()
         min_color_layout.addWidget(QLabel("Min Color:"))
         self.min_color_btn = QPushButton()
@@ -347,7 +382,7 @@ class MainWindow(QMainWindow):
         min_color_layout.addWidget(self.min_color_btn)
         min_color_layout.addStretch()
         gradient_layout.addLayout(min_color_layout)
-        
+
         max_color_layout = QHBoxLayout()
         max_color_layout.addWidget(QLabel("Max Color:"))
         self.max_color_btn = QPushButton()
@@ -357,56 +392,15 @@ class MainWindow(QMainWindow):
         max_color_layout.addWidget(self.max_color_btn)
         max_color_layout.addStretch()
         gradient_layout.addLayout(max_color_layout)
-        
-        layout.addLayout(gradient_layout)
-        
-        layout.addWidget(QLabel(""))  # Spacer
-        
-        # Layout controls
-        layout_label = QLabel("<b>Layout</b>")
-        layout.addWidget(layout_label)
-        
-        self.spring_btn = QPushButton("Spring Layout")
-        self.spring_btn.clicked.connect(lambda: self.canvas.apply_layout("spring"))
-        layout.addWidget(self.spring_btn)
-        
-        self.hierarchical_btn = QPushButton("Hierarchical Layout")
-        self.hierarchical_btn.clicked.connect(lambda: self.canvas.apply_layout("hierarchical"))
-        layout.addWidget(self.hierarchical_btn)
-        
-        self.circular_btn = QPushButton("Circular Layout")
-        self.circular_btn.clicked.connect(lambda: self.canvas.apply_layout("circular"))
-        layout.addWidget(self.circular_btn)
-        
-        self.ann_btn = QPushButton("ANN Layout (L→R)")
-        self.ann_btn.clicked.connect(lambda: self.canvas.apply_layout("ann"))
-        layout.addWidget(self.ann_btn)
-        
-        self.ann_colors_btn = QPushButton("Apply ANN Colors")
-        self.ann_colors_btn.clicked.connect(self.canvas.apply_ann_colors)
-        layout.addWidget(self.ann_colors_btn)
-        
-        layout.addWidget(QLabel(""))  # Spacer
-        
-        # Plotting controls
-        plotting_label = QLabel("<b>Plotting</b>")
-        layout.addWidget(plotting_label)
-        
-        self.open_plot_btn = QPushButton("📊 Open Plot Window")
-        self.open_plot_btn.clicked.connect(self.open_plot_window)
-        layout.addWidget(self.open_plot_btn)
-        
-        self.add_to_plot_btn = QPushButton("➕ Add Selected to Plot")
-        self.add_to_plot_btn.clicked.connect(self.add_selected_to_plot)
-        layout.addWidget(self.add_to_plot_btn)
-        
-        layout.addWidget(QLabel(""))  # Spacer
-        
-        # Node appearance controls
+
+        viz_layout.addLayout(gradient_layout)
+
+        viz_layout.addWidget(QLabel(""))  # Spacer
+
+        # Node appearance controls (moved to Visualization)
         appearance_label = QLabel("<b>Node Appearance</b>")
-        layout.addWidget(appearance_label)
-        
-        # Node color picker
+        viz_layout.addWidget(appearance_label)
+
         node_color_layout = QHBoxLayout()
         node_color_layout.addWidget(QLabel("Node Color:"))
         self.node_color_btn = QPushButton()
@@ -416,9 +410,8 @@ class MainWindow(QMainWindow):
         self.node_color_btn.clicked.connect(self.choose_node_color)
         node_color_layout.addWidget(self.node_color_btn)
         node_color_layout.addStretch()
-        layout.addLayout(node_color_layout)
-        
-        # Text color picker
+        viz_layout.addLayout(node_color_layout)
+
         text_color_layout = QHBoxLayout()
         text_color_layout.addWidget(QLabel("Text Color:"))
         self.text_color_btn = QPushButton()
@@ -428,20 +421,67 @@ class MainWindow(QMainWindow):
         self.text_color_btn.clicked.connect(self.choose_text_color)
         text_color_layout.addWidget(self.text_color_btn)
         text_color_layout.addStretch()
-        layout.addLayout(text_color_layout)
-        
-        # Apply colors button
+        viz_layout.addLayout(text_color_layout)
+
         self.apply_colors_btn = QPushButton("Apply to All Nodes")
         self.apply_colors_btn.clicked.connect(self.apply_node_colors)
-        layout.addWidget(self.apply_colors_btn)
+        viz_layout.addWidget(self.apply_colors_btn)
 
-        # Apply to selected nodes button
         self.apply_selected_colors_btn = QPushButton("Apply to Selected")
         self.apply_selected_colors_btn.clicked.connect(self.apply_node_colors_selected)
-        layout.addWidget(self.apply_selected_colors_btn)
-        
+        viz_layout.addWidget(self.apply_selected_colors_btn)
+
+        # Move Apply ANN Colors to Visualization per request
+        self.ann_colors_btn = QPushButton("Apply ANN Colors")
+        self.ann_colors_btn.clicked.connect(self.canvas.apply_ann_colors)
+        viz_layout.addWidget(self.ann_colors_btn)
+
+        viz_layout.addStretch()
+
+        # --- Layout controls
+        layout_label = QLabel("<b>Layout</b>")
+        layout_layout.addWidget(layout_label)
+
+        self.spring_btn = QPushButton("Spring Layout")
+        self.spring_btn.clicked.connect(lambda: self.canvas.apply_layout("spring"))
+        layout_layout.addWidget(self.spring_btn)
+
+        self.hierarchical_btn = QPushButton("Hierarchical Layout")
+        self.hierarchical_btn.clicked.connect(lambda: self.canvas.apply_layout("hierarchical"))
+        layout_layout.addWidget(self.hierarchical_btn)
+
+        self.circular_btn = QPushButton("Circular Layout")
+        self.circular_btn.clicked.connect(lambda: self.canvas.apply_layout("circular"))
+        layout_layout.addWidget(self.circular_btn)
+
+        self.ann_btn = QPushButton("ANN Layout (L→R)")
+        self.ann_btn.clicked.connect(lambda: self.canvas.apply_layout("ann"))
+        layout_layout.addWidget(self.ann_btn)
+
+        layout_layout.addWidget(QLabel(""))  # Spacer
+
+        # --- Plotting controls
+        plotting_label = QLabel("<b>Plotting</b>")
+        plot_layout.addWidget(plotting_label)
+
+        self.open_plot_btn = QPushButton("📊 Open Plot Window")
+        self.open_plot_btn.clicked.connect(self.open_plot_window)
+        plot_layout.addWidget(self.open_plot_btn)
+
+        self.add_to_plot_btn = QPushButton("➕ Add Selected to Plot")
+        self.add_to_plot_btn.clicked.connect(self.add_selected_to_plot)
+        plot_layout.addWidget(self.add_to_plot_btn)
+
+        plot_layout.addStretch()
+
+        # Add collapsible sections to main layout
+        layout.addWidget(CollapsibleSection("Execution", exec_container, expanded=True))
+        layout.addWidget(CollapsibleSection("Visualization", viz_container, expanded=True))
+        layout.addWidget(CollapsibleSection("Layout", layout_container, expanded=False))
+        layout.addWidget(CollapsibleSection("Plotting", plot_container, expanded=False))
+
         layout.addStretch()
-        
+
         # Set the widget inside the scroll area
         scroll.setWidget(widget)
         dock.setWidget(scroll)

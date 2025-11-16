@@ -2,7 +2,7 @@
 GraphicsItem representation of edges connecting nodes.
 """
 
-from PyQt6.QtWidgets import QGraphicsPathItem, QStyleOptionGraphicsItem, QStyle
+from PyQt6.QtWidgets import QGraphicsPathItem, QStyleOptionGraphicsItem, QStyle, QGraphicsItem
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QPen, QPainterPath, QColor, QBrush, QPolygonF
 import math
@@ -20,6 +20,10 @@ class EdgeItem(QGraphicsPathItem):
         # Visual properties
         self.setPen(QPen(QColor(80, 80, 80), 2))
         self.setZValue(-1)  # Draw edges behind nodes
+        # Allow edges to be selectable and receive hover events
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsFocusable)
+        self.setAcceptHoverEvents(True)
         
         # Arrow properties
         self.arrow_size = 12
