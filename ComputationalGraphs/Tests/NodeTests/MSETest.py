@@ -15,3 +15,5 @@ graph.AddNode(bufferNode, datastreamNode,datastreamNode2)
 
 graphProcessor = GraphProcessor(graph=graph)
 graphProcessor.ComputeGraph(10)
+graph.UpdateAdjacencyMatrix()
+graph.DisplayGraph()

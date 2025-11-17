@@ -6,8 +6,9 @@ from PyQt6.QtWidgets import (QMainWindow, QToolBar, QStatusBar, QDockWidget,
                              QVBoxLayout, QHBoxLayout, QWidget, QPushButton,
                              QLabel, QSlider, QSpinBox, QFileDialog, QMessageBox,
                              QCheckBox, QColorDialog, QComboBox, QScrollArea, QListWidget,
-                             QDialog, QApplication)
-from PyQt6.QtCore import Qt
+                             QDialog, QApplication, QTextEdit)
+from PyQt6.QtCore import Qt, pyqtSignal
+import sys
 from PyQt6.QtGui import QAction, QKeySequence, QColor, QBrush, QFont
 
 from .graph_canvas import GraphCanvas
@@ -70,6 +71,7 @@ class CollapsibleSection(QWidget):
 
 class MainWindow(QMainWindow):
     """Main application window for the graph editor."""
+    console_write = pyqtSignal(str)
     
     def __init__(self):
         super().__init__()
@@ -126,6 +128,8 @@ class MainWindow(QMainWindow):
         
         # Right dock - Controls
         self.create_control_panel()
+        # Bottom dock - Console for verbose/debug output
+        self.create_console_panel()
     
     def create_control_panel(self):
         """Create the control panel dock."""
@@ -279,6 +283,12 @@ class MainWindow(QMainWindow):
         self.pause_btn.clicked.connect(self.pause_graph)
         self.pause_btn.setEnabled(False)
         btn_layout.addWidget(self.pause_btn)
+
+        # Explicit Resume button (separate from Play)
+        self.resume_btn = QPushButton("⤻ Resume")
+        self.resume_btn.clicked.connect(self.resume_graph)
+        self.resume_btn.setEnabled(False)
+        btn_layout.addWidget(self.resume_btn)
         exec_layout.addLayout(btn_layout)
 
         self.step_btn = QPushButton("Step →")
@@ -292,7 +302,9 @@ class MainWindow(QMainWindow):
         steps_layout = QHBoxLayout()
         steps_layout.addWidget(QLabel("Max Steps:"))
         self.max_steps_spin = QSpinBox()
-        self.max_steps_spin.setRange(1, 10000)
+        # Allow a much larger maximum to remove the previous 10,000 hard cap.
+        # Keep a practical upper bound to avoid accidental huge numbers; can be adjusted later.
+        self.max_steps_spin.setRange(1, 100000000)
         self.max_steps_spin.setValue(100)
         steps_layout.addWidget(self.max_steps_spin)
         exec_layout.addLayout(steps_layout)
@@ -604,6 +616,125 @@ class MainWindow(QMainWindow):
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Ready")
+
+    def create_console_panel(self):
+        """Create a docked console for verbose/debug output."""
+        dock = QDockWidget("Console", self)
+        dock.setAllowedAreas(Qt.DockWidgetArea.BottomDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
+
+        container = QWidget()
+        v = QVBoxLayout(container)
+        v.setContentsMargins(4, 4, 4, 4)
+
+        # Console text area (read-only)
+        self.console_text = QTextEdit()
+        self.console_text.setReadOnly(True)
+        # Dark theme to match app
+        self.console_text.setStyleSheet("background-color: #1e1e1e; color: #e6e6e6; font-family: Segoe UI; font-size: 11px;")
+        v.addWidget(self.console_text)
+
+        # Connect the signal so writes are thread-safe
+        try:
+            self.console_write.connect(self.console_text.append)
+        except Exception:
+            pass
+
+        # Controls: clear and echo-to-terminal
+        btn_layout = QHBoxLayout()
+        self.clear_console_btn = QPushButton("Clear")
+        self.clear_console_btn.clicked.connect(lambda: self.console_text.clear())
+        btn_layout.addWidget(self.clear_console_btn)
+
+        self.echo_terminal_check = QCheckBox("Echo to terminal")
+        self.echo_terminal_check.setChecked(True)
+        btn_layout.addWidget(self.echo_terminal_check)
+
+        btn_layout.addStretch()
+        v.addLayout(btn_layout)
+
+        dock.setWidget(container)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock)
+        self.console_dock = dock
+
+        # Redirect stdout/stderr to the in-app console (keeps original outputs)
+        class ConsoleRedirector:
+            def __init__(self, main_win, orig_stream, name='stdout'):
+                self.main_win = main_win
+                self.orig = orig_stream
+                self.name = name
+
+            def write(self, msg):
+                if not msg:
+                    return
+                try:
+                    # Emit signal to append safely in the GUI thread
+                    try:
+                        self.main_win.console_write.emit(msg)
+                    except Exception:
+                        # Fallback to directly appending if signal not connected
+                        try:
+                            self.main_win.console_text.append(msg)
+                        except Exception:
+                            pass
+                finally:
+                    try:
+                        # Always forward to the original stream so terminal still gets output
+                        self.orig.write(msg)
+                    except Exception:
+                        pass
+
+            def flush(self):
+                try:
+                    self.orig.flush()
+                except Exception:
+                    pass
+
+        try:
+            # Keep originals to restore later if needed
+            self._orig_stdout = sys.stdout
+            self._orig_stderr = sys.stderr
+            sys.stdout = ConsoleRedirector(self, self._orig_stdout, 'stdout')
+            sys.stderr = ConsoleRedirector(self, self._orig_stderr, 'stderr')
+        except Exception:
+            # If redirect fails, ignore silently
+            pass
+
+    def write_to_console(self, message: str, verbose_only: bool = False):
+        """Append a message to the in-app console.
+
+        If `verbose_only` is True, the message is added only when verbose is enabled.
+        Always echoes to terminal when `self.echo_terminal_check` is checked.
+        """
+        try:
+            if verbose_only and not getattr(self, 'verbose_check', None):
+                # If verbose UI control hasn't been created yet, fall back to printing
+                print(message)
+                return
+
+            if verbose_only and not self.verbose_check.isChecked():
+                return
+
+            # Append message with newline and auto-scroll
+            self.console_text.append(message)
+            self.console_text.moveCursor(self.console_text.textCursor().End)
+
+            # Echo to terminal if requested (the ConsoleRedirector already forwards to original stdout)
+            # Keep this behavior intact for non-redirected code paths
+            if getattr(self, 'echo_terminal_check', None) and self.echo_terminal_check.isChecked():
+                try:
+                    # Use original stdout to avoid recursive redirection
+                    if hasattr(self, '_orig_stdout'):
+                        self._orig_stdout.write(message + "\n")
+                    else:
+                        print(message)
+                except Exception:
+                    try:
+                        print(message)
+                    except Exception:
+                        pass
+        except Exception:
+            # Fallback: print to terminal
+            print(message)
     
     # Graph operations
     
@@ -674,20 +805,38 @@ class MainWindow(QMainWindow):
     
     def play_graph(self):
         """Start graph execution."""
-        # Rebuild graph from canvas
-        self.rebuild_graph()
-        
+        # Avoid rebuilding if the canvas already contains the same nodes as the current graph.
+        # Rebuilding into a plain `Graph()` would drop graph-level metadata such as
+        # `starting_nodes` or `PrepareForForwardProcessing()` implemented by graph classes
+        # like `MLPGraphForwardProcessing`. In that case, preserve the existing graph.
+        try:
+            canvas_nodes = set(self.canvas.node_items.keys()) if hasattr(self, 'canvas') and getattr(self.canvas, 'node_items', None) is not None else set()
+            graph_nodes = set(self.graph.nodes) if self.graph and hasattr(self.graph, 'nodes') else set()
+            # Avoid rebuilding from an empty canvas when the user has chosen to
+            # skip visualization: rebuilding from an empty canvas would overwrite
+            # the existing graph with an empty Graph and cause batch mode to do nothing.
+            if not canvas_nodes:
+                if not self.skip_visualization:
+                    self.rebuild_graph()
+            else:
+                if canvas_nodes != graph_nodes:
+                    self.rebuild_graph()
+        except Exception:
+            # On any error, fall back to rebuilding
+            self.rebuild_graph()
+
         max_steps = self.max_steps_spin.value()
-        
+
         # Check if skip visualization (batch mode) is enabled
         if self.skip_visualization:
             self.run_batch_mode(max_steps)
         else:
             # Normal mode with visualization
             self.graph_runner.start(max_steps)
-            
+
             self.play_btn.setEnabled(False)
             self.pause_btn.setEnabled(True)
+            self.resume_btn.setEnabled(False)
             self.threading_combo.setEnabled(False)  # Disable threading mode while running
             self.status_bar.showMessage("Executing graph...")
     
@@ -741,16 +890,28 @@ class MainWindow(QMainWindow):
         finally:
             self.play_btn.setEnabled(True)
             self.pause_btn.setEnabled(False)
+            self.resume_btn.setEnabled(False)
             self.threading_combo.setEnabled(True)
     
     def pause_graph(self):
         """Pause graph execution."""
         self.graph_runner.pause()
-        
-        self.play_btn.setEnabled(True)
+        # When paused, enable Resume (explicit) and disable Play to avoid accidental restarts
+        self.play_btn.setEnabled(False)
         self.pause_btn.setEnabled(False)
+        self.resume_btn.setEnabled(True)
         self.threading_combo.setEnabled(True)  # Re-enable threading mode when paused
         self.status_bar.showMessage("Paused")
+
+    def resume_graph(self):
+        """Resume a paused background execution."""
+        self.graph_runner.resume()
+        # Update button states: running -> Play disabled, Pause enabled, Resume disabled
+        self.play_btn.setEnabled(False)
+        self.pause_btn.setEnabled(True)
+        self.resume_btn.setEnabled(False)
+        self.threading_combo.setEnabled(False)
+        self.status_bar.showMessage("Resumed execution")
     
     def step_graph(self):
         """Execute a single step."""
@@ -766,6 +927,7 @@ class MainWindow(QMainWindow):
         
         self.play_btn.setEnabled(True)
         self.pause_btn.setEnabled(False)
+        self.resume_btn.setEnabled(False)
         self.threading_combo.setEnabled(True)  # Re-enable threading mode selection
         
         # Reset visuals
@@ -813,8 +975,16 @@ class MainWindow(QMainWindow):
         """Handle step completion."""
         self.step_label.setText(f"Step: {step}")
         
-        # Skip visual updates if in batch mode (shouldn't be called in batch mode, but just in case)
+        # If 'Skip Graph Visualization' is enabled, skip canvas/visual updates
+        # but still allow plot updates unless 'Skip Plot Updates' is enabled.
         if self.skip_visualization:
+            # Update plot window if open (unless skip_plotting is enabled)
+            if not self.skip_plotting and self.plot_window and self.plot_window.isVisible():
+                try:
+                    self.plot_window.update_plot(step)
+                except Exception:
+                    pass
+            # Skip further canvas/visual updates
             return
         
         # Update node visuals first (values and optionally colors)
@@ -867,6 +1037,7 @@ class MainWindow(QMainWindow):
         """Handle execution completion."""
         self.play_btn.setEnabled(True)
         self.pause_btn.setEnabled(False)
+        self.resume_btn.setEnabled(False)
         self.threading_combo.setEnabled(True)  # Re-enable threading mode when finished
         self.status_bar.showMessage("Execution finished")
     
@@ -936,6 +1107,11 @@ class MainWindow(QMainWindow):
                 self.status_bar.showMessage("Verbose output enabled - check terminal")
             else:
                 self.status_bar.showMessage("Verbose output disabled")
+        # Also write to console if available
+        try:
+            self.write_to_console(f"Verbose {'enabled' if verbose_enabled else 'disabled'}", verbose_only=False)
+        except Exception:
+            pass
 
     def on_dim_processed_changed(self, state):
         """Handle dim-processed checkbox change."""

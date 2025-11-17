@@ -19,9 +19,6 @@ python run_gui.py
 ### 1. **Node Palette (Left Panel)**
 Contains all available node types organized by category:
 
-- **Data Nodes**: DataStreamNode, DynamicDataStreamNode, BufferNode, SequencerNode, ListNode, ContainerNode
-- **Arithmetic Nodes**: AdditionNode, SubtractionNode, MultiplicationNode, DivisionNode
-- **Statistical Nodes**: MaxNode, MinNode, MeanSquaredErrorNode
 - **Activation Functions**: SigmoidNode, ReLUNode, LinearNode, GaussianNode, PiecewiseLinearNode, and their derivatives
 - **Evolutionary Algorithm Nodes**: TournamentSelectionNode, CrossoverNode, MutationNode, DeJongSphereNode
 - **Utility Nodes**: DisplayNode

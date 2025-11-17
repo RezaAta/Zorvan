@@ -162,11 +162,24 @@ class MLPGraphForwardProcessing(Graph):
         """
         source_count = processor.mark_source_nodes_as_processed()
 
-        # Ensure the processor's graph knows about these stopping nodes
-        # so that successor-readiness checks treat weight ContainerNodes
-        # as non-blocking predecessors. This is necessary when the full
-        # graph is a combination of the MLP and a backprop subgraph.
+        # Also mark container (weight) nodes as processed so the FIRST forward
+        # iteration can read weight values even when backprop has added predecessors
+        # to those ContainerNodes. This aligns with the intended design: weights
+        # are counted as processed for readiness but their usual successor-driven
+        # activation is suppressed via `stopping_nodes` to avoid loop reactivation.
         try:
+            container_count = 0
+            if hasattr(processor, 'mark_container_nodes_as_processed'):
+                try:
+                    container_count = processor.mark_container_nodes_as_processed()
+                except Exception:
+                    container_count = 0
+            else:
+                container_count = 0
+
+            # Ensure the processor's graph knows about these stopping nodes
+            # so that successor-readiness checks treat weight ContainerNodes
+            # differently (they will not call successors during newly-processed iteration).
             target_graph = processor.graph
             if not hasattr(target_graph, 'stopping_nodes') or not target_graph.stopping_nodes:
                 target_graph.stopping_nodes = list(self.stopping_nodes)
@@ -174,9 +187,9 @@ class MLPGraphForwardProcessing(Graph):
                     print(f"Copied {len(self.stopping_nodes)} stopping_nodes into processor.graph")
         except Exception:
             # If processor.graph is unavailable for some reason, skip silently
-            pass
+            container_count = len(self.stopping_nodes)
 
-        return (source_count, len(self.stopping_nodes))
+        return (source_count, container_count)
 
     def _CreateInputLayer(self):
         """Create input layer with DataStreamNodes (streams through data automatically)."""

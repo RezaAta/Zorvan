@@ -43,6 +43,5 @@ __all__ = [
     "SigmoidDerivativeNode",
     "SigmoidNode",
     "GaussianNode",
-    "SubtractionNode",
-    "MeanSquaredErrorNode"
+    "SubtractionNode"
 ]

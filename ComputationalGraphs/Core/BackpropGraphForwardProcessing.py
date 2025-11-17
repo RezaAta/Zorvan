@@ -18,6 +18,7 @@ from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
+from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 
 class BackpropGraphForwardProcessing(Graph):
     def __init__(self, mlpGraph, learningRate=0.01):
@@ -54,7 +55,10 @@ class BackpropGraphForwardProcessing(Graph):
 
     def _CreateLRNode(self):
         """Create learning rate node."""
-        self.lrNode = ContainerNode(name="LearningRate", value=self.learning_rate)
+        # Learning rate is a constant hyperparameter for forward processing
+        # and should behave like a display/source node so it is available
+        # to gradient multipliers without being treated as a mutable weight.
+        self.lrNode = DisplayNode(name="LearningRate", value=self.learning_rate)
         self.AddNode(self.lrNode)
 
     def _CreateGradientLayers(self):
