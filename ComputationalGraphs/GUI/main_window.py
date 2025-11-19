@@ -827,7 +827,17 @@ class MainWindow(QMainWindow):
         
         if dialog.exec():
             # Update visuals
-            node_item.label.setPlainText(node_item.node.name)
+            # Use NodeItem helper to reset text and re-center label
+            try:
+                node_item.set_label_text(node_item.node.name)
+            except Exception:
+                # Fallback to old behavior if NodeItem doesn't have helper
+                node_item.label.setPlainText(node_item.node.name)
+                try:
+                    rect = node_item.label.boundingRect()
+                    node_item.label.setPos(-rect.width() / 2, -rect.height() / 2 - 10)
+                except Exception:
+                    pass
             node_item.update_value_display()
             self.status_bar.showMessage(f"Node '{node_item.node.name}' updated")
     
@@ -1590,7 +1600,10 @@ class MainWindow(QMainWindow):
             
             # Update text color
             node_item.label.setDefaultTextColor(self.default_text_color)
-            node_item.value_label.setDefaultTextColor(self.default_text_color)
+            # Guard against NodeItem instances that might not have created their
+            # value_label attribute (e.g., loaded from older saved state)
+            if hasattr(node_item, 'value_label') and node_item.value_label is not None:
+                node_item.value_label.setDefaultTextColor(self.default_text_color)
             
             # Trigger repaint
             node_item.update()
@@ -1612,7 +1625,8 @@ class MainWindow(QMainWindow):
             node_item.default_color = self.default_node_color
             node_item.setBrush(QBrush(self.default_node_color))
             node_item.label.setDefaultTextColor(self.default_text_color)
-            node_item.value_label.setDefaultTextColor(self.default_text_color)
+            if hasattr(node_item, 'value_label') and node_item.value_label is not None:
+                node_item.value_label.setDefaultTextColor(self.default_text_color)
             node_item.update()
 
         self.status_bar.showMessage(f"Applied colors to {len(node_items)} selected node(s)")
@@ -1869,9 +1883,13 @@ class MainWindow(QMainWindow):
                 
                 # Store position and create node
                 created_positions[node] = (adjusted_x, adjusted_y)
-                node_item = NodeItem(node, adjusted_x, adjusted_y)
-                self.canvas.scene.addItem(node_item)
-                self.canvas.node_items[node] = node_item
+                try:
+                    node_item = NodeItem(node, adjusted_x, adjusted_y)
+                    self.canvas.scene.addItem(node_item)
+                    self.canvas.node_items[node] = node_item
+                except Exception as e:
+                    print(f"Failed to create NodeItem for node: {getattr(node, 'name', str(node))}")
+                    raise
             
             # Create edge items
             for node in graph.nodes:
@@ -1881,17 +1899,27 @@ class MainWindow(QMainWindow):
                         for pred in node.predecessors:
                             source_item = self.canvas.node_items.get(pred)
                             if source_item:
-                                edge = EdgeItem(source_item, target_item)
+                                try:
+                                    edge = EdgeItem(source_item, target_item)
+                                except Exception:
+                                    print(f"Failed to create EdgeItem: {pred.name if hasattr(pred, 'name') else pred} -> {node.name if hasattr(node, 'name') else node}")
+                                    raise
                                 self.canvas.scene.addItem(edge)
                                 self.canvas.edge_items.append(edge)
                                 source_item.add_edge(edge)
                                 target_item.add_edge(edge)
             
             # Update visuals
-            if self.colorize_enabled:
-                self.auto_detect_range()
-            else:
-                self.canvas.update_node_visuals(False, 0, 1)
+            try:
+                if self.colorize_enabled:
+                    self.auto_detect_range()
+                else:
+                    self.canvas.update_node_visuals(False, 0, 1)
+            except Exception as e:
+                print("Error while updating node visuals:")
+                import traceback
+                traceback.print_exc()
+                raise
             
         except Exception as e:
             QMessageBox.warning(

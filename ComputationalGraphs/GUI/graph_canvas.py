@@ -56,6 +56,22 @@ class GraphCanvas(QGraphicsView):
         node_item = NodeItem(node, x, y)
         self.scene.addItem(node_item)
         self.node_items[node] = node_item
+        # Ensure value_label exists for older or partially-initialized node items
+        try:
+            if not hasattr(node_item, 'value_label') or node_item.value_label is None:
+                from PyQt6.QtWidgets import QGraphicsTextItem
+                node_item.value_label = QGraphicsTextItem("", node_item)
+                node_item.value_label.setDefaultTextColor(Qt.GlobalColor.white)
+                from PyQt6.QtGui import QFont
+                node_item.value_label.setFont(QFont("Arial", 8))
+        except Exception:
+            # If creation fails, don't block adding the node - leave as-is and skip value display
+            pass
+        # Populate the initial value display
+        try:
+            node_item.update_value_display()
+        except Exception:
+            pass
         return node_item
     
     def add_edge_item(self, source_node, target_node):

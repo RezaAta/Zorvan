@@ -50,14 +50,35 @@ class NodeItem(QGraphicsEllipseItem):
         # Center the label
         label_rect = self.label.boundingRect()
         self.label.setPos(-label_rect.width() / 2, -label_rect.height() / 2 - 10)
-        
+
         # Value display
         self.value_label = QGraphicsTextItem("", self)
         self.value_label.setDefaultTextColor(Qt.GlobalColor.white)
         value_font = QFont("Arial", 8)
         self.value_label.setFont(value_font)
-        
+        # Populate with initial value
         self.update_value_display()
+
+    def set_label_text(self, text: str):
+        """Set the node label text and re-center it above the node.
+
+        This method should be used whenever the label text changes (e.g., when
+        renaming a node) to ensure the text remains centered.
+        """
+        try:
+            self.label.setPlainText(text)
+            # Reapply font to ensure layout is updated consistently
+            # (some platforms may not update layout immediately otherwise)
+            font = self.label.font()
+            self.label.setFont(font)
+            label_rect = self.label.boundingRect()
+            self.label.setPos(-label_rect.width() / 2, -label_rect.height() / 2 - 10)
+        except Exception:
+            # Fall back to plain set if anything goes wrong
+            try:
+                self.label.setPlainText(text)
+            except Exception:
+                pass
         
     def boundingRect(self):
         """Return the bounding rectangle including ports and hover ring."""
@@ -72,6 +93,17 @@ class NodeItem(QGraphicsEllipseItem):
     
     def update_value_display(self):
         """Update the displayed value from the node."""
+        # Ensure value_label exists (defensive: some NodeItem instances saved/restored
+        # or partially initialized may not have the attribute). Create if missing.
+        if not hasattr(self, 'value_label') or self.value_label is None:
+            try:
+                self.value_label = QGraphicsTextItem("", self)
+                self.value_label.setDefaultTextColor(Qt.GlobalColor.white)
+                value_font = QFont("Arial", 8)
+                self.value_label.setFont(value_font)
+            except Exception:
+                # If creating the value label fails, skip updating the label
+                return
         # For DataStreamNodes, show the data attribute if value is None
         if hasattr(self.node, 'data') and self.node.value is None and self.node.data:
             # DataStreamNode with data but no value yet
