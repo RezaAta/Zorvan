@@ -884,6 +884,8 @@ class MainWindow(QMainWindow):
             self.threading_combo.setEnabled(False)  # Disable threading mode while running
             if hasattr(self, 'rebuild_btn'):
                 self.rebuild_btn.setEnabled(False)
+            if hasattr(self, 'rebuild_exec_btn'):
+                self.rebuild_exec_btn.setEnabled(False)
             self.status_bar.showMessage("Executing graph...")
     
     def run_batch_mode(self, max_steps):
@@ -949,6 +951,8 @@ class MainWindow(QMainWindow):
         self.threading_combo.setEnabled(True)  # Re-enable threading mode when paused
         if hasattr(self, 'rebuild_btn'):
             self.rebuild_btn.setEnabled(True)
+        if hasattr(self, 'rebuild_exec_btn'):
+            self.rebuild_exec_btn.setEnabled(True)
         self.status_bar.showMessage("Paused")
 
     def resume_graph(self):
@@ -961,6 +965,8 @@ class MainWindow(QMainWindow):
         self.threading_combo.setEnabled(False)
         if hasattr(self, 'rebuild_btn'):
             self.rebuild_btn.setEnabled(False)
+        if hasattr(self, 'rebuild_exec_btn'):
+            self.rebuild_exec_btn.setEnabled(False)
         self.status_bar.showMessage("Resumed execution")
     
     def step_graph(self):
@@ -981,6 +987,8 @@ class MainWindow(QMainWindow):
         self.threading_combo.setEnabled(True)  # Re-enable threading mode selection
         if hasattr(self, 'rebuild_btn'):
             self.rebuild_btn.setEnabled(True)
+        if hasattr(self, 'rebuild_exec_btn'):
+            self.rebuild_exec_btn.setEnabled(True)
         
         # Reset visuals
         if self.colorize_enabled:
@@ -1108,6 +1116,8 @@ class MainWindow(QMainWindow):
         self.threading_combo.setEnabled(True)  # Re-enable threading mode when finished
         if hasattr(self, 'rebuild_btn'):
             self.rebuild_btn.setEnabled(True)
+        if hasattr(self, 'rebuild_exec_btn'):
+            self.rebuild_exec_btn.setEnabled(True)
         self.status_bar.showMessage("Execution finished")
     
     def on_error(self, message):
