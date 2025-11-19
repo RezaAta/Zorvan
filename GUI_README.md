@@ -32,6 +32,7 @@ Interactive workspace for building your computational graph:
   - Click on a node's output port (bottom white circle)
   - Drag to the input port (top white circle) of another node
   - Release to create the connection
+   - **Multi-Node Connect**: Select multiple nodes (drag select or Ctrl+click). Hover near the outer edge of any selected node until a crosshair cursor appears; all selected nodes will glow yellow. Click and drag to a target node, and release to create connections from all selected nodes to the target (useful for building fan-in links quickly).
 - **Select Nodes**: Click to select, drag to select multiple
 - **Delete**: Select items and press `Delete` or `Backspace`
 - **Zoom**: Use mouse wheel to zoom in/out

@@ -20,6 +20,7 @@ class NodeItem(QGraphicsEllipseItem):
         self.output_port = QPointF(0, radius)  # Bottom
         self.edges = []  # Connected edge items
         self.hover_edge = False  # Track if hovering over edge
+        self.connection_highlight = False  # Highlight for multi-connection
         
         # Visual properties
         self.setPos(x, y)
@@ -256,11 +257,21 @@ class NodeItem(QGraphicsEllipseItem):
             painter.setPen(QPen(QColor(255, 200, 0), 3))  # Orange highlight
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(-self.radius, -self.radius, self.radius * 2, self.radius * 2)
+        # Connection highlight applies to all selected nodes while connecting
+        elif self.connection_highlight:
+            painter.setPen(QPen(QColor(255, 215, 0), 3))  # Yellow-ish ring
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawEllipse(-self.radius, -self.radius, self.radius * 2, self.radius * 2)
     
     def set_active(self, active):
         """Set whether this node is currently active (for Forward Processing)."""
         self.is_active = active
         self.update()  # Trigger repaint
+
+    def set_connection_highlight(self, val: bool):
+        """Highlight this node as part of a multi-connection preview."""
+        self.connection_highlight = bool(val)
+        self.update()
     
     def hoverMoveEvent(self, event):
         """Handle hover to show connection cursor."""
@@ -273,9 +284,23 @@ class NodeItem(QGraphicsEllipseItem):
         if abs(distance_from_center - self.radius) < 15:
             self.hover_edge = True
             self.setCursor(QCursor(Qt.CursorShape.CrossCursor))
+            # If this node is selected, notify the view to highlight all selected nodes
+            if self.isSelected():
+                scene = self.scene()
+                if scene and scene.views():
+                    view = scene.views()[0]
+                    if hasattr(view, 'highlight_selected_nodes_for_connection'):
+                        view.highlight_selected_nodes_for_connection(True)
         else:
             self.hover_edge = False
             self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+            # Remove selected nodes highlight when not hovering
+            if self.isSelected():
+                scene = self.scene()
+                if scene and scene.views():
+                    view = scene.views()[0]
+                    if hasattr(view, 'highlight_selected_nodes_for_connection') and not getattr(view, 'connection_mode', False):
+                        view.highlight_selected_nodes_for_connection(False)
         
         self.update()  # Trigger repaint
         super().hoverMoveEvent(event)
@@ -284,5 +309,11 @@ class NodeItem(QGraphicsEllipseItem):
         """Reset cursor when leaving node."""
         self.hover_edge = False
         self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+        # Remove selected nodes highlight when leaving this node
+        scene = self.scene()
+        if scene and scene.views():
+            view = scene.views()[0]
+            if hasattr(view, 'highlight_selected_nodes_for_connection') and not getattr(view, 'connection_mode', False):
+                view.highlight_selected_nodes_for_connection(False)
         self.update()
         super().hoverLeaveEvent(event)

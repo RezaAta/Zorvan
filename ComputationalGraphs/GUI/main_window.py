@@ -295,6 +295,12 @@ class MainWindow(QMainWindow):
         self.reset_btn.clicked.connect(self.reset_graph)
         exec_layout.addWidget(self.reset_btn)
 
+        # Add Rebuild button in the Execution Controls for convenience
+        self.rebuild_exec_btn = QPushButton("🔁 Rebuild")
+        self.rebuild_exec_btn.setToolTip("Rebuild the graph from canvas without running it")
+        self.rebuild_exec_btn.clicked.connect(self.rebuild_graph)
+        exec_layout.addWidget(self.rebuild_exec_btn)
+
         steps_layout = QHBoxLayout()
         steps_layout.addWidget(QLabel("Max Steps:"))
         self.max_steps_spin = QSpinBox()
@@ -548,6 +554,11 @@ class MainWindow(QMainWindow):
         self.paste_action = QAction("&Paste", self)
         self.paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         self.paste_action.triggered.connect(lambda: self.canvas.paste_clipboard())
+
+        # Tools action: Rebuild Graph
+        self.rebuild_action = QAction("Rebuild &Graph", self)
+        self.rebuild_action.setStatusTip("Rebuild the graph from the canvas without running it")
+        self.rebuild_action.triggered.connect(self.rebuild_graph)
     
     def create_menus(self):
         """Create menu bar."""
@@ -589,6 +600,9 @@ class MainWindow(QMainWindow):
         backprop_action.setStatusTip("Add backpropagation training to current MLP")
         backprop_action.triggered.connect(self._show_backprop_dialog)
         tools_menu.addAction(backprop_action)
+        tools_menu.addSeparator()
+        # Add rebuild action to Tools
+        tools_menu.addAction(self.rebuild_action)
         
         # View menu
         view_menu = menubar.addMenu("&View")
@@ -634,6 +648,12 @@ class MainWindow(QMainWindow):
         # Track search results
         self.search_results = []
         self.search_index = -1
+        # Add a small toolbar button for Rebuild Graph
+        self.rebuild_btn = QPushButton("🔁 Rebuild")
+        self.rebuild_btn.setToolTip("Rebuild the graph from the canvas without running it")
+        self.rebuild_btn.clicked.connect(self.rebuild_graph)
+        self.rebuild_btn.setMaximumWidth(120)
+        toolbar.addWidget(self.rebuild_btn)
     
     def create_status_bar(self):
         """Create status bar."""
@@ -862,6 +882,8 @@ class MainWindow(QMainWindow):
             self.pause_btn.setEnabled(True)
             self.resume_btn.setEnabled(False)
             self.threading_combo.setEnabled(False)  # Disable threading mode while running
+            if hasattr(self, 'rebuild_btn'):
+                self.rebuild_btn.setEnabled(False)
             self.status_bar.showMessage("Executing graph...")
     
     def run_batch_mode(self, max_steps):
@@ -925,6 +947,8 @@ class MainWindow(QMainWindow):
         self.pause_btn.setEnabled(False)
         self.resume_btn.setEnabled(True)
         self.threading_combo.setEnabled(True)  # Re-enable threading mode when paused
+        if hasattr(self, 'rebuild_btn'):
+            self.rebuild_btn.setEnabled(True)
         self.status_bar.showMessage("Paused")
 
     def resume_graph(self):
@@ -935,6 +959,8 @@ class MainWindow(QMainWindow):
         self.pause_btn.setEnabled(True)
         self.resume_btn.setEnabled(False)
         self.threading_combo.setEnabled(False)
+        if hasattr(self, 'rebuild_btn'):
+            self.rebuild_btn.setEnabled(False)
         self.status_bar.showMessage("Resumed execution")
     
     def step_graph(self):
@@ -953,6 +979,8 @@ class MainWindow(QMainWindow):
         self.pause_btn.setEnabled(False)
         self.resume_btn.setEnabled(False)
         self.threading_combo.setEnabled(True)  # Re-enable threading mode selection
+        if hasattr(self, 'rebuild_btn'):
+            self.rebuild_btn.setEnabled(True)
         
         # Reset visuals
         if self.colorize_enabled:
@@ -964,6 +992,14 @@ class MainWindow(QMainWindow):
     
     def rebuild_graph(self):
         """Rebuild the graph from canvas nodes and edges."""
+        # If canvas is empty, confirm with the user before wiping an existing graph
+        if not self.canvas.node_items:
+            reply = QMessageBox.question(self, "Rebuild Graph",
+                                         "Canvas is empty. Rebuilding will clear the existing graph. Continue?",
+                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply != QMessageBox.StandardButton.Yes:
+                self.status_bar.showMessage("Rebuild cancelled")
+                return
         # Preserve starting_nodes and stopping_nodes before rebuilding
         old_starting_nodes = list(self.graph.starting_nodes) if hasattr(self.graph, 'starting_nodes') else []
         old_stopping_nodes = list(self.graph.stopping_nodes) if hasattr(self.graph, 'stopping_nodes') else []
@@ -992,6 +1028,13 @@ class MainWindow(QMainWindow):
         
         # Set the graph
         self.graph_runner.set_graph(self.graph)
+        # Update UI state
+        try:
+            self.update_starting_nodes_display()
+            self.update_stopping_nodes_display()
+        except Exception:
+            pass
+        self.status_bar.showMessage("Graph rebuilt from canvas")
     
     # Event handlers
     
@@ -1063,6 +1106,8 @@ class MainWindow(QMainWindow):
         self.pause_btn.setEnabled(False)
         self.resume_btn.setEnabled(False)
         self.threading_combo.setEnabled(True)  # Re-enable threading mode when finished
+        if hasattr(self, 'rebuild_btn'):
+            self.rebuild_btn.setEnabled(True)
         self.status_bar.showMessage("Execution finished")
     
     def on_error(self, message):

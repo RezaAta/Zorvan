@@ -38,8 +38,8 @@ class GraphCanvas(QGraphicsView):
         
         # Connection state
         self.connection_mode = False
-        self.connection_start_node = None
-        self.temp_connection_line = None
+        self.connection_start_nodes = []  # List[NodeItem] when multi-connecting
+        self.temp_connection_lines = []  # List of QGraphicsLineItem for preview
         
         # Panning state
         self.panning = False
@@ -97,8 +97,21 @@ class GraphCanvas(QGraphicsView):
     
     def start_connection(self, node_item):
         """Start creating a connection from a node."""
+        # If multiple nodes selected and node_item is among them, connect all selected nodes
+        selected = [item for item in self.scene.selectedItems() if isinstance(item, NodeItem)]
+        if len(selected) > 1 and node_item in selected:
+            self.connection_start_nodes = selected
+        else:
+            self.connection_start_nodes = [node_item]
+
+        # Turn on connection mode and disable movement on start nodes
         self.connection_mode = True
-        self.connection_start_node = node_item
+        for n in self.connection_start_nodes:
+            n.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+            # Also set the connection highlight
+            n.set_connection_highlight(True)
+
+        # Disable rubberband selection and enable drawing
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
     
     def wheelEvent(self, event):
@@ -306,18 +319,22 @@ class GraphCanvas(QGraphicsView):
                 self.verticalScrollBar().value() - int(delta.y())
             )
             event.accept()
-        elif self.connection_mode and self.connection_start_node:
+        elif self.connection_mode and self.connection_start_nodes:
             # Draw temporary line
-            if not self.temp_connection_line:
-                from PyQt6.QtWidgets import QGraphicsLineItem
-                self.temp_connection_line = QGraphicsLineItem()
-                self.temp_connection_line.setPen(QPen(QColor(100, 100, 100), 2, Qt.PenStyle.DashLine))
-                self.scene.addItem(self.temp_connection_line)
+            from PyQt6.QtWidgets import QGraphicsLineItem
+            if not self.temp_connection_lines:
+                # Create a preview line for each start node
+                for n in self.connection_start_nodes:
+                    line = QGraphicsLineItem()
+                    line.setPen(QPen(QColor(100, 100, 100), 2, Qt.PenStyle.DashLine))
+                    self.scene.addItem(line)
+                    self.temp_connection_lines.append(line)
             
-            # Start from the center of the node, not the output port
-            start_pos = self.connection_start_node.scenePos()
+            # Update lines for each start node
             end_pos = self.mapToScene(event.position().toPoint())
-            self.temp_connection_line.setLine(start_pos.x(), start_pos.y(), end_pos.x(), end_pos.y())
+            for i, n in enumerate(self.connection_start_nodes):
+                start_pos = n.scenePos()
+                self.temp_connection_lines[i].setLine(start_pos.x(), start_pos.y(), end_pos.x(), end_pos.y())
         
         super().mouseMoveEvent(event)
     
@@ -329,32 +346,40 @@ class GraphCanvas(QGraphicsView):
             self.pan_start_pos = None
             self.setCursor(Qt.CursorShape.ArrowCursor)
             event.accept()
-        elif self.connection_mode and self.connection_start_node:
+        elif self.connection_mode and self.connection_start_nodes:
             # Check if released over another node
             pos = self.mapToScene(event.position().toPoint())
             items = self.scene.items(pos)
             
             target_node = None
             for item in items:
-                if isinstance(item, NodeItem) and item != self.connection_start_node:
+                if isinstance(item, NodeItem) and item not in self.connection_start_nodes:
                     # Accept connection if released anywhere on the target node
                     target_node = item
                     break
             
             if target_node:
-                # Create edge
-                self.add_edge_item(self.connection_start_node.node, target_node.node)
+                # Create edges from all start nodes to this target
+                for start in self.connection_start_nodes:
+                    if start.node != target_node.node:
+                        self.add_edge_item(start.node, target_node.node)
             
             # Clean up
-            if self.temp_connection_line:
-                self.scene.removeItem(self.temp_connection_line)
-                self.temp_connection_line = None
+            if self.temp_connection_lines:
+                for line in self.temp_connection_lines:
+                    try:
+                        self.scene.removeItem(line)
+                    except Exception:
+                        pass
+                self.temp_connection_lines = []
             
-            # Re-enable movement on the source node
-            self.connection_start_node.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+            # Re-enable movement on the source node(s) and remove their connection highlight
+            for n in self.connection_start_nodes:
+                n.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+                n.set_connection_highlight(False)
             
             self.connection_mode = False
-            self.connection_start_node = None
+            self.connection_start_nodes = []
             self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         
         super().mouseReleaseEvent(event)
@@ -403,6 +428,7 @@ class GraphCanvas(QGraphicsView):
             from ComputationalGraphs.Nodes.MutationNode import MutaionNode
             from ComputationalGraphs.Nodes.DeJongSphereNode import DeJongSphereNode
             from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+            from ComputationalGraphs.Nodes.ExtractListElement import ExtractListElement
             
             node = None
             node_id = len(self.node_items)
@@ -421,6 +447,9 @@ class GraphCanvas(QGraphicsView):
                 node = SequencerNode(name=f"Seq_{node_id}")
             elif node_type == "ListNode":
                 node = ListNode(name=f"List_{node_id}")
+            elif node_type == "ExtractListElement":
+                # Default to extracting index 0; user can edit properties later
+                node = ExtractListElement(name=f"ExtractList_{node_id}", index=0)
             elif node_type == "ContainerNode":
                 node = ContainerNode(name=f"Container_{node_id}")
             
@@ -486,6 +515,12 @@ class GraphCanvas(QGraphicsView):
             node_item.update_value_display()
             if colorize:
                 node_item.colorize_by_value(min_val, max_val, min_color, max_color)
+
+    def highlight_selected_nodes_for_connection(self, on: bool):
+        """Highlight all currently selected nodes for connection preview."""
+        selected_items = [item for item in self.scene.selectedItems() if isinstance(item, NodeItem)]
+        for item in selected_items:
+            item.set_connection_highlight(on)
     
     def highlight_active_nodes(self, active_nodes):
         """Highlight active nodes during Forward Processing execution.

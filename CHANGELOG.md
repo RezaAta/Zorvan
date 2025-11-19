@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 - GUI: Added Copy/Cut/Paste actions in the Edit menu with standard shortcuts.
 - GUI: Fixed an AttributeError on startup by replacing `QKeySequence.Copy|Cut|Paste` with `QKeySequence.StandardKey.Copy|Cut|Paste`.
 
+- GUI: Added quick Multi-Node Connect UX. When multiple nodes are selected, hover the outer edge of any selected node to preview a multi-connection and drag to connect all selected nodes to a target node. (Preview, highlight and preview lines implemented.)
+- GUI: Added automated GUI test `Tests/test_multi_connection_gui.py` to verify multi-node connection behavior.
+
 ### Notes & Limitations
 - Pasted nodes are created by instantiating the node class and restoring a subset of attributes (`value`, `data`, `size`). Some node types requiring special constructor parameters may not be copied.
 - The clipboard is internal to the running application (not persisted between sessions).
