@@ -48,6 +48,8 @@ class GraphCanvas(QGraphicsView):
         # Node tracking
         self.node_items = {}  # Maps node objects to NodeItem widgets
         self.edge_items = []
+        # Internal clipboard for copy/paste
+        self._clipboard = None
         
     def add_node_item(self, node, x=0, y=0):
         """Add a visual representation of a node to the canvas."""
@@ -118,8 +120,130 @@ class GraphCanvas(QGraphicsView):
         # Delete selected nodes/edges
         elif event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
             self.remove_selected_items()
+        # Copy / Paste / Cut (Ctrl+C / Ctrl+V / Ctrl+X)
+        elif event.key() == Qt.Key.Key_C and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.copy_selected()
+        elif event.key() == Qt.Key.Key_V and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.paste_clipboard()
+        elif event.key() == Qt.Key.Key_X and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.cut_selected()
         else:
             super().keyPressEvent(event)
+
+    def copy_selected(self):
+        """Copy currently selected node items (and internal edges between them) to internal clipboard."""
+        selected = [item for item in self.scene.selectedItems() if isinstance(item, NodeItem)]
+        if not selected:
+            return
+
+        # Build node data list
+        nodes_data = []
+        node_to_index = {}
+        for idx, item in enumerate(selected):
+            node = item.node
+            node_to_index[node] = idx
+            # Collect simple attributes (primitives and lists/dicts)
+            attrs = {}
+            for attr in ('value', 'data', 'size'):
+                if hasattr(node, attr):
+                    val = getattr(node, attr)
+                    # shallow copy for lists/dicts
+                    try:
+                        if isinstance(val, (list, dict)):
+                            import copy as _copy
+                            attrs[attr] = _copy.copy(val)
+                        else:
+                            attrs[attr] = val
+                    except Exception:
+                        pass
+
+            nodes_data.append({
+                'class': node.__class__,
+                'name': node.name if hasattr(node, 'name') else None,
+                'attrs': attrs,
+                'pos': (item.pos().x(), item.pos().y())
+            })
+
+        # Collect internal edges (between selected nodes)
+        edges = []
+        for edge in list(self.edge_items):
+            s = edge.source_node.node
+            t = edge.target_node.node
+            if s in node_to_index and t in node_to_index:
+                edges.append((node_to_index[s], node_to_index[t]))
+
+        self._clipboard = {
+            'nodes': nodes_data,
+            'edges': edges
+        }
+
+    def paste_clipboard(self):
+        """Paste nodes from internal clipboard into the scene, centered in view."""
+        if not self._clipboard:
+            return
+
+        data = self._clipboard
+        nodes_data = data.get('nodes', [])
+        edges = data.get('edges', [])
+
+        # Compute average original position
+        if not nodes_data:
+            return
+
+        avg_x = sum(p['pos'][0] for p in nodes_data) / len(nodes_data)
+        avg_y = sum(p['pos'][1] for p in nodes_data) / len(nodes_data)
+
+        # Paste center at current view center
+        center_point = self.mapToScene(self.viewport().rect().center())
+        dx = center_point.x() - avg_x
+        dy = center_point.y() - avg_y
+
+        new_items = []
+        for node_info in nodes_data:
+            cls = node_info['class']
+            orig_name = node_info.get('name') or 'Node'
+            # Create a new name to avoid collisions
+            new_name = f"{orig_name}_copy"
+            try:
+                # Try to instantiate with name param
+                new_node = cls(name=new_name)
+            except Exception:
+                try:
+                    # Fallback: instantiate without args
+                    new_node = cls()
+                    if hasattr(new_node, 'name'):
+                        new_node.name = new_name
+                except Exception:
+                    # Unable to create node of this type; skip
+                    continue
+
+            # Restore simple attributes
+            for k, v in node_info.get('attrs', {}).items():
+                try:
+                    setattr(new_node, k, v)
+                except Exception:
+                    pass
+
+            # Position
+            ox, oy = node_info.get('pos', (0, 0))
+            new_item = self.add_node_item(new_node, ox + dx + 20, oy + dy + 20)
+            new_items.append(new_item)
+
+        # Recreate edges between pasted items
+        for s_idx, t_idx in edges:
+            if s_idx < len(new_items) and t_idx < len(new_items):
+                s_node = new_items[s_idx].node
+                t_node = new_items[t_idx].node
+                self.add_edge_item(s_node, t_node)
+
+        # Select pasted items
+        for item in new_items:
+            item.setSelected(True)
+
+    def cut_selected(self):
+        """Cut selected nodes (copy then delete)."""
+        self.copy_selected()
+        self.remove_selected_items()
     
     def fit_all_nodes_in_view(self):
         """Center and zoom to fit all nodes in the viewport."""

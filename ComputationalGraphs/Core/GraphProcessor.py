@@ -100,10 +100,18 @@ class GraphProcessor:
                     while controller_obj.pause_event.is_set():
                         time.sleep(0.01)
 
+                # Phase 1: UpdateInputs for nodes that need it.
+                # Collect futures and wait for completion to avoid races where
+                # ProcessBatch reads inputs while UpdateInputs is still running.
                 nodes_to_update = [n for n in self.graph.nodes if not getattr(n, 'midCalculation', False)]
+                update_futures = []
                 for chunk in self._chunk_nodes(nodes_to_update):
-                    executor.submit(self._process_node_chunk, chunk, 'UpdateInputs')
+                    update_futures.append(executor.submit(self._process_node_chunk, chunk, 'UpdateInputs'))
+                # Wait for all UpdateInputs tasks to finish before proceeding.
+                for uf in update_futures:
+                    uf.result()
 
+                # Phase 2: ProcessBatch for all nodes. Wait for completion.
                 futures = []
                 for chunk in self._chunk_nodes(self.graph.nodes):
                     futures.append(executor.submit(self._process_node_chunk, chunk, 'ProcessBatch'))

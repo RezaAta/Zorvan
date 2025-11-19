@@ -495,6 +495,12 @@ unified_graph.UpdateAdjacencyMatrix()
 
 All model types are just nodes - connections define the hybrid architecture.
 
+### Fusion-Level Hybridization (author's definition)
+
+- Fusion hybrid AI modifies a model's micro-architecture (internal ops or components) to create a hybrid model (example: ANFIS). This differs from hierarchical/network hybridization where whole models are composed without changing their internals. Fusion typically requires reimplementation of internal parts (hardest form of hybridization).
+- The ComputationalGraphs framework is intentionally node-centric to make fusion easy: swap or extend node-level micro-ops (activations, membership functions, message functions) to create fusion hybrids without touching unrelated nodes. When implementing fusion, prefer adding new nodes and wiring them into graphs; do NOT change existing fuzzy-system nodes directly (keep tests stable).
+
+
 ## Performance Notes
 
 - Single-thread often faster than multi-thread for <1000 nodes due to Python GIL

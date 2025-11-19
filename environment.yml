@@ -1,0 +1,23 @@
+name: computationalgraphs
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - matplotlib
+  - networkx
+  - pyqt=6
+  - scikit-learn
+  - pandas
+  - pillow
+  - pip
+  - pip:
+    - PyQt6>=6.4.0
+    - networkx>=2.8.0
+    - -r requirements_gui.txt
+    - tqdm
+    - pytest
+    - jupyterlab
+prefix: null

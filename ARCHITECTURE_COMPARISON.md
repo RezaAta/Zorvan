@@ -8,22 +8,13 @@
 - ✅ Has BufferNodes after EVERY layer:
   - Input layer: `(DataStreamNode, BufferNode)` pairs
   - Hidden layers: `(AdditionNode, ActivationNode, BufferNode)` triplets
-  - Buffer sizes calculated based on layers ahead: `(layersAhead * 6)`
-  
-**MLPGraphForwardProcessing:**
-- ❌ NO BufferNodes anywhere
   - Input layer: `DataStreamNode` only
   - Hidden layers: `(AdditionNode, ActivationNode)` pairs only
   - Direct propagation without buffering
 
 **Impact:** Buffers allow concurrent processing by storing values for later use. Without buffers, values propagate immediately through active node processing.
 
----
-
-### 2. **Input Layer**
-
 **MLPGraph (Concurrent):**
-```python
 self.inputLayer = [(DataStreamNode(name=f"x{i}"), 
                     BufferNode(name=f"Buff_x{i}", size=((self.numHiddenLayers + 1) * 6))) 
                    for i in range(self.numInputs)]
@@ -33,10 +24,20 @@ self.inputLayer = [(DataStreamNode(name=f"x{i}"),
 
 **MLPGraphForwardProcessing:**
 ```python
-self.inputLayer = [DataStreamNode(name=f"x{i}", initialDelay=0, streamDelay=0) 
-                  for i in range(self.numInputs)]
-```
 - DataStreamNode only (no buffer)
+---
+
+## Fusion-Level Hybridization (Author definition)
+
+- **Definition:** Fusion hybrid AI is hybridization implemented at the architecture (micro-architecture) level — the internal operations or structure of a model are changed or replaced to create a hybrid model (for example, ANFIS). In contrast to hierarchical and network hybridization, fusion modifies the internal micro-architecture (neurons, membership functions, message functions) rather than only connecting whole models together.
+
+- **Key difference vs other hybrid types:** In hierarchical or network hybridization we keep a model's internals intact and adapt inputs/outputs for compatibility. Fusion changes internals, which nearly always requires reimplementation of parts of the model and new parameter interfaces.
+
+- **Why it's the hardest:** Fusion requires redesigning internal components and often special training wiring; it can break differentiability or require novel gradient paths. Successfully implementing fusion-level hybrids is the strongest evidence the framework supports hybrid models broadly.
+
+- **How ComputationalGraphs supports fusion:** Because every micro-operation is a node, you can "play with legos" at the micro-architecture level: swap activation nodes for fuzzy membership+defuzz subgraphs, replace MLP message functions inside a GNN, or embed evolutionary operators as node-level primitives. This repo demonstrates that pattern (ANFIS examples, `MLPAnfisGraph`, `BackpropAnfisGraph`) while preserving existing fuzzy-system nodes.
+
+```
 - `initialDelay=0, streamDelay=0` for immediate streaming
 - Direct connections to multiplication nodes
 

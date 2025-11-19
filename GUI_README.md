@@ -46,6 +46,7 @@ Interactive workspace for building your computational graph:
 - **Reset ⏹**: Reset graph to initial state
 - **Max Steps**: Set the maximum number of iterations
 - **Speed Slider**: Adjust execution speed (10-2000 ms per step)
+   - **Typed Speed**: You can also type an exact value for Speed (ms/step) using the new numeric input (spinbox) next to the slider. Values are kept in sync between the slider and the spinbox.
 
 #### Visualization
 - **Colorize by Value**: Enable heat map coloring of nodes
@@ -69,6 +70,7 @@ Interactive workspace for building your computational graph:
 #### Edit Menu
 - **Delete**: Remove selected items
 - **Edit Node**: Open property editor for selected node (Ctrl+E)
+ - **Copy/Cut/Paste**: Copy and paste selected nodes (Ctrl+C / Ctrl+X / Ctrl+V). Paste centers pasted nodes in view and recreates internal edges between copied nodes.
 
 #### View Menu
 - Toggle visibility of Node Palette and Control Panel
@@ -81,6 +83,9 @@ Interactive workspace for building your computational graph:
 - `Ctrl+E` - Edit selected node
 - `Delete` - Delete selected items
 - `Ctrl+Q` - Quit application
+ - `Ctrl+C` - Copy selected node(s)
+ - `Ctrl+V` - Paste copied node(s)
+ - `Ctrl+X` - Cut selected node(s)
 
 ## Editing Node Properties
 
@@ -178,7 +183,7 @@ Support genetic algorithm implementations:
 
 - [ ] Save/Load graph to/from JSON or Python files
 - [ ] Undo/Redo functionality
-- [ ] Copy/Paste nodes
+ - [x] Copy/Paste nodes
 - [ ] Node grouping/subgraphs
 - [ ] Breakpoints for debugging
 - [ ] Export graph as image

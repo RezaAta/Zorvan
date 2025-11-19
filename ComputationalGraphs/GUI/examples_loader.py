@@ -78,6 +78,11 @@ class ExamplesLoader:
             "Minimal MLP with buffer synchronization",
             self._build_simple_mlp_concurrent
         )
+        nn_concurrent.add_example(
+            "Diabetes Prediction (Concurrent)",
+            "Regression on the Diabetes dataset using a concurrent MLP with backprop",
+            self._build_diabetes_mlp_concurrent
+        )
         self.categories["neural_networks_concurrent"] = nn_concurrent
         
         # Fuzzy System Examples
@@ -86,6 +91,12 @@ class ExamplesLoader:
             "Temperature Control (Fan Speed)",
             "Fan speed control based on temperature and humidity using Mamdani fuzzy rules",
             self._build_temperature_control
+        )
+        # ANFIS (fusion hybrid) example - added for GUI exploration
+        fuzzy.add_example(
+            "ANFIS XOR (Concurrent GUI)",
+            "Zero-order Sugeno ANFIS trained with concurrent backprop - XOR dataset",
+            self._build_anfis_xor
         )
         self.categories["fuzzy_systems"] = fuzzy
         
@@ -372,6 +383,82 @@ class ExamplesLoader:
         fullGraph._mlp_graph = mlpGraph
         
         return fullGraph
+
+    def _build_diabetes_mlp_concurrent(self) -> Graph:
+        """Build Diabetes regression MLP (Concurrent Processing with buffers).
+
+        This adapts the test script `TestingOnDiabetes.py` into a GUI-loadable
+        example. It loads the sklearn Diabetes dataset, removes outliers via IQR,
+        scales features, then builds a concurrent `MLPGraph` and `BackpropGraph`.
+
+        NOTE: Error buffers are NOT added here; the GUI runner can create them
+        after a warmup if needed (similar to other concurrent examples).
+        """
+        # Local imports to avoid GUI import-time side-effects
+        from ComputationalGraphs.Core.MLPGraph import MLPGraph
+        from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
+        from ComputationalGraphs.Nodes.LinearNode import LinearNode
+        from sklearn.datasets import load_diabetes
+        from sklearn.preprocessing import StandardScaler
+        import numpy as np
+
+        # Load Diabetes Dataset
+        data = load_diabetes()
+        inputData = data.data  # Features (n_samples, n_features)
+        targetData = data.target  # (n_samples,)
+
+        # Detect and remove outliers using IQR on target
+        q1 = np.percentile(targetData, 25, axis=0)
+        q3 = np.percentile(targetData, 75, axis=0)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+        non_outlier_mask = (targetData >= lower_bound) & (targetData <= upper_bound)
+        inputData = inputData[non_outlier_mask.flatten()]
+        targetData = targetData[non_outlier_mask.flatten()]
+
+        # Reshape target and scale features
+        targetData = targetData.reshape(-1, 1)
+        scaler = StandardScaler()
+        inputData = scaler.fit_transform(inputData)
+
+        # Convert to row-per-feature format expected by concurrent MLPGraph
+        X = inputData.T.tolist()  # shape: (features, samples)
+        y = targetData.T.tolist()  # shape: (1, samples)
+
+        # Build concurrent MLPGraph
+        mlpGraph = MLPGraph(
+            numInputs=len(X),
+            numOutputs=1,
+            numHiddenLayers=3,
+            hiddenLayerSizes=[8, 4, 2],
+            activationFunction=SigmoidNode,
+            outputLayerType=LinearNode
+        )
+        mlpGraph.BuildMLP()
+
+        # Attach concurrent backprop
+        backprop_graph = BackpropGraph(mlpGraph, learningRate=0.00001)
+        backprop_graph.BuildBackprop()
+
+        # Load dataset into the graph
+        mlpGraph.LoadData(X, y)
+
+        # Combine graphs into a single Graph object for the GUI
+        fullGraph = Graph()
+        for node in mlpGraph.nodes:
+            fullGraph.AddNode(node)
+        for node in backprop_graph.nodes:
+            fullGraph.AddNode(node)
+
+        # Starting nodes for concurrent processing: data streams + labels
+        fullGraph.starting_nodes = [input_pair[0] for input_pair in mlpGraph.inputLayer] + mlpGraph.labelLayer
+        fullGraph.UpdateAdjacencyMatrix()
+
+        # Store reference for GUI/debugging if needed
+        fullGraph._mlp_graph = mlpGraph
+
+        return fullGraph
     
     def _build_simple_mlp_concurrent(self) -> Graph:
         """Build minimal 1x1x1 MLP - Concurrent Processing with buffers."""
@@ -464,6 +551,46 @@ class ExamplesLoader:
         
         graph.UpdateAdjacencyMatrix()
         return graph
+
+    def _build_anfis_xor(self) -> Graph:
+        """Build ANFIS zero-order Sugeno for XOR (Concurrent mode) to load in GUI.
+
+        This uses `MLPAnfisGraph` (concurrent-style) and `BackpropAnfisGraph` to
+        attach gradient wiring. The returned `Graph` is a combined graph suitable
+        for opening in the GUI (concurrent processing with buffers).
+        """
+        # Local imports to avoid GUI import-time side-effects
+        from ComputationalGraphs.Core.MLPAnfisGraph import MLPAnfisGraph
+        from ComputationalGraphs.Core.BackpropAnfisGraph import BackpropAnfisGraph
+
+        # Build ANFIS graph: 2 inputs, 1 output, 2 MFs per input
+        anfis = MLPAnfisGraph(numInputs=2, numOutputs=1, mfs_per_input=2)
+        anfis.BuildMLP()
+
+        # XOR dataset in row-per-feature form (concurrent mode expects this)
+        X = [[0.0, 0.0, 1.0, 1.0], [0.0, 1.0, 0.0, 1.0]]
+        y = [[0.0, 1.0, 1.0, 0.0]]
+        anfis.LoadData(X, y)
+
+        # Attach concurrent backprop adapter for ANFIS
+        backprop = BackpropAnfisGraph(anfis, learningRate=0.01)
+        backprop.BuildBackprop()
+
+        # Combine graphs into a single Graph object for the GUI
+        fullGraph = Graph()
+        for node in anfis.nodes:
+            fullGraph.AddNode(node)
+        for node in backprop.nodes:
+            fullGraph.AddNode(node)
+
+        # Starting nodes for concurrent processing: data streams + labels
+        fullGraph.starting_nodes = [input_pair[0] for input_pair in anfis.inputLayer] + anfis.labelLayer
+        fullGraph.UpdateAdjacencyMatrix()
+
+        # Store reference for GUI/debugging if needed
+        fullGraph._anfis_graph = anfis
+
+        return fullGraph
     
     def _build_dejong_ea_elitism(self) -> Graph:
         """Build De Jong EA with elitism - best individual preserved across generations."""

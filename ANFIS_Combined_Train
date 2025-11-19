@@ -1,0 +1,643 @@
+digraph {
+	rankdir=LR
+	x0 [label="x0
+(DataStreamNode)
+None"]
+	Buff_x0 [label="Buff_x0
+(BufferNode)
+None"]
+	x1 [label="x1
+(DataStreamNode)
+None"]
+	Buff_x1 [label="Buff_x1
+(BufferNode)
+None"]
+	c_x0_m0 [label="c_x0_m0
+(ContainerNode)
+0.0"]
+	s_x0_m0 [label="s_x0_m0
+(ContainerNode)
+0.5"]
+	G_x0_m0 [label="G_x0_m0
+(GaussianMembershipNode)
+0.0"]
+	c_x0_m1 [label="c_x0_m1
+(ContainerNode)
+1.0"]
+	s_x0_m1 [label="s_x0_m1
+(ContainerNode)
+0.5"]
+	G_x0_m1 [label="G_x0_m1
+(GaussianMembershipNode)
+0.0"]
+	c_x1_m0 [label="c_x1_m0
+(ContainerNode)
+0.0"]
+	s_x1_m0 [label="s_x1_m0
+(ContainerNode)
+0.5"]
+	G_x1_m0 [label="G_x1_m0
+(GaussianMembershipNode)
+0.0"]
+	c_x1_m1 [label="c_x1_m1
+(ContainerNode)
+1.0"]
+	s_x1_m1 [label="s_x1_m1
+(ContainerNode)
+0.5"]
+	G_x1_m1 [label="G_x1_m1
+(GaussianMembershipNode)
+0.0"]
+	R_00_m1 [label="R_00_m1
+(MultiplicationNode)
+0"]
+	R_01_m1 [label="R_01_m1
+(MultiplicationNode)
+0"]
+	R_10_m1 [label="R_10_m1
+(MultiplicationNode)
+0"]
+	R_11_m1 [label="R_11_m1
+(MultiplicationNode)
+0"]
+	q0 [label="q0
+(ContainerNode)
+0.0"]
+	q1 [label="q1
+(ContainerNode)
+0.0"]
+	q2 [label="q2
+(ContainerNode)
+0.0"]
+	q3 [label="q3
+(ContainerNode)
+0.0"]
+	P0 [label="P0
+(MultiplicationNode)
+0"]
+	P1 [label="P1
+(MultiplicationNode)
+0"]
+	P2 [label="P2
+(MultiplicationNode)
+0"]
+	P3 [label="P3
+(MultiplicationNode)
+0"]
+	Numerator [label="Numerator
+(AdditionNode)
+0.0"]
+	Denominator [label="Denominator
+(AdditionNode)
+0.0"]
+	y0 [label="y0
+(DivisionNode)
+0"]
+	L_y0 [label="L_y0
+(DataStreamNode)
+None"]
+	Error_y0 [label="Error_y0
+(SubtractionNode)
+0"]
+	LearningRate [label="LearningRate
+(DisplayNode)
+0.3"]
+	NormRule_0 [label="NormRule_0
+(DivisionNode)
+0"]
+	EG_q0 [label="EG_q0
+(MultiplicationNode)
+0"]
+	LRMult_q0 [label="LRMult_q0
+(MultiplicationNode)
+0"]
+	qdiff_0 [label="qdiff_0
+(SubtractionNode)
+0"]
+	qdiff_div_0 [label="qdiff_div_0
+(DivisionNode)
+0"]
+	grad_wk_0 [label="grad_wk_0
+(MultiplicationNode)
+0"]
+	otherprod_0_0 [label="otherprod_0_0
+(DivisionNode)
+0"]
+	dmu_dc_k0_m0 [label="dmu_dc_k0_m0
+(GaussianCenterDerivativeNode)
+0.0"]
+	dmu_ds_k0_m0 [label="dmu_ds_k0_m0
+(GaussianSigmaDerivativeNode)
+0.0"]
+	gw_other_0_0 [label="gw_other_0_0
+(MultiplicationNode)
+0"]
+	dCcontrib_0_0 [label="dCcontrib_0_0
+(MultiplicationNode)
+0"]
+	LRMult_c_k0_m0 [label="LRMult_c_k0_m0
+(MultiplicationNode)
+0"]
+	gw_other_s_0_0 [label="gw_other_s_0_0
+(MultiplicationNode)
+0"]
+	dScontrib_0_0 [label="dScontrib_0_0
+(MultiplicationNode)
+0"]
+	LRMult_s_k0_m0 [label="LRMult_s_k0_m0
+(MultiplicationNode)
+0"]
+	otherprod_0_1 [label="otherprod_0_1
+(DivisionNode)
+0"]
+	dmu_dc_k0_m1 [label="dmu_dc_k0_m1
+(GaussianCenterDerivativeNode)
+0.0"]
+	dmu_ds_k0_m1 [label="dmu_ds_k0_m1
+(GaussianSigmaDerivativeNode)
+0.0"]
+	gw_other_0_1 [label="gw_other_0_1
+(MultiplicationNode)
+0"]
+	dCcontrib_0_1 [label="dCcontrib_0_1
+(MultiplicationNode)
+0"]
+	LRMult_c_k0_m1 [label="LRMult_c_k0_m1
+(MultiplicationNode)
+0"]
+	gw_other_s_0_1 [label="gw_other_s_0_1
+(MultiplicationNode)
+0"]
+	dScontrib_0_1 [label="dScontrib_0_1
+(MultiplicationNode)
+0"]
+	LRMult_s_k0_m1 [label="LRMult_s_k0_m1
+(MultiplicationNode)
+0"]
+	NormRule_1 [label="NormRule_1
+(DivisionNode)
+0"]
+	EG_q1 [label="EG_q1
+(MultiplicationNode)
+0"]
+	LRMult_q1 [label="LRMult_q1
+(MultiplicationNode)
+0"]
+	qdiff_1 [label="qdiff_1
+(SubtractionNode)
+0"]
+	qdiff_div_1 [label="qdiff_div_1
+(DivisionNode)
+0"]
+	grad_wk_1 [label="grad_wk_1
+(MultiplicationNode)
+0"]
+	otherprod_1_0 [label="otherprod_1_0
+(DivisionNode)
+0"]
+	dmu_dc_k1_m0 [label="dmu_dc_k1_m0
+(GaussianCenterDerivativeNode)
+0.0"]
+	dmu_ds_k1_m0 [label="dmu_ds_k1_m0
+(GaussianSigmaDerivativeNode)
+0.0"]
+	gw_other_1_0 [label="gw_other_1_0
+(MultiplicationNode)
+0"]
+	dCcontrib_1_0 [label="dCcontrib_1_0
+(MultiplicationNode)
+0"]
+	LRMult_c_k1_m0 [label="LRMult_c_k1_m0
+(MultiplicationNode)
+0"]
+	gw_other_s_1_0 [label="gw_other_s_1_0
+(MultiplicationNode)
+0"]
+	dScontrib_1_0 [label="dScontrib_1_0
+(MultiplicationNode)
+0"]
+	LRMult_s_k1_m0 [label="LRMult_s_k1_m0
+(MultiplicationNode)
+0"]
+	otherprod_1_1 [label="otherprod_1_1
+(DivisionNode)
+0"]
+	dmu_dc_k1_m1 [label="dmu_dc_k1_m1
+(GaussianCenterDerivativeNode)
+0.0"]
+	dmu_ds_k1_m1 [label="dmu_ds_k1_m1
+(GaussianSigmaDerivativeNode)
+0.0"]
+	gw_other_1_1 [label="gw_other_1_1
+(MultiplicationNode)
+0"]
+	dCcontrib_1_1 [label="dCcontrib_1_1
+(MultiplicationNode)
+0"]
+	LRMult_c_k1_m1 [label="LRMult_c_k1_m1
+(MultiplicationNode)
+0"]
+	gw_other_s_1_1 [label="gw_other_s_1_1
+(MultiplicationNode)
+0"]
+	dScontrib_1_1 [label="dScontrib_1_1
+(MultiplicationNode)
+0"]
+	LRMult_s_k1_m1 [label="LRMult_s_k1_m1
+(MultiplicationNode)
+0"]
+	NormRule_2 [label="NormRule_2
+(DivisionNode)
+0"]
+	EG_q2 [label="EG_q2
+(MultiplicationNode)
+0"]
+	LRMult_q2 [label="LRMult_q2
+(MultiplicationNode)
+0"]
+	qdiff_2 [label="qdiff_2
+(SubtractionNode)
+0"]
+	qdiff_div_2 [label="qdiff_div_2
+(DivisionNode)
+0"]
+	grad_wk_2 [label="grad_wk_2
+(MultiplicationNode)
+0"]
+	otherprod_2_0 [label="otherprod_2_0
+(DivisionNode)
+0"]
+	dmu_dc_k2_m0 [label="dmu_dc_k2_m0
+(GaussianCenterDerivativeNode)
+0.0"]
+	dmu_ds_k2_m0 [label="dmu_ds_k2_m0
+(GaussianSigmaDerivativeNode)
+0.0"]
+	gw_other_2_0 [label="gw_other_2_0
+(MultiplicationNode)
+0"]
+	dCcontrib_2_0 [label="dCcontrib_2_0
+(MultiplicationNode)
+0"]
+	LRMult_c_k2_m0 [label="LRMult_c_k2_m0
+(MultiplicationNode)
+0"]
+	gw_other_s_2_0 [label="gw_other_s_2_0
+(MultiplicationNode)
+0"]
+	dScontrib_2_0 [label="dScontrib_2_0
+(MultiplicationNode)
+0"]
+	LRMult_s_k2_m0 [label="LRMult_s_k2_m0
+(MultiplicationNode)
+0"]
+	otherprod_2_1 [label="otherprod_2_1
+(DivisionNode)
+0"]
+	dmu_dc_k2_m1 [label="dmu_dc_k2_m1
+(GaussianCenterDerivativeNode)
+0.0"]
+	dmu_ds_k2_m1 [label="dmu_ds_k2_m1
+(GaussianSigmaDerivativeNode)
+0.0"]
+	gw_other_2_1 [label="gw_other_2_1
+(MultiplicationNode)
+0"]
+	dCcontrib_2_1 [label="dCcontrib_2_1
+(MultiplicationNode)
+0"]
+	LRMult_c_k2_m1 [label="LRMult_c_k2_m1
+(MultiplicationNode)
+0"]
+	gw_other_s_2_1 [label="gw_other_s_2_1
+(MultiplicationNode)
+0"]
+	dScontrib_2_1 [label="dScontrib_2_1
+(MultiplicationNode)
+0"]
+	LRMult_s_k2_m1 [label="LRMult_s_k2_m1
+(MultiplicationNode)
+0"]
+	NormRule_3 [label="NormRule_3
+(DivisionNode)
+0"]
+	EG_q3 [label="EG_q3
+(MultiplicationNode)
+0"]
+	LRMult_q3 [label="LRMult_q3
+(MultiplicationNode)
+0"]
+	qdiff_3 [label="qdiff_3
+(SubtractionNode)
+0"]
+	qdiff_div_3 [label="qdiff_div_3
+(DivisionNode)
+0"]
+	grad_wk_3 [label="grad_wk_3
+(MultiplicationNode)
+0"]
+	otherprod_3_0 [label="otherprod_3_0
+(DivisionNode)
+0"]
+	dmu_dc_k3_m0 [label="dmu_dc_k3_m0
+(GaussianCenterDerivativeNode)
+0.0"]
+	dmu_ds_k3_m0 [label="dmu_ds_k3_m0
+(GaussianSigmaDerivativeNode)
+0.0"]
+	gw_other_3_0 [label="gw_other_3_0
+(MultiplicationNode)
+0"]
+	dCcontrib_3_0 [label="dCcontrib_3_0
+(MultiplicationNode)
+0"]
+	LRMult_c_k3_m0 [label="LRMult_c_k3_m0
+(MultiplicationNode)
+0"]
+	gw_other_s_3_0 [label="gw_other_s_3_0
+(MultiplicationNode)
+0"]
+	dScontrib_3_0 [label="dScontrib_3_0
+(MultiplicationNode)
+0"]
+	LRMult_s_k3_m0 [label="LRMult_s_k3_m0
+(MultiplicationNode)
+0"]
+	otherprod_3_1 [label="otherprod_3_1
+(DivisionNode)
+0"]
+	dmu_dc_k3_m1 [label="dmu_dc_k3_m1
+(GaussianCenterDerivativeNode)
+0.0"]
+	dmu_ds_k3_m1 [label="dmu_ds_k3_m1
+(GaussianSigmaDerivativeNode)
+0.0"]
+	gw_other_3_1 [label="gw_other_3_1
+(MultiplicationNode)
+0"]
+	dCcontrib_3_1 [label="dCcontrib_3_1
+(MultiplicationNode)
+0"]
+	LRMult_c_k3_m1 [label="LRMult_c_k3_m1
+(MultiplicationNode)
+0"]
+	gw_other_s_3_1 [label="gw_other_s_3_1
+(MultiplicationNode)
+0"]
+	dScontrib_3_1 [label="dScontrib_3_1
+(MultiplicationNode)
+0"]
+	LRMult_s_k3_m1 [label="LRMult_s_k3_m1
+(MultiplicationNode)
+0"]
+	x0 -> Buff_x0
+	x0 -> G_x0_m0
+	x0 -> G_x0_m1
+	x0 -> dmu_dc_k0_m0
+	x0 -> dmu_ds_k0_m0
+	x0 -> dmu_dc_k1_m0
+	x0 -> dmu_ds_k1_m0
+	x0 -> dmu_dc_k2_m0
+	x0 -> dmu_ds_k2_m0
+	x0 -> dmu_dc_k3_m0
+	x0 -> dmu_ds_k3_m0
+	x1 -> Buff_x1
+	x1 -> G_x1_m0
+	x1 -> G_x1_m1
+	x1 -> dmu_dc_k0_m1
+	x1 -> dmu_ds_k0_m1
+	x1 -> dmu_dc_k1_m1
+	x1 -> dmu_ds_k1_m1
+	x1 -> dmu_dc_k2_m1
+	x1 -> dmu_ds_k2_m1
+	x1 -> dmu_dc_k3_m1
+	x1 -> dmu_ds_k3_m1
+	c_x0_m0 -> G_x0_m0
+	c_x0_m0 -> dmu_dc_k0_m0
+	c_x0_m0 -> dmu_ds_k0_m0
+	c_x0_m0 -> dmu_dc_k1_m0
+	c_x0_m0 -> dmu_ds_k1_m0
+	s_x0_m0 -> G_x0_m0
+	s_x0_m0 -> dmu_dc_k0_m0
+	s_x0_m0 -> dmu_ds_k0_m0
+	s_x0_m0 -> dmu_dc_k1_m0
+	s_x0_m0 -> dmu_ds_k1_m0
+	G_x0_m0 -> R_00_m1
+	G_x0_m0 -> R_01_m1
+	G_x0_m0 -> otherprod_0_0
+	G_x0_m0 -> otherprod_1_0
+	c_x0_m1 -> G_x0_m1
+	c_x0_m1 -> dmu_dc_k2_m0
+	c_x0_m1 -> dmu_ds_k2_m0
+	c_x0_m1 -> dmu_dc_k3_m0
+	c_x0_m1 -> dmu_ds_k3_m0
+	s_x0_m1 -> G_x0_m1
+	s_x0_m1 -> dmu_dc_k2_m0
+	s_x0_m1 -> dmu_ds_k2_m0
+	s_x0_m1 -> dmu_dc_k3_m0
+	s_x0_m1 -> dmu_ds_k3_m0
+	G_x0_m1 -> R_10_m1
+	G_x0_m1 -> R_11_m1
+	G_x0_m1 -> otherprod_2_0
+	G_x0_m1 -> otherprod_3_0
+	c_x1_m0 -> G_x1_m0
+	c_x1_m0 -> dmu_dc_k0_m1
+	c_x1_m0 -> dmu_ds_k0_m1
+	c_x1_m0 -> dmu_dc_k2_m1
+	c_x1_m0 -> dmu_ds_k2_m1
+	s_x1_m0 -> G_x1_m0
+	s_x1_m0 -> dmu_dc_k0_m1
+	s_x1_m0 -> dmu_ds_k0_m1
+	s_x1_m0 -> dmu_dc_k2_m1
+	s_x1_m0 -> dmu_ds_k2_m1
+	G_x1_m0 -> R_00_m1
+	G_x1_m0 -> R_10_m1
+	G_x1_m0 -> otherprod_0_1
+	G_x1_m0 -> otherprod_2_1
+	c_x1_m1 -> G_x1_m1
+	c_x1_m1 -> dmu_dc_k1_m1
+	c_x1_m1 -> dmu_ds_k1_m1
+	c_x1_m1 -> dmu_dc_k3_m1
+	c_x1_m1 -> dmu_ds_k3_m1
+	s_x1_m1 -> G_x1_m1
+	s_x1_m1 -> dmu_dc_k1_m1
+	s_x1_m1 -> dmu_ds_k1_m1
+	s_x1_m1 -> dmu_dc_k3_m1
+	s_x1_m1 -> dmu_ds_k3_m1
+	G_x1_m1 -> R_01_m1
+	G_x1_m1 -> R_11_m1
+	G_x1_m1 -> otherprod_1_1
+	G_x1_m1 -> otherprod_3_1
+	R_00_m1 -> P0
+	R_00_m1 -> Denominator
+	R_00_m1 -> NormRule_0
+	R_00_m1 -> otherprod_0_0
+	R_00_m1 -> otherprod_0_1
+	R_01_m1 -> P1
+	R_01_m1 -> Denominator
+	R_01_m1 -> NormRule_1
+	R_01_m1 -> otherprod_1_0
+	R_01_m1 -> otherprod_1_1
+	R_10_m1 -> P2
+	R_10_m1 -> Denominator
+	R_10_m1 -> NormRule_2
+	R_10_m1 -> otherprod_2_0
+	R_10_m1 -> otherprod_2_1
+	R_11_m1 -> P3
+	R_11_m1 -> Denominator
+	R_11_m1 -> NormRule_3
+	R_11_m1 -> otherprod_3_0
+	R_11_m1 -> otherprod_3_1
+	q0 -> P0
+	q0 -> qdiff_0
+	q1 -> P1
+	q1 -> qdiff_1
+	q2 -> P2
+	q2 -> qdiff_2
+	q3 -> P3
+	q3 -> qdiff_3
+	P0 -> Numerator
+	P1 -> Numerator
+	P2 -> Numerator
+	P3 -> Numerator
+	Numerator -> y0
+	Denominator -> y0
+	Denominator -> NormRule_0
+	Denominator -> qdiff_div_0
+	Denominator -> NormRule_1
+	Denominator -> qdiff_div_1
+	Denominator -> NormRule_2
+	Denominator -> qdiff_div_2
+	Denominator -> NormRule_3
+	Denominator -> qdiff_div_3
+	y0 -> Error_y0
+	y0 -> qdiff_0
+	y0 -> qdiff_1
+	y0 -> qdiff_2
+	y0 -> qdiff_3
+	L_y0 -> Error_y0
+	Error_y0 -> EG_q0
+	Error_y0 -> grad_wk_0
+	Error_y0 -> EG_q1
+	Error_y0 -> grad_wk_1
+	Error_y0 -> EG_q2
+	Error_y0 -> grad_wk_2
+	Error_y0 -> EG_q3
+	Error_y0 -> grad_wk_3
+	LearningRate -> LRMult_q0
+	LearningRate -> LRMult_c_k0_m0
+	LearningRate -> LRMult_s_k0_m0
+	LearningRate -> LRMult_c_k0_m1
+	LearningRate -> LRMult_s_k0_m1
+	LearningRate -> LRMult_q1
+	LearningRate -> LRMult_c_k1_m0
+	LearningRate -> LRMult_s_k1_m0
+	LearningRate -> LRMult_c_k1_m1
+	LearningRate -> LRMult_s_k1_m1
+	LearningRate -> LRMult_q2
+	LearningRate -> LRMult_c_k2_m0
+	LearningRate -> LRMult_s_k2_m0
+	LearningRate -> LRMult_c_k2_m1
+	LearningRate -> LRMult_s_k2_m1
+	LearningRate -> LRMult_q3
+	LearningRate -> LRMult_c_k3_m0
+	LearningRate -> LRMult_s_k3_m0
+	LearningRate -> LRMult_c_k3_m1
+	LearningRate -> LRMult_s_k3_m1
+	NormRule_0 -> EG_q0
+	EG_q0 -> LRMult_q0
+	qdiff_0 -> qdiff_div_0
+	qdiff_div_0 -> grad_wk_0
+	grad_wk_0 -> gw_other_0_0
+	grad_wk_0 -> gw_other_s_0_0
+	grad_wk_0 -> gw_other_0_1
+	grad_wk_0 -> gw_other_s_0_1
+	otherprod_0_0 -> gw_other_0_0
+	otherprod_0_0 -> gw_other_s_0_0
+	dmu_dc_k0_m0 -> dCcontrib_0_0
+	dmu_ds_k0_m0 -> dScontrib_0_0
+	gw_other_0_0 -> dCcontrib_0_0
+	dCcontrib_0_0 -> LRMult_c_k0_m0
+	gw_other_s_0_0 -> dScontrib_0_0
+	dScontrib_0_0 -> LRMult_s_k0_m0
+	otherprod_0_1 -> gw_other_0_1
+	otherprod_0_1 -> gw_other_s_0_1
+	dmu_dc_k0_m1 -> dCcontrib_0_1
+	dmu_ds_k0_m1 -> dScontrib_0_1
+	gw_other_0_1 -> dCcontrib_0_1
+	dCcontrib_0_1 -> LRMult_c_k0_m1
+	gw_other_s_0_1 -> dScontrib_0_1
+	dScontrib_0_1 -> LRMult_s_k0_m1
+	NormRule_1 -> EG_q1
+	EG_q1 -> LRMult_q1
+	qdiff_1 -> qdiff_div_1
+	qdiff_div_1 -> grad_wk_1
+	grad_wk_1 -> gw_other_1_0
+	grad_wk_1 -> gw_other_s_1_0
+	grad_wk_1 -> gw_other_1_1
+	grad_wk_1 -> gw_other_s_1_1
+	otherprod_1_0 -> gw_other_1_0
+	otherprod_1_0 -> gw_other_s_1_0
+	dmu_dc_k1_m0 -> dCcontrib_1_0
+	dmu_ds_k1_m0 -> dScontrib_1_0
+	gw_other_1_0 -> dCcontrib_1_0
+	dCcontrib_1_0 -> LRMult_c_k1_m0
+	gw_other_s_1_0 -> dScontrib_1_0
+	dScontrib_1_0 -> LRMult_s_k1_m0
+	otherprod_1_1 -> gw_other_1_1
+	otherprod_1_1 -> gw_other_s_1_1
+	dmu_dc_k1_m1 -> dCcontrib_1_1
+	dmu_ds_k1_m1 -> dScontrib_1_1
+	gw_other_1_1 -> dCcontrib_1_1
+	dCcontrib_1_1 -> LRMult_c_k1_m1
+	gw_other_s_1_1 -> dScontrib_1_1
+	dScontrib_1_1 -> LRMult_s_k1_m1
+	NormRule_2 -> EG_q2
+	EG_q2 -> LRMult_q2
+	qdiff_2 -> qdiff_div_2
+	qdiff_div_2 -> grad_wk_2
+	grad_wk_2 -> gw_other_2_0
+	grad_wk_2 -> gw_other_s_2_0
+	grad_wk_2 -> gw_other_2_1
+	grad_wk_2 -> gw_other_s_2_1
+	otherprod_2_0 -> gw_other_2_0
+	otherprod_2_0 -> gw_other_s_2_0
+	dmu_dc_k2_m0 -> dCcontrib_2_0
+	dmu_ds_k2_m0 -> dScontrib_2_0
+	gw_other_2_0 -> dCcontrib_2_0
+	dCcontrib_2_0 -> LRMult_c_k2_m0
+	gw_other_s_2_0 -> dScontrib_2_0
+	dScontrib_2_0 -> LRMult_s_k2_m0
+	otherprod_2_1 -> gw_other_2_1
+	otherprod_2_1 -> gw_other_s_2_1
+	dmu_dc_k2_m1 -> dCcontrib_2_1
+	dmu_ds_k2_m1 -> dScontrib_2_1
+	gw_other_2_1 -> dCcontrib_2_1
+	dCcontrib_2_1 -> LRMult_c_k2_m1
+	gw_other_s_2_1 -> dScontrib_2_1
+	dScontrib_2_1 -> LRMult_s_k2_m1
+	NormRule_3 -> EG_q3
+	EG_q3 -> LRMult_q3
+	qdiff_3 -> qdiff_div_3
+	qdiff_div_3 -> grad_wk_3
+	grad_wk_3 -> gw_other_3_0
+	grad_wk_3 -> gw_other_s_3_0
+	grad_wk_3 -> gw_other_3_1
+	grad_wk_3 -> gw_other_s_3_1
+	otherprod_3_0 -> gw_other_3_0
+	otherprod_3_0 -> gw_other_s_3_0
+	dmu_dc_k3_m0 -> dCcontrib_3_0
+	dmu_ds_k3_m0 -> dScontrib_3_0
+	gw_other_3_0 -> dCcontrib_3_0
+	dCcontrib_3_0 -> LRMult_c_k3_m0
+	gw_other_s_3_0 -> dScontrib_3_0
+	dScontrib_3_0 -> LRMult_s_k3_m0
+	otherprod_3_1 -> gw_other_3_1
+	otherprod_3_1 -> gw_other_s_3_1
+	dmu_dc_k3_m1 -> dCcontrib_3_1
+	dmu_ds_k3_m1 -> dScontrib_3_1
+	gw_other_3_1 -> dCcontrib_3_1
+	dCcontrib_3_1 -> LRMult_c_k3_m1
+	gw_other_s_3_1 -> dScontrib_3_1
+	dScontrib_3_1 -> LRMult_s_k3_m1
+}

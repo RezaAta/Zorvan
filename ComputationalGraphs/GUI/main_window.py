@@ -266,11 +266,7 @@ class MainWindow(QMainWindow):
 
         exec_layout.addWidget(self.stopping_nodes_widget)
 
-        # Mark weights button (kept in Execution panel for visibility)
-        self.mark_weights_processed_btn = QPushButton("Mark Weights Processed (Debug)")
-        self.mark_weights_processed_btn.setToolTip("Mark all ContainerNode weights as processed (debug)")
-        self.mark_weights_processed_btn.clicked.connect(self.mark_weights_processed)
-        exec_layout.addWidget(self.mark_weights_processed_btn)
+        # (Removed debug button: 'Mark Weights Processed')
 
         exec_layout.addWidget(QLabel(""))  # Spacer
 
@@ -343,8 +339,19 @@ class MainWindow(QMainWindow):
         self.speed_slider.valueChanged.connect(self.on_speed_changed)
         speed_layout.addWidget(self.speed_slider)
 
+        # Allow the user to type an exact speed value (ms/step)
+        spin_layout = QHBoxLayout()
+        self.speed_spin = QSpinBox()
+        self.speed_spin.setRange(10, 2000)
+        self.speed_spin.setValue(500)
+        self.speed_spin.setSingleStep(10)
+        self.speed_spin.valueChanged.connect(self.on_speed_spin_changed)
+        spin_layout.addWidget(self.speed_spin)
+
         self.speed_label = QLabel("500 ms")
-        speed_layout.addWidget(self.speed_label)
+        spin_layout.addWidget(self.speed_label)
+        spin_layout.addStretch()
+        speed_layout.addLayout(spin_layout)
         exec_layout.addLayout(speed_layout)
 
         self.step_label = QLabel("Step: 0")
@@ -487,9 +494,10 @@ class MainWindow(QMainWindow):
         plot_layout.addStretch()
 
         # Add collapsible sections to main layout
+        # Order changed: Execution -> Layout (open) -> Visualization -> Plotting
         layout.addWidget(CollapsibleSection("Execution", exec_container, expanded=True))
-        layout.addWidget(CollapsibleSection("Visualization", viz_container, expanded=True))
-        layout.addWidget(CollapsibleSection("Layout", layout_container, expanded=False))
+        layout.addWidget(CollapsibleSection("Layout", layout_container, expanded=True))
+        layout.addWidget(CollapsibleSection("Visualization", viz_container, expanded=False))
         layout.addWidget(CollapsibleSection("Plotting", plot_container, expanded=False))
 
         layout.addStretch()
@@ -527,6 +535,19 @@ class MainWindow(QMainWindow):
         self.edit_node_action = QAction("&Edit Node...", self)
         self.edit_node_action.setShortcut(QKeySequence("Ctrl+E"))
         self.edit_node_action.triggered.connect(self.edit_selected_node)
+        
+        # Copy / Cut / Paste actions for canvas
+        self.copy_action = QAction("&Copy", self)
+        self.copy_action.setShortcut(QKeySequence.StandardKey.Copy)
+        self.copy_action.triggered.connect(lambda: self.canvas.copy_selected())
+
+        self.cut_action = QAction("Cu&t", self)
+        self.cut_action.setShortcut(QKeySequence.StandardKey.Cut)
+        self.cut_action.triggered.connect(lambda: self.canvas.cut_selected())
+
+        self.paste_action = QAction("&Paste", self)
+        self.paste_action.setShortcut(QKeySequence.StandardKey.Paste)
+        self.paste_action.triggered.connect(lambda: self.canvas.paste_clipboard())
     
     def create_menus(self):
         """Create menu bar."""
@@ -549,6 +570,9 @@ class MainWindow(QMainWindow):
         # Edit menu
         edit_menu = menubar.addMenu("&Edit")
         edit_menu.addAction(self.delete_action)
+        edit_menu.addAction(self.copy_action)
+        edit_menu.addAction(self.cut_action)
+        edit_menu.addAction(self.paste_action)
         edit_menu.addAction(self.edit_node_action)
         
         # Tools menu
@@ -1051,6 +1075,29 @@ class MainWindow(QMainWindow):
     
     def on_speed_changed(self, value):
         """Handle speed slider change."""
+        # Keep spinbox in sync when slider moves
+        try:
+            if hasattr(self, 'speed_spin') and self.speed_spin.value() != value:
+                self.speed_spin.blockSignals(True)
+                self.speed_spin.setValue(value)
+                self.speed_spin.blockSignals(False)
+        except Exception:
+            pass
+
+        self.speed_label.setText(f"{value} ms")
+        self.graph_runner.set_speed(value)
+
+    def on_speed_spin_changed(self, value):
+        """Handle speed spinbox (typed) change."""
+        # Keep slider in sync when spinbox changes
+        try:
+            if hasattr(self, 'speed_slider') and self.speed_slider.value() != value:
+                self.speed_slider.blockSignals(True)
+                self.speed_slider.setValue(value)
+                self.speed_slider.blockSignals(False)
+        except Exception:
+            pass
+
         self.speed_label.setText(f"{value} ms")
         self.graph_runner.set_speed(value)
     
@@ -1060,14 +1107,33 @@ class MainWindow(QMainWindow):
             # Save current speed and set to minimum (10ms)
             self.saved_speed = self.speed_slider.value()
             self.speed_slider.setEnabled(False)
+            if hasattr(self, 'speed_spin'):
+                self.speed_spin.setEnabled(False)
             self.graph_runner.set_speed(10)
             self.speed_label.setText("10 ms (MAX)")
             self.max_speed_btn.setText("⚡ Max Speed (ON)")
         else:
             # Restore previous speed
             self.speed_slider.setEnabled(True)
+            if hasattr(self, 'speed_spin'):
+                self.speed_spin.setEnabled(True)
             if hasattr(self, 'saved_speed'):
-                self.speed_slider.setValue(self.saved_speed)
+                # Restore both slider and spinbox without re-trigger loops
+                try:
+                    self.speed_slider.blockSignals(True)
+                    self.speed_slider.setValue(self.saved_speed)
+                    self.speed_slider.blockSignals(False)
+                except Exception:
+                    self.speed_slider.setValue(self.saved_speed)
+
+                try:
+                    if hasattr(self, 'speed_spin'):
+                        self.speed_spin.blockSignals(True)
+                        self.speed_spin.setValue(self.saved_speed)
+                        self.speed_spin.blockSignals(False)
+                except Exception:
+                    pass
+
                 self.graph_runner.set_speed(self.saved_speed)
             self.max_speed_btn.setText("⚡ Max Speed")
     
@@ -1078,11 +1144,15 @@ class MainWindow(QMainWindow):
         if self.skip_visualization:
             # Disable speed controls when skipping graph updates
             self.speed_slider.setEnabled(False)
+            if hasattr(self, 'speed_spin'):
+                self.speed_spin.setEnabled(False)
             self.max_speed_btn.setEnabled(False)
             self.status_bar.showMessage("Graph visualization skipped - will update at end")
         else:
             # Re-enable speed controls
             self.speed_slider.setEnabled(not self.max_speed_btn.isChecked())
+            if hasattr(self, 'speed_spin'):
+                self.speed_spin.setEnabled(not self.max_speed_btn.isChecked())
             self.max_speed_btn.setEnabled(True)
             self.status_bar.showMessage("Graph visualization enabled")
     
@@ -1345,6 +1415,7 @@ class MainWindow(QMainWindow):
             self.canvas.highlight_active_nodes(self.graph_runner.active_nodes)
         else:
             QMessageBox.information(self, "Not Supported", "Processor does not support marking container nodes as processed.")
+
 
     def clear_stopping_nodes(self):
         """Clear all stopping nodes."""
