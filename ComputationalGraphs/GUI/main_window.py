@@ -169,7 +169,7 @@ class MainWindow(QMainWindow):
         processor_layout = QHBoxLayout()
         processor_layout.addWidget(QLabel("Processor:"))
         self.processor_combo = QComboBox()
-        self.processor_combo.addItems(["Forward Processing", "Concurrent"])
+        self.processor_combo.addItems(["Forward Processing", "Concurrent", "Manual Processing"])
         self.processor_combo.setCurrentIndex(1)  # Default to Concurrent
         self.processor_combo.currentIndexChanged.connect(self.on_processor_type_changed)
         processor_layout.addWidget(self.processor_combo)
@@ -265,6 +265,46 @@ class MainWindow(QMainWindow):
         stopping_nodes_group.addLayout(stopping_nodes_btn_layout2)
 
         exec_layout.addWidget(self.stopping_nodes_widget)
+
+        # Manual sequence management (only shown in Manual Processing mode)
+        self.manual_sequence_widget = QWidget()
+        self.manual_sequence_widget.setVisible(False)
+        manual_seq_group = QVBoxLayout(self.manual_sequence_widget)
+        manual_seq_group.setContentsMargins(0, 0, 0, 0)
+        manual_seq_label = QLabel("<b>Manual Sequence</b>")
+        manual_seq_group.addWidget(manual_seq_label)
+
+        self.manual_sequence_list = QListWidget()
+        self.manual_sequence_list.setMaximumHeight(150)
+        self.manual_sequence_list.setStyleSheet("QListWidget { background-color: #2a2a2a; border: 1px solid #555; }")
+        manual_seq_group.addWidget(self.manual_sequence_list)
+
+        manual_btns = QHBoxLayout()
+        self.add_step_selected_btn = QPushButton("Add Step (Selected)")
+        self.add_step_selected_btn.clicked.connect(self.add_selected_to_manual_sequence)
+        manual_btns.addWidget(self.add_step_selected_btn)
+
+        self.remove_step_btn = QPushButton("Remove Step")
+        self.remove_step_btn.clicked.connect(self.remove_from_manual_sequence)
+        manual_btns.addWidget(self.remove_step_btn)
+
+        self.clear_sequence_btn = QPushButton("Clear Sequence")
+        self.clear_sequence_btn.clicked.connect(self.clear_manual_sequence)
+        manual_btns.addWidget(self.clear_sequence_btn)
+
+        manual_seq_group.addLayout(manual_btns)
+
+        manual_btns2 = QHBoxLayout()
+        self.load_sequence_btn = QPushButton("Load Sequence")
+        self.load_sequence_btn.clicked.connect(self.load_manual_sequence_from_graph)
+        manual_btns2.addWidget(self.load_sequence_btn)
+
+        self.apply_sequence_btn = QPushButton("Apply to Graph")
+        self.apply_sequence_btn.clicked.connect(self.apply_manual_sequence_to_graph)
+        manual_btns2.addWidget(self.apply_sequence_btn)
+
+        manual_seq_group.addLayout(manual_btns2)
+        exec_layout.addWidget(self.manual_sequence_widget)
 
         # (Removed debug button: 'Mark Weights Processed')
 
@@ -920,6 +960,9 @@ class MainWindow(QMainWindow):
                 if hasattr(self.graph, 'starting_nodes') and self.graph.starting_nodes:
                     starting_nodes = self.graph.starting_nodes
                 processor.ForwardProcessing(iterations=max_steps, starting_nodes=starting_nodes)
+            elif processor_type == "manual":
+                # Manual processing in batch: run manual sequence for max_steps
+                proc.ManualProcessing(iterations=max_steps, computation_sequence=getattr(self.graph, 'manual_processing_sequence', None))
             else:
                 # Concurrent processing
                 if use_multithreading:
@@ -1021,6 +1064,7 @@ class MainWindow(QMainWindow):
         # Preserve starting_nodes and stopping_nodes before rebuilding
         old_starting_nodes = list(self.graph.starting_nodes) if hasattr(self.graph, 'starting_nodes') else []
         old_stopping_nodes = list(self.graph.stopping_nodes) if hasattr(self.graph, 'stopping_nodes') else []
+        old_manual_sequence = list(self.graph.manual_processing_sequence) if hasattr(self.graph, 'manual_processing_sequence') and self.graph.manual_processing_sequence else None
         
         self.graph = Graph()
         
@@ -1040,9 +1084,10 @@ class MainWindow(QMainWindow):
         # Update adjacency matrix
         self.graph.UpdateAdjacencyMatrix()
         
-        # Restore starting_nodes and stopping_nodes
+        # Restore starting_nodes, stopping_nodes and manual sequence
         self.graph.starting_nodes = old_starting_nodes
         self.graph.stopping_nodes = old_stopping_nodes
+        self.graph.manual_processing_sequence = old_manual_sequence
         
         # Set the graph
         self.graph_runner.set_graph(self.graph)
@@ -1078,13 +1123,13 @@ class MainWindow(QMainWindow):
         else:
             self.canvas.update_node_visuals(False, 0, 1)
         
-        # Highlight active nodes for Forward Processing
+        # Highlight active nodes for Forward Processing and Manual Processing
         # MUST be done AFTER colorization so it takes priority
-        if self.graph_runner.processor_type == "forward":
+        if self.graph_runner.processor_type in ("forward", "manual"):
             self.canvas.highlight_active_nodes(self.graph_runner.active_nodes)
             # Optionally dim nodes that the processor has marked as 'processed'
             # Use the checkbox state directly for robustness
-            if self.dim_processed_check.isChecked():
+            if self.dim_processed_check.isChecked() and self.graph_runner.processor_type == 'forward':
                 gp = getattr(self.graph_runner, 'graph_processor', None)
                 if gp and hasattr(gp, '_node_status'):
                     processed_nodes = {n for n, s in gp._node_status.items() if s == 'processed'}
@@ -1492,6 +1537,113 @@ class MainWindow(QMainWindow):
 
         self.update_stopping_nodes_display()
         self.status_bar.showMessage("Cleared all stopping nodes")
+
+    # --- Manual Sequence UI Handlers
+    def add_selected_to_manual_sequence(self):
+        """Add a step to the manual sequence using currently selected nodes on canvas."""
+        if not self.graph:
+            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
+            return
+
+        selected_items = [item for item in self.canvas.scene.selectedItems() if hasattr(item, 'node')]
+        if not selected_items:
+            QMessageBox.information(self, "No Selection", "Please select node(s) on the canvas first.")
+            return
+
+        step_nodes = [item.node for item in selected_items]
+        # Append step (list of Node objects) to manual sequence UI and graph property
+        # If graph manual sequence is None, initialize
+        if not hasattr(self.graph, 'manual_processing_sequence') or self.graph.manual_processing_sequence is None:
+            self.graph.manual_processing_sequence = []
+        self.graph.manual_processing_sequence.append(step_nodes)
+        step_label = f"Step {len(self.graph.manual_processing_sequence)-1}: " + ", ".join([n.name for n in step_nodes])
+        self.manual_sequence_list.addItem(step_label)
+        self.status_bar.showMessage("Added manual sequence step (Selected nodes)")
+
+    def remove_from_manual_sequence(self):
+        """Remove selected step(s) from manual sequence UI and update graph property."""
+        if not self.graph or not hasattr(self.graph, 'manual_processing_sequence') or not self.graph.manual_processing_sequence:
+            QMessageBox.information(self, "No Sequence", "Manual sequence is empty.")
+            return
+
+        selected_items = self.manual_sequence_list.selectedItems()
+        if not selected_items:
+            QMessageBox.information(self, "No Selection", "Please select step(s) from the manual sequence list.")
+            return
+
+        for item in selected_items:
+            row = self.manual_sequence_list.row(item)
+            self.manual_sequence_list.takeItem(row)
+            try:
+                del self.graph.manual_processing_sequence[row]
+            except Exception:
+                pass
+
+        # Rebuild displayed labels to reflect new indices
+        self.load_manual_sequence_from_graph()
+        self.status_bar.showMessage("Removed selected step(s) from manual sequence")
+
+    def clear_manual_sequence(self):
+        """Clear manual sequence from UI and graph property."""
+        self.manual_sequence_list.clear()
+        if hasattr(self.graph, 'manual_processing_sequence'):
+            try:
+                self.graph.manual_processing_sequence = None
+            except Exception:
+                pass
+        self.status_bar.showMessage("Manual sequence cleared")
+
+    def apply_manual_sequence_to_graph(self):
+        """Take steps from UI list and set the graph manual_processing_sequence property accordingly."""
+        if not self.graph:
+            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
+            return
+
+        sequence = []
+        for i in range(self.manual_sequence_list.count()):
+            item_text = self.manual_sequence_list.item(i).text()
+            # Format: "Step N: a, b, c"
+            if ':' in item_text:
+                _, nodes_str = item_text.split(':', 1)
+                node_names = [n.strip() for n in nodes_str.split(',') if n.strip()]
+            else:
+                node_names = [n.strip() for n in item_text.split(',') if n.strip()]
+
+            # Resolve node names to Node objects or pass through id strings (Graph handles resolution)
+            step = []
+            for nm in node_names:
+                # If name matches a node id, prefer id
+                if nm in self.graph.idToNodeDictionary:
+                    step.append(self.graph.idToNodeDictionary[nm])
+                else:
+                    # match by node name
+                    matches = [n for n in self.graph.nodes if getattr(n, 'name', None) == nm]
+                    if matches:
+                        step.append(matches[0])
+                    else:
+                        # Fall back to string name - set_manual_processing_sequence handles strictness
+                        step.append(nm)
+            sequence.append(step)
+
+        try:
+            self.graph.set_manual_processing_sequence(sequence, strict=False)
+            self.status_bar.showMessage("Manual sequence applied to graph")
+        except Exception as e:
+            QMessageBox.critical(self, "Apply Failed", f"Failed to set manual sequence: {e}")
+
+    def load_manual_sequence_from_graph(self):
+        """Load the current graph.manual_processing_sequence into the UI list."""
+        self.manual_sequence_list.clear()
+        if not self.graph or not hasattr(self.graph, 'manual_processing_sequence') or not self.graph.manual_processing_sequence:
+            return
+
+        for i, step in enumerate(self.graph.manual_processing_sequence):
+            try:
+                labels = [n.name if hasattr(n, 'name') else (n.id if hasattr(n, 'id') else str(n)) for n in step]
+                step_label = f"Step {i}: " + ", ".join(labels)
+            except Exception:
+                step_label = f"Step {i}"
+            self.manual_sequence_list.addItem(step_label)
     
     def remove_from_starting_nodes(self):
         """Remove selected nodes from starting nodes list."""
@@ -1550,25 +1702,31 @@ class MainWindow(QMainWindow):
     
     def on_processor_type_changed(self, index):
         """Handle processor type selection change."""
-        processor_type = "forward" if index == 0 else "concurrent"
+        # Map combo index: 0 -> forward, 1 -> concurrent, 2 -> manual
+        processor_type = "forward" if index == 0 else ("concurrent" if index == 1 else "manual")
         self.graph_runner.set_processor_type(processor_type)
         
-        # Show/hide forward processing panels based on mode
+        # Show/hide forward and manual processing panels based on mode
         is_forward_mode = (index == 0)
+        is_manual_mode = (index == 2)
         self.starting_nodes_widget.setVisible(is_forward_mode)
         self.stopping_nodes_widget.setVisible(is_forward_mode)
+        self.manual_sequence_widget.setVisible(is_manual_mode)
         
-        # Disable threading combo for Forward Processing (not applicable)
+        # Disable threading combo for Forward and Manual Processing (not applicable)
         # Threading only applies to Concurrent mode
         self.threading_combo.setEnabled(index == 1)
         
-        type_name = "Forward Processing" if index == 0 else "Concurrent"
+        type_name = "Forward Processing" if index == 0 else ("Concurrent" if index == 1 else "Manual Processing")
         self.status_bar.showMessage(f"Processor type: {type_name}")
         
         # Update starting nodes display when switching to Forward Processing
         if index == 0:
             self.update_starting_nodes_display()
             self.update_stopping_nodes_display()
+        if index == 2:
+            # When switching to Manual Processing, show sequence from graph if present
+            self.load_manual_sequence_from_graph()
     
     def on_threading_mode_changed(self, index):
         """Handle threading mode selection change."""

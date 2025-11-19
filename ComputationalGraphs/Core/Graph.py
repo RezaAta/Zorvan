@@ -10,6 +10,10 @@ class Graph:
         self.adjacencyMatrix = []  # Adjacency matrix for node connections
         self.idToNodeDictionary = {}  # Map node ids to node objects
         self.starting_nodes = []  # Entry points for graph execution (e.g., input nodes)
+        # Optional manual node processing sequence: list of iterables of Node identifiers
+        # Each item in the list represents the set of nodes to process at a single iteration.
+        # Accepts Node objects, node ids (strings), or node indices (ints).
+        self.manual_processing_sequence = None
         
         # Counters for the first naming convention
         self.abstract_counter = 1
@@ -210,6 +214,70 @@ class Graph:
                     successor_map[predecessor].append(node)
         
         return successor_map
+
+    def set_manual_processing_sequence(self, sequence, strict=True):
+        """
+        Set a manual processing sequence for the graph. The sequence should be a list of
+        iterables (sets, lists, tuples) each containing node identifiers (Node instance, id string, or index).
+        If strict is True, invalid identifiers raise ValueError; otherwise they are ignored.
+        """
+        if sequence is None:
+            self.manual_processing_sequence = None
+            return
+
+        resolved_sequence = []
+        for step in sequence:
+            if step is None:
+                continue
+            step_list = []
+            for entry in step:
+                # Accept Node objects, id strings, or indices
+                if isinstance(entry, Node):
+                    node_obj = entry
+                elif isinstance(entry, str):
+                    node_obj = self.idToNodeDictionary.get(entry)
+                    if node_obj is None:
+                        # Try matching by name
+                        matches = [n for n in self.nodes if getattr(n, 'name', None) == entry]
+                        if len(matches) == 1:
+                            node_obj = matches[0]
+                        elif len(matches) > 1:
+                            if strict:
+                                raise ValueError(f"Ambiguous node name '{entry}' matches multiple nodes.")
+                            else:
+                                node_obj = matches[0]
+                elif isinstance(entry, int):
+                    try:
+                        node_obj = self.nodes[entry]
+                    except IndexError:
+                        node_obj = None
+                else:
+                    node_obj = None
+
+                if node_obj is None:
+                    if strict:
+                        raise ValueError(f"Node identifier '{entry}' not found in graph.")
+                    else:
+                        continue
+
+                if node_obj not in self.nodes:
+                    if strict:
+                        raise ValueError(f"Node '{node_obj}' is not part of this graph.")
+                    else:
+                        continue
+
+                if node_obj not in step_list:
+                    step_list.append(node_obj)
+
+            # Only add non-empty steps
+            if step_list:
+                resolved_sequence.append(step_list)
+
+        self.manual_processing_sequence = resolved_sequence
+
+    def clear_manual_processing_sequence(self):
+        """Clear any previously set manual processing sequence."""
+        self.manual_processing_sequence = None
 
     # any node that old nodes are in its pred list
     # put the new abstract node in its pred list

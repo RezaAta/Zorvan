@@ -308,6 +308,97 @@ class GraphProcessor:
 
         return len(self._active_nodes)
 
+    def ManualProcessing(self, iterations, computation_sequence=None, wrap_sequence=True,
+                         exec_options: Optional[ExecutionOptions] = None, controller=None,
+                         on_iteration_complete=None):
+        """
+        Manual processing mode: the user provides a sequence of node groups (list of iterables),
+        each group is processed in one iteration (in the order provided). This method does no
+        graph initialization or dependency resolution — it simply calls UpdateInputs() and
+        ProcessBatch() for each node in the sequence for each iteration. If no sequence is
+        provided, falls back to forward processing.
+        """
+        # Prefer local controller if provided, otherwise create one from exec_options
+        controller_obj = controller if controller is not None else GraphProcessor.ExecutionController.from_options(exec_options)
+
+        # If a computation_sequence was provided, validate and set it on the graph
+        if computation_sequence is not None:
+            # Use graph helper to validate/resolve sequence; this also sets it on the graph
+            try:
+                self.graph.set_manual_processing_sequence(computation_sequence, strict=True)
+            except Exception:
+                # If strict resolution fails, fallback to forward processing
+                return self.ForwardProcessing(iterations, exec_options=exec_options, controller=controller, starting_nodes=None)
+
+        sequence = getattr(self.graph, 'manual_processing_sequence', None)
+        if not sequence:
+            # No sequence configured; fallback to forward processing
+            # Note: ForwardProcessing handles graph initialization itself.
+            return self.ForwardProcessing(iterations, exec_options=exec_options, controller=controller, starting_nodes=None)
+
+        seq_len = len(sequence)
+        # initialize stored manual sequence and index if not present
+        if not hasattr(self, '_manual_sequence') or self._manual_sequence != sequence:
+            self._manual_sequence = sequence
+            self._manual_sequence_index = 0
+        if not hasattr(self, '_manual_sequence_index'):
+            self._manual_sequence_index = 0
+
+        for t in range(iterations):
+            # Respect controller stop/pause if requested
+            if getattr(controller_obj, 'stop_event', None) is not None and controller_obj.stop_event.is_set():
+                break
+            if getattr(controller_obj, 'pause_event', None) is not None and controller_obj.pause_event.is_set():
+                while controller_obj.pause_event.is_set():
+                    time.sleep(0.01)
+
+            # Get the current set of nodes to process this iteration
+            active_set = sequence[self._manual_sequence_index]
+
+            # Expose for UI (empty if not used)
+            try:
+                self._currently_processing_nodes = list(active_set)
+            except Exception:
+                self._currently_processing_nodes = []
+
+            # Process each node in the set in order provided
+            for node in active_set:
+                # Minimal processing: update inputs if not midCalculation, then process
+                try:
+                    if not getattr(node, 'midCalculation', False):
+                        node.UpdateInputs()
+                    node.ProcessBatch()
+                except Exception:
+                    # Node processing errors do not stop manual processing; continue to others
+                    continue
+
+            # Advance sequence index
+            self._manual_sequence_index += 1
+            if self._manual_sequence_index >= seq_len:
+                if wrap_sequence:
+                    self._manual_sequence_index = 0
+                else:
+                    # If no wrap and we exhausted sequence, stop processing
+                    break
+
+            self.time += 1
+            if on_iteration_complete:
+                try:
+                    on_iteration_complete(t + 1)
+                except Exception:
+                    pass
+
+        return
+
+    def reset_manual_state(self):
+        """Reset the manual processing internal state for sequence position and cached sequence."""
+        if hasattr(self, '_manual_sequence_index'):
+            del self._manual_sequence_index
+        if hasattr(self, '_manual_sequence'):
+            del self._manual_sequence
+
+        return
+
     def _initialize_forward_state(self, starting_nodes=None):
         self._forward_state_initialized = True
         self._node_status = {node: 'unprocessed' for node in self.graph.nodes}

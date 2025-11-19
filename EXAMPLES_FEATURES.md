@@ -263,3 +263,34 @@ Your GUI now has:
 ✅ Keyboard shortcuts for power users
 
 The examples showcase your framework's capabilities and make it easy for users to get started!
+
+## Manual Processing Mode (New)
+
+Manual Processing is a lightweight execution mode where the user provides a sequence of node groups to execute. Each step in the sequence is one iteration and consists of a set/list of nodes to process. The processor executes UpdateInputs() and ProcessBatch() for each node in the set in the order you provide.
+
+Key points:
+- Stored on the Graph as `graph.manual_processing_sequence` (use `graph.set_manual_processing_sequence(sequence)` to set it).
+- Run via `processor.ManualProcessing(iterations, computation_sequence=sequence)`.
+- This mode does not perform dependency checks or graph initialization — you are responsible for providing a valid sequence.
+- If no sequence is provided, `ManualProcessing` falls back to `ForwardProcessing`.
+
+Example:
+```python
+from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
+from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
+
+graph = Graph()
+a = DataStreamNode('a', data=[1,2,3])
+b = DataStreamNode('b', data=[10,20,30])
+c = AdditionNode('c')
+c.AddPreNode(a, b)
+graph.AddNode(a, b, c)
+
+# The manual sequence: first update both streams, then compute the addition
+sequence = [[a, b], [c]]
+proc = GraphProcessor(graph)
+proc.ManualProcessing(iterations=3, computation_sequence=sequence)
+```
+

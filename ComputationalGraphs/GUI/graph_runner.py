@@ -51,6 +51,9 @@ class GraphRunner(QObject):
         # If using forward processing, reset state to ensure fresh initialization
         if self.processor_type == "forward" and hasattr(self.graph_processor, 'reset_forward_state'):
             self.graph_processor.reset_forward_state()
+        # If using manual processing, reset manual state to ensure index starts at 0
+        if self.processor_type == "manual" and hasattr(self.graph_processor, 'reset_manual_state'):
+            self.graph_processor.reset_manual_state()
 
         # If using forward processing, prefer graph-level preparation:
         # Many forward-processing graphs (e.g., MLPGraphForwardProcessing) implement
@@ -143,6 +146,41 @@ class GraphRunner(QObject):
                             while slept < interval_ms and not controller.stop_event.is_set():
                                 if controller.pause_event.is_set():
                                     # If paused, block here until unpaused or stopped
+                                    while controller.pause_event.is_set() and not controller.stop_event.is_set():
+                                        time.sleep(0.01)
+                                    if controller.stop_event.is_set():
+                                        break
+                                sleep_chunk = min(50, interval_ms - slept) / 1000.0
+                                time.sleep(sleep_chunk)
+                                slept += sleep_chunk * 1000.0
+
+                elif self.processor_type == "manual":
+                    # Manual processing: call ManualProcessing for one iteration
+                    iterations_run = 0
+                    while iterations_run < self.max_steps and not controller.stop_event.is_set():
+                        # Respect pause
+                        while controller.pause_event.is_set():
+                            time.sleep(0.01)
+
+                        # Execute one manual processing iteration (uses graph.manual_processing_sequence)
+                        self.graph_processor.ManualProcessing(iterations=1, computation_sequence=getattr(self.graph, 'manual_processing_sequence', None))
+                        iterations_run += 1
+                        self.current_step += 1
+
+                        # Update active nodes for highlighting
+                        if hasattr(self.graph_processor, '_currently_processing_nodes'):
+                            self.active_nodes = list(self.graph_processor._currently_processing_nodes)
+                        else:
+                            self.active_nodes = []
+
+                        # Emit progress
+                        self.step_completed.emit(self.current_step)
+                        # Respect step interval
+                        interval_ms = getattr(controller, 'step_interval_ms', self.step_interval) or 0
+                        if interval_ms:
+                            slept = 0
+                            while slept < interval_ms and not controller.stop_event.is_set():
+                                if controller.pause_event.is_set():
                                     while controller.pause_event.is_set() and not controller.stop_event.is_set():
                                         time.sleep(0.01)
                                     if controller.stop_event.is_set():
@@ -260,6 +298,13 @@ class GraphRunner(QObject):
                 
                 # Note: We don't stop when active_remaining == 0 because the graph
                 # may reactivate nodes in subsequent iterations (e.g., DataStreamNodes cycling)
+            elif self.processor_type == "manual":
+                # Single-step manual processing uses graph.manual_processing_sequence
+                self.graph_processor.ManualProcessing(iterations=1, computation_sequence=getattr(self.graph, 'manual_processing_sequence', None))
+                if hasattr(self.graph_processor, '_currently_processing_nodes'):
+                    self.active_nodes = list(self.graph_processor._currently_processing_nodes)
+                else:
+                    self.active_nodes = []
             else:
                 # Concurrent processing (traditional)
                 self.active_nodes = []  # No active node tracking for concurrent
@@ -441,6 +486,11 @@ class GraphRunner(QObject):
             # Marking container (weight) nodes should be handled explicitly
             # by graph builders or user actions so they can participate in
             # forward-processing cycles and updates correctly.
+            if processor_type == "manual" and self.graph_processor and hasattr(self.graph_processor, 'reset_manual_state'):
+                try:
+                    self.graph_processor.reset_manual_state()
+                except Exception:
+                    pass
     
     def single_step(self):
         """Execute a single step without timer."""
