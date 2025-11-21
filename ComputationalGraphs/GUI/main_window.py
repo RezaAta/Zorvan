@@ -275,7 +275,9 @@ class MainWindow(QMainWindow):
         manual_seq_group.addWidget(manual_seq_label)
 
         self.manual_sequence_list = QListWidget()
-        self.manual_sequence_list.setMaximumHeight(150)
+        # Increase manual sequence list size to show at least 4 elements
+        self.manual_sequence_list.setMinimumHeight(120)
+        self.manual_sequence_list.setMaximumHeight(300)
         self.manual_sequence_list.setStyleSheet("QListWidget { background-color: #2a2a2a; border: 1px solid #555; }")
         manual_seq_group.addWidget(self.manual_sequence_list)
 
@@ -283,6 +285,11 @@ class MainWindow(QMainWindow):
         self.add_step_selected_btn = QPushButton("Add Step (Selected)")
         self.add_step_selected_btn.clicked.connect(self.add_selected_to_manual_sequence)
         manual_btns.addWidget(self.add_step_selected_btn)
+
+        self.add_to_selected_step_btn = QPushButton("Add to Selected Step")
+        self.add_to_selected_step_btn.clicked.connect(self.add_selected_nodes_to_selected_step)
+        manual_btns.addWidget(self.add_to_selected_step_btn)
+        self.add_to_selected_step_btn.setToolTip("Add selected node(s) on the canvas to the chosen manual sequence step")
 
         self.remove_step_btn = QPushButton("Remove Step")
         self.remove_step_btn.clicked.connect(self.remove_from_manual_sequence)
@@ -302,6 +309,11 @@ class MainWindow(QMainWindow):
         self.apply_sequence_btn = QPushButton("Apply to Graph")
         self.apply_sequence_btn.clicked.connect(self.apply_manual_sequence_to_graph)
         manual_btns2.addWidget(self.apply_sequence_btn)
+
+        self.replace_selected_step_btn = QPushButton("Replace Selected Step")
+        self.replace_selected_step_btn.clicked.connect(self.replace_selected_step_with_selected_nodes)
+        manual_btns2.addWidget(self.replace_selected_step_btn)
+        self.replace_selected_step_btn.setToolTip("Replace the chosen manual sequence step with currently selected node(s) on the canvas")
 
         manual_seq_group.addLayout(manual_btns2)
         exec_layout.addWidget(self.manual_sequence_widget)
@@ -656,6 +668,11 @@ class MainWindow(QMainWindow):
         view_menu.addSeparator()
         view_menu.addAction(self.palette.toggleViewAction())
         view_menu.addAction(self.control_dock.toggleViewAction())
+        # Console toggle (hidden by default)
+        try:
+            view_menu.addAction(self.console_dock.toggleViewAction())
+        except Exception:
+            pass
     
     def create_toolbars(self):
         """Create toolbars."""
@@ -738,6 +755,10 @@ class MainWindow(QMainWindow):
 
         dock.setWidget(container)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock)
+        try:
+            dock.hide()
+        except Exception:
+            pass
         self.console_dock = dock
 
         # Redirect stdout/stderr to the in-app console (keeps original outputs)
@@ -962,7 +983,7 @@ class MainWindow(QMainWindow):
                 processor.ForwardProcessing(iterations=max_steps, starting_nodes=starting_nodes)
             elif processor_type == "manual":
                 # Manual processing in batch: run manual sequence for max_steps
-                proc.ManualProcessing(iterations=max_steps, computation_sequence=getattr(self.graph, 'manual_processing_sequence', None))
+                processor.ManualProcessing(iterations=max_steps, computation_sequence=getattr(self.graph, 'manual_processing_sequence', None))
             else:
                 # Concurrent processing
                 if use_multithreading:
@@ -1559,6 +1580,79 @@ class MainWindow(QMainWindow):
         step_label = f"Step {len(self.graph.manual_processing_sequence)-1}: " + ", ".join([n.name for n in step_nodes])
         self.manual_sequence_list.addItem(step_label)
         self.status_bar.showMessage("Added manual sequence step (Selected nodes)")
+
+    def add_selected_nodes_to_selected_step(self):
+        """Append currently selected canvas nodes to the chosen manual sequence step."""
+        if not self.graph:
+            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
+            return
+
+        # Determine the selected step (use first selected entry)
+        selected_steps = self.manual_sequence_list.selectedItems()
+        if not selected_steps:
+            QMessageBox.information(self, "No Step Selected", "Please select a manual sequence step in the list.")
+            return
+        # Use the first selected step index
+        step_index = self.manual_sequence_list.row(selected_steps[0])
+
+        # Get selected nodes from canvas
+        selected_items = [item for item in self.canvas.scene.selectedItems() if hasattr(item, 'node')]
+        if not selected_items:
+            QMessageBox.information(self, "No Selection", "Please select node(s) on the canvas first.")
+            return
+
+        nodes_to_add = [item.node for item in selected_items]
+
+        if not hasattr(self.graph, 'manual_processing_sequence') or self.graph.manual_processing_sequence is None:
+            self.graph.manual_processing_sequence = []
+
+        # Ensure the step exists (expand list if necessary)
+        while len(self.graph.manual_processing_sequence) <= step_index:
+            self.graph.manual_processing_sequence.append([])
+
+        step = self.graph.manual_processing_sequence[step_index]
+        added = 0
+        for n in nodes_to_add:
+            if n not in step:
+                step.append(n)
+                added += 1
+
+        # Update UI entry
+        labels = [n.name for n in step]
+        self.manual_sequence_list.item(step_index).setText(f"Step {step_index}: " + ", ".join(labels))
+        self.status_bar.showMessage(f"Added {added} node(s) to Step {step_index}")
+
+    def replace_selected_step_with_selected_nodes(self):
+        """Replace the chosen manual sequence step contents with the currently selected canvas nodes."""
+        if not self.graph:
+            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
+            return
+
+        selected_steps = self.manual_sequence_list.selectedItems()
+        if not selected_steps:
+            QMessageBox.information(self, "No Step Selected", "Please select a manual sequence step in the list.")
+            return
+        step_index = self.manual_sequence_list.row(selected_steps[0])
+
+        selected_items = [item for item in self.canvas.scene.selectedItems() if hasattr(item, 'node')]
+        if not selected_items:
+            QMessageBox.information(self, "No Selection", "Please select node(s) on the canvas first.")
+            return
+
+        nodes_to_set = [item.node for item in selected_items]
+
+        if not hasattr(self.graph, 'manual_processing_sequence') or self.graph.manual_processing_sequence is None:
+            self.graph.manual_processing_sequence = []
+
+        while len(self.graph.manual_processing_sequence) <= step_index:
+            self.graph.manual_processing_sequence.append([])
+
+        self.graph.manual_processing_sequence[step_index] = list(nodes_to_set)
+
+        # Update UI entry
+        labels = [n.name for n in nodes_to_set]
+        self.manual_sequence_list.item(step_index).setText(f"Step {step_index}: " + ", ".join(labels))
+        self.status_bar.showMessage(f"Replaced Step {step_index} with {len(nodes_to_set)} node(s)")
 
     def remove_from_manual_sequence(self):
         """Remove selected step(s) from manual sequence UI and update graph property."""
