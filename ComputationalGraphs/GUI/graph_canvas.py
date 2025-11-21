@@ -3,7 +3,7 @@ QGraphicsView-based canvas for displaying and editing the computational graph.
 """
 
 from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsItem
-from PyQt6.QtCore import Qt, QPointF, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QPainter, QPen, QColor
 from .node_item import NodeItem
 from .edge_item import EdgeItem
@@ -288,7 +288,7 @@ class GraphCanvas(QGraphicsView):
             return
         
         # Calculate union of all bounding rects
-        from PyQt6.QtCore import QRectF
+        # QRectF is not required explicitly; united_rect created by union operations is used directly
         united_rect = all_rects[0]
         for rect in all_rects[1:]:
             united_rect = united_rect.united(rect)
@@ -794,8 +794,7 @@ class GraphCanvas(QGraphicsView):
         sorted_layers = sorted([k for k in layers.keys() if k >= 0])
         layer_map = {old: new for new, old in enumerate(sorted_layers)}
         
-        # Create reverse map to find original layer numbers
-        reverse_layer_map = {new: old for old, new in layer_map.items()}
+        # reverse_layer_map is unused (kept for reference if needed)
         
         # Add learning rate layer at the end
         if -1 in layers:
