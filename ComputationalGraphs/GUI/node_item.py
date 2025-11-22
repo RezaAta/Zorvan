@@ -193,6 +193,31 @@ class NodeItem(QGraphicsEllipseItem):
             # Request scene update for old position before moving
             if self.scene():
                 self.scene().update()
+            # Live snapping while dragging
+            try:
+                canvas = getattr(self, 'canvas', None)
+                # Fallback: attempt to get the view (GraphCanvas) assigned to the scene
+                if canvas is None and self.scene() and self.scene().views():
+                    try:
+                        view = self.scene().views()[0]
+                        # If the view is the GraphCanvas instance, use it
+                        if hasattr(view, 'snap_to_grid'):
+                            canvas = view
+                    except Exception:
+                        pass
+                if canvas and getattr(canvas, 'snap_to_grid', False) and getattr(canvas, 'snap_while_dragging', False):
+                    # `value` is a QPointF with the proposed new position
+                    from PyQt6.QtCore import QPointF
+                    p = value
+                    g = getattr(canvas, 'grid_size', 0)
+                    if g and g > 0:
+                        step = getattr(canvas, 'snap_step', 1)
+                        unit = g * (int(step) if step else 1)
+                        sx = round(p.x() / unit) * unit
+                        sy = round(p.y() / unit) * unit
+                        return QPointF(sx, sy)
+            except Exception:
+                pass
         
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             # Update all connected edges
@@ -202,6 +227,35 @@ class NodeItem(QGraphicsEllipseItem):
             # Trigger scene update for new position
             if self.scene():
                 self.scene().update()
+            # Snap on release if enabled
+            try:
+                canvas = getattr(self, 'canvas', None)
+                # Fallback: attempt to get the view (GraphCanvas) assigned to the scene
+                if canvas is None and self.scene() and self.scene().views():
+                    try:
+                        view = self.scene().views()[0]
+                        if hasattr(view, 'snap_to_grid'):
+                            canvas = view
+                    except Exception:
+                        pass
+                if canvas and getattr(canvas, 'snap_to_grid', False) and not getattr(canvas, 'snap_while_dragging', False):
+                    # Snap to nearest unit after move completed
+                    g = getattr(canvas, 'grid_size', 0)
+                    if g and g > 0:
+                        step = getattr(canvas, 'snap_step', 1)
+                        unit = g * (int(step) if step else 1)
+                        p = self.pos()
+                        sx = round(p.x() / unit) * unit
+                        sy = round(p.y() / unit) * unit
+                        # Avoid infinite loop; only set if different
+                        from PyQt6.QtCore import QPointF
+                        if abs(sx - p.x()) > 0.0001 or abs(sy - p.y()) > 0.0001:
+                            self.setPos(QPointF(sx, sy))
+                            # Update edges after snapping
+                            for edge in self.edges:
+                                edge.update_position()
+            except Exception:
+                pass
         
         return super().itemChange(change, value)
     

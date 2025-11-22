@@ -45,6 +45,18 @@ class GraphCanvas(QGraphicsView):
         self.panning = False
         self.pan_start_pos = None
         
+        # Grid / snap settings
+        self.node_diameter = 80  # Default assumed diameter (2 * radius 40)
+        self.grid_mode = '4x4'  # '1x1' or '4x4'
+        self.grid_size = int(self.node_diameter / 4)  # 20px by default
+        self.grid_major_every = 4  # draw a major line every 4 cells (node size)
+        self.grid_minor_color = QColor(45, 45, 45)
+        self.grid_major_color = QColor(70, 70, 70)
+        self.show_grid = False
+        self.snap_to_grid = True
+        self.snap_while_dragging = True  # default: snap while dragging so users see snap live
+        self.snap_step = 4  # Snap in units of grid cells (4 -> node sized step)
+        
         # Node tracking
         self.node_items = {}  # Maps node objects to NodeItem widgets
         self.edge_items = []
@@ -53,7 +65,19 @@ class GraphCanvas(QGraphicsView):
         
     def add_node_item(self, node, x=0, y=0):
         """Add a visual representation of a node to the canvas."""
+        # snap initial position if enabled
+        try:
+            if getattr(self, 'snap_to_grid', False) and getattr(self, 'grid_size', 0) > 0:
+                x, y = self.snap_point(x, y, step=self.snap_step)
+        except Exception:
+            pass
+
         node_item = NodeItem(node, x, y)
+        # Allow NodeItem to reference the canvas for snapping live
+        try:
+            node_item.canvas = self
+        except Exception:
+            pass
         self.scene.addItem(node_item)
         self.node_items[node] = node_item
         # Ensure value_label exists for older or partially-initialized node items
@@ -73,6 +97,99 @@ class GraphCanvas(QGraphicsView):
         except Exception:
             pass
         return node_item
+
+    def set_show_grid(self, enabled: bool):
+        """Enable or disable drawing of the grid background."""
+        self.show_grid = bool(enabled)
+        try:
+            self.viewport().update()
+        except Exception:
+            pass
+
+    def set_snap_to_grid(self, enabled: bool):
+        """Enable or disable snapping nodes to the grid."""
+        self.snap_to_grid = bool(enabled)
+
+    def set_snap_while_dragging(self, enabled: bool):
+        """Enable or disable snapping while dragging (live) vs on release."""
+        self.snap_while_dragging = bool(enabled)
+
+    def set_grid_mode(self, mode: str):
+        """Set grid mode: '1x1' for node=1 cell, '4x4' for node=4 cells. Mode affects grid_size."""
+        try:
+            node_diam = getattr(self, 'node_diameter', 80)
+            if mode == '1x1':
+                self.grid_size = node_diam
+                self.snap_step = 1
+            else:
+                # default to 4x4 grid
+                self.grid_size = max(1, int(node_diam / 4))
+                self.snap_step = 4
+            self.grid_mode = mode
+            try:
+                self.viewport().update()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def snap_point(self, x: float, y: float, step: int = None):
+        """Return the snapped position according to grid settings.
+
+        If step is None use self.snap_step.
+        """
+        if not getattr(self, 'snap_to_grid', False):
+            return x, y
+        if getattr(self, 'grid_size', 0) <= 0:
+            return x, y
+        try:
+            s = int(step or getattr(self, 'snap_step', 1))
+            unit = self.grid_size * s
+            sx = round(x / unit) * unit
+            sy = round(y / unit) * unit
+            return sx, sy
+        except Exception:
+            return x, y
+
+    def drawBackground(self, painter, rect):
+        """Draw a subtle grid on the background when enabled.
+
+        Draw only in the visible rect for performance.
+        """
+        # Default dark background already set; draw grid lines on top
+        super().drawBackground(painter, rect)
+        if not getattr(self, 'show_grid', False):
+            return
+        # grid size in pixels
+        g = getattr(self, 'grid_size', 20)
+        if g <= 0:
+            return
+
+        from PyQt6.QtGui import QPen, QPainter
+        import math
+        left = int(math.floor(rect.left() / g) * g)
+        right = int(math.ceil(rect.right() / g) * g)
+        top = int(math.floor(rect.top() / g) * g)
+        bottom = int(math.ceil(rect.bottom() / g) * g)
+
+        minor_pen = QPen(self.grid_minor_color, 1)
+        major_pen = QPen(self.grid_major_color, 1)
+
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+
+        x = left
+        while x <= right:
+            pen = major_pen if ((x // g) % self.grid_major_every == 0) else minor_pen
+            painter.setPen(pen)
+            painter.drawLine(x, top, x, bottom)
+            x += g
+
+        y = top
+        while y <= bottom:
+            pen = major_pen if ((y // g) % self.grid_major_every == 0) else minor_pen
+            painter.setPen(pen)
+            painter.drawLine(left, y, right, y)
+            y += g
     
     def add_edge_item(self, source_node, target_node):
         """Add a visual edge between two nodes."""
@@ -584,6 +701,9 @@ class GraphCanvas(QGraphicsView):
             elif layout_type == "ann":
                 # ANN-specific layout: Left-to-right with layer-based positioning
                 pos = self._compute_ann_layout(G, scale)
+            elif layout_type == "good":
+                # The Good Layout: cellular grid MLP layout (deterministic)
+                pos = self._compute_good_layout(G, scale)
             elif layout_type == "hierarchical":
                 # Try to use shell/layered layout for hierarchical structure
                 try:
@@ -620,39 +740,124 @@ class GraphCanvas(QGraphicsView):
             else:  # circular
                 pos = nx.circular_layout(G, scale=scale)
             
-            # Apply positions with collision detection and adjustment
-            min_distance = 100  # Minimum distance between node centers (nodes are ~80px diameter)
+            # Apply positions. For 'good' layout we rely on grid and skip collision adjustment
+            # to preserve the deterministic MLP grid layout as computed by _compute_good_layout.
+            min_distance = 100  # Minimum distance used for collision detection when needed
             
             for node, (x, y) in pos.items():
-                if node in self.node_items:
-                    # Check for collisions and adjust
-                    adjusted_x, adjusted_y = x, y
-                    max_attempts = 50
-                    
-                    for attempt in range(max_attempts):
-                        collision = False
-                        for other_node, other_item in self.node_items.items():
-                            if other_node == node:
+                if node not in self.node_items:
+                    continue
+                # Use direct snapped placement for Good Layout to preserve grid design
+                if layout_type == 'good':
+                    try:
+                        if getattr(self, 'snap_to_grid', False) and getattr(self, 'grid_size', 0) > 0:
+                            x, y = self.snap_point(x, y, step=self.snap_step)
+                    except Exception:
+                        pass
+                    self.node_items[node].setPos(x, y)
+                    continue
+
+                # For other layouts, apply collision detection/adjustment
+                adjusted_x, adjusted_y = x, y
+                max_attempts = 50
+                for attempt in range(max_attempts):
+                    collision = False
+                    for other_node, other_item in self.node_items.items():
+                        if other_node == node:
+                            continue
+                        other_pos = other_item.pos()
+                        dx = adjusted_x - other_pos.x()
+                        dy = adjusted_y - other_pos.y()
+                        distance = (dx**2 + dy**2)**0.5
+                        if distance < min_distance:
+                            collision = True
+                            # Push away from collision (mild push)
+                            if distance > 0:
+                                push_x = (dx / distance) * (min_distance - distance)
+                                push_y = (dy / distance) * (min_distance - distance)
+                                adjusted_x += push_x * 0.5
+                                adjusted_y += push_y * 0.5
+                    if not collision:
+                        break
+                self.node_items[node].setPos(adjusted_x, adjusted_y)
+
+            # Post-processing for Good Layout: ensure input buffers (Buff_xN) are placed
+            # to the right of the corresponding input (xN) with at least one unit offset.
+            if layout_type == 'good':
+                try:
+                    unit = getattr(self, 'grid_size', 20) * getattr(self, 'snap_step', 4)
+                    for name, item in self.node_items.items():
+                        nm = getattr(name, 'name', str(name))
+                        if nm.startswith('Buff_x'):
+                            # Parse index
+                            import re
+                            m = re.match(r'Buff_x(\d+)', nm)
+                            if not m:
                                 continue
-                            
-                            other_pos = other_item.pos()
-                            dx = adjusted_x - other_pos.x()
-                            dy = adjusted_y - other_pos.y()
-                            distance = (dx**2 + dy**2)**0.5
-                            
-                            if distance < min_distance:
-                                collision = True
-                                # Push away from collision
-                                if distance > 0:
-                                    push_x = (dx / distance) * (min_distance - distance)
-                                    push_y = (dy / distance) * (min_distance - distance)
-                                    adjusted_x += push_x * 0.5
-                                    adjusted_y += push_y * 0.5
-                        
-                        if not collision:
-                            break
-                    
-                    self.node_items[node].setPos(adjusted_x, adjusted_y)
+                            idx = int(m.group(1))
+                            # Find corresponding x node
+                            x_node = next((n for n in self.node_items.keys() if getattr(n,'name',None) == f'x{idx}'), None)
+                            if not x_node:
+                                continue
+                            x_item = self.node_items[x_node]
+                            # Ensure buffer is to the right by at least one unit
+                            bx, by = item.pos().x(), item.pos().y()
+                            tx = x_item.pos().x() + unit
+                            if bx <= x_item.pos().x():
+                                item.setPos(tx, by)
+                    # Ensure multiplication nodes are to the right of their weight predecessors
+                    for n, item in list(self.node_items.items()):
+                        nm2 = getattr(n, 'name', str(n))
+                        if nm2.startswith('Mul_'):
+                            # Try to find a ContainerNode or weight predecessor
+                            preds = getattr(n, 'predecessors', []) if hasattr(n, 'predecessors') else []
+                            weight_pred = None
+                            for p in preds:
+                                pn = getattr(p, 'name', str(p))
+                                if pn.startswith('W_') or pn.startswith('wn') or pn.startswith('wx'):
+                                    weight_pred = p
+                                    break
+                            if weight_pred and weight_pred in self.node_items:
+                                wx = self.node_items[weight_pred].pos().x()
+                                mx, my = item.pos().x(), item.pos().y()
+                                if mx <= wx:
+                                    item.setPos(wx + unit, my)
+                    # Ensure activation nodes are to the right of their Add nodes
+                    import re
+                    for n, item in list(self.node_items.items()):
+                        nm2 = getattr(n, 'name', str(n))
+                        if nm2.startswith('Act_'):
+                            m = re.match(r'Act_(?:L|H)(\d+)N(\d+)', nm2)
+                        else:
+                            m = None
+                        if not m:
+                            continue
+                            L = int(m.group(1))
+                            N = int(m.group(2))
+                            # find corresponding Add_L{L}N{N}
+                            add_node = next((a for a in self.node_items.keys() if getattr(a, 'name', None) in (f'Add_L{L}N{N}', f'Add_H{L}N{N}')), None)
+                            if add_node and add_node in self.node_items:
+                                ax, ay = item.pos().x(), item.pos().y()
+                                addx = self.node_items[add_node].pos().x()
+                                if ax <= addx:
+                                    item.setPos(addx + unit, ay)
+                    # Ensure derivative nodes for hidden layers are placed below their buffer nodes
+                    for n, item in list(self.node_items.items()):
+                        nm2 = getattr(n, 'name', str(n))
+                        if nm2.startswith('D_H'):
+                            m = re.match(r'D_H(\d+)N(\d+)', nm2)
+                            if not m:
+                                continue
+                            L = int(m.group(1))
+                            N = int(m.group(2))
+                            buff_node = next((b for b in self.node_items.keys() if getattr(b, 'name', None) == f'Buff_H{L}N{N}'), None)
+                            if buff_node and buff_node in self.node_items:
+                                bx, by = self.node_items[buff_node].pos().x(), self.node_items[buff_node].pos().y()
+                                dx, dy = item.pos().x(), item.pos().y()
+                                if dy <= by:
+                                    item.setPos(dx, by + unit)
+                except Exception:
+                    pass
             
             # Update all edges
             for edge_item in self.edge_items:
@@ -674,10 +879,10 @@ class GraphCanvas(QGraphicsView):
         
         Strategy:
         - Layer 0: Input streams (x nodes) and Label streams (Label_ or yd nodes)
-        - Layer 1: First multiplication nodes (Mult_x)
+        - Layer 1: First multiplication nodes (Mul_x)
         - Layer 2: Weight container nodes (W_x, wn_, wx_)
-        - Layer 3: Hidden layer addition nodes (Add_H)
-        - Layer 4: Hidden layer activation nodes (Act_H, Sigmoid, ReLU, etc.)
+        - Layer 3: Hidden layer addition nodes (Add_L)
+        - Layer 4: Hidden layer activation nodes (Act_L, Sigmoid, ReLU, etc.)
         - Layer 5: Hidden layer derivatives (D_H, derivative nodes)
         - Layer 6+: Repeat for additional hidden layers
         - Layer N-3: Output addition nodes (Add_y)
@@ -699,7 +904,7 @@ class GraphCanvas(QGraphicsView):
             # Layer 0: Input and Label streams
             if name.startswith('x') and 'Stream' in name:
                 layers[0].append(node)
-            elif name.startswith('Label_') or name.startswith('yd'):
+            elif name.startswith('L_y') or name.startswith('yd') or name.startswith('Label_'):
                 layers[0].append(node)
             
             # Layer 0.5: Weight containers (before multiplication, will be positioned behind with offset)
@@ -707,18 +912,18 @@ class GraphCanvas(QGraphicsView):
                 layers[0.5].append(node)
             
             # Layer 1: First multiplication (Input × Weight)
-            elif name.startswith('Mult_x'):
+            elif name.startswith('Mul_x'):
                 layers[1].append(node)
             
             # Layer 3-N: Hidden layers (dynamically detect layer number)
-            elif name.startswith('Add_H'):
-                # Extract layer number from name like "Add_H0N1"
-                match = re.search(r'Add_H(\d+)', name)
+            elif name.startswith('Add_L'):
+                # Extract layer number from name like "Add_L0N1"
+                match = re.search(r'Add_L(\d+)', name)
                 if match:
                     h_layer = int(match.group(1))
                     layers[3 + h_layer * 3].append(node)
             
-            elif name.startswith('Act_H') or (name.startswith('n') and 'Sigmoid' in name):
+            elif name.startswith('Act_L') or (name.startswith('n') and 'Sigmoid' in name):
                 # Activation nodes
                 match = re.search(r'H(\d+)', name)
                 if match:
@@ -959,7 +1164,7 @@ class GraphCanvas(QGraphicsView):
             for node in nodes:
                 name = node_names[node]
                 if name.startswith('Label_') or name.startswith('yd'):
-                    # Extract label index (e.g., Label_y0 -> 0)
+                    # Extract label index (e.g., L_y0 -> 0)
                     label_match = re.search(r'y(\d+)', name)
                     if label_match:
                         label_idx = label_match.group(1)
@@ -985,6 +1190,278 @@ class GraphCanvas(QGraphicsView):
                             y = 150
                             pos[node] = (x, y)
         
+        return pos
+
+    def _compute_good_layout(self, G, scale):
+        """
+        Compute the new 'Good' MLP layout. Uses a cellular grid where each cell
+        is the node size plus padding. Lays out nodes deterministically left-to-right
+        through input -> buffers -> weights -> mults -> additions -> activations -> buffer.
+
+        Algorithm (simplified and robust):
+        - Detect input nodes `x{idx}` and place them in column 0 vertically
+        - For `Buff_x{idx}` place them at column 1, same row as their x
+        - For first-layer weights `W_x{i}H0N{j}`, place in column 2 and row=j
+        - Multiplication nodes `Mul_x{i}H{j}` are column 3 and row=j
+        - Addition nodes `Add_L0N{j}` at column 4 and row=j, activation `Act_L0N{j}` at column 5
+        - Repeat for additional hidden layers; weights between hidden layers are placed in
+          columns offset by a group width per layer (group width = 5)
+        - Output layer is interpreted as last group's addition/activation
+        - Buffer nodes are placed after their activation in same column as buffer slot
+        - Derivative nodes (D_H*) are placed at (buffer_col + 1, buffer_row + 1)
+
+        It is intentionally deterministic and grid-based to align neurons and their
+        connecting weight/multiplication nodes vertically by neuron index.
+        """
+        import re
+        from collections import defaultdict
+
+        node_names = {node: getattr(node, 'name', str(node)) for node in G.nodes()}
+
+        # Helpers
+        def match_name(pattern, name):
+            return re.match(pattern, name)
+
+        # Discover patterns: categorize nodes into forward-pass groups and buffers/derivatives
+        inputs = []  # list of (node, idx)
+        buffs_x = {}  # idx -> Buff node
+        weights = defaultdict(list)  # key -> list of (node, i, j)
+        muls = []
+        adds = defaultdict(list)  # layer -> list of (node, neuron_idx)
+        acts = defaultdict(list)
+        buffs_h = defaultdict(list)  # layer -> list of (node, neuron_idx)
+        derivatives = []
+        outputs_add = []
+        outputs_act = []
+
+        for node in G.nodes():
+            name = node_names[node]
+            m = match_name(r'^x(\d+)$', name)
+            if m:
+                inputs.append((node, int(m.group(1))))
+                continue
+            m = match_name(r'^Buff_x(\d+)$', name)
+            if m:
+                buffs_x[int(m.group(1))] = node
+                continue
+            m = match_name(r'^W_x(\d+)H(\d+)N(\d+)$', name)
+            if m:
+                i = int(m.group(1))
+                layer = int(m.group(2))
+                j = int(m.group(3))
+                weights[(layer, f'x{i}')].append((node, i, j))
+                continue
+            m = match_name(r'^W_H(\d+)N(\d+)H(\d+)N(\d+)$', name)
+            if m:
+                from_layer = int(m.group(1))
+                i = int(m.group(2))
+                to_l = int(m.group(3))
+                j = int(m.group(4))
+                weights[(to_l, f'H{from_layer}')].append((node, i, j))
+                continue
+            m = match_name(r'^Mul_([A-Za-z].+)$', name)
+            if m:
+                muls.append(node)
+                continue
+            m = match_name(r'^Add_(?:L|H)(\d+)N(\d+)$', name)
+            if m:
+                layer = int(m.group(1))
+                n = int(m.group(2))
+                adds[layer].append((node, n))
+                continue
+            m = match_name(r'^Act_(?:L|H)(\d+)N(\d+)$', name)
+            if m:
+                layer = int(m.group(1))
+                n = int(m.group(2))
+                acts[layer].append((node, n))
+                continue
+            m = match_name(r'^Buff_H(\d+)N(\d+)$', name)
+            if m:
+                layer = int(m.group(1))
+                n = int(m.group(2))
+                buffs_h[layer].append((node, n))
+                continue
+            m = match_name(r'^D_H(\d+)N(\d+)$', name)
+            if m:
+                layer = int(m.group(1))
+                n = int(m.group(2))
+                derivatives.append((node, layer, n))
+                continue
+            m = match_name(r'^D_y(\d+)$', name)
+            if m:
+                derivatives.append((node, 'y', int(m.group(1))))
+                continue
+            m = match_name(r'^Add_y(\d+)$', name)
+            if m:
+                outputs_add.append((node, int(m.group(1))))
+                continue
+            m = match_name(r'^y(\d+)$', name)
+            if m:
+                outputs_act.append((node, int(m.group(1))))
+                continue
+
+        # Determine grid dimensions
+        # Number of grid steps reserved per hidden layer (columns per layer)
+        step_per_layer = 8
+        num_hidden_layers = max(adds.keys()) + 1 if adds else 0
+        max_hidden_neurons = max((max([n for (_, n) in nodes]) + 1) if nodes else 0 for nodes in adds.values()) if adds else 0
+        max_rows = max([len(inputs), max_hidden_neurons, len(outputs_add)])
+        if max_rows == 0:
+            max_rows = 1
+
+        # Determine cell size using canvas grid settings when available.
+        try:
+            # unit equals node-sized step (grid_size * snap_step usually equals node diameter)
+            grid_unit = int(getattr(self, 'grid_size', 20)) * int(getattr(self, 'snap_step', 4))
+            cell_w = grid_unit
+            cell_h = grid_unit
+        except Exception:
+            # Fallback to previous manual calculation
+            radii = [item.radius for item in self.node_items.values() if hasattr(item, 'radius')]
+            avg_radius = sum(radii) / len(radii) if radii else 40
+            cell_w = avg_radius * 2 + 40
+            cell_h = avg_radius * 2 + 40
+
+        # Map grid cell (col, row) -> pixel pos
+        max_columns = 2 + (num_hidden_layers + 1) * step_per_layer + 2
+
+        def cell_to_pixel(col, row):
+            # Simplified deterministic mapping; use top-left origin for grid.
+            x = col * cell_w
+            y = row * cell_h
+            # Snap final coordinates to grid if grid snapping enabled
+            try:
+                if getattr(self, 'snap_to_grid', False) and getattr(self, 'grid_size', 0) > 0:
+                    x, y = self.snap_point(x, y, step=self.snap_step)
+            except Exception:
+                pass
+            return (x, y)
+
+        pos = {}
+
+        # Place inputs and input buffers
+        for node, idx in inputs:
+            row = idx
+            pos[node] = cell_to_pixel(0, row)
+            buff = buffs_x.get(idx)
+            if buff:
+                # Place input buffer top-right of its input if possible
+                # If this would fall outside grid (row == 0), place it at row +1 instead
+                buff_row = row - 1 if row > 0 else row + 1
+                pos[buff] = cell_to_pixel(1, buff_row)
+
+        # Hidden layer placements (add/act/buff)
+        for layer, nodes in adds.items():
+            for (node, n) in nodes:
+                base = 2 + (layer * step_per_layer)
+                pos[node] = cell_to_pixel(base + 2, n)
+        for layer, nodes in acts.items():
+            for (node, n) in nodes:
+                base = 2 + (layer * step_per_layer)
+                pos[node] = cell_to_pixel(base + 3, n)
+        for layer, nodes in buffs_h.items():
+            for (node, n) in nodes:
+                base = 2 + (layer * step_per_layer)
+                # Place hidden layer buffer top-right of activation if possible
+                # Place hidden buffer top-right (above) activation if possible
+                # If at top row then place below so it remains distinct
+                buff_row = n - 1 if n > 0 else n + 1
+                pos[node] = cell_to_pixel(base + 4, buff_row)
+
+        # Weights and multiplications
+        # To avoid stacking multiple weight nodes for the same target neuron j,
+        # distribute the weights vertically across nearby rows centered at j.
+        weight_row_map = {}  # node -> row assigned
+        weight_col_map = {}  # node -> column assigned
+        for key, wlist in weights.items():
+            # group by target neuron j
+            grouped_by_j = defaultdict(list)
+            for (node, i, j) in wlist:
+                grouped_by_j[j].append((node, i, j))
+            for j, items in grouped_by_j.items():
+                # Sort by source index (i) to make distribution deterministic
+                items_sorted = sorted(items, key=lambda x: x[1])
+                c = len(items_sorted)
+                # Center rows around the neuron index j
+                start_row = j - (c - 1) // 2
+                for idx_in_group, (node, i, j2) in enumerate(items_sorted):
+                    row = start_row + idx_in_group
+                    target_layer = key[0] if isinstance(key[0], int) else 0
+                    base = 2 + ((max(0, target_layer - 1)) * step_per_layer) if target_layer > 0 else 2
+                    # Column offset using target neuron j for diagonal cascading across neurons
+                    col = base + j
+                    pos[node] = cell_to_pixel(col, row)
+                    weight_row_map[node] = row
+                    weight_col_map[node] = col
+
+        for node in muls:
+            name = node_names[node]
+            m = re.match(r'^Mul_x(\d+)H(\d+)$', name)
+            if m:
+                j = int(m.group(2))
+                # Align the mul node based on the corresponding weight node row if available
+                # find weight for pair (first layer weights) matching i/j
+                i = int(m.group(1))
+                # Search for matching weight node in weights[(0,'x')] list
+                assigned_row = None
+                if (0, 'x') in weights:
+                    for (wn, si, sj) in weights[(0, 'x')]:
+                        if si == i and sj == j:
+                            assigned_row = weight_row_map.get(wn)
+                            assigned_col = weight_col_map.get(wn)
+                            break
+                row = assigned_row if assigned_row is not None else j
+                col = (assigned_col + 1) if assigned_row is not None and 'assigned_col' in locals() else 3
+                pos[node] = cell_to_pixel(col, row)
+                continue
+            m = re.match(r'^Mul_H(\d+)N(\d+)H(\d+)N(\d+)$', name)
+            if m:
+                to_l = int(m.group(3))
+                j = int(m.group(4))
+                # Align with corresponding weight row for hidden->hidden muls
+                i = int(m.group(2))
+                assigned_row = None
+                assigned_col = None
+                key = (to_l, f'H{to_l-1}' )
+                if key in weights:
+                    for (wn, si, sj) in weights[key]:
+                        if si == i and sj == j:
+                            assigned_row = weight_row_map.get(wn)
+                            assigned_col = weight_col_map.get(wn)
+                            break
+                base = 2 + ((to_l - 1) * step_per_layer)
+                row = assigned_row if assigned_row is not None else j
+                col = (assigned_col + 1) if assigned_col is not None else base + 1
+                pos[node] = cell_to_pixel(col, row)
+                continue
+            m = re.match(r'^Mul_H(\d+)N(\d+)y(\d+)$', name)
+            if m:
+                from_l = int(m.group(1))
+                j = int(m.group(3))
+                base = 2 + ((from_l) * step_per_layer)
+                pos[node] = cell_to_pixel(base + 1, j)
+                continue
+            # fallback
+            pos[node] = cell_to_pixel(3, 0)
+
+        # Output positions
+        last_group_base = 2 + (num_hidden_layers * step_per_layer)
+        for (node, idx) in outputs_add:
+            pos[node] = cell_to_pixel(last_group_base + 2, idx)
+        for (node, idx) in outputs_act:
+            pos[node] = cell_to_pixel(last_group_base + 3, idx)
+
+        # Derivatives placed relative to corresponding buffers
+        for (node, layer, n) in derivatives:
+            if layer == 'y':
+                col = last_group_base + 4
+                row = n
+            else:
+                base = 2 + (layer * step_per_layer)
+                col = base + 5
+                row = n + 1
+            pos[node] = cell_to_pixel(col, row)
+
         return pos
     
     def _update_scene_rect(self):
