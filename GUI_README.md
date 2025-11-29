@@ -59,6 +59,7 @@ Interactive workspace for building your computational graph:
 - **Spring Layout**: Physics-based layout (good for general graphs)
 - **Hierarchical Layout**: Layered layout (good for DAGs)
 - **Circular Layout**: Nodes arranged in a circle
+ - **Good Layout**: MLP-specific grid-based deterministic layout
 
 ### 4. **Menu Bar**
 

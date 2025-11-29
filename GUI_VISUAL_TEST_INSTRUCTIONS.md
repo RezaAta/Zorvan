@@ -6,7 +6,7 @@ The GUI's `graph_runner.py` now automatically calls two preparation methods when
 
 1. **`mark_source_nodes_as_processed()`** - Marks nodes with NO predecessors as 'processed':
    - Input DataStreamNodes (x0, x1)
-   - Label DataStreamNodes (Label_y0)
+   - Label DataStreamNodes (L_y0)
    - Learning rate node (LearningRate)
 
 2. **`mark_container_nodes_as_processed()`** - Marks ALL ContainerNodes as 'processed' (even with predecessors):
@@ -79,7 +79,7 @@ python run_gui.py
 
 If you test with an **older version** (before `mark_source_nodes_as_processed()` was added to GUI):
 - ❌ Graph would **fail to execute** or stop after 1 step
-- ❌ Starting nodes (Mult_x0H0N0, etc.) couldn't access source node values
+- ❌ Starting nodes (Mul_x0H0, etc.) couldn't access source node values
 - ❌ Error: "Not all predecessors processed" or similar
 - ❌ No training progress, weights don't update
 
