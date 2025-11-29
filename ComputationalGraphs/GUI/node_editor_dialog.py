@@ -45,7 +45,13 @@ class NodeEditorDialog(QDialog):
         # Current value (editable)
         self.value_edit = QTextEdit()
         self.value_edit.setMaximumHeight(60)
-        value_str = str(self.node.value) if self.node.value is not None else "None"
+        # For BufferNode, show both the 'current' (oldest/delayed) value and the most recent appended value
+        if hasattr(self.node, 'buffer'):
+            curVal = self.node.value
+            curStr = str(curVal) if curVal is not None else "None"
+            value_str = curStr
+        else:
+            value_str = str(self.node.value) if self.node.value is not None else "None"
         self.value_edit.setPlainText(value_str)
         self.value_edit.setToolTip("Edit the current value of this node (use Python syntax)")
         basic_layout.addRow("Current Value:", self.value_edit)

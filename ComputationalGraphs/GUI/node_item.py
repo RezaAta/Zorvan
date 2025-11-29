@@ -5,6 +5,7 @@ GraphicsItem representation of a computational graph node.
 from PyQt6.QtWidgets import QGraphicsEllipseItem, QGraphicsTextItem, QGraphicsItem, QStyleOptionGraphicsItem, QStyle
 from PyQt6.QtCore import Qt, QRectF, QPointF
 from PyQt6.QtGui import QBrush, QColor, QPen, QFont, QCursor
+from PyQt6.QtWidgets import QMenu
 import colorsys
 
 
@@ -112,7 +113,29 @@ class NodeItem(QGraphicsEllipseItem):
             else:
                 display_text = str(self.node.data)[:20]
         else:
-            value = self.node.value
+            # For BufferNodes, show the delayed (oldest) output.
+            # Avoid falling through to the generic formatting logic that expects `value` to be defined,
+            # which causes an unbound-local error on the buffered branch.
+            if hasattr(self.node, 'buffer'):
+                val = self.node.value
+                def fmt(x):
+                    if x is None:
+                        return "None"
+                    elif isinstance(x, float):
+                        return f"{x:.2f}"
+                    elif isinstance(x, int):
+                        return str(x)
+                    else:
+                        return str(x)
+
+                display_text = f"{fmt(val)}"
+                self.value_label.setPlainText(display_text)
+                # Center the value label
+                value_rect = self.value_label.boundingRect()
+                self.value_label.setPos(-value_rect.width() / 2, value_rect.height() / 2)
+                return
+            else:
+                value = self.node.value
             if value is None:
                 display_text = "None"
             elif isinstance(value, (int, float)):
@@ -308,6 +331,24 @@ class NodeItem(QGraphicsEllipseItem):
                     return
         
         super().mouseDoubleClickEvent(event)
+
+    def contextMenuEvent(self, event):
+        try:
+            menu = QMenu()
+            # View predecessors menu item
+            view_pred_action = menu.addAction("View Predecessors")
+            action = menu.exec(event.screenPos())
+            if action == view_pred_action:
+                try:
+                    canvas = getattr(self, 'canvas', None)
+                    if canvas and hasattr(canvas, 'graph') and canvas.graph is not None:
+                        from .predecessors_dialog import PredecessorsDialog
+                        dlg = PredecessorsDialog(self, canvas, parent=self.scene().views()[0].window())
+                        dlg.exec()
+                except Exception:
+                    pass
+        except Exception:
+            pass
     
     def paint(self, painter, option, widget):
         """Custom paint to show selection state and active nodes."""

@@ -18,6 +18,8 @@ from ComputationalGraphs.Nodes.ReLUDerivativeNode import ReLUDerivativeNode
 from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
 from ComputationalGraphs.Nodes.SigmoidDerivativeNode import SigmoidDerivativeNode
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from ComputationalGraphs.Nodes.TanhNode import TanhNode
+from ComputationalGraphs.Nodes.TanhDerivativeNode import TanhDerivativeNode
 from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
 
 
@@ -42,6 +44,8 @@ __all__ = [
     "ReLUNode",
     "SigmoidDerivativeNode",
     "SigmoidNode",
+    "TanhDerivativeNode",
+    "TanhNode",
     "GaussianNode",
     "SubtractionNode"
 ]

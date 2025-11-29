@@ -67,6 +67,8 @@ class NodePalette(QDockWidget):
                     ("ReLUDerivativeNode", "ReLU'", "Derivative of ReLU function"),
                     ("LinearNode", "Linear", "Linear activation (identity)"),
                     ("LinearNodeDerivative", "Linear'", "Derivative of linear function"),
+                    ("TanhNode", "Tanh", "Hyperbolic tangent activation function"),
+                    ("TanhDerivativeNode", "Tanh'", "Derivative of hyperbolic tangent function"),
                     ("GaussianNode", "Gaussian", "Gaussian (bell curve) function"),
                     ("PiecewiseLinearNode", "Piecewise Linear", "Piecewise linear function"),
                 ]
