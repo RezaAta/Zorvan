@@ -14,6 +14,7 @@ class GraphCanvas(QGraphicsView):
     
     node_selected = pyqtSignal(object)  # Emits the selected node
     edge_created = pyqtSignal(object, object)  # Emits (source_node, target_node)
+    edge_removed = pyqtSignal(object, object)  # Emits (source_node, target_node) when an edge is removed
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -201,6 +202,18 @@ class GraphCanvas(QGraphicsView):
             self.scene.addItem(edge_item)
             self.edge_items.append(edge_item)
             self.edge_created.emit(source_node, target_node)
+            # If canvas holds a graph reference, update the graph connectivity
+            try:
+                if hasattr(self, 'graph') and getattr(self, 'graph') is not None:
+                    # Only connect if the nodes belong to the authoritative graph
+                    try:
+                        if target_node in getattr(self.graph, 'nodes', []) and source_node in getattr(self.graph, 'nodes', []):
+                            self.graph.ConnectPreNode(target_node, source_node)
+                    except Exception:
+                        # If the connection fails, continue without blocking UI
+                        pass
+            except Exception:
+                pass
             return edge_item
         
         return None
@@ -213,6 +226,24 @@ class GraphCanvas(QGraphicsView):
             if isinstance(item, NodeItem):
                 # Remove connected edges first
                 for edge in item.edges[:]:
+                    # Disconnect underlying Graph link if present
+                    try:
+                        # emit edge_removed for listeners before we physically remove it
+                        src = edge.source_node.node
+                        tgt = edge.target_node.node
+                        try:
+                            self.edge_removed.emit(src, tgt)
+                        except Exception:
+                            pass
+                        if hasattr(self, 'graph') and getattr(self, 'graph') is not None:
+                            # Only disconnect if these nodes are in the authoritative graph
+                            try:
+                                if tgt in getattr(self.graph, 'nodes', []) and src in getattr(self.graph, 'nodes', []):
+                                    self.graph.DisconnectPreNode(tgt, src)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
                     edge.remove()
                     if edge in self.edge_items:
                         self.edge_items.remove(edge)
@@ -224,6 +255,22 @@ class GraphCanvas(QGraphicsView):
                 self.scene.removeItem(item)
             
             elif isinstance(item, EdgeItem):
+                # Update the computational graph if available
+                try:
+                    if hasattr(self, 'graph') and getattr(self, 'graph') is not None:
+                        src = item.source_node.node
+                        tgt = item.target_node.node
+                        try:
+                            self.edge_removed.emit(src, tgt)
+                        except Exception:
+                            pass
+                        try:
+                            if tgt in getattr(self.graph, 'nodes', []) and src in getattr(self.graph, 'nodes', []):
+                                self.graph.DisconnectPreNode(tgt, src)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
                 item.remove()
                 if item in self.edge_items:
                     self.edge_items.remove(item)
@@ -552,6 +599,8 @@ class GraphCanvas(QGraphicsView):
             from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
             from ComputationalGraphs.Nodes.ReLUDerivativeNode import ReLUDerivativeNode
             from ComputationalGraphs.Nodes.LinearNode import LinearNode
+            from ComputationalGraphs.Nodes.TanhNode import TanhNode
+            from ComputationalGraphs.Nodes.TanhDerivativeNode import TanhDerivativeNode
             from ComputationalGraphs.Nodes.GaussianNode import GaussianNode
             from ComputationalGraphs.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
             from ComputationalGraphs.Nodes.TournamentSelectionNode import TournamentSelectionNode
@@ -615,6 +664,10 @@ class GraphCanvas(QGraphicsView):
                 node = ReLUDerivativeNode(name=f"ReLU'_{node_id}")
             elif node_type == "LinearNode":
                 node = LinearNode(name=f"Linear_{node_id}")
+            elif node_type == "TanhNode":
+                node = TanhNode(name=f"Tanh_{node_id}")
+            elif node_type == "TanhDerivativeNode":
+                node = TanhDerivativeNode(name=f"Tanh'_{node_id}")
             elif node_type == "GaussianNode":
                 node = GaussianNode(name=f"Gauss_{node_id}")
             elif node_type == "PiecewiseLinearNode":

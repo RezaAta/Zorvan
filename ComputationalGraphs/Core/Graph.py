@@ -85,6 +85,64 @@ class Graph:
             preNode_index = self.nodes.index(preNode)
             self.adjacencyMatrix[preNode_index][node_index] = 1  # Connection from predecessor to node
 
+    def DisconnectPreNode(self, node, *preNodes):
+        """Disconnect predecessor(s) from a node and update the adjacency matrix."""
+        if node not in self.nodes:
+            return
+        for preNode in preNodes:
+            # If the exact node object is present, remove directly
+            if preNode in node.predecessors:
+                try:
+                    node.predecessors.remove(preNode)
+                    # Debug output to help with synchronization issues
+                    try:
+                        print(f"Graph: removed predecessor {getattr(preNode, 'name', str(preNode))} from {getattr(node, 'name', str(node))}")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                continue
+
+            # If not identical object, try to match on id or name (common in GUI replacements)
+            # Accept string identifiers for convenience
+            candidates = list(node.predecessors)
+            matched = None
+            if isinstance(preNode, str):
+                for cand in candidates:
+                    if hasattr(cand, 'name') and cand.name == preNode:
+                        matched = cand
+                        break
+                    if hasattr(cand, 'id') and cand.id == preNode:
+                        matched = cand
+                        break
+            else:
+                # preNode is a Node (or similar) but a different object instance - try matching by id/name
+                try:
+                    pid = getattr(preNode, 'id', None)
+                    pname = getattr(preNode, 'name', None)
+                except Exception:
+                    pid = None
+                    pname = None
+                for cand in candidates:
+                    if pid is not None and getattr(cand, 'id', None) == pid:
+                        matched = cand
+                        break
+                    if pname is not None and getattr(cand, 'name', None) == pname:
+                        matched = cand
+                        break
+
+            if matched is not None and matched in node.predecessors:
+                try:
+                    node.predecessors.remove(matched)
+                    try:
+                        print(f"Graph: removed predecessor {getattr(matched, 'name', str(matched))} from {getattr(node, 'name', str(node))} (matched)")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+        # Rebuild the adjacency matrix to reflect changes
+        self.UpdateAdjacencyMatrix()
+
     def UpdateAdjacencyMatrix(self):
         """Rebuild the adjacency matrix by iterating over all nodes and their connections."""
         size = len(self.nodes)

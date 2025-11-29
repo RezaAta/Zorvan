@@ -172,6 +172,24 @@ class EdgeItem(QGraphicsPathItem):
     
     def remove(self):
         """Remove this edge from the scene and unregister from nodes."""
+        # Determine the view to emit a canvas-level 'edge_removed' event.
+        view = None
+        try:
+            if self.scene() and self.scene().views():
+                view = self.scene().views()[0]
+        except Exception:
+            view = None
+
+        # Emit canvas-level signal if available so UI can update other components
+        try:
+            if view and hasattr(view, 'edge_removed'):
+                try:
+                    view.edge_removed.emit(self.source_node.node, self.target_node.node)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         self.source_node.remove_edge(self)
         self.target_node.remove_edge(self)
         

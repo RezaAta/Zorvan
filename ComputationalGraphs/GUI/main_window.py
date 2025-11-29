@@ -25,6 +25,9 @@ from ComputationalGraphs.Core.Graph import Graph
 
 from PyQt6.QtWidgets import QToolButton, QSizePolicy
 
+# Draw.io serializer/deserializer
+from ComputationalGraphs.Core.DrawioIO import DrawioIO
+
 
 class CollapsibleSection(QWidget):
     """A simple collapsible section widget with a header button.
@@ -86,9 +89,16 @@ class MainWindow(QMainWindow):
         self.resize(1200, 800)
         
         # Core components
-        self.graph = Graph()
+        # Create a new Graph object and use set_graph to keep everything in sync
+        new_graph = Graph()
         self.graph_runner = GraphRunner(self)
-        self.graph_runner.set_graph(self.graph)
+        # Ensure runner and canvas reference the authoritative graph (use set_graph)
+        try:
+            self.set_graph(new_graph)
+        except Exception:
+            # If set_graph is not yet available, fallback to direct assignment
+            self.graph = new_graph
+            self.graph_runner.set_graph(self.graph)
         self.examples_loader = ExamplesLoader()
         
         # Connect signals
@@ -114,11 +124,40 @@ class MainWindow(QMainWindow):
         self.create_menus()
         self.create_toolbars()
         self.create_status_bar()
+
+    def set_graph(self, graph: Graph):
+        """Set the authoritative Graph instance and keep canvas and runner in sync.
+
+        This helps avoid stale references where UI actions affect a different graph
+        object than the one used for processing.
+        """
+        self.graph = graph
+        try:
+            self.canvas.graph = graph
+        except Exception:
+            pass
+        try:
+            # GraphRunner expects set_graph to be called so it uses the same graph
+            if hasattr(self, 'graph_runner') and getattr(self, 'graph_runner') is not None:
+                self.graph_runner.set_graph(graph)
+        except Exception:
+            pass
+        # Update displayed starting/stopping nodes
+        try:
+            self.update_starting_nodes_display()
+            self.update_stopping_nodes_display()
+        except Exception:
+            pass
     
     def init_ui(self):
         """Initialize the UI components."""
         # Central widget - Graph Canvas
         self.canvas = GraphCanvas(self)
+        # Provide canvas with a pointer to the underlying computational Graph
+        try:
+            self.canvas.graph = self.graph
+        except Exception:
+            pass
         # Default grid & snap settings (recommended)
         try:
             self.canvas.set_grid_mode('4x4')
@@ -130,6 +169,7 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
         self.canvas.edge_created.connect(self.on_edge_created)
+        self.canvas.edge_removed.connect(self.on_edge_removed)
         self.setCentralWidget(self.canvas)
         
         # Left dock - Node Palette
@@ -956,8 +996,8 @@ class MainWindow(QMainWindow):
             self.canvas.node_items.clear()
             self.canvas.edge_items.clear()
             
-            self.graph = Graph()
-            self.graph_runner.set_graph(self.graph)
+            # Replace graph via helper to sync canvas and graph_runner
+            self.set_graph(Graph())
             self.graph_runner.reset()
             
             self.status_bar.showMessage("New graph created")
@@ -965,24 +1005,58 @@ class MainWindow(QMainWindow):
     def open_graph(self):
         """Open a graph from file."""
         filename, _ = QFileDialog.getOpenFileName(self, "Open Graph", "",
-                                                  "Python Files (*.py);;All Files (*)")
+                                                  "Draw.io XML (*.drawio *.xml);;Python Files (*.py);;All Files (*)")
         
         if filename:
-            # TODO: Implement graph loading
-            self.status_bar.showMessage(f"Opening {filename}...")
-            QMessageBox.information(self, "Not Implemented",
-                                   "Graph loading not yet implemented.")
+            try:
+                self.status_bar.showMessage(f"Opening {filename}...")
+                # If user chose a Draw.io-compatible XML, use DrawioIO loader
+                if filename.lower().endswith(('.drawio', '.xml')):
+                    graph = DrawioIO.load(filename)
+                    # Clear current canvas
+                    self.canvas.scene.clear()
+                    self.canvas.node_items.clear()
+                    self.canvas.edge_items.clear()
+                    # Set and visualize graph (use helper to keep canvas and runner in sync)
+                    self.set_graph(graph)
+                    # Keep existing runner reset behavior if it was previously set
+                    self._visualize_graph_on_canvas(self.graph)
+                    self.update_starting_nodes_display()
+                    self.update_stopping_nodes_display()
+                    self.status_bar.showMessage(f"Loaded {filename}")
+                else:
+                    # Python file loading is more complex and not implemented yet
+                    QMessageBox.information(self, "Not Implemented",
+                                            "Opening Python-constructed graph files (*.py) is not supported yet.\n" \
+                                            "Use Draw.io XML format (*.drawio, *.xml) for saving/loading the GUI.")
+            except Exception as e:
+                QMessageBox.critical(self, "Open Error", f"Failed to open file {filename}: {e}")
     
     def save_graph(self):
         """Save the current graph to file."""
         filename, _ = QFileDialog.getSaveFileName(self, "Save Graph", "",
-                                                  "Python Files (*.py);;All Files (*)")
+                                                  "Draw.io XML (*.drawio *.xml);;Python Files (*.py);;All Files (*)")
         
         if filename:
-            # TODO: Implement graph saving
-            self.status_bar.showMessage(f"Saving to {filename}...")
-            QMessageBox.information(self, "Not Implemented",
-                                   "Graph saving not yet implemented.")
+            try:
+                # Ensure graph object is up-to-date from canvas
+                try:
+                    self.rebuild_graph()
+                except Exception:
+                    # If rebuilding fails, still try to save the existing graph object
+                    pass
+
+                self.status_bar.showMessage(f"Saving to {filename}...")
+                # If file extension suggests Draw.io format, use DrawioIO.save
+                if filename.lower().endswith(('.drawio', '.xml')):
+                    DrawioIO.save(self.graph, filename)
+                else:
+                    # For now, saving as Python is not implemented; save as draw.io XML with changed extension
+                    DrawioIO.save(self.graph, filename + '.xml')
+
+                self.status_bar.showMessage(f"Saved {filename}")
+            except Exception as e:
+                QMessageBox.critical(self, "Save Error", f"Failed to save file {filename}: {e}")
     
     def edit_node(self, node_item):
         """Open editor dialog for a specific node item."""
@@ -1189,11 +1263,11 @@ class MainWindow(QMainWindow):
         old_stopping_nodes = list(self.graph.stopping_nodes) if hasattr(self.graph, 'stopping_nodes') else []
         old_manual_sequence = list(self.graph.manual_processing_sequence) if hasattr(self.graph, 'manual_processing_sequence') and self.graph.manual_processing_sequence else None
         
-        self.graph = Graph()
+        new_graph = Graph()
         
         # Add all nodes
         for node in self.canvas.node_items.keys():
-            self.graph.AddNode(node)
+            new_graph.AddNode(node)
         
         # Add edges (connections)
         for edge_item in self.canvas.edge_items:
@@ -1205,15 +1279,15 @@ class MainWindow(QMainWindow):
                 target.AddPreNode(source)
         
         # Update adjacency matrix
-        self.graph.UpdateAdjacencyMatrix()
+        new_graph.UpdateAdjacencyMatrix()
         
         # Restore starting_nodes, stopping_nodes and manual sequence
-        self.graph.starting_nodes = old_starting_nodes
-        self.graph.stopping_nodes = old_stopping_nodes
-        self.graph.manual_processing_sequence = old_manual_sequence
+        new_graph.starting_nodes = old_starting_nodes
+        new_graph.stopping_nodes = old_stopping_nodes
+        new_graph.manual_processing_sequence = old_manual_sequence
         
-        # Set the graph
-        self.graph_runner.set_graph(self.graph)
+        # Set the graph via the helper to synchronize canvas and runner
+        self.set_graph(new_graph)
         # Update UI state
         try:
             self.update_starting_nodes_display()
@@ -1511,6 +1585,21 @@ class MainWindow(QMainWindow):
     def on_edge_created(self, source_node, target_node):
         """Handle edge creation."""
         self.status_bar.showMessage(f"Connected {source_node.name} → {target_node.name}")
+        # Keep adjacency matrix updated and reset forward processing controls state if needed
+        try:
+            if self.graph:
+                self.graph.UpdateAdjacencyMatrix()
+        except Exception:
+            pass
+        try:
+            if hasattr(self, 'graph_runner') and getattr(self, 'graph_runner') is not None and hasattr(self.graph_runner, 'graph_processor'):
+                if getattr(self, 'processor_type', None) == 'forward' or getattr(self.graph_runner, 'processor_type', None) == 'forward':
+                    try:
+                        self.graph_runner.graph_processor.reset_forward_state()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
     
     def update_starting_nodes_display(self):
         """Update the starting nodes list display."""
@@ -1557,6 +1646,23 @@ class MainWindow(QMainWindow):
         
         self.update_starting_nodes_display()
         self.status_bar.showMessage(f"Added {added_count} node(s) to starting nodes")
+
+    def on_edge_removed(self, source_node, target_node):
+        self.status_bar.showMessage(f"Disconnected {source_node.name} → {target_node.name}")
+        try:
+            if self.graph:
+                self.graph.UpdateAdjacencyMatrix()
+        except Exception:
+            pass
+        # Reset the graph processor forward state so it reinitializes internal caches
+        try:
+            if hasattr(self, 'graph_runner') and getattr(self, 'graph_runner') is not None and hasattr(self.graph_runner, 'graph_processor'):
+                try:
+                    self.graph_runner.graph_processor.reset_forward_state()
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def update_stopping_nodes_display(self):
         """Update the stopping nodes list display."""
@@ -2136,9 +2242,8 @@ class MainWindow(QMainWindow):
             self.canvas.node_items.clear()
             self.canvas.edge_items.clear()
             
-            # Load the new graph
-            self.graph = example_graph
-            self.graph_runner.set_graph(self.graph)
+            # Load the new graph and synchronize canvas and runner
+            self.set_graph(example_graph)
             
             # DON'T reset when loading - it clears DataStreamNode data!
             # self.graph_runner.reset()
@@ -2184,9 +2289,8 @@ class MainWindow(QMainWindow):
             self.canvas.node_items.clear()
             self.canvas.edge_items.clear()
             
-            # Load the generated graph
-            self.graph = generated_graph
-            self.graph_runner.set_graph(self.graph)
+            # Load the generated graph and keep canvas/runner synchronized
+            self.set_graph(generated_graph)
             # DON'T reset when loading - it clears DataStreamNode data!
             # self.graph_runner.reset()
             
@@ -2214,9 +2318,8 @@ class MainWindow(QMainWindow):
             self.canvas.node_items.clear()
             self.canvas.edge_items.clear()
             
-            # Load the graph with backprop
-            self.graph = generated_graph
-            self.graph_runner.set_graph(self.graph)
+            # Load the graph with backprop and keep the UI/runner in sync
+            self.set_graph(generated_graph)
             # DON'T reset when loading - it clears DataStreamNode data!
             # self.graph_runner.reset()
             
