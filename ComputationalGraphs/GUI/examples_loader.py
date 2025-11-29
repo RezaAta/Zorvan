@@ -47,24 +47,24 @@ class ExamplesLoader:
         )
         self.categories["basic"] = basic
         
-        # Forward Processing Neural Network Examples
-        nn_forward = ExampleCategory("Neural Networks - Forward Processing", "MLP with forward processing (no buffers)")
+        # Neural Network Examples (All unified to Concurrent MLP)
+        nn_forward = ExampleCategory("Neural Networks", "All MLP examples use the concurrent MLP with buffers")
         nn_forward.add_example(
             "XOR Problem (2-2-1)",
             "2-input XOR with 2-neuron hidden layer using sigmoid activation",
-            self._build_xor_mlp
+            self._build_xor_mlp_concurrent
         )
         nn_forward.add_example(
             "Simple MLP (1-1-1)",
             "Minimal MLP for understanding the architecture",
-            self._build_simple_mlp
+            self._build_simple_mlp_concurrent
         )
         nn_forward.add_example(
             "Iris Classification (4-5-3-3)",
             "Multi-class classification with two hidden layers",
-            self._build_iris_mlp
+            self._build_iris_mlp_concurrent
         )
-        self.categories["neural_networks_forward"] = nn_forward
+        self.categories["neural_networks"] = nn_forward
         
         # Concurrent Processing Neural Network Examples
         nn_concurrent = ExampleCategory("Neural Networks - Concurrent Processing", "MLP with concurrent processing (with buffers)")
@@ -83,13 +83,23 @@ class ExamplesLoader:
             "Regression on the Diabetes dataset using a concurrent MLP with backprop",
             self._build_diabetes_mlp_concurrent
         )
+        nn_concurrent.add_example(
+            "Piecewise Function MLP (Concurrent)",
+            "Regression on a simple hybrid piecewise function - 1-in 1-out MLP with a 3-neuron hidden layer (Sigmoid)",
+            self._build_piecewise_mlp_concurrent
+        )
+        nn_concurrent.add_example(
+            "Piecewise Function 2 MLP (Concurrent)",
+            "Regression on piecewise quadratic / linear function - 1-in, 2-hidden layers (3 ReLU, 8 ReLU)",
+            self._build_piecewise_mlp2_concurrent
+        )
         self.categories["neural_networks_concurrent"] = nn_concurrent
 
         # Manual Processing Neural Network Examples
-        nn_manual = ExampleCategory("Neural Networks - Manual Processing", "MLP with an explicitly assigned manual processing sequence")
+        nn_manual = ExampleCategory("Neural Networks - Manual Processing", "Manual execution sequence for a concurrent MLP")
         nn_manual.add_example(
             "XOR Problem (2-2-1) - Manual",
-            "2-input XOR with 2-neuron hidden layer using a predefined manual processing sequence",
+            "2-input XOR with 2-neuron hidden layer using a predefined manual processing sequence (concurrent)",
             self._build_xor_mlp_manual
         )
         self.categories["neural_networks_manual"] = nn_manual
@@ -161,8 +171,8 @@ class ExamplesLoader:
     
     def _build_xor_mlp(self) -> Graph:
         """Build XOR MLP with backpropagation (Forward Processing version)."""
-        from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
-        from ComputationalGraphs.Core.BackpropGraphForwardProcessing import BackpropGraphForwardProcessing
+        from ComputationalGraphs.Core.MLPGraph import MLPGraph
+        from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
         from ComputationalGraphs.Nodes.LinearNode import LinearNode
         
         # Create MLP without buffers (for forward processing)
@@ -272,6 +282,56 @@ class ExamplesLoader:
         
         fullGraph.UpdateAdjacencyMatrix()
         
+        return fullGraph
+
+    def _build_iris_mlp_concurrent(self) -> Graph:
+        """Build Iris classification MLP (4-5-3-3) - Concurrent MLP version."""
+        from ComputationalGraphs.Core.MLPGraph import MLPGraph
+        from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
+        from ComputationalGraphs.Nodes.LinearNode import LinearNode
+        import numpy as np
+
+        # Build concurrent MLPGraph (matching forward processing architecture)
+        mlpGraph = MLPGraph(
+            numInputs=4,
+            numOutputs=3,
+            numHiddenLayers=2,
+            hiddenLayerSizes=[5, 3],
+            activationFunction=SigmoidNode,
+            outputLayerType=LinearNode
+        )
+        mlpGraph.BuildMLP()
+
+        # Sample Iris data
+        X_train = [
+            [5.1, 3.5, 1.4, 0.2],  # Setosa
+            [7.0, 3.2, 4.7, 1.4],  # Versicolor
+            [6.3, 3.3, 6.0, 2.5]   # Virginica
+        ]
+        y_train = [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0]
+        ]
+
+        # Convert to row-per-feature shape expected by concurrent MLP: (features, samples)
+        X = np.array(X_train).T.tolist()
+        y = np.array(y_train).T.tolist()
+        mlpGraph.LoadData(X, y)
+
+        backprop_graph = BackpropGraph(mlpGraph, learningRate=0.01)
+        backprop_graph.BuildBackprop()
+
+        fullGraph = Graph()
+        for node in mlpGraph.nodes:
+            fullGraph.AddNode(node)
+        for node in backprop_graph.nodes:
+            fullGraph.AddNode(node)
+
+        # Set starting nodes for concurrent processing: data streams + labels
+        fullGraph.starting_nodes = [input_pair[0] for input_pair in mlpGraph.inputLayer] + mlpGraph.labelLayer
+        fullGraph.UpdateAdjacencyMatrix()
+
         return fullGraph
     
     def _build_temperature_control(self) -> Graph:
@@ -393,6 +453,137 @@ class ExamplesLoader:
         
         return fullGraph
 
+    def _build_piecewise_mlp_concurrent(self) -> Graph:
+        """Build a small 1-input concurrent MLP that learns a hybrid piecewise function.
+
+        The function is defined as:
+            f(x) = sin(x) for x < 0
+            f(x) = 0 for 0 ≤ x < 1
+            f(x) = 2x + 1 for x ≥ 1
+
+        This builds a concurrent `MLPGraph` with 1 input, 1 hidden layer of 3 Sigmoid neurons,
+        and 1 linear output node. It loads a synthetic dataset in row-per-feature format, attaches
+        concurrent `BackpropGraph`, and returns a combined `Graph` for the GUI.
+        """
+        # Local imports (avoid GUI import-time side-effects)
+        from ComputationalGraphs.Core.MLPGraph import MLPGraph
+        from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
+        from ComputationalGraphs.Nodes.LinearNode import LinearNode
+        from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+        import numpy as np
+
+        # Generate dataset for piecewise function
+        x_vals = np.linspace(-3.0, 4.0, 300)
+        # Piecewise function implementation
+        y_vals = np.where(
+            x_vals < 0,
+            np.sin(x_vals),
+            np.where(x_vals < 1, 0.0, 2.0 * x_vals + 1.0)
+        )
+
+        # Convert to row-per-feature format for concurrent MLPGraph (features, samples)
+        X = [x_vals.tolist()]
+        y = [y_vals.tolist()]
+
+        # Build concurrent MLPGraph: 1 input -> 3 hidden sigmoid neurons -> 1 linear output
+        mlpGraph = MLPGraph(
+            numInputs=1,
+            numOutputs=1,
+            numHiddenLayers=1,
+            hiddenLayerSizes=[3],
+            activationFunction=SigmoidNode,
+            outputLayerType=LinearNode
+        )
+        mlpGraph.BuildMLP()
+
+        # Load dataset into the MLP
+        mlpGraph.LoadData(X, y)
+
+        # Build concurrent Backprop and attach
+        backprop_graph = BackpropGraph(mlpGraph, learningRate=0.01)
+        backprop_graph.BuildBackprop()
+
+        # Combine into a single Graph for the GUI
+        fullGraph = Graph()
+        for node in mlpGraph.nodes:
+            fullGraph.AddNode(node)
+        for node in backprop_graph.nodes:
+            fullGraph.AddNode(node)
+
+        # Set starting nodes for concurrent processing: data streams + labels
+        fullGraph.starting_nodes = [input_pair[0] for input_pair in mlpGraph.inputLayer] + mlpGraph.labelLayer
+
+        # Copy stopping nodes (weights) so GUI/processor can respect them
+        if hasattr(mlpGraph, 'stopping_nodes'):
+            fullGraph.stopping_nodes = list(mlpGraph.stopping_nodes)
+
+        fullGraph.UpdateAdjacencyMatrix()
+
+        # Store references for GUI debug/controls
+        fullGraph._mlp_graph = mlpGraph
+        fullGraph._backprop_graph = backprop_graph
+
+        return fullGraph
+
+    def _build_piecewise_mlp2_concurrent(self) -> Graph:
+        """Build a concurrent MLP that learns the quadratic-linear piecewise function.
+
+        f(x) = x^2 for x < 0
+        f(x) = 0 for 0 <= x <= 1
+        f(x) = 2x + 1 for x > 1
+
+        Architecture: 1 input -> [3 ReLU] -> [8 ReLU] -> 1 Linear output; concurrent MLP with buffers.
+        """
+        from ComputationalGraphs.Core.MLPGraph import MLPGraph
+        from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
+        from ComputationalGraphs.Nodes.LinearNode import LinearNode
+        from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
+        import numpy as np
+
+        # Create dataset
+        x_vals = np.linspace(-3.0, 4.0, 300)
+        y_vals = np.where(
+            x_vals < 0,
+            x_vals ** 2,
+            np.where(x_vals <= 1, 0.0, 2.0 * x_vals + 1.0)
+        )
+
+        # Convert to row-per-feature format for concurrent MLPGraph
+        X = [x_vals.tolist()]
+        y = [y_vals.tolist()]
+
+        # Build concurrent MLPGraph with specified architecture
+        mlpGraph = MLPGraph(
+            numInputs=1,
+            numOutputs=1,
+            numHiddenLayers=2,
+            hiddenLayerSizes=[3, 8],
+            activationFunction=ReLUNode,
+            outputLayerType=LinearNode
+        )
+        mlpGraph.BuildMLP()
+
+        mlpGraph.LoadData(X, y)
+
+        backprop_graph = BackpropGraph(mlpGraph, learningRate=0.001)
+        backprop_graph.BuildBackprop()
+
+        fullGraph = Graph()
+        for node in mlpGraph.nodes:
+            fullGraph.AddNode(node)
+        for node in backprop_graph.nodes:
+            fullGraph.AddNode(node)
+
+        fullGraph.starting_nodes = [input_pair[0] for input_pair in mlpGraph.inputLayer] + mlpGraph.labelLayer
+        if hasattr(mlpGraph, 'stopping_nodes'):
+            fullGraph.stopping_nodes = list(mlpGraph.stopping_nodes)
+
+        fullGraph.UpdateAdjacencyMatrix()
+        fullGraph._mlp_graph = mlpGraph
+        fullGraph._backprop_graph = backprop_graph
+
+        return fullGraph
+
     def _build_xor_mlp_manual(self) -> Graph:
         """Build XOR MLP wired for ManualProcessing with a predefined sequence.
 
@@ -406,8 +597,8 @@ class ExamplesLoader:
         from ComputationalGraphs.Nodes.LinearNode import LinearNode
         from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 
-        # Build MLP (forward processing style)
-        mlpGraph = MLPGraphForwardProcessing(
+        # Build MLP (concurrent style)
+        mlpGraph = MLPGraph(
             numInputs=2,
             numOutputs=1,
             numHiddenLayers=1,
@@ -421,8 +612,8 @@ class ExamplesLoader:
         y_train = [[0.0], [1.0], [1.0], [0.0]]
         mlpGraph.LoadData(X_train, y_train)
 
-        # Attach backprop (forward processing variant)
-        backprop_graph = BackpropGraphForwardProcessing(mlpGraph, learningRate=0.5)
+        # Attach backprop (concurrent variant)
+        backprop_graph = BackpropGraph(mlpGraph, learningRate=0.5)
         backprop_graph.BuildBackprop()
 
         # Combine graphs into a single Graph for GUI
@@ -437,7 +628,8 @@ class ExamplesLoader:
         sequence = []
 
         # 1) First-layer multiplications (input * weights)
-        sequence.append(list(mlpGraph.firstLayerMultNodes))
+        first_mults = [n for n in fullGraph.nodes if getattr(n, 'name', '').startswith('Mul_x')]
+        sequence.append(first_mults)
 
         # 2) Hidden layer additions
         hidden_adds = [h[0] for h in mlpGraph.hiddenLayers[0]]
@@ -628,8 +820,8 @@ class ExamplesLoader:
         # required for a complete manual pass (each group is one iteration).
         fullGraph.manual_pass_length = len(sequence)
 
-        # Set starting nodes for forward processing compatibility and GUI expectations
-        fullGraph.starting_nodes = list(mlpGraph.firstLayerMultNodes)
+        # Set starting nodes for concurrent GUI expectations (data streams + labels)
+        fullGraph.starting_nodes = [input_pair[0] for input_pair in mlpGraph.inputLayer] + mlpGraph.labelLayer
         # Copy stopping nodes (weights) so GUI/processor can respect them
         if hasattr(mlpGraph, 'stopping_nodes'):
             fullGraph.stopping_nodes = list(mlpGraph.stopping_nodes)

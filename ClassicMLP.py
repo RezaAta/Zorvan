@@ -115,3 +115,29 @@ class ClassicMLP:
         predictions = self.predict(X)
         mae = np.mean(np.abs(predictions - y))
         return mae
+
+    def get_named_weights(self):
+        """Return a mapping of weight names (concurrent MLP naming) to values.
+
+        Naming conventions used:
+        - Input -> first hidden: W_x{i}H0N{j}
+        - Hidden -> Hidden: W_H{layer}N{i}H{layer+1}N{j}
+        - Last Hidden -> Output: W_H{last}N{i}y{j}
+        """
+        named = {}
+        layer_dims = [self.input_size] + self.hidden_layers + [self.output_size]
+        for l in range(len(self.weights)):
+            rows, cols = self.weights[l].shape
+            for i in range(rows):
+                for j in range(cols):
+                    if l == 0:
+                        # Input -> first hidden
+                        key = f"W_x{i}H0N{j}"
+                    elif l == len(self.weights) - 1:
+                        # Last hidden -> output
+                        key = f"W_H{l-1}N{i}y{j}"
+                    else:
+                        # Hidden -> Hidden
+                        key = f"W_H{l-1}N{i}H{l}N{j}"
+                    named[key] = self.weights[l][i, j]
+        return named

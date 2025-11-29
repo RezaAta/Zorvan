@@ -207,11 +207,11 @@ class MLPGraphForwardProcessing(Graph):
             hiddenLayer = []
             for i in range(numNeurons):
                 # Addition node for weighted sum
-                additionNode = AdditionNode(name=f"Add_H{layerNum}N{i}")
+                additionNode = AdditionNode(name=f"Add_L{layerNum}N{i}")
                 additionNode.forcedBatchProcessing = True
                 
                 # Activation node
-                activationNode = self.activationFunction(name=f"Act_H{layerNum}N{i}")
+                activationNode = self.activationFunction(name=f"Act_L{layerNum}N{i}")
                 activationNode.AddPreNode(additionNode)
                 
                 # NO BUFFER NODE - immediate propagation!
@@ -277,7 +277,7 @@ class MLPGraphForwardProcessing(Graph):
         from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
         
         # initialDelay=0, streamDelay=0 for ForwardProcessing (no synchronization needed)
-        self.labelLayer = [DataStreamNode(name=f"Label_y{i}", initialDelay=0, streamDelay=0) 
+        self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay=0, streamDelay=0) 
                           for i in range(self.numOutputs)]
         for labelNode in self.labelLayer:
             self.AddNode(labelNode)
@@ -321,7 +321,7 @@ class MLPGraphForwardProcessing(Graph):
         for i, inputNode in enumerate(self.inputLayer):
             for j in range(self.hiddenLayerSizes[0]):
                 # Create multiplication node for input * weight
-                multiplicationNode = MultiplicationNode(name=f"Mult_x{i}H0N{j}")
+                multiplicationNode = MultiplicationNode(name=f"Mul_x{i}H{j}")
                 multiplicationNode.AddPreNode(inputNode)
                 multiplicationNode.AddPreNode(self.weightLayers[0][i][j])
                 
@@ -343,7 +343,7 @@ class MLPGraphForwardProcessing(Graph):
                 for j in range(len(nextLayer)):
                     # Create multiplication node
                     multiplicationNode = MultiplicationNode(
-                        name=f"Mult_H{layerNum}N{i}H{layerNum+1}N{j}")
+                        name=f"Mul_H{layerNum}N{i}H{layerNum+1}N{j}")
                     multiplicationNode.AddPreNode(currentActivation)
                     multiplicationNode.AddPreNode(weightLayer[i][j])
                     
@@ -360,7 +360,7 @@ class MLPGraphForwardProcessing(Graph):
             for j in range(self.numOutputs):
                 # Create multiplication node
                 multiplicationNode = MultiplicationNode(
-                    name=f"Mult_H{self.numHiddenLayers-1}N{i}y{j}")
+                    name=f"Mul_H{self.numHiddenLayers-1}N{i}y{j}")
                 multiplicationNode.AddPreNode(hiddenActivation)
                 multiplicationNode.AddPreNode(weightLayer[i][j])
                 
