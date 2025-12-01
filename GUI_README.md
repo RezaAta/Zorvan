@@ -60,6 +60,10 @@ Interactive workspace for building your computational graph:
 - **Hierarchical Layout**: Layered layout (good for DAGs)
 - **Circular Layout**: Nodes arranged in a circle
  - **Good Layout**: MLP-specific grid-based deterministic layout
+ - **Good Layout (Dynamic)**: Improved Good Layout that automatically widens layer spacing for dense layers to maintain clarity and avoid collisions
+ - **Good Layout (Dynamic per-layer)**: Improved Good Layout that adjusts spacing per-layer while keeping columns for different layers aligned; less disruptive for manual layouts
+ - **Good Layout (Divide & Conquer)**: New layout that first places forward-pass nodes and then places backprop/weight/buffer nodes relative to their predecessors. Uses a grid-based cell system and per-layer dynamic spacing with clamping to prevent drastic movement.
+ - **Final Layout**: Deterministic MLP & Backprop layout implementing the complete 'The final Layout' rules (name based detection, topology fallback, grid-based column/row placement, and placement tracking to avoid rearranging nodes).
 
 ### 4. **Menu Bar**
 
