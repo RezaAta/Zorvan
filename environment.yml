@@ -16,6 +16,7 @@ dependencies:
   - pip:
     - PyQt6>=6.4.0
     - networkx>=2.8.0
+    - pyqtgraph>=0.13.0
     - -r requirements_gui.txt
     - tqdm
     - pytest

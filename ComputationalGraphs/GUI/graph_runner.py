@@ -405,7 +405,8 @@ class GraphRunner(QObject):
     
     def set_speed(self, interval_ms):
         """Set the step interval in milliseconds."""
-        self.step_interval = max(10, interval_ms)
+        # Allow 0ms for maximum speed (Qt timer accepts 0 to fire as fast as possible)
+        self.step_interval = max(0, interval_ms)
         # Update any running Qt timer
         if self.timer.isActive():
             try:

@@ -141,6 +141,11 @@ config_dialog = PlotConfigDialog(self.graph, default_max_iter, self)
 - ✅ **NEW**: Node removal dropdown
 - ✅ **NEW**: "Remove Selected" button
 - ✅ **NEW**: `add_node()` method for dynamic additions
+ - ✅ **NEW**: PyQtGraph rendering backend option (`Plotting Backend` dropdown) with Matplotlib fallback
+ - ✅ **NEW**: Smooth rendering / antialiasing (pyqtgraph global config + per-curve smoothing, matplotlib uses `antialiased=True`)
+ - ✅ **NEW**: White background option in PyQtGraph (better contrast and print-ready appearance)
+ - ✅ **NEW**: Hover tooltip (nearest curve) — hovering near a curve shows the node name and value; Matplotlib backend uses `mplcursors` when available
+ - ✅ **NEW**: Legend label uniqueness — if multiple nodes share the same name the legend entries are made unique by appending ` (N)` suffixes
 
 ### Main Window Integration
 - ✅ "📊 Open Plot Window" button (opens dialog)
@@ -153,6 +158,18 @@ config_dialog = PlotConfigDialog(self.graph, default_max_iter, self)
 - ✅ **NEW**: Concurrent processor by default
 - ✅ **NEW**: Max iterations synced with control panel
 - ✅ Auto-scale Y enabled by default
+
+## Backend Selection (Quick Tip)
+The backend can be selected in the Controls → Plotting section under the `Plot Backend` dropdown. The GUI tries to default to PyQtGraph when installed, otherwise Matplotlib is used. If you programmatically create plot windows, use the factory `create_plot_window(nodes, max_iterations, parent, backend='auto')` (options: `auto`, `pyqtgraph`, `matplotlib`).
+
+Example (programmatic):
+```python
+# Force PyQtGraph backend
+pw = create_plot_window(nodes, max_iterations, parent, backend='pyqtgraph')
+
+# Force Matplotlib backend
+pw = create_plot_window(nodes, max_iterations, parent, backend='matplotlib')
+```
 
 ---
 

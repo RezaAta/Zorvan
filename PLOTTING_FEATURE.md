@@ -61,6 +61,36 @@ Added a real-time plotting feature to the Computational Graphs GUI that allows u
    - **Auto-scale Y**: Toggle automatic Y-axis adjustment
    - **Iteration label**: Shows current/max iterations
 
+   ## PyQtGraph Backend
+
+   To improve interactive responsiveness and handle higher-throughput live plotting, a PyQtGraph backend is available as an alternative to the Matplotlib renderer.
+
+   The PyQtGraph backend adds a few UX/quality improvements:
+   - White background as the default canvas background for improved contrast and print-ready visuals.
+   - Global and per-curve antialiasing (smoother lines) using `pyqtgraph` config options and per-curve antialias flags.
+   - Nearest-curve hover tooltips: hovering near a plotted series shows a small tooltip with the nearest curve's name and value (pixel-based proximity threshold).
+   - Legend label uniqueness: when multiple nodes share the same name, labels are made unique (e.g., `Name`, `Name (1)`, `Name (2)`).
+
+   You can select the backend in the Controls -> Plotting section under `Plot Backend` dropdown; the default is PyQtGraph when available, otherwise Matplotlib.
+
+   Note: PyQtGraph requires `pyqtgraph` to be installed (e.g., via `pip install pyqtgraph`) and is optional for users who prefer to keep a pure Matplotlib setup.
+
+      Matplotlib: The Matplotlib backend supports hover tooltips using `mplcursors` when the library is installed — fallback behavior works without it.
+
+## Backend selection snippet
+To change or force a backend programmatically, use the `create_plot_window()` factory call and set the `backend` parameter: `auto` (default), `pyqtgraph`, or `matplotlib`.
+
+```python
+# Force PyQtGraph backend (if installed):
+pw = create_plot_window(nodes, max_iterations, parent, backend='pyqtgraph')
+
+# Force Matplotlib backend:
+pw = create_plot_window(nodes, max_iterations, parent, backend='matplotlib')
+
+# Let the factory auto-select PyQtGraph when available (default):
+pw = create_plot_window(nodes, max_iterations, parent, backend='auto')
+```
+
 ## Example Use Cases
 
 ### Genetic Algorithm (De Jong EA)
@@ -83,6 +113,7 @@ Added a real-time plotting feature to the Computational Graphs GUI that allows u
 ### Dependencies
 - **PyQt6**: UI framework (already present)
 - **matplotlib**: Plotting library (version 3.9.3 verified)
+ - **pyqtgraph**: Optional faster plot widget for real-time UI (recommended for many live curves)
 - **numpy**: Array handling (used for averaging list values)
 
 ### Architecture

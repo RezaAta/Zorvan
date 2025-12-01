@@ -9,6 +9,14 @@ matplotlib.use('QtAgg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
+try:
+    import mplcursors
+except Exception:
+    mplcursors = None
+try:
+    from .plot_window_pyqtgraph import PlotWindowPG
+except Exception:
+    PlotWindowPG = None
 
 
 class PlotConfigDialog(QDialog):
@@ -87,6 +95,7 @@ class PlotWindow(QWidget):
     def __init__(self, nodes, max_iterations, parent=None):
         super().__init__(parent)
         self.nodes = list(nodes)  # Keep as list to maintain order
+        self.backend = 'matplotlib'
         self.max_iterations = max_iterations
         self.current_iteration = 0
         self.parent_window = parent
@@ -110,7 +119,7 @@ class PlotWindow(QWidget):
         layout = QVBoxLayout()
         
         # Matplotlib canvas - give it maximum space
-        self.figure = Figure(figsize=(8, 5))
+        self.figure = Figure(figsize=(8, 5), facecolor='white')
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas, stretch=1)  # Stretch factor of 1 = takes all available space
         
@@ -154,6 +163,27 @@ class PlotWindow(QWidget):
         layout.addLayout(control_layout, stretch=0)  # Stretch factor of 0 = use minimum space needed
         
         self.setLayout(layout)
+
+    def _generate_unique_legend_label(self, base_label, existing_labels):
+        """Return a unique label based on base_label, appending ' (N)' when needed.
+
+        Modifies the provided existing_labels list in-place by appending the returned
+        unique label so subsequent calls are aware of already-used labels.
+        """
+        try:
+            if base_label not in existing_labels:
+                existing_labels.append(base_label)
+                return base_label
+            suffix = 1
+            while True:
+                candidate = f"{base_label} ({suffix})"
+                if candidate not in existing_labels:
+                    existing_labels.append(candidate)
+                    return candidate
+                suffix += 1
+        except Exception:
+            # Fallback to base label on unexpected error
+            return base_label
     
     def update_node_combo(self):
         """Update the combo box with current nodes."""
@@ -182,8 +212,22 @@ class PlotWindow(QWidget):
             # Update combo box
             self.update_node_combo()
             
-            # Redraw legend (only if there are nodes left)
+            # Rebuild legend with unique labels to avoid duplicate entries
             if self.nodes:
+                # Remove existing legend if present
+                legend = self.ax.get_legend()
+                if legend:
+                    legend.remove()
+                existing_labels = []
+                # Reassign labels for lines to ensure uniqueness before creating legend
+                for n in self.nodes:
+                    if n in self.lines:
+                        unique_label = self._generate_unique_legend_label(n.name, existing_labels)
+                        try:
+                            self.lines[n].set_label(unique_label)
+                        except Exception:
+                            pass
+                # Recreate legend
                 self.ax.legend(loc='upper right')
             else:
                 # Remove legend if no nodes left
@@ -202,7 +246,13 @@ class PlotWindow(QWidget):
         
         # Add line for this node
         color = self.colors[len(self.nodes) % len(self.colors)]
-        line, = self.ax.plot([], [], label=node.name, color=color, linewidth=2)
+        # Ensure legend labels are unique (avoid duplicate legend entries)
+        try:
+            existing_labels = [l.get_label() for l in self.lines.values()]
+        except Exception:
+            existing_labels = []
+        unique_label = self._generate_unique_legend_label(node.name, existing_labels)
+        line, = self.ax.plot([], [], label=unique_label, color=color, linewidth=2)
         self.lines[node] = line
         
         # Update combo box
@@ -215,6 +265,7 @@ class PlotWindow(QWidget):
     def setup_plot(self):
         """Setup the matplotlib plot."""
         self.ax = self.figure.add_subplot(111)
+        self.ax.set_facecolor('white')
         self.ax.set_xlabel('Iteration')
         self.ax.set_ylabel('Value')
         self.ax.set_title('Node Values Over Time')
@@ -225,14 +276,34 @@ class PlotWindow(QWidget):
         
         # Create line objects for each node
         self.lines = {}
+        # Ensure labels are unique when first creating lines
+        existing_labels = []
         for i, node in enumerate(self.nodes):
             color = self.colors[i % len(self.colors)]
-            line, = self.ax.plot([], [], label=node.name, color=color, linewidth=2)
+            unique_label = self._generate_unique_legend_label(node.name, existing_labels)
+            line, = self.ax.plot([], [], label=unique_label, color=color, linewidth=2, antialiased=True)
             self.lines[node] = line
         
         # Only show legend if there are nodes
         if self.nodes:
             self.ax.legend(loc='upper right')
+            # Setup mplcursors hover if available
+            if mplcursors is not None:
+                try:
+                    cursor = mplcursors.cursor(list(self.lines.values()), hover=True)
+                    def on_add(sel):
+                        artist = sel.artist
+                        node_name = None
+                        for n, l in self.lines.items():
+                            if l == artist:
+                                node_name = n.name
+                                break
+                        if node_name is not None:
+                            x, y = sel.target
+                            sel.annotation.set_text(f"{node_name}: {y:.4f}")
+                    cursor.connect("add", on_add)
+                except Exception:
+                    pass
         self.canvas.draw()
     
     def update_plot(self, iteration):
@@ -301,3 +372,24 @@ class PlotWindow(QWidget):
         # Clean up matplotlib resources
         self.figure.clear()
         event.accept()
+
+
+def create_plot_window(nodes, max_iterations, parent=None, backend='auto'):
+    """Factory to create a PlotWindow using the selected backend.
+
+    backend: 'matplotlib', 'pyqtgraph', or 'auto'.
+      - 'auto': use PyQtGraph if installed, otherwise Matplotlib
+    """
+    backend_choice = backend
+    if backend_choice == 'auto':
+        backend_choice = 'pyqtgraph' if PlotWindowPG is not None else 'matplotlib'
+
+    if backend_choice == 'pyqtgraph':
+        if PlotWindowPG is None:
+            # Fallback to Matplotlib implementation
+            return PlotWindow(nodes, max_iterations, parent)
+        else:
+            return PlotWindowPG(nodes, max_iterations, parent)
+    else:
+        # default to Matplotlib implementation
+        return PlotWindow(nodes, max_iterations, parent)

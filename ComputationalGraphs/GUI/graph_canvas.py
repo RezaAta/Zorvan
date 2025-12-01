@@ -45,18 +45,28 @@ class GraphCanvas(QGraphicsView):
         # Panning state
         self.panning = False
         self.pan_start_pos = None
+        # (No spacebar panning state) - use only middle-button panning
+        # Auto-expand canvas when nodes are added/removed
+        self.auto_expand_to_nodes = True
+        # Default scene rect and padding
+        try:
+            self.default_scene_rect = self.scene.sceneRect()
+        except Exception:
+            self.default_scene_rect = self.scene.sceneRect()
+        self.canvas_padding = 500
         
         # Grid / snap settings
         self.node_diameter = 80  # Default assumed diameter (2 * radius 40)
-        self.grid_mode = '4x4'  # '1x1' or '4x4'
-        self.grid_size = int(self.node_diameter / 4)  # 20px by default
+        self.grid_mode = '1x1'  # '1x1' (grid cell) or '4x4' - default to 1x1 for MLP layouts
+        self.grid_size = self.node_diameter  # 80px for 1x1 mode (one grid cell = one node)
         self.grid_major_every = 4  # draw a major line every 4 cells (node size)
         self.grid_minor_color = QColor(45, 45, 45)
         self.grid_major_color = QColor(70, 70, 70)
         self.show_grid = False
-        self.snap_to_grid = True
+        # Default to no grid snapping (preserve manual node positions typical for user layout)
+        self.snap_to_grid = False
         self.snap_while_dragging = True  # default: snap while dragging so users see snap live
-        self.snap_step = 4  # Snap in units of grid cells (4 -> node sized step)
+        self.snap_step = 1  # Snap in units of grid cells (1 for 1x1 mode)
         
         # Node tracking
         self.node_items = {}  # Maps node objects to NodeItem widgets
@@ -95,6 +105,12 @@ class GraphCanvas(QGraphicsView):
         # Populate the initial value display
         try:
             node_item.update_value_display()
+        except Exception:
+            pass
+        # If requested, auto-expand the scene rect to include the new node
+        try:
+            if getattr(self, 'auto_expand_to_nodes', False):
+                self._update_scene_rect()
         except Exception:
             pass
         return node_item
@@ -223,6 +239,7 @@ class GraphCanvas(QGraphicsView):
         selected = self.scene.selectedItems()
         
         for item in selected:
+            # Handle node item deletion
             if isinstance(item, NodeItem):
                 # Remove connected edges first
                 for edge in list(item.edges[:]):
@@ -275,37 +292,41 @@ class GraphCanvas(QGraphicsView):
                             del self.node_items[to_remove]
                 except Exception:
                     pass
-            return
+            # Continue to remove all selected items rather than returning early
+            # (The earlier early return prevented removing more than one selection)
+            # Handle edge item deletion (selected edge directly)
+            from .edge_item import EdgeItem
+            if isinstance(item, EdgeItem):
+                try:
+                    src = item.source_node.node
+                    tgt = item.target_node.node
+                except Exception:
+                    src = None
+                    tgt = None
+                # Disconnect in authoritative graph if available
+                try:
+                    if hasattr(self, 'graph') and getattr(self, 'graph') is not None and src is not None and tgt is not None:
+                        self.graph.DisconnectPreNode(tgt, src)
+                except Exception:
+                    pass
+                # Remove the visual edge and internal record
+                try:
+                    item.remove()
+                except Exception:
+                    try:
+                        self.scene.removeItem(item)
+                    except Exception:
+                        pass
+                try:
+                    if item in self.edge_items:
+                        self.edge_items.remove(item)
+                except Exception:
+                    pass
         
-        # Get bounding rect of all nodes
-        all_rects = []
-        for node_item in self.node_items.values():
-            all_rects.append(node_item.sceneBoundingRect())
-        
-        if not all_rects:
-            return
-        
-        # Calculate union of all bounding rects
-        # QRectF is not required explicitly; united_rect created by union operations is used directly
-        united_rect = all_rects[0]
-        for rect in all_rects[1:]:
-            united_rect = united_rect.united(rect)
-        
-        # Add some padding (10% on each side)
-        padding = max(united_rect.width(), united_rect.height()) * 0.1
-        united_rect.adjust(-padding, -padding, padding, padding)
-        
-        # Fit the rect in view
-        self.fitInView(united_rect, Qt.AspectRatioMode.KeepAspectRatio)
-        
-        # Limit maximum zoom to avoid making nodes too large
-        current_transform = self.transform()
-        scale_factor = current_transform.m11()  # Get x-axis scale
-        if scale_factor > 2.0:
-            # If zoomed in too much, scale back to 2.0x
-            self.resetTransform()
-            self.scale(2.0, 2.0)
-            self.centerOn(united_rect.center())
+        # Update scene rect if auto-expand is enabled, but do NOT refit the view
+        # (Refitting the view on every delete is disorienting for the user)
+        if getattr(self, 'auto_expand_to_nodes', False):
+            self._update_scene_rect()
     
     def mousePressEvent(self, event):
         """Handle mouse press for panning with middle button."""
@@ -315,6 +336,7 @@ class GraphCanvas(QGraphicsView):
             self.pan_start_pos = event.position()
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             event.accept()
+            return
         else:
             super().mousePressEvent(event)
     
@@ -333,6 +355,7 @@ class GraphCanvas(QGraphicsView):
                 self.verticalScrollBar().value() - int(delta.y())
             )
             event.accept()
+            return
         elif self.connection_mode and self.connection_start_nodes:
             # Draw temporary line
             from PyQt6.QtWidgets import QGraphicsLineItem
@@ -349,6 +372,7 @@ class GraphCanvas(QGraphicsView):
             for i, n in enumerate(self.connection_start_nodes):
                 start_pos = n.scenePos()
                 self.temp_connection_lines[i].setLine(start_pos.x(), start_pos.y(), end_pos.x(), end_pos.y())
+            return
         
         super().mouseMoveEvent(event)
     
@@ -360,6 +384,7 @@ class GraphCanvas(QGraphicsView):
             self.pan_start_pos = None
             self.setCursor(Qt.CursorShape.ArrowCursor)
             event.accept()
+        
         elif self.connection_mode and self.connection_start_nodes:
             # Check if released over another node
             pos = self.mapToScene(event.position().toPoint())
@@ -395,8 +420,51 @@ class GraphCanvas(QGraphicsView):
             self.connection_mode = False
             self.connection_start_nodes = []
             self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+            return
         
         super().mouseReleaseEvent(event)
+
+    # (Spacebar panning feature removed) - keyboard events not used for panning.
+
+    def wheelEvent(self, event):
+        """Zoom view using mouse wheel.
+
+        Zoom is anchored under the mouse pointer (set earlier with
+        setTransformationAnchor). Clamps zoom between min and max scales to
+        avoid making nodes too small or too large.
+        """
+        # Prefer angleDelta (most common); fallback to pixelDelta for trackpads
+        delta = 0
+        try:
+            delta = event.angleDelta().y()
+        except Exception:
+            try:
+                delta = event.pixelDelta().y()
+            except Exception:
+                delta = 0
+
+        # If delta is 0, nothing to do -> pass to superclass
+        if delta == 0:
+            super().wheelEvent(event)
+            return
+
+        # Zoom factors: positive delta -> zoom in, negative -> zoom out
+        zoom_in_factor = 1.15
+        zoom_out_factor = 1.0 / zoom_in_factor
+        factor = zoom_in_factor if delta > 0 else zoom_out_factor
+
+        # Enforce min/max scale
+        current_scale = self.transform().m11()  # assume uniform scaling
+        min_scale = 0.2
+        max_scale = 4.0
+        new_scale = current_scale * factor
+        if new_scale < min_scale:
+            factor = min_scale / current_scale
+        elif new_scale > max_scale:
+            factor = max_scale / current_scale
+
+        self.scale(factor, factor)
+        event.accept()
     
     def dragEnterEvent(self, event):
         """Accept drag events from the palette."""
@@ -556,6 +624,355 @@ class GraphCanvas(QGraphicsView):
         for node, node_item in self.node_items.items():
             is_active = node in active_node_set
             node_item.set_active(is_active)
+
+    def start_connection(self, start_node_item):
+        """Begin an interactive connection operation from the provided NodeItem.
+
+        This places the canvas into connection_mode and highlights the start node
+        or selected nodes if multiple are selected.
+        """
+        try:
+            # Determine selected start nodes: use current selection if start_node_item is selected
+            selected_items = [item for item in self.scene.selectedItems() if isinstance(item, NodeItem)]
+            if start_node_item in selected_items:
+                self.connection_start_nodes = selected_items
+            else:
+                self.connection_start_nodes = [start_node_item]
+
+            # Lock movement on the start node(s) and highlight
+            for n in self.connection_start_nodes:
+                try:
+                    n.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+                    n.set_connection_highlight(True)
+                except Exception:
+                    pass
+
+            self.connection_mode = True
+            self.temp_connection_lines = []
+            # Disable rubber-band drag while connecting
+            try:
+                self.setDragMode(QGraphicsView.DragMode.NoDrag)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _create_node_by_class_name(self, class_name, attrs=None):
+        """Instantiate a node by its class name using dynamic inspection of the Nodes package.
+
+        Args:
+            class_name: The class name of the node to create (e.g., 'ContainerNode').
+            attrs: Optional dict of attributes to pass to constructor and/or set after creation.
+
+        Returns the new node or None.
+        """
+        import inspect
+        import importlib
+        import pkgutil
+        
+        try:
+            import ComputationalGraphs.Nodes as NodesPkg
+            cls = None
+            
+            # First try the direct package exports
+            for name, obj in inspect.getmembers(NodesPkg):
+                if inspect.isclass(obj) and obj.__name__ == class_name:
+                    cls = obj
+                    break
+            
+            # If not found in exports, scan all submodules
+            if cls is None:
+                for importer, modname, ispkg in pkgutil.iter_modules(NodesPkg.__path__):
+                    try:
+                        module = importlib.import_module(f'ComputationalGraphs.Nodes.{modname}')
+                        if hasattr(module, class_name):
+                            cls = getattr(module, class_name)
+                            break
+                    except Exception:
+                        continue
+            
+            if cls is None:
+                print(f"[Copy/Paste] Warning: Class '{class_name}' not found in Nodes package")
+                return None
+            
+            # Attribute-to-parameter mappings for nodes where stored attribute names
+            # differ from constructor parameter names
+            attr_to_param_mappings = {
+                'BufferNode': {'buffer': 'data', 'bufferSize': 'size'},
+                'DataStreamNode': {'streamIndex': None},  # None means skip this attr for constructor
+            }
+            
+            # Build constructor kwargs from attrs that match constructor parameters
+            constructor_kwargs = {}
+            if attrs:
+                try:
+                    sig = inspect.signature(cls.__init__)
+                    param_names = set(sig.parameters.keys()) - {'self'}
+                    mappings = attr_to_param_mappings.get(class_name, {})
+                    
+                    for attr_name, attr_val in attrs.items():
+                        # Check if this attribute maps to a different parameter name
+                        if attr_name in mappings:
+                            param_name = mappings[attr_name]
+                            if param_name is None:
+                                continue  # Skip this attribute
+                        else:
+                            param_name = attr_name
+                        
+                        # Only include if parameter exists in constructor
+                        if param_name in param_names:
+                            constructor_kwargs[param_name] = attr_val
+                except Exception:
+                    # Fallback: just try 'name' if available
+                    if 'name' in attrs:
+                        constructor_kwargs['name'] = attrs['name']
+            
+            # Create the node
+            try:
+                new_node = cls(**constructor_kwargs) if constructor_kwargs else cls()
+            except Exception as e:
+                # Fallback to empty constructor
+                try:
+                    new_node = cls()
+                except Exception:
+                    return None
+            
+            return new_node
+            
+        except Exception as e:
+            print(f"[Copy/Paste] Error creating node '{class_name}': {e}")
+            return None
+
+    def _get_node_attributes(self, node):
+        """Extract all serializable attributes from a node for copying.
+        
+        Excludes internal/private attributes, predecessors, inputs, and callable methods.
+        Similar approach to CGJsonIO._get_node_attributes.
+        """
+        import inspect
+        from copy import deepcopy
+        
+        attrs = {}
+        for attr_name, val in vars(node).items():
+            # Skip private/internal attributes
+            if attr_name.startswith('_'):
+                continue
+            # Skip graph connection attributes (will be recreated)
+            if attr_name in ('predecessors', 'inputs', 'id'):
+                continue
+            # Skip callable methods
+            if inspect.isroutine(val):
+                continue
+            # Attempt to deepcopy the value
+            try:
+                attrs[attr_name] = deepcopy(val)
+            except Exception:
+                # For non-copyable values, try to use as-is or skip
+                try:
+                    attrs[attr_name] = val
+                except Exception:
+                    continue
+        return attrs
+
+    def _generate_unique_name(self, base_name):
+        """Generate a unique node name by appending _copy or incrementing counter.
+        
+        Examples:
+            'Node_1' -> 'Node_1_copy'
+            'Node_1_copy' -> 'Node_1_copy2'
+            'Node_1_copy2' -> 'Node_1_copy3'
+        """
+        if not base_name:
+            base_name = "Node"
+        
+        existing_names = {n.name for n in self.node_items.keys() if hasattr(n, 'name')}
+        
+        # If name doesn't exist yet, we can use it (but we still want to mark as copy)
+        # Check if it already ends with _copy or _copyN
+        import re
+        copy_pattern = re.compile(r'^(.+?)_copy(\d*)$')
+        match = copy_pattern.match(base_name)
+        
+        if match:
+            # Already a copy, increment the counter
+            root_name = match.group(1)
+            counter_str = match.group(2)
+            counter = int(counter_str) if counter_str else 1
+            counter += 1
+            candidate = f"{root_name}_copy{counter}"
+        else:
+            # First copy
+            root_name = base_name
+            candidate = f"{base_name}_copy"
+            counter = 1
+        
+        # Ensure uniqueness
+        while candidate in existing_names:
+            counter += 1
+            candidate = f"{root_name}_copy{counter}"
+        
+        return candidate
+
+    def copy_selected(self):
+        """Copy selected nodes and internal edges to the internal clipboard.
+        
+        Stores all node attributes (not just name/value/data) so that pasted
+        nodes are true duplicates of the originals.
+        """
+        selected_items = [item for item in self.scene.selectedItems() if isinstance(item, NodeItem)]
+        if not selected_items:
+            return
+        
+        nodes_info = []
+        node_to_index = {}
+        
+        for idx, item in enumerate(selected_items):
+            n = item.node
+            node_to_index[n] = idx
+            
+            # Collect ALL node attributes
+            attrs = self._get_node_attributes(n)
+            
+            node_info = {
+                'class': type(n).__name__,
+                'attrs': attrs,
+                'gui_pos': (float(item.pos().x()), float(item.pos().y()))
+            }
+            nodes_info.append(node_info)
+        
+        # Collect internal edges between selected nodes
+        edges = []
+        for edge in list(self.edge_items):
+            try:
+                s = edge.source_node.node
+                t = edge.target_node.node
+                if s in node_to_index and t in node_to_index:
+                    edges.append((node_to_index[s], node_to_index[t]))
+            except Exception:
+                pass
+
+        self._clipboard = {'nodes': nodes_info, 'edges': edges}
+
+    def cut_selected(self):
+        """Copy selected nodes then remove them from the canvas."""
+        self.copy_selected()
+        self.remove_selected_items()
+
+    def paste_clipboard(self):
+        """Paste nodes and edges from the internal clipboard.
+
+        Creates true duplicates of the copied nodes with all their attributes preserved.
+        New nodes get unique names (with _copy suffix) and are placed at cursor position
+        or viewport center, maintaining their relative positions to each other.
+        """
+        from PyQt6.QtGui import QCursor
+        from copy import deepcopy
+        
+        if not self._clipboard:
+            return
+        
+        nodes_info = self._clipboard.get('nodes', [])
+        edges = self._clipboard.get('edges', [])
+        if not nodes_info:
+            return
+
+        # Determine base position for paste - prefer cursor position if inside viewport
+        try:
+            global_pos = QCursor.pos()
+            local_pos = self.mapFromGlobal(global_pos)
+            if self.viewport().rect().contains(local_pos):
+                scene_pos = self.mapToScene(local_pos)
+                base_x = scene_pos.x()
+                base_y = scene_pos.y()
+            else:
+                center = self.mapToScene(self.viewport().rect().center())
+                base_x = center.x()
+                base_y = center.y()
+        except Exception:
+            base_x = 0
+            base_y = 0
+
+        # Compute centroid of copied nodes to preserve relative positions
+        gui_positions = [info.get('gui_pos') for info in nodes_info if info.get('gui_pos')]
+        if gui_positions:
+            copy_center_x = sum(p[0] for p in gui_positions) / len(gui_positions)
+            copy_center_y = sum(p[1] for p in gui_positions) / len(gui_positions)
+        else:
+            copy_center_x = 0
+            copy_center_y = 0
+
+        new_nodes = []
+        for idx, info in enumerate(nodes_info):
+            class_name = info.get('class')
+            attrs = info.get('attrs', {})
+            
+            # Generate unique name for the copy
+            original_name = attrs.get('name', f'Node_{idx}')
+            unique_name = self._generate_unique_name(original_name)
+            
+            # Update attrs with the unique name for constructor
+            attrs_for_creation = deepcopy(attrs)
+            attrs_for_creation['name'] = unique_name
+            
+            # Create the node with constructor-compatible attributes
+            new_node = self._create_node_by_class_name(class_name, attrs=attrs_for_creation)
+            
+            if new_node is None:
+                # Fallback: create a DisplayNode
+                from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+                new_node = DisplayNode(name=unique_name)
+                print(f"[Copy/Paste] Warning: Could not create {class_name}, using DisplayNode")
+            
+            # Set any remaining attributes that weren't handled by constructor
+            for attr_name, attr_val in attrs.items():
+                if attr_name == 'name':
+                    continue  # Already set with unique name
+                try:
+                    # Only set if the attribute exists on the node or is a known attribute
+                    if hasattr(new_node, attr_name):
+                        setattr(new_node, attr_name, deepcopy(attr_val))
+                except Exception as e:
+                    print(f"[Copy/Paste] Warning: Could not set attribute '{attr_name}': {e}")
+
+            # Add node to the authoritative graph if available
+            if hasattr(self, 'graph') and self.graph is not None:
+                try:
+                    self.graph.AddNode(new_node)
+                except Exception as e:
+                    print(f"[Copy/Paste] Warning: Could not add node to graph: {e}")
+
+            # Calculate position - maintain relative positions from original
+            gui_pos = info.get('gui_pos')
+            if gui_pos:
+                rel_x = gui_pos[0] - copy_center_x
+                rel_y = gui_pos[1] - copy_center_y
+                pos_x = base_x + rel_x
+                pos_y = base_y + rel_y
+            else:
+                # Fallback grid positioning
+                pos_x = base_x + (idx % 5) * 40
+                pos_y = base_y + (idx // 5) * 40
+
+            self.add_node_item(new_node, pos_x, pos_y)
+            new_nodes.append(new_node)
+
+        # Recreate internal edges between pasted nodes
+        for s_idx, t_idx in edges:
+            try:
+                s_node = new_nodes[s_idx]
+                t_node = new_nodes[t_idx]
+                self.add_edge_item(s_node, t_node)
+            except Exception as e:
+                print(f"[Copy/Paste] Warning: Could not recreate edge: {e}")
+        
+        # Select newly pasted nodes for better UX
+        for it in list(self.scene.selectedItems()):
+            it.setSelected(False)
+        
+        for n in new_nodes:
+            ni = self.node_items.get(n)
+            if ni:
+                ni.setSelected(True)
     
     def apply_layout(self, layout_type="spring"):
         """No-op layout plumbing: preserve method signature for compatibility.
@@ -908,8 +1325,8 @@ class GraphCanvas(QGraphicsView):
             min_y = min(min_y, pos.y() - radius)
             max_y = max(max_y, pos.y() + radius)
         
-        # Add padding (500 pixels on each side for comfortable panning)
-        padding = 500
+        # Add padding based on canvas setting
+        padding = getattr(self, 'canvas_padding', 500)
         min_x -= padding
         max_x += padding
         min_y -= padding
