@@ -189,8 +189,22 @@ class Graph:
         return abstract
 
     def ReplaceNode(self, newNode, *oldNode):
+        # Add new node; transfer attributes and connections from oldNode
         self.AddNode(newNode)
-        self.ReplicateConnections(newNode,*oldNode)
+        # Transfer attributes where applicable
+        try:
+            self.TransferNodeAttributes(oldNode[0], newNode)
+        except Exception:
+            # If there's an issue, we still proceed
+            pass
+        self.ReplicateConnections(newNode, *oldNode)
+        # If old node was in starting_nodes, replace it with newNode
+        for i, sn in enumerate(list(self.starting_nodes)):
+            if sn in oldNode:
+                try:
+                    self.starting_nodes[i] = newNode
+                except Exception:
+                    pass
         self.RemoveNode(*oldNode)
         self.UpdateAdjacencyMatrix()
 
@@ -201,11 +215,47 @@ class Graph:
         - oldNodes: One or more old nodes whose connections are transferred to the new node.
         """
         for oldNode in oldNodes:
-            oldNodeIndex = self.nodes.index(oldNode)
+            # Replicate predecessors (incoming connections)
+            for pred in list(oldNode.predecessors):
+                # add predecessor to newNode
+                try:
+                    if pred in self.nodes:
+                        newNode.AddPreNode(pred)
+                except Exception:
+                    pass
             # Replicate outgoing connections (connections from the old node to others)
-            for j in range(len(self.adjacencyMatrix[oldNodeIndex])):
-                if self.adjacencyMatrix[oldNodeIndex][j] == 1:  # If old node connects to another node
-                    self.nodes[j].AddPreNode(newNode)
+            if oldNode in self.nodes:
+                oldNodeIndex = self.nodes.index(oldNode)
+                for j in range(len(self.adjacencyMatrix[oldNodeIndex])):
+                    if self.adjacencyMatrix[oldNodeIndex][j] == 1:  # If old node connects to another node
+                        self.nodes[j].AddPreNode(newNode)
+
+        # Recompute adjacency matrix to reflect new connections
+        self.UpdateAdjacencyMatrix()
+
+    def TransferNodeAttributes(self, oldNode: Node, newNode: Node):
+        """Copy transferable attributes from oldNode to newNode.
+
+        This attempts to copy primitive and simple attributes (like value, data, buffer, size).
+        We avoid copying complex object references (predecessors, id) as those are handled separately.
+        """
+        if oldNode is None or newNode is None:
+            return
+        # Copy simple attributes if they exist on both nodes
+        simple_attrs = ['value', 'data', 'size', 'index', 'inputCount', 'batchSize', 'inclusive', 'forcedBatchProcessing']
+        for attr in simple_attrs:
+            try:
+                if hasattr(oldNode, attr) and hasattr(newNode, attr):
+                    setattr(newNode, attr, getattr(oldNode, attr))
+            except Exception:
+                pass
+        # Special-case ContainerNode initial value
+        try:
+            if getattr(oldNode, '__class__', None) is not None and getattr(newNode, '__class__', None) is not None:
+                if oldNode.__class__.__name__ == 'ContainerNode' and hasattr(oldNode, 'value') and hasattr(newNode, 'value'):
+                    newNode.value = oldNode.value
+        except Exception:
+            pass
             
 
     def CompressNodes(self, nodes):
