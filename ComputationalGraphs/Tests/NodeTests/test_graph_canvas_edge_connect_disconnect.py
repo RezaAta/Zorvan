@@ -4,6 +4,9 @@ from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+from ComputationalGraphs.GUI.replace_node_dialog import ReplaceNodeDialog
+from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
+from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 from ComputationalGraphs.GUI.main_window import MainWindow
@@ -193,4 +196,45 @@ def test_rebuild_graph_syncs_canvas_and_graph():
     window.canvas.remove_selected_items()
     assert ds not in buff.predecessors
 
+    app.quit()
+
+
+def test_graph_canvas_replace_node_item():
+    app = QApplication(sys.argv)
+    g = Graph()
+    ds = DataStreamNode(name='ds', data=[1, 2, 3])
+    add = AdditionNode(name='add')
+    mul = MultiplicationNode(name='mul')
+    g.AddNode(ds, add, mul)
+    # connect ds -> add -> mul
+    g.ConnectPreNode(add, ds)
+    g.ConnectPreNode(mul, add)
+
+    canvas = GraphCanvas()
+    canvas.graph = g
+    ds_item = canvas.add_node_item(ds, x=0, y=0)
+    add_item = canvas.add_node_item(add, x=200, y=0)
+    mul_item = canvas.add_node_item(mul, x=400, y=0)
+
+    # Replace add node with a multiplication node
+    new_node = canvas.replace_node_item(add_item, 'MultiplicationNode')
+    assert new_node is not None
+    assert new_node in g.nodes
+    assert add not in g.nodes
+    # NodeItem of the original should now refer to new_node
+    assert add_item.node is new_node
+    # Predecessor relationships should remain
+    assert ds in new_node.predecessors
+    assert any(pred is new_node for pred in mul.predecessors)
+    app.quit()
+
+
+def test_replace_dialog_search_does_not_crash():
+    app = QApplication(sys.argv)
+    # Construct dialog and simulate typing
+    dlg = ReplaceNodeDialog()
+    # Set a search text to activate filtering
+    dlg.search_bar.setText('mul')
+    # Ensure selected_type remains None if nothing selected
+    assert dlg.selected_type() is None
     app.quit()

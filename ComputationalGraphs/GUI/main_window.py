@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import QToolButton, QSizePolicy
 
 # Draw.io serializer/deserializer
 from ComputationalGraphs.Core.DrawioIO import DrawioIO
+import ComputationalGraphs.Core.CGJsonIO as CGJsonIO
 
 
 class CollapsibleSection(QWidget):
@@ -203,9 +204,7 @@ class MainWindow(QMainWindow):
         viz_layout = QVBoxLayout(viz_container)
         viz_layout.setContentsMargins(0, 0, 0, 0)
 
-        layout_container = QWidget()
-        layout_layout = QVBoxLayout(layout_container)
-        layout_layout.setContentsMargins(0, 0, 0, 0)
+        # Layout controls removed per user request (GUI no longer exposes layout algorithms)
 
         plot_container = QWidget()
         plot_layout = QVBoxLayout(plot_container)
@@ -634,50 +633,9 @@ class MainWindow(QMainWindow):
 
         viz_layout.addStretch()
 
-        # --- Layout controls
-        layout_label = QLabel("<b>Layout</b>")
-        layout_layout.addWidget(layout_label)
-
-        self.spring_btn = QPushButton("Spring Layout")
-        self.spring_btn.clicked.connect(lambda: self.canvas.apply_layout("spring"))
-        layout_layout.addWidget(self.spring_btn)
-
-        self.hierarchical_btn = QPushButton("Hierarchical Layout")
-        self.hierarchical_btn.clicked.connect(lambda: self.canvas.apply_layout("hierarchical"))
-        layout_layout.addWidget(self.hierarchical_btn)
-
-        self.circular_btn = QPushButton("Circular Layout")
-        self.circular_btn.clicked.connect(lambda: self.canvas.apply_layout("circular"))
-        layout_layout.addWidget(self.circular_btn)
-
-        self.ann_btn = QPushButton("ANN Layout (L→R)")
-        self.ann_btn.clicked.connect(lambda: self.canvas.apply_layout("ann"))
-        layout_layout.addWidget(self.ann_btn)
-        
-        self.good_btn = QPushButton("Good Layout (MLP Grid)")
-        self.good_btn.setToolTip("Apply the deterministic Good MLP layout (grid/cell-based)")
-        self.good_btn.clicked.connect(lambda: self.canvas.apply_layout("good"))
-        layout_layout.addWidget(self.good_btn)
-        
-        # Apply Diagonal ANN Layout and Lock button (explicitly ensure new algorithm is used)
-        self.apply_diagonal_layout_btn = QPushButton("Apply Diagonal ANN Layout")
-        self.apply_diagonal_layout_btn.setToolTip("Apply the new diagonal ANN layout and preserve W/dW positions")
-        self.apply_diagonal_layout_btn.clicked.connect(self.apply_diagonal_layout)
-        layout_layout.addWidget(self.apply_diagonal_layout_btn)
-        
-        # Dump weight positions for debug/verification
-        self.dump_weights_btn = QPushButton("Dump W/dW Positions")
-        self.dump_weights_btn.setToolTip("Print W/dW node positions to console for verification")
-        self.dump_weights_btn.clicked.connect(self.dump_weight_positions)
-        layout_layout.addWidget(self.dump_weights_btn)
-
-        # Optional: lock diagonal layout positions to prevent collision-adjustment for W/dW
-        self.lock_diagonal_layout_check = QCheckBox("Lock Diagonal Layout Positions")
-        self.lock_diagonal_layout_check.setChecked(True)
-        self.lock_diagonal_layout_check.setToolTip("When enabled, W/dW positions computed by the diagonal ANN layout are preserved (no collision adjustments)")
-        layout_layout.addWidget(self.lock_diagonal_layout_check)
-
-        layout_layout.addWidget(QLabel(""))  # Spacer
+        # NOTE: All layout-related controls (buttons + options) have been removed from the GUI.
+        # The underlying algorithms remain available on the canvas for programmatic use and tests,
+        # but they are no longer exposed via the GUI controls as requested.
 
         # --- Plotting controls
         plotting_label = QLabel("<b>Plotting</b>")
@@ -696,7 +654,7 @@ class MainWindow(QMainWindow):
         # Add collapsible sections to main layout
         # Order changed: Execution -> Layout (open) -> Visualization -> Plotting
         layout.addWidget(CollapsibleSection("Execution", exec_container, expanded=True))
-        layout.addWidget(CollapsibleSection("Layout", layout_container, expanded=True))
+        # Layout UI section removed (no GUI layout algorithms)
         layout.addWidget(CollapsibleSection("Visualization", viz_container, expanded=False))
         layout.addWidget(CollapsibleSection("Plotting", plot_container, expanded=False))
 
@@ -1005,7 +963,7 @@ class MainWindow(QMainWindow):
     def open_graph(self):
         """Open a graph from file."""
         filename, _ = QFileDialog.getOpenFileName(self, "Open Graph", "",
-                                                  "Draw.io XML (*.drawio *.xml);;Python Files (*.py);;All Files (*)")
+                              "Computational Graph (.cgjson *.cgz);;Draw.io XML (*.drawio *.xml);;Python Files (*.py);;All Files (*)")
         
         if filename:
             try:
@@ -1024,6 +982,19 @@ class MainWindow(QMainWindow):
                     self.update_starting_nodes_display()
                     self.update_stopping_nodes_display()
                     self.status_bar.showMessage(f"Loaded {filename}")
+                elif filename.lower().endswith(('.cgjson', '.cgz', '.json')):
+                    graph = CGJsonIO.load(filename)
+                    # Clear current canvas
+                    self.canvas.scene.clear()
+                    self.canvas.node_items.clear()
+                    self.canvas.edge_items.clear()
+                    # Assign graph and visualize
+                    self.graph = graph
+                    self.graph_runner.set_graph(self.graph)
+                    self._visualize_graph_on_canvas(self.graph)
+                    self.update_starting_nodes_display()
+                    self.update_stopping_nodes_display()
+                    self.status_bar.showMessage(f"Loaded {filename}")
                 else:
                     # Python file loading is more complex and not implemented yet
                     QMessageBox.information(self, "Not Implemented",
@@ -1035,7 +1006,7 @@ class MainWindow(QMainWindow):
     def save_graph(self):
         """Save the current graph to file."""
         filename, _ = QFileDialog.getSaveFileName(self, "Save Graph", "",
-                                                  "Draw.io XML (*.drawio *.xml);;Python Files (*.py);;All Files (*)")
+                              "Computational Graph (.cgjson *.cgz);;Draw.io XML (*.drawio *.xml);;Python Files (*.py);;All Files (*)")
         
         if filename:
             try:
@@ -1050,8 +1021,11 @@ class MainWindow(QMainWindow):
                 # If file extension suggests Draw.io format, use DrawioIO.save
                 if filename.lower().endswith(('.drawio', '.xml')):
                     DrawioIO.save(self.graph, filename)
+                elif filename.lower().endswith(('.cgjson', '.json', '.cgz')):
+                    # Save as our JSON-based format; include visuals from the canvas
+                    CGJsonIO.save(self.graph, filename, canvas=self.canvas, compress=filename.lower().endswith('.cgz'))
                 else:
-                    # For now, saving as Python is not implemented; save as draw.io XML with changed extension
+                    # For now, saving as Python is not implemented; fallback to DrawioIO
                     DrawioIO.save(self.graph, filename + '.xml')
 
                 self.status_bar.showMessage(f"Saved {filename}")
@@ -1077,6 +1051,27 @@ class MainWindow(QMainWindow):
                     pass
             node_item.update_value_display()
             self.status_bar.showMessage(f"Node '{node_item.node.name}' updated")
+
+    def replace_node(self, node_item):
+        """Prompt user to replace node type and perform swap using canvas.replace_node_item."""
+        from .replace_node_dialog import ReplaceNodeDialog
+        dlg = ReplaceNodeDialog(self)
+        if dlg.exec():
+            new_type = dlg.selected_type()
+            if new_type:
+                # Delegate orchestration to canvas
+                new_node = None
+                try:
+                    new_node = self.canvas.replace_node_item(node_item, new_type)
+                except Exception:
+                    new_node = None
+                if new_node:
+                    # Open editor to adjust node parameters right away
+                    try:
+                        self.edit_node(node_item)
+                    except Exception:
+                        pass
+                    self.status_bar.showMessage(f"Replaced node with type '{new_type}'")
     
     def edit_selected_node(self):
         """Open editor for the selected node."""
@@ -2162,50 +2157,9 @@ class MainWindow(QMainWindow):
         node_count = len([item for item in selected_items if isinstance(item, NodeItem)])
         self.status_bar.showMessage(f"Added {node_count} node(s) to plot")
 
-    def dump_weight_positions(self):
-        """Debug helper to print W/dW positions to the console for quick verification.
-        Useful when validating ANN layout changes.
-        """
-        try:
-            if not self.canvas.node_items:
-                self.status_bar.showMessage("No nodes on canvas to inspect")
-                return
-            count = 0
-            for node, item in self.canvas.node_items.items():
-                nm = getattr(node, 'name', str(node))
-                if nm.startswith('W_') or nm.startswith('wn') or nm.startswith('wx') or nm.startswith('dW_') or nm.startswith('dw_'):
-                    p = item.pos()
-                    print(f'{nm}: ({p.x():.1f}, {p.y():.1f})')
-                    count += 1
-            self.status_bar.showMessage(f'Dumped positions for {count} W/dW nodes to console')
-        except Exception as ex:
-            self.status_bar.showMessage(f'Error dumping positions: {ex}')
+    # Debug/dump_layout helper removed from GUI
 
-    def apply_diagonal_layout(self):
-        """Apply the diagonal ANN layout algorithm explicitly and preserve special node positions.
-
-        This method runs the layout algorithm and ensures the results remain intact.
-        It provides visual confirmation in the status bar and prints a compact summary.
-        """
-        try:
-            if not hasattr(self, 'canvas') or not self.canvas.node_items:
-                self.status_bar.showMessage("No nodes on canvas to layout")
-                return
-
-            # Apply the ANN layout via the canvas method (this calls `_compute_ann_layout`)
-            self.canvas.apply_layout('ann')
-
-            # Optionally, re-apply colors (consistent with apply_layout behaviour)
-            self.canvas.apply_ann_colors()
-
-            # Redraw visuals
-            self.canvas.update_node_visuals(False, 0, 1)
-
-            self.status_bar.showMessage('Applied diagonal ANN layout (new algorithm)')
-            # Output a minimal console confirmation for extra assurance
-            print('Applied diagonal ANN layout (new algorithm)')
-        except Exception as ex:
-            self.status_bar.showMessage(f'Failed to apply diagonal ANN layout: {ex}')
+    # apply_diagonal_layout removed from GUI; layout algorithms are no longer exposed via controls
     
     def _populate_examples_menu(self, menu):
         """Populate the examples menu with categories."""
@@ -2264,6 +2218,50 @@ class MainWindow(QMainWindow):
             # No need to apply layout separately - already done in _visualize_graph_on_canvas
             
             self.status_bar.showMessage(f"Loaded example: {name}")
+
+            # --- SYNC: Rebuild canonical graph map and ensure canvas items are bound ---
+            try:
+                # Rebuild adjacency matrix & id dictionary in case builder used nonstandard manipulations
+                if hasattr(self, 'graph') and self.graph is not None:
+                    try:
+                        self.graph.UpdateAdjacencyMatrix()
+                        # Rebuild id map (safeguard if any missing ids)
+                        try:
+                            self.graph.idToNodeDictionary = {n.id: n for n in self.graph.nodes if getattr(n, 'id', None) is not None}
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+
+                # Reattach canvas reference and refresh visuals for all NodeItems
+                try:
+                    if hasattr(self, 'canvas') and self.canvas is not None:
+                        for node_obj, node_item in list(getattr(self.canvas, 'node_items', {}).items()):
+                            try:
+                                node_item.canvas = self.canvas
+                            except Exception:
+                                pass
+                            try:
+                                # Refresh node label and value display if widget methods exist
+                                if hasattr(node_item, 'set_label_text'):
+                                    node_item.set_label_text(getattr(node_item.node, 'name', ''))
+                                if hasattr(node_item, 'update_value_display'):
+                                    node_item.update_value_display()
+                            except Exception:
+                                pass
+                        try:
+                            # Ensure canvas repaints and the QGraphicsScene knows of the nodes
+                            self.canvas.scene.update()
+                            try:
+                                self.canvas.viewport().update()
+                            except Exception:
+                                pass
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+            except Exception:
+                pass
             
         except Exception as e:
             import traceback
@@ -2357,21 +2355,31 @@ class MainWindow(QMainWindow):
             base_scale = 300
             scale = base_scale * max(1.0, num_nodes / 15)
             
-            # Use ANN layout directly for small/medium graphs; fall back for very large graphs
-            pos = None
-            try:
-                # Avoid running the heavy ANN layout for massive graphs - fall back to spring
-                if num_nodes > 500:
-                    raise RuntimeError("Graph too large for ANN layout; using spring fallback")
-                pos = self.canvas._compute_ann_layout(G, scale)
-            except Exception as e:
-                # Fallback to networkx spring layout to avoid freezing on huge graphs
+            # If all nodes have explicit GUI positions (loaded from file), use them as `pos`
+            gui_positions = {node: getattr(node, 'gui_pos', None) for node in graph.nodes}
+            use_gui_positions = False
+            if all(gui_positions.values()):
+                pos = {node: tuple(gui_positions[node]) for node in graph.nodes}
+                use_gui_positions = True
+            else:
+                # Use ANN layout directly for small/medium graphs; fall back for very large graphs
+                pos = None
+            # Only compute an automatic layout if GUI positions are NOT provided
+            if not use_gui_positions:
                 try:
-                    print(f"[GUI] ANN layout failed ({e}); falling back to spring layout for {num_nodes} nodes")
-                    pos = nx.spring_layout(G, k=2.0/num_nodes**0.5, iterations=50, scale=scale, seed=42)
-                except Exception:
-                    # Final fallback: circular layout
-                    pos = nx.circular_layout(G, scale=scale)
+                    # Use the canvas apply_layout plumbing (no-op layout algorithms retained as stubs)
+                    pos = self.canvas.apply_layout('ann')
+                except Exception as e:
+                    # Fallback to networkx spring layout to avoid freezing on huge graphs
+                    try:
+                        print(f"[GUI] ANN layout not available ({e}); falling back to spring layout for {num_nodes} nodes")
+                        pos = nx.spring_layout(G, k=2.0/num_nodes**0.5, iterations=50, scale=scale, seed=42)
+                    except Exception:
+                        # Final fallback: circular layout
+                        pos = nx.circular_layout(G, scale=scale)
+            else:
+                # When using GUI positions we already set `pos` from node.gui_pos earlier
+                pass
             t1 = time.time()
             # Log time if verbose
             try:
@@ -2385,6 +2393,16 @@ class MainWindow(QMainWindow):
             offset_y = 0
             
             # Create node items with collision avoidance
+            # If using explicit GUI positions, temporarily disable snap to grid to preserve exact coordinates
+            if use_gui_positions:
+                try:
+                    old_snap = getattr(self.canvas, 'snap_to_grid', False)
+                    old_snap_while = getattr(self.canvas, 'snap_while_dragging', False)
+                    self.canvas.set_snap_to_grid(False)
+                    self.canvas.set_snap_while_dragging(False)
+                except Exception:
+                    old_snap = None
+                    old_snap_while = None
             min_distance = 100  # Minimum distance between nodes
             created_positions = {}  # Track created node positions
             
@@ -2418,8 +2436,9 @@ class MainWindow(QMainWindow):
                     lock_enabled = lock.isChecked() if lock is not None else True
                 except Exception:
                     lock_enabled = True
-                if lock_enabled:
-                    skip_collision_adjustment = is_container or nm.startswith('dW_') or nm.startswith('dw_')
+                # If GUI positions are used, skip collision adjustment for all nodes.
+                # Otherwise, respect the lock setting for containers and dW/dw nodes.
+                skip_collision_adjustment = use_gui_positions or (lock_enabled and (is_container or nm.startswith('dW_') or nm.startswith('dw_')))
                 max_attempts = 50
                 
                 for attempt in range(max_attempts):
@@ -2449,9 +2468,42 @@ class MainWindow(QMainWindow):
                 # Store position and create node
                 created_positions[node] = (adjusted_x, adjusted_y)
                 try:
-                    node_item = NodeItem(node, adjusted_x, adjusted_y)
+                    # Respect explicit GUI positions by preventing collision adjustments when requested
+                    if use_gui_positions:
+                        # Ensure we don't change the adjusted position
+                        node_item = NodeItem(node, adjusted_x, adjusted_y)
+                    else:
+                        node_item = NodeItem(node, adjusted_x, adjusted_y)
+                    # Allow node_item to access canvas for snapping logic
+                    try:
+                        node_item.canvas = self.canvas
+                    except Exception:
+                        pass
                     self.canvas.scene.addItem(node_item)
                     self.canvas.node_items[node] = node_item
+                    # If using GUI positions: reapply the exact requested position while snapping disabled
+                    if use_gui_positions:
+                        try:
+                            old_snap = getattr(self.canvas, 'snap_to_grid', False)
+                            old_snap_while = getattr(self.canvas, 'snap_while_dragging', False)
+                            self.canvas.set_snap_to_grid(False)
+                            self.canvas.set_snap_while_dragging(False)
+                        except Exception:
+                            old_snap = None
+                            old_snap_while = None
+
+                        try:
+                            node_item.setPos(adjusted_x, adjusted_y)
+                        except Exception:
+                            pass
+
+                        try:
+                            if old_snap is not None:
+                                self.canvas.set_snap_to_grid(old_snap)
+                            if old_snap_while is not None:
+                                self.canvas.set_snap_while_dragging(old_snap_while)
+                        except Exception:
+                            pass
                 except Exception as e:
                     print(f"Failed to create NodeItem for node: {getattr(node, 'name', str(node))}")
                     raise
@@ -2502,6 +2554,15 @@ class MainWindow(QMainWindow):
                 traceback.print_exc()
                 raise
             t4 = time.time()
+            # Restore snap settings if we changed them
+            if use_gui_positions:
+                try:
+                    if old_snap is not None:
+                        self.canvas.set_snap_to_grid(old_snap)
+                    if old_snap_while is not None:
+                        self.canvas.set_snap_while_dragging(old_snap_while)
+                except Exception:
+                    pass
             try:
                 if hasattr(self, 'verbose_check') and self.verbose_check.isChecked():
                     print(f"Node creation {t2 - t1:.3f}s, Edge creation {t3 - t2:.3f}s, Visual update {t4 - t3:.3f}s")

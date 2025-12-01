@@ -59,6 +59,10 @@ class NodeItem(QGraphicsEllipseItem):
         self.value_label.setFont(value_font)
         # Populate with initial value
         self.update_value_display()
+        
+        # Track move state to avoid unnecessary updates when clicking without movement
+        self._moved = False
+        self._pressed_pos = None
 
     def set_label_text(self, text: str):
         """Set the node label text and re-center it above the node.
@@ -277,6 +281,12 @@ class NodeItem(QGraphicsEllipseItem):
                             # Update edges after snapping
                             for edge in self.edges:
                                 edge.update_position()
+                # Mark that the item has moved (used by mouseReleaseEvent to conditionally
+                # trigger canvas rect updates)
+                try:
+                    self._moved = True
+                except Exception:
+                    pass
             except Exception:
                 pass
         
@@ -292,6 +302,12 @@ class NodeItem(QGraphicsEllipseItem):
     
     def mousePressEvent(self, event):
         """Handle mouse press for selection or connection."""
+        # Reset moved flag on press and remember the pressed position
+        try:
+            self._moved = False
+            self._pressed_pos = event.pos()
+        except Exception:
+            pass
         if event.button() == Qt.MouseButton.LeftButton:
             # Check if clicking near the edge of the circle for connection
             distance_from_center = (event.pos().x() ** 2 + event.pos().y() ** 2) ** 0.5
@@ -315,6 +331,27 @@ class NodeItem(QGraphicsEllipseItem):
     def mouseReleaseEvent(self, event):
         """Handle mouse release."""
         super().mouseReleaseEvent(event)
+        # If the view is a GraphCanvas, ask it to update the scene rect after end of move
+        try:
+            scene = self.scene()
+            if scene and scene.views():
+                view = scene.views()[0]
+                if hasattr(view, '_update_scene_rect') and getattr(view, 'auto_expand_to_nodes', False):
+                    try:
+                        # Only trigger an update when the item actually moved
+                        if getattr(self, '_moved', False):
+                            view._update_scene_rect()
+                    except Exception:
+                        pass
+                    finally:
+                        # Reset move tracking
+                        try:
+                            self._moved = False
+                            self._pressed_pos = None
+                        except Exception:
+                            pass
+        except Exception:
+            pass
     
     def mouseDoubleClickEvent(self, event):
         """Handle double-click to open node editor."""
@@ -337,6 +374,7 @@ class NodeItem(QGraphicsEllipseItem):
             menu = QMenu()
             # View predecessors menu item
             view_pred_action = menu.addAction("View Predecessors")
+            replace_action = menu.addAction("Replace Node...")
             action = menu.exec(event.screenPos())
             if action == view_pred_action:
                 try:
@@ -347,6 +385,17 @@ class NodeItem(QGraphicsEllipseItem):
                         dlg.exec()
                 except Exception:
                     pass
+            elif action == replace_action:
+                    try:
+                        scene = self.scene()
+                        if scene and scene.views():
+                            view = scene.views()[0]
+                            main_window = view.window()
+                            if main_window and hasattr(main_window, 'replace_node'):
+                                main_window.replace_node(self)
+                    except Exception:
+                        pass
+            
         except Exception:
             pass
     

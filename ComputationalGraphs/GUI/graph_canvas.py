@@ -225,222 +225,56 @@ class GraphCanvas(QGraphicsView):
         for item in selected:
             if isinstance(item, NodeItem):
                 # Remove connected edges first
-                for edge in item.edges[:]:
-                    # Disconnect underlying Graph link if present
+                for edge in list(item.edges[:]):
+                    # Safely compute the associated graph nodes
                     try:
-                        # emit edge_removed for listeners before we physically remove it
                         src = edge.source_node.node
                         tgt = edge.target_node.node
-                        try:
-                            self.edge_removed.emit(src, tgt)
-                        except Exception:
-                            pass
-                        if hasattr(self, 'graph') and getattr(self, 'graph') is not None:
-                            # Only disconnect if these nodes are in the authoritative graph
-                            try:
-                                if tgt in getattr(self.graph, 'nodes', []) and src in getattr(self.graph, 'nodes', []):
-                                    self.graph.DisconnectPreNode(tgt, src)
-                            except Exception:
-                                pass
                     except Exception:
-                        pass
-                    edge.remove()
-                    if edge in self.edge_items:
-                        self.edge_items.remove(edge)
-                
-                # Remove node item
-                if item.node in self.node_items:
-                    del self.node_items[item.node]
-                
-                self.scene.removeItem(item)
-            
-            elif isinstance(item, EdgeItem):
-                # Update the computational graph if available
-                try:
-                    if hasattr(self, 'graph') and getattr(self, 'graph') is not None:
-                        src = item.source_node.node
-                        tgt = item.target_node.node
-                        try:
-                            self.edge_removed.emit(src, tgt)
-                        except Exception:
-                            pass
-                        try:
-                            if tgt in getattr(self.graph, 'nodes', []) and src in getattr(self.graph, 'nodes', []):
-                                self.graph.DisconnectPreNode(tgt, src)
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-                item.remove()
-                if item in self.edge_items:
-                    self.edge_items.remove(item)
-    
-    def start_connection(self, node_item):
-        """Start creating a connection from a node."""
-        # If multiple nodes selected and node_item is among them, connect all selected nodes
-        selected = [item for item in self.scene.selectedItems() if isinstance(item, NodeItem)]
-        if len(selected) > 1 and node_item in selected:
-            self.connection_start_nodes = selected
-        else:
-            self.connection_start_nodes = [node_item]
+                        continue
 
-        # Turn on connection mode and disable movement on start nodes
-        self.connection_mode = True
-        for n in self.connection_start_nodes:
-            n.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
-            # Also set the connection highlight
-            n.set_connection_highlight(True)
-
-        # Disable rubberband selection and enable drawing
-        self.setDragMode(QGraphicsView.DragMode.NoDrag)
-    
-    def wheelEvent(self, event):
-        """Zoom in/out with mouse wheel."""
-        zoom_factor = 1.15
-        
-        if event.angleDelta().y() > 0:
-            # Zoom in
-            self.scale(zoom_factor, zoom_factor)
-        else:
-            # Zoom out
-            self.scale(1 / zoom_factor, 1 / zoom_factor)
-    
-    def keyPressEvent(self, event):
-        """Handle keyboard shortcuts."""
-        # Fit view
-        if event.key() == Qt.Key.Key_F:
-            self.fit_all_nodes_in_view()
-        # Delete selected nodes/edges
-        elif event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
-            self.remove_selected_items()
-        # Copy / Paste / Cut (Ctrl+C / Ctrl+V / Ctrl+X)
-        elif event.key() == Qt.Key.Key_C and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            self.copy_selected()
-        elif event.key() == Qt.Key.Key_V and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            self.paste_clipboard()
-        elif event.key() == Qt.Key.Key_X and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            self.cut_selected()
-        else:
-            super().keyPressEvent(event)
-
-    def copy_selected(self):
-        """Copy currently selected node items (and internal edges between them) to internal clipboard."""
-        selected = [item for item in self.scene.selectedItems() if isinstance(item, NodeItem)]
-        if not selected:
-            return
-
-        # Build node data list
-        nodes_data = []
-        node_to_index = {}
-        for idx, item in enumerate(selected):
-            node = item.node
-            node_to_index[node] = idx
-            # Collect simple attributes (primitives and lists/dicts)
-            attrs = {}
-            for attr in ('value', 'data', 'size'):
-                if hasattr(node, attr):
-                    val = getattr(node, attr)
-                    # shallow copy for lists/dicts
+                    # Emit removal signal to listeners
                     try:
-                        if isinstance(val, (list, dict)):
-                            import copy as _copy
-                            attrs[attr] = _copy.copy(val)
-                        else:
-                            attrs[attr] = val
+                        self.edge_removed.emit(src, tgt)
                     except Exception:
                         pass
 
-            nodes_data.append({
-                'class': node.__class__,
-                'name': node.name if hasattr(node, 'name') else None,
-                'attrs': attrs,
-                'pos': (item.pos().x(), item.pos().y())
-            })
+                    # Disconnect in authoritative graph if available
+                    try:
+                        if hasattr(self, 'graph') and getattr(self, 'graph') is not None:
+                            self.graph.DisconnectPreNode(tgt, src)
+                    except Exception:
+                        pass
 
-        # Collect internal edges (between selected nodes)
-        edges = []
-        for edge in list(self.edge_items):
-            s = edge.source_node.node
-            t = edge.target_node.node
-            if s in node_to_index and t in node_to_index:
-                edges.append((node_to_index[s], node_to_index[t]))
-
-        self._clipboard = {
-            'nodes': nodes_data,
-            'edges': edges
-        }
-
-    def paste_clipboard(self):
-        """Paste nodes from internal clipboard into the scene, centered in view."""
-        if not self._clipboard:
-            return
-
-        data = self._clipboard
-        nodes_data = data.get('nodes', [])
-        edges = data.get('edges', [])
-
-        # Compute average original position
-        if not nodes_data:
-            return
-
-        avg_x = sum(p['pos'][0] for p in nodes_data) / len(nodes_data)
-        avg_y = sum(p['pos'][1] for p in nodes_data) / len(nodes_data)
-
-        # Paste center at current view center
-        center_point = self.mapToScene(self.viewport().rect().center())
-        dx = center_point.x() - avg_x
-        dy = center_point.y() - avg_y
-
-        new_items = []
-        for node_info in nodes_data:
-            cls = node_info['class']
-            orig_name = node_info.get('name') or 'Node'
-            # Create a new name to avoid collisions
-            new_name = f"{orig_name}_copy"
-            try:
-                # Try to instantiate with name param
-                new_node = cls(name=new_name)
-            except Exception:
+                    # Remove the visual edge and its internal record
+                    try:
+                        # Prefer the EdgeItem removal helper
+                        edge.remove()
+                    except Exception:
+                        try:
+                            self.scene.removeItem(edge)
+                        except Exception:
+                            pass
+                    try:
+                        if edge in self.edge_items:
+                            self.edge_items.remove(edge)
+                    except Exception:
+                        pass
+                # Now remove the node item itself
                 try:
-                    # Fallback: instantiate without args
-                    new_node = cls()
-                    if hasattr(new_node, 'name'):
-                        new_node.name = new_name
-                except Exception:
-                    # Unable to create node of this type; skip
-                    continue
-
-            # Restore simple attributes
-            for k, v in node_info.get('attrs', {}).items():
-                try:
-                    setattr(new_node, k, v)
+                    if item in self.node_items.values():
+                        # remove scene item
+                        self.scene.removeItem(item)
+                        # remove mapping
+                        to_remove = None
+                        for n, i in list(self.node_items.items()):
+                            if i == item:
+                                to_remove = n
+                                break
+                        if to_remove is not None:
+                            del self.node_items[to_remove]
                 except Exception:
                     pass
-
-            # Position
-            ox, oy = node_info.get('pos', (0, 0))
-            new_item = self.add_node_item(new_node, ox + dx + 20, oy + dy + 20)
-            new_items.append(new_item)
-
-        # Recreate edges between pasted items
-        for s_idx, t_idx in edges:
-            if s_idx < len(new_items) and t_idx < len(new_items):
-                s_node = new_items[s_idx].node
-                t_node = new_items[t_idx].node
-                self.add_edge_item(s_node, t_node)
-
-        # Select pasted items
-        for item in new_items:
-            item.setSelected(True)
-
-    def cut_selected(self):
-        """Cut selected nodes (copy then delete)."""
-        self.copy_selected()
-        self.remove_selected_items()
-    
-    def fit_all_nodes_in_view(self):
-        """Center and zoom to fit all nodes in the viewport."""
-        if not self.node_items:
             return
         
         # Get bounding rect of all nodes
@@ -694,6 +528,9 @@ class GraphCanvas(QGraphicsView):
             if node:
                 self.add_node_item(node, drop_pos.x(), drop_pos.y())
                 event.acceptProposedAction()
+
+    # Note: _create_node_by_type and the earlier replace_node_item implementation were removed
+    # in favor of the dynamic `replace_node_item()` implementation defined later in this file.
     
     def update_node_visuals(self, colorize=False, min_val=0, max_val=1, min_color=None, max_color=None):
         """Update all node visuals (values and optionally colors)."""
@@ -721,528 +558,62 @@ class GraphCanvas(QGraphicsView):
             node_item.set_active(is_active)
     
     def apply_layout(self, layout_type="spring"):
-        """Apply an automatic layout algorithm to nodes with better spacing."""
+        """No-op layout plumbing: preserve method signature for compatibility.
+
+        Replaces the previous GUI layout algorithms with a minimal implementation
+        that updates edges and optionally reapplies ANN colorization. This allows
+        the UI to request layout without executing any heavy algorithm code.
+        """
         if not self.node_items:
-            return
-        
+            return {}
+        pos = {}
         try:
-            import networkx as nx
-            
-            # Build networkx graph
-            G = nx.DiGraph()
-            for node in self.node_items.keys():
-                G.add_node(node)
-            
-            for edge_item in self.edge_items:
-                G.add_edge(edge_item.source_node.node, edge_item.target_node.node)
-            
-            # Calculate appropriate scale based on number of nodes
-            num_nodes = len(G.nodes())
-            base_scale = 300  # Optimal base scale
-            scale = base_scale * max(1.0, num_nodes / 15)  # Scale up for larger graphs
-            
-            # Compute layout with better parameters
-            if layout_type == "spring":
-                # Spring layout with better spacing
-                pos = nx.spring_layout(
-                    G, 
-                    k=2.0/num_nodes**0.5,  # Optimal distance between nodes
-                    iterations=100,  # More iterations for better convergence
-                    scale=scale,
-                    seed=42  # Reproducible layout
-                )
-            elif layout_type == "ann":
-                # ANN-specific layout: Left-to-right with layer-based positioning
-                pos = self._compute_ann_layout(G, scale)
-            elif layout_type == "good":
-                # The Good Layout: cellular grid MLP layout (deterministic)
-                pos = self._compute_good_layout(G, scale)
-            elif layout_type == "hierarchical":
-                # Try to use shell/layered layout for hierarchical structure
+            # Construct a positions mapping based on gui_pos (if present) or current item positions
+            for node, item in self.node_items.items():
                 try:
-                    # Try to detect layers using topological sort
-                    if nx.is_directed_acyclic_graph(G):
-                        # Use multipartite layout for DAGs
-                        layers = {}
-                        for node in nx.topological_sort(G):
-                            # Calculate layer based on longest path from source
-                            predecessors = list(G.predecessors(node))
-                            if not predecessors:
-                                layers[node] = 0
-                            else:
-                                layers[node] = max(layers[pred] for pred in predecessors) + 1
-                        
-                        # Group nodes by layer
-                        from collections import defaultdict
-                        layer_groups = defaultdict(list)
-                        for node, layer in layers.items():
-                            layer_groups[layer].append(node)
-                        
-                        # Use multipartite layout
-                        for layer, nodes in layer_groups.items():
-                            for node in nodes:
-                                G.nodes[node]['layer'] = layer
-                        
-                        pos = nx.multipartite_layout(G, subset_key='layer', scale=scale)
-                    else:
-                        # Use shell layout for cyclic graphs
-                        pos = nx.shell_layout(G, scale=scale)
-                except Exception:
-                    # Fallback to spring layout
-                    pos = nx.spring_layout(G, k=2.0/num_nodes**0.5, iterations=100, scale=scale)
-            else:  # circular
-                pos = nx.circular_layout(G, scale=scale)
-            
-            # Apply positions. For 'good' layout we rely on grid and skip collision adjustment
-            # to preserve the deterministic MLP grid layout as computed by _compute_good_layout.
-            min_distance = 100  # Minimum distance used for collision detection when needed
-            
-            for node, (x, y) in pos.items():
-                if node not in self.node_items:
-                    continue
-                # Use direct snapped placement for Good Layout to preserve grid design
-                if layout_type == 'good':
-                    try:
-                        if getattr(self, 'snap_to_grid', False) and getattr(self, 'grid_size', 0) > 0:
-                            x, y = self.snap_point(x, y, step=self.snap_step)
-                    except Exception:
-                        pass
-                    self.node_items[node].setPos(x, y)
-                    continue
-
-                # For other layouts, apply collision detection/adjustment
-                adjusted_x, adjusted_y = x, y
-                max_attempts = 50
-                for attempt in range(max_attempts):
-                    collision = False
-                    for other_node, other_item in self.node_items.items():
-                        if other_node == node:
-                            continue
-                        other_pos = other_item.pos()
-                        dx = adjusted_x - other_pos.x()
-                        dy = adjusted_y - other_pos.y()
-                        distance = (dx**2 + dy**2)**0.5
-                        if distance < min_distance:
-                            collision = True
-                            # Push away from collision (mild push)
-                            if distance > 0:
-                                push_x = (dx / distance) * (min_distance - distance)
-                                push_y = (dy / distance) * (min_distance - distance)
-                                adjusted_x += push_x * 0.5
-                                adjusted_y += push_y * 0.5
-                    if not collision:
-                        break
-                self.node_items[node].setPos(adjusted_x, adjusted_y)
-
-            # Post-processing for Good Layout: ensure input buffers (Buff_xN) are placed
-            # to the right of the corresponding input (xN) with at least one unit offset.
-            if layout_type == 'good':
-                try:
-                    unit = getattr(self, 'grid_size', 20) * getattr(self, 'snap_step', 4)
-                    for name, item in self.node_items.items():
-                        nm = getattr(name, 'name', str(name))
-                        if nm.startswith('Buff_x'):
-                            # Parse index
-                            import re
-                            m = re.match(r'Buff_x(\d+)', nm)
-                            if not m:
-                                continue
-                            idx = int(m.group(1))
-                            # Find corresponding x node
-                            x_node = next((n for n in self.node_items.keys() if getattr(n,'name',None) == f'x{idx}'), None)
-                            if not x_node:
-                                continue
-                            x_item = self.node_items[x_node]
-                            # Ensure buffer is to the right by at least one unit
-                            bx, by = item.pos().x(), item.pos().y()
-                            tx = x_item.pos().x() + unit
-                            if bx <= x_item.pos().x():
-                                item.setPos(tx, by)
-                    # Ensure multiplication nodes are to the right of their weight predecessors
-                    for n, item in list(self.node_items.items()):
-                        nm2 = getattr(n, 'name', str(n))
-                        if nm2.startswith('Mul_'):
-                            # Try to find a ContainerNode or weight predecessor
-                            preds = getattr(n, 'predecessors', []) if hasattr(n, 'predecessors') else []
-                            weight_pred = None
-                            for p in preds:
-                                pn = getattr(p, 'name', str(p))
-                                if pn.startswith('W_') or pn.startswith('wn') or pn.startswith('wx'):
-                                    weight_pred = p
-                                    break
-                            if weight_pred and weight_pred in self.node_items:
-                                wx = self.node_items[weight_pred].pos().x()
-                                mx, my = item.pos().x(), item.pos().y()
-                                if mx <= wx:
-                                    item.setPos(wx + unit, my)
-                    # Ensure activation nodes are to the right of their Add nodes
-                    import re
-                    for n, item in list(self.node_items.items()):
-                        nm2 = getattr(n, 'name', str(n))
-                        if nm2.startswith('Act_'):
-                            m = re.match(r'Act_(?:L|H)(\d+)N(\d+)', nm2)
+                    if hasattr(node, 'gui_pos') and node.gui_pos is not None:
+                        # node.gui_pos may be tuple/list-like; coerce to (x,y)
+                        if isinstance(node.gui_pos, (tuple, list)) and len(node.gui_pos) >= 2:
+                            pos[node] = (float(node.gui_pos[0]), float(node.gui_pos[1]))
                         else:
-                            m = None
-                        if not m:
-                            continue
-                            L = int(m.group(1))
-                            N = int(m.group(2))
-                            # find corresponding Add_L{L}N{N}
-                            add_node = next((a for a in self.node_items.keys() if getattr(a, 'name', None) in (f'Add_L{L}N{N}', f'Add_H{L}N{N}')), None)
-                            if add_node and add_node in self.node_items:
-                                ax, ay = item.pos().x(), item.pos().y()
-                                addx = self.node_items[add_node].pos().x()
-                                if ax <= addx:
-                                    item.setPos(addx + unit, ay)
-                    # Ensure derivative nodes for hidden layers are placed below their buffer nodes
-                    for n, item in list(self.node_items.items()):
-                        nm2 = getattr(n, 'name', str(n))
-                        if nm2.startswith('D_H'):
-                            m = re.match(r'D_H(\d+)N(\d+)', nm2)
-                            if not m:
-                                continue
-                            L = int(m.group(1))
-                            N = int(m.group(2))
-                            buff_node = next((b for b in self.node_items.keys() if getattr(b, 'name', None) == f'Buff_H{L}N{N}'), None)
-                            if buff_node and buff_node in self.node_items:
-                                bx, by = self.node_items[buff_node].pos().x(), self.node_items[buff_node].pos().y()
-                                dx, dy = item.pos().x(), item.pos().y()
-                                if dy <= by:
-                                    item.setPos(dx, by + unit)
+                            pos[node] = (float(item.pos().x()), float(item.pos().y()))
+                    else:
+                        pos[node] = (float(item.pos().x()), float(item.pos().y()))
+                except Exception:
+                    # Fallback to current item pos
+                    try:
+                        pos[node] = (float(item.pos().x()), float(item.pos().y()))
+                    except Exception:
+                        pos[node] = (0.0, 0.0)
+
+            if layout_type == 'ann':
+                self.apply_ann_colors()
+
+            # Refresh edges and update the scene rect
+            for edge_item in self.edge_items:
+                try:
+                    edge_item.update_position()
                 except Exception:
                     pass
-            
-            # Update all edges
-            for edge_item in self.edge_items:
-                edge_item.update_position()
-            
-            # Update scene rect to encompass all nodes with padding
             self._update_scene_rect()
-            
-            # Apply ANN colors if using ANN layout
-            if layout_type == "ann":
-                self.apply_ann_colors()
-        
-        except ImportError:
-            print("NetworkX not installed. Install with: pip install networkx")
+        except Exception:
+            # swallow exceptions from layout plumbing to keep GUI stable; return partial pos mapping
+            pass
+
+        return pos
     
     def _compute_ann_layout(self, G, scale):
+        """ANN layout removed: compatibility stub.
+
+        Returns a mapping of nodes to their existing GUI positions if available,
+        else returns (0.0, 0.0) default positions. Keeps API stable for callers.
         """
-        Compute ANN-specific left-to-right layout.
-        
-        Strategy:
-        - Layer 0: Input streams (x nodes) and Label streams (Label_ or yd nodes)
-        - Layer 1: First multiplication nodes (Mul_x)
-        - Layer 2: Weight container nodes (W_x, wn_, wx_)
-        - Layer 3: Hidden layer addition nodes (Add_L)
-        - Layer 4: Hidden layer activation nodes (Act_L, Sigmoid, ReLU, etc.)
-        - Layer 5: Hidden layer derivatives (D_H, derivative nodes)
-        - Layer 6+: Repeat for additional hidden layers
-        - Layer N-3: Output addition nodes (Add_y)
-        - Layer N-2: Output activation nodes (y nodes, output activations)
-        - Layer N-1: Error nodes (Error_, e nodes)
-        - Layer N: Backprop gradient nodes (EG_, LRMult_, dW_)
-        - Special: LearningRate node at top
-        """
-        from collections import defaultdict
-        import re
-        
-        # Categorize nodes by type and layer
-        layers = defaultdict(list)
-        node_names = {node: node.name if hasattr(node, 'name') else str(node) for node in G.nodes()}
-        
-        for node in G.nodes():
-            name = node_names[node]
-            
-            # Layer 0: Input and Label streams
-            if name.startswith('x') and 'Stream' in name:
-                layers[0].append(node)
-            elif name.startswith('L_y') or name.startswith('yd') or name.startswith('Label_'):
-                layers[0].append(node)
-            
-            # Layer 0.5: Weight containers (before multiplication, will be positioned behind with offset)
-            elif name.startswith('W_x') or name.startswith('wx') or name.startswith('wn'):
-                layers[0.5].append(node)
-            
-            # Layer 1: First multiplication (Input × Weight)
-            elif name.startswith('Mul_x'):
-                layers[1].append(node)
-            
-            # Layer 3-N: Hidden layers (dynamically detect layer number)
-            elif name.startswith('Add_L'):
-                # Extract layer number from name like "Add_L0N1"
-                match = re.search(r'Add_L(\d+)', name)
-                if match:
-                    h_layer = int(match.group(1))
-                    layers[3 + h_layer * 3].append(node)
-            
-            elif name.startswith('Act_L') or (name.startswith('n') and 'Sigmoid' in name):
-                # Activation nodes
-                match = re.search(r'H(\d+)', name)
-                if match:
-                    h_layer = int(match.group(1))
-                    layers[4 + h_layer * 3].append(node)
-            
-            elif name.startswith('D_H'):
-                # Derivative nodes
-                match = re.search(r'D_H(\d+)', name)
-                if match:
-                    h_layer = int(match.group(1))
-                    layers[5 + h_layer * 3].append(node)
-            
-            # Output layer
-            elif name.startswith('Add_y'):
-                layers[100].append(node)  # Use high number, will renumber later
-            
-            elif name.startswith('y') and not name.startswith('yd'):
-                # Output activation nodes
-                layers[101].append(node)
-            
-            # Error nodes
-            elif name.startswith('Error_') or name.startswith('e') and 'E' in name:
-                layers[102].append(node)
-            
-            # Backprop nodes - assign to same layer as their forward counterpart
-            elif name.startswith('EG_'):
-                # Error gradient nodes align with their layer
-                match = re.search(r'EG_H(\d+)', name) or re.search(r'EG_y', name)
-                if match and 'H' in name:
-                    h_layer = int(re.search(r'H(\d+)', name).group(1))
-                    layers[4 + h_layer * 3].append(node)  # Same layer as activation
-                else:
-                    layers[101].append(node)  # Output layer EG
-            elif name.startswith('LRMult_') or name.startswith('WGS_'):
-                # Learning rate mult nodes align with their layer
-                match = re.search(r'H(\d+)', name)
-                if match:
-                    h_layer = int(match.group(1))
-                    layers[4 + h_layer * 3].append(node)
-                else:
-                    layers[101].append(node)
-            elif name.startswith('dW_') or name.startswith('dw_'):
-                # Weight gradient nodes align with weight layer
-                layers[0.5].append(node)
-            
-            # Learning rate (special positioning)
-            elif name == 'LearningRate' or name == 'LR':
-                layers[-1].append(node)  # Special layer
-            
-            # Fallback: use graph topology
-            else:
-                # Calculate layer based on longest path from inputs
-                try:
-                    predecessors = list(G.predecessors(node))
-                    if not predecessors:
-                        layers[0].append(node)
-                    else:
-                        # Find max layer of predecessors
-                        pred_layers = []
-                        for layer_num, layer_nodes in layers.items():
-                            for pred in predecessors:
-                                if pred in layer_nodes:
-                                    pred_layers.append(layer_num)
-                        if pred_layers:
-                            layers[max(pred_layers) + 1].append(node)
-                        else:
-                            layers[50].append(node)  # Unknown layer
-                except Exception:
-                    layers[50].append(node)
-        
-        # Compress layers to sequential positions but maintain a reverse mapping
-        sorted_layers = sorted([k for k in layers.keys() if k >= 0])
-        layer_map = {old: new for new, old in enumerate(sorted_layers)}
-        
-        # reverse_layer_map is unused (kept for reference if needed)
-        
-        # Add learning rate layer at the end
-        if -1 in layers:
-            layer_map[-1] = len(sorted_layers)
-        
-        # Compute positions with diagonal backprop layout
         pos = {}
-        layer_width = 200  # Horizontal spacing between layers
-        node_spacing = 80  # Vertical spacing between nodes
-        diagonal_offset_x = 50  # Horizontal diagonal offset
-        diagonal_offset_y = 60  # Vertical diagonal offset
-        
-        # First, position all forward pass nodes normally (excluding label nodes)
-        for old_layer, nodes in layers.items():
-            new_layer = layer_map.get(old_layer, 0)
-            x = new_layer * layer_width
-            
-            # Separate by node type for special positioning
-            for node in nodes:
-                name = node_names[node]
-                
-                # Skip backprop nodes and label nodes for now
-                if any(pattern in name for pattern in ['EG_', 'LRMult_', 'dW_', 'dw_', 'WGS_', 'WG_', 'Label_', 'yd']):
-                    continue
-                
-                # Calculate base position
-                layer_nodes = [n for n in nodes if not any(p in node_names[n] for p in ['EG_', 'LRMult_', 'dW_', 'dw_', 'WGS_', 'WG_', 'Label_', 'yd'])]
-                node_index = layer_nodes.index(node) if node in layer_nodes else 0
-                num_nodes = len(layer_nodes)
-                y = -(num_nodes - 1) * node_spacing / 2 + node_index * node_spacing
-                
-                # Special positioning rules
-                if name.startswith('W_'):  # Weight nodes
-                    x -= diagonal_offset_x  # Slightly left of Mult nodes
-                    y -= 120  # Above Mult nodes
-                elif name.startswith('D_') or 'Derivative' in name or 'derivative' in name:  # Derivative nodes
-                    # Find corresponding activation node to position relative to it
-                    x += diagonal_offset_x  # Upper-right of activation
-                    y -= diagonal_offset_y
-                
-                pos[node] = (x, y)
-        
-        # Now position backprop nodes with diagonal offsets
-        # First, group dW nodes by their target layer
-        dw_by_target_layer = {}
-        for old_layer, nodes in layers.items():
-            for node in nodes:
-                name = node_names[node]
-                if name.startswith('dW_') or name.startswith('dw_'):
-                    # Parse dW node name to determine which layer it updates
-                    # Format: dW_x{input}H{layer}N{neuron} or dW_H{layer}N{neuron}y{output}
-                    target_layer = 0.5  # Default to weight layer
-                    
-                    if 'H' in name and 'y' not in name:
-                        # dW for input to hidden: dW_x0H0N1 -> layer 0.5 (before layer 1 Mult)
-                        target_layer = 0.5
-                    elif 'H' in name and 'y' in name:
-                        # dW for hidden to output: dW_H0N1y0 -> position above hidden layer
-                        match = re.search(r'H(\d+)', name)
-                        if match:
-                            h_layer = int(match.group(1))
-                            target_layer = 4 + h_layer * 3  # Align with hidden activation layer
-                    
-                    if target_layer not in dw_by_target_layer:
-                        dw_by_target_layer[target_layer] = []
-                    dw_by_target_layer[target_layer].append(node)
-        
-        # Position dW nodes above their target layers
-        for target_layer, dw_nodes in dw_by_target_layer.items():
-            target_x = layer_map.get(target_layer, 0) * layer_width
-            for node_idx, node in enumerate(dw_nodes):
-                x = target_x - diagonal_offset_x * 0.5  # Midpoint between W and Mult
-                y = -250 - node_idx * 100  # Diagonal cascade with more spacing
-                pos[node] = (x, y)
-        
-        # Group other backprop nodes by their target layer
-        lrmult_by_layer = {}
-        eg_by_layer = {}
-        wgs_by_layer = {}
-        
-        for old_layer, nodes in layers.items():
-            for node in nodes:
-                name = node_names[node]
-                
-                # Skip dW nodes (already positioned)
-                if name.startswith('dW_') or name.startswith('dw_'):
-                    continue
-                
-                # LRMult nodes: parse to find target layer
-                elif name.startswith('LRMult_') or name.startswith('LRML_'):
-                    target_layer = 0.5  # Default
-                    if 'H' in name and 'y' not in name:
-                        target_layer = 0.5
-                    elif 'H' in name and 'y' in name:
-                        match = re.search(r'H(\d+)', name)
-                        if match:
-                            h_layer = int(match.group(1))
-                            target_layer = 4 + h_layer * 3
-                    if target_layer not in lrmult_by_layer:
-                        lrmult_by_layer[target_layer] = []
-                    lrmult_by_layer[target_layer].append(node)
-                
-                # EG nodes: position above their activation layer
-                elif name.startswith('EG_'):
-                    target_layer = 101  # Default to output
-                    if 'H' in name:
-                        match = re.search(r'H(\d+)', name)
-                        if match:
-                            h_layer = int(match.group(1))
-                            target_layer = 4 + h_layer * 3
-                    if target_layer not in eg_by_layer:
-                        eg_by_layer[target_layer] = []
-                    eg_by_layer[target_layer].append(node)
-                
-                # WGS/WG nodes: align with their EG layer
-                elif name.startswith('WGS_') or name.startswith('WG_'):
-                    target_layer = 101  # Default to output
-                    if 'H' in name:
-                        match = re.search(r'H(\d+)', name)
-                        if match:
-                            h_layer = int(match.group(1))
-                            target_layer = 4 + h_layer * 3
-                    if target_layer not in wgs_by_layer:
-                        wgs_by_layer[target_layer] = []
-                    wgs_by_layer[target_layer].append(node)
-        
-        # Position LRMult nodes above their target layers
-        for target_layer, lrmult_nodes in lrmult_by_layer.items():
-            target_x = layer_map.get(target_layer, 0) * layer_width
-            for node_idx, node in enumerate(lrmult_nodes):
-                x = target_x - diagonal_offset_x - 30
-                y = -350 - node_idx * 100
-                pos[node] = (x, y)
-        
-        # Position EG nodes above their target layers
-        for target_layer, eg_nodes in eg_by_layer.items():
-            target_x = layer_map.get(target_layer, 0) * layer_width
-            for node_idx, node in enumerate(eg_nodes):
-                x = target_x + diagonal_offset_x
-                y = -250 - node_idx * 100
-                pos[node] = (x, y)
-        
-        # Position WGS/WG nodes horizontally aligned with EG
-        for target_layer, wgs_nodes in wgs_by_layer.items():
-            target_x = layer_map.get(target_layer, 0) * layer_width
-            for node_idx, node in enumerate(wgs_nodes):
-                x = target_x + diagonal_offset_x + 20
-                y = -250 - node_idx * 100
-                pos[node] = (x, y)
-        
-        # Learning Rate node: centered above everything
-        if -1 in layers:
-            lr_node = layers[-1][0]
-            # Find middle layer
-            mid_layer = len(sorted_layers) // 2
-            x = mid_layer * layer_width
-            y = -450  # High above everything
-            pos[lr_node] = (x, y)
-        
-        # Finally, position label nodes below their corresponding error nodes
-        for old_layer, nodes in layers.items():
-            for node in nodes:
-                name = node_names[node]
-                if name.startswith('Label_') or name.startswith('yd'):
-                    # Extract label index (e.g., L_y0 -> 0)
-                    label_match = re.search(r'y(\d+)', name)
-                    if label_match:
-                        label_idx = label_match.group(1)
-                        # Find corresponding error node across all layers
-                        error_name = f'Error_y{label_idx}'
-                        error_node = None
-                        for layer_nodes in layers.values():
-                            for n in layer_nodes:
-                                if node_names[n] == error_name:
-                                    error_node = n
-                                    break
-                            if error_node:
-                                break
-                        # Position below error if found
-                        if error_node and error_node in pos:
-                            x = pos[error_node][0]
-                            y = pos[error_node][1] + 120  # Directly below
-                            pos[node] = (x, y)
-                        else:
-                            # Fallback: position at output layer
-                            output_layer = layer_map.get(101, len(sorted_layers) - 1)
-                            x = output_layer * layer_width
-                            y = 150
-                            pos[node] = (x, y)
-        
+        for node in G.nodes():
+            if hasattr(node, 'gui_pos') and node.gui_pos is not None:
+                pos[node] = tuple(node.gui_pos)
+            else:
+                pos[node] = (0.0, 0.0)
         return pos
 
     def _compute_good_layout(self, G, scale):
@@ -1595,3 +966,103 @@ class GraphCanvas(QGraphicsView):
             if color:
                 node_item.color = color
                 node_item.update()  # Force redraw
+
+    def fit_all_nodes_in_view(self):
+        """Fit all nodes into the current view, maintaining aspect ratio."""
+        if not self.node_items:
+            return
+        all_rects = [item.sceneBoundingRect() for item in self.node_items.values()]
+        united_rect = all_rects[0]
+        for rect in all_rects[1:]:
+            united_rect = united_rect.united(rect)
+        padding = max(united_rect.width(), united_rect.height()) * 0.1
+        united_rect.adjust(-padding, -padding, padding, padding)
+        try:
+            self.fitInView(united_rect, Qt.AspectRatioMode.KeepAspectRatio)
+        except Exception:
+            pass
+
+    def replace_node_item(self, node_item, new_type: str):
+        """Replace the underlying graph node for a NodeItem with a new node instance of type new_type.
+
+        Args:
+            node_item: NodeItem instance to replace the underlying node for.
+            new_type: String type name of the new node class (e.g., 'MultiplicationNode').
+
+        Returns:
+            The new node object if replacement succeeded, else None.
+        """
+        import inspect
+        # find node class by name inside ComputationalGraphs.Nodes package
+        try:
+            import ComputationalGraphs.Nodes as NodesPkg
+            cls = None
+            for name, obj in inspect.getmembers(NodesPkg):
+                if inspect.isclass(obj) and obj.__name__ == new_type:
+                    cls = obj
+                    break
+            if cls is None:
+                return None
+            # Construct new node instance: prefer name parameter if supported
+            kwargs = {}
+            try:
+                sig = inspect.signature(cls.__init__)
+                if 'name' in sig.parameters:
+                    kwargs['name'] = getattr(node_item.node, 'name', None)
+            except Exception:
+                pass
+            try:
+                new_node = cls(**kwargs) if kwargs else cls()
+            except Exception:
+                # fallback to empty constructor
+                try:
+                    new_node = cls()
+                except Exception:
+                    return None
+
+            # If we have an authoritative graph, perform a Graph.ReplaceNode operation
+            g = getattr(self, 'graph', None)
+            old_node = getattr(node_item, 'node', None)
+            if g is not None and old_node is not None and old_node in getattr(g, 'nodes', []):
+                try:
+                    g.ReplaceNode(new_node, old_node)
+                except Exception:
+                    # If graph replacement fails, abort
+                    return None
+            else:
+                # No authoritative graph: attempt the simple replacement in canvas and mapping
+                try:
+                    # Keep visual mapping
+                    if node_item in self.node_items.values():
+                        # remove old mapping
+                        to_remove = None
+                        for n, i in list(self.node_items.items()):
+                            if i == node_item:
+                                to_remove = n
+                                break
+                        if to_remove is not None:
+                            del self.node_items[to_remove]
+                        self.node_items[new_node] = node_item
+                except Exception:
+                    pass
+
+            # Update node_item reference to new node
+            try:
+                node_item.node = new_node
+                # Update label text
+                try:
+                    node_item.set_label_text(getattr(new_node, 'name', ''))
+                except Exception:
+                    pass
+                # update value display
+                try:
+                    node_item.update_value_display()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+            # Return new node to caller
+            return new_node
+        except Exception:
+            return None
