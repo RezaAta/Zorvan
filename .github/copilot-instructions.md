@@ -284,12 +284,9 @@ for epoch in range(epochs):
 
 ## Known Issues & Design Challenges
 
-### Concurrent Mode Gradient Delay Problem
-The original concurrent processing approach hits a fundamental limitation for neural networks:
-- **Issue**: BufferNodes create temporal delays in weight updates
-- **Symptom**: Model trains initially but cannot reach second descent in learning curve
-- **Root cause**: New gradients calculated using delayed weights, breaking gradient descent convergence
-- **Status**: This is why forward processing is being developed (removes buffer dependency)
+
+### Concurrent Mode Gradient Delay Problem (Revised)
+After fixing the backpropagation connection issue, recent tests show that the gradient delay in concurrent mode is not a significant problem. The model can now achieve the second descent in the XOR problem, and buffer-induced delays do not prevent proper convergence. The previous belief that concurrent mode could not reach full learning curve descent was incorrect. Forward processing is still useful for buffer-free training, but concurrent mode is now validated for effective learning after the backprop fix.
 
 ### Forward Processing Branch Issue (SOLVED)
 **Problem**: Starting nodes (first layer multiplication) need to access weight and input nodes that haven't been "processed" yet but already have values.

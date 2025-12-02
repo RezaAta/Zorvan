@@ -68,6 +68,8 @@ Added a real-time plotting feature to the Computational Graphs GUI that allows u
    The PyQtGraph backend adds a few UX/quality improvements:
    - White background as the default canvas background for improved contrast and print-ready visuals.
    - Global and per-curve antialiasing (smoother lines) using `pyqtgraph` config options and per-curve antialias flags.
+      - Global and per-curve antialiasing (smoother lines) using `pyqtgraph` config options and per-curve antialias flags.
+      - New PyQtGraph rendering options: OpenGL toggle, "Decimate Large Data" mode (per-pixel decimation preserving spikes), and optional Gaussian smoothing. These controls are available from the pyqtgraph plot window.
    - Nearest-curve hover tooltips: hovering near a plotted series shows a small tooltip with the nearest curve's name and value (pixel-based proximity threshold).
    - Legend label uniqueness: when multiple nodes share the same name, labels are made unique (e.g., `Name`, `Name (1)`, `Name (2)`).
 

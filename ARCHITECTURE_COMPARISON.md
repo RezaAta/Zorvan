@@ -193,14 +193,8 @@ for epoch in range(epochs):
 
 ---
 
-## Why Weights Work in Concurrent but Not in ForwardProcessing?
 
-**Hypothesis:**
-1. In **Concurrent**, weights are processed every iteration but buffers prevent immediate propagation
-2. In **ForwardProcessing**, weights are in starting_nodes so they're active from the first iteration
-3. BUT: If weights aren't being updated properly, or if they're accumulating incorrectly...
+## Known Issues & Design Challenges
 
-**Need to investigate:**
-- Are weight updates (gradient applications) happening correctly?
-- Are ContainerNodes accumulating properly in ForwardProcessing?
-- Is the backprop graph structured correctly for forward processing execution?
+### Concurrent Mode Gradient Delay Problem (Revised)
+After fixing the backpropagation connection issue, recent tests show that the gradient delay in concurrent mode is not a significant problem. The model can now achieve the second descent in the XOR problem, and buffer-induced delays do not prevent proper convergence. The previous belief that concurrent mode could not reach full learning curve descent was incorrect. Forward processing is still useful for buffer-free training, but concurrent mode is now validated for effective learning after the backprop fix.
