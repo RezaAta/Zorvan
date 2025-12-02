@@ -316,6 +316,9 @@ paket-files/
 __pycache__/
 *.pyc
 
+# Local Python virtual environment created during development
+.venv/
+
 # Cake - Uncomment if you are using it
 # tools/**
 # !tools/packages.config

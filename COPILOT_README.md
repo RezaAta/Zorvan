@@ -38,3 +38,9 @@ What to do before making larger changes:
 - Add or update tests that exercise the changed behavior.
 
 If you need more context, read `.github/copilot-instructions.md` for the research thesis and detailed architecture notes.
+
+New project policy and tooling:
+- `CONTRIBUTING.md` – project contribution rules (TDD, commit style, testing guidance).
+- `AGENT_POLICY.md` – high-level rules for AI-assisted edits and agent behavior.
+- `DEVELOPER_GUIDE.md` – quick developer workflow including local commands, testing, and pre-commit guidance.
+Install `commitizen` and use `git cz` to create Conventional Commits; `pre-commit` is supported for local checks.

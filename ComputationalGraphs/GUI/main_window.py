@@ -2,35 +2,31 @@
 Main window for the ComputationalGraphs visual editor.
 """
 
-from PyQt6.QtWidgets import (QMainWindow, QToolBar, QStatusBar, QDockWidget,
-                             QVBoxLayout, QHBoxLayout, QWidget, QPushButton,
-                             QLabel, QSlider, QSpinBox, QMessageBox,
-                             QCheckBox, QComboBox, QScrollArea, QListWidget,
-                             QApplication, QTextEdit)
+from PyQt6.QtWidgets import (
+    QMainWindow, QDockWidget, QVBoxLayout, QHBoxLayout, QWidget, QPushButton,
+    QLabel, QSlider, QSpinBox, QMessageBox, QCheckBox, QComboBox, QScrollArea,
+    QListWidget, QApplication, QToolButton, QSizePolicy
+)
 from PyQt6.QtCore import Qt, pyqtSignal
-import sys
-from PyQt6.QtGui import QAction, QKeySequence, QColor, QFont
+from PyQt6.QtGui import QColor, QFont
 
 from .graph_canvas import GraphCanvas
 from .node_palette import NodePalette
-from .node_editor_dialog import NodeEditorDialog
 from .graph_runner import GraphRunner
 from .examples_loader import ExamplesLoader
-from .mlp_dialog import MLPGeneratorDialog
-from .backprop_dialog import BackpropDialog
-from .plot_window import PlotConfigDialog, create_plot_window  # Import at top to init PyQtGraph config early
-from . import layouts as layout_algorithms
+# Import plot_window early to init PyQtGraph config
+from .plot_window import PlotConfigDialog, create_plot_window  # noqa: F401
 
 # Import refactored controllers
 from .controllers import (
-    ExecutionController, FileIOController, SearchController, 
-    VisualizationController, NodeSequenceController, PlottingController
+    ExecutionController, FileIOController, SearchController,
+    VisualizationController, NodeSequenceController, PlottingController,
+    GraphBuilderController, DialogController, GraphLayoutController,
+    ExecutionSettingsController, GraphEdgeController, NodeEditingController,
+    ConsoleController, MenuToolbarController, ControlPanelBuilder
 )
 
 from ComputationalGraphs.Core.Graph import Graph
-
-
-from PyQt6.QtWidgets import QToolButton, QSizePolicy
 
 
 class CollapsibleSection(QWidget):
@@ -117,6 +113,15 @@ class MainWindow(QMainWindow):
         self.visualization_controller = VisualizationController(self)
         self.node_sequence_controller = NodeSequenceController(self)
         self.plotting_controller = PlottingController(self)
+        self.graph_builder_controller = GraphBuilderController(self)
+        self.dialog_controller = DialogController(self)
+        self.graph_layout_controller = GraphLayoutController(self)
+        self.execution_settings_controller = ExecutionSettingsController(self)
+        self.graph_edge_controller = GraphEdgeController(self)
+        self.node_editing_controller = NodeEditingController(self)
+        self.console_controller = ConsoleController(self)
+        self.menu_toolbar_controller = MenuToolbarController(self)
+        self.control_panel_builder = ControlPanelBuilder(self)
         
         # State (must be before init_ui)
         self.colorize_enabled = False
@@ -194,833 +199,35 @@ class MainWindow(QMainWindow):
         self.create_console_panel()
     
     def create_control_panel(self):
-        """Create the control panel dock."""
-        dock = QDockWidget("Controls", self)
-        dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.LeftDockWidgetArea)
+        """Create the control panel dock. Delegated to ControlPanelBuilder."""
+        self.control_panel_builder.build()
 
-        # Create a scroll area
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-
-        # Create section containers
-        exec_container = QWidget()
-        exec_layout = QVBoxLayout(exec_container)
-        exec_layout.setContentsMargins(0, 0, 0, 0)
-
-        viz_container = QWidget()
-        viz_layout = QVBoxLayout(viz_container)
-        viz_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Layout controls section
-        layout_container = QWidget()
-        layout_ctrl_layout = QVBoxLayout(layout_container)
-        layout_ctrl_layout.setContentsMargins(0, 0, 0, 0)
-
-        plot_container = QWidget()
-        plot_layout = QVBoxLayout(plot_container)
-        plot_layout.setContentsMargins(0, 0, 0, 0)
-
-        # --- Execution controls (includes starting/stopping nodes for forward processing)
-        exec_label = QLabel("<b>Execution Controls</b>")
-        exec_layout.addWidget(exec_label)
-
-        # Processor type selection
-        processor_layout = QHBoxLayout()
-        processor_layout.addWidget(QLabel("Processor:"))
-        self.processor_combo = QComboBox()
-        self.processor_combo.addItems(["Forward Processing", "Concurrent", "Manual Processing"])
-        self.processor_combo.setCurrentIndex(1)  # Default to Concurrent
-        self.processor_combo.currentIndexChanged.connect(self.on_processor_type_changed)
-        processor_layout.addWidget(self.processor_combo)
-        exec_layout.addLayout(processor_layout)
-
-        # Threading mode selection (only for Concurrent mode)
-        threading_layout = QHBoxLayout()
-        threading_layout.addWidget(QLabel("Threading:"))
-        self.threading_combo = QComboBox()
-        self.threading_combo.addItems(["Single Thread", "Multi Thread"])
-        self.threading_combo.setCurrentIndex(0)
-        self.threading_combo.setEnabled(True)
-        self.threading_combo.currentIndexChanged.connect(self.on_threading_mode_changed)
-        threading_layout.addWidget(self.threading_combo)
-        exec_layout.addLayout(threading_layout)
-
-        # Starting nodes management (for Forward Processing)
-        self.starting_nodes_widget = QWidget()
-        self.starting_nodes_widget.setVisible(False)
-        starting_nodes_group = QVBoxLayout(self.starting_nodes_widget)
-        starting_nodes_group.setContentsMargins(0, 0, 0, 0)
-        starting_nodes_label = QLabel("<b>Starting Nodes</b>")
-        starting_nodes_group.addWidget(starting_nodes_label)
-
-        # List widget to show starting nodes
-        self.starting_nodes_list = QListWidget()
-        self.starting_nodes_list.setMaximumHeight(120)
-        self.starting_nodes_list.setStyleSheet("QListWidget { background-color: #2a2a2a; border: 1px solid #555; }")
-        starting_nodes_group.addWidget(self.starting_nodes_list)
-
-        # Buttons for managing starting nodes
-        starting_nodes_btn_layout = QHBoxLayout()
-        self.add_to_starting_btn = QPushButton("Add Selected")
-        self.add_to_starting_btn.setToolTip("Add selected node(s) from canvas to starting nodes list")
-        self.add_to_starting_btn.clicked.connect(self.add_selected_to_starting_nodes)
-        starting_nodes_btn_layout.addWidget(self.add_to_starting_btn)
-
-        self.remove_from_starting_btn = QPushButton("Remove")
-        self.remove_from_starting_btn.setToolTip("Remove selected node(s) from starting nodes list")
-        self.remove_from_starting_btn.clicked.connect(self.remove_from_starting_nodes)
-        starting_nodes_btn_layout.addWidget(self.remove_from_starting_btn)
-        starting_nodes_group.addLayout(starting_nodes_btn_layout)
-
-        starting_nodes_btn_layout2 = QHBoxLayout()
-        self.auto_detect_starting_btn = QPushButton("Auto-Detect")
-        self.auto_detect_starting_btn.setToolTip("Auto-detect nodes with no predecessors")
-        self.auto_detect_starting_btn.clicked.connect(self.auto_detect_starting_nodes)
-        starting_nodes_btn_layout2.addWidget(self.auto_detect_starting_btn)
-
-        self.clear_starting_btn = QPushButton("Clear All")
-        self.clear_starting_btn.setToolTip("Clear all starting nodes")
-        self.clear_starting_btn.clicked.connect(self.clear_starting_nodes)
-        starting_nodes_btn_layout2.addWidget(self.clear_starting_btn)
-        starting_nodes_group.addLayout(starting_nodes_btn_layout2)
-
-        exec_layout.addWidget(self.starting_nodes_widget)
-
-        # Stopping nodes management
-        self.stopping_nodes_widget = QWidget()
-        self.stopping_nodes_widget.setVisible(False)
-        stopping_nodes_group = QVBoxLayout(self.stopping_nodes_widget)
-        stopping_nodes_group.setContentsMargins(0, 0, 0, 0)
-        stopping_nodes_label = QLabel("<b>Stopping Nodes</b>")
-        stopping_nodes_group.addWidget(stopping_nodes_label)
-
-        self.stopping_nodes_list = QListWidget()
-        self.stopping_nodes_list.setMaximumHeight(120)
-        self.stopping_nodes_list.setStyleSheet("QListWidget { background-color: #2a2a2a; border: 1px solid #555; }")
-        stopping_nodes_group.addWidget(self.stopping_nodes_list)
-
-        stopping_nodes_btn_layout = QHBoxLayout()
-        self.add_to_stopping_btn = QPushButton("Add Selected")
-        self.add_to_stopping_btn.setToolTip("Add selected node(s) from canvas to stopping nodes list")
-        self.add_to_stopping_btn.clicked.connect(self.add_selected_to_stopping_nodes)
-        stopping_nodes_btn_layout.addWidget(self.add_to_stopping_btn)
-
-        self.remove_from_stopping_btn = QPushButton("Remove")
-        self.remove_from_stopping_btn.setToolTip("Remove selected node(s) from stopping nodes list")
-        self.remove_from_stopping_btn.clicked.connect(self.remove_from_stopping_nodes)
-        stopping_nodes_btn_layout.addWidget(self.remove_from_stopping_btn)
-        stopping_nodes_group.addLayout(stopping_nodes_btn_layout)
-
-        stopping_nodes_btn_layout2 = QHBoxLayout()
-        self.auto_detect_stopping_btn = QPushButton("Auto-Detect")
-        self.auto_detect_stopping_btn.setToolTip("Auto-detect candidate stopping nodes (e.g., ContainerNodes)")
-        self.auto_detect_stopping_btn.clicked.connect(self.auto_detect_stopping_nodes)
-        stopping_nodes_btn_layout2.addWidget(self.auto_detect_stopping_btn)
-
-        self.clear_stopping_btn = QPushButton("Clear All")
-        self.clear_stopping_btn.setToolTip("Clear all stopping nodes")
-        self.clear_stopping_btn.clicked.connect(self.clear_stopping_nodes)
-        stopping_nodes_btn_layout2.addWidget(self.clear_stopping_btn)
-        stopping_nodes_group.addLayout(stopping_nodes_btn_layout2)
-
-        exec_layout.addWidget(self.stopping_nodes_widget)
-
-        # Manual sequence management (only shown in Manual Processing mode)
-        self.manual_sequence_widget = QWidget()
-        self.manual_sequence_widget.setVisible(False)
-        manual_seq_group = QVBoxLayout(self.manual_sequence_widget)
-        manual_seq_group.setContentsMargins(0, 0, 0, 0)
-        manual_seq_label = QLabel("<b>Manual Sequence</b>")
-        manual_seq_group.addWidget(manual_seq_label)
-
-        self.manual_sequence_list = QListWidget()
-        # Increase manual sequence list size to show at least 4 elements
-        self.manual_sequence_list.setMinimumHeight(120)
-        self.manual_sequence_list.setMaximumHeight(300)
-        self.manual_sequence_list.setStyleSheet("QListWidget { background-color: #2a2a2a; border: 1px solid #555; }")
-        manual_seq_group.addWidget(self.manual_sequence_list)
-
-        manual_btns = QHBoxLayout()
-        self.add_step_selected_btn = QPushButton("Add Step (Selected)")
-        self.add_step_selected_btn.clicked.connect(self.add_selected_to_manual_sequence)
-        manual_btns.addWidget(self.add_step_selected_btn)
-
-        self.add_to_selected_step_btn = QPushButton("Add to Selected Step")
-        self.add_to_selected_step_btn.clicked.connect(self.add_selected_nodes_to_selected_step)
-        manual_btns.addWidget(self.add_to_selected_step_btn)
-        self.add_to_selected_step_btn.setToolTip("Add selected node(s) on the canvas to the chosen manual sequence step")
-
-        self.remove_step_btn = QPushButton("Remove Step")
-        self.remove_step_btn.clicked.connect(self.remove_from_manual_sequence)
-        manual_btns.addWidget(self.remove_step_btn)
-
-        self.clear_sequence_btn = QPushButton("Clear Sequence")
-        self.clear_sequence_btn.clicked.connect(self.clear_manual_sequence)
-        manual_btns.addWidget(self.clear_sequence_btn)
-
-        manual_seq_group.addLayout(manual_btns)
-
-        manual_btns2 = QHBoxLayout()
-        self.load_sequence_btn = QPushButton("Load Sequence")
-        self.load_sequence_btn.clicked.connect(self.load_manual_sequence_from_graph)
-        manual_btns2.addWidget(self.load_sequence_btn)
-
-        self.apply_sequence_btn = QPushButton("Apply to Graph")
-        self.apply_sequence_btn.clicked.connect(self.apply_manual_sequence_to_graph)
-        manual_btns2.addWidget(self.apply_sequence_btn)
-
-        self.replace_selected_step_btn = QPushButton("Replace Selected Step")
-        self.replace_selected_step_btn.clicked.connect(self.replace_selected_step_with_selected_nodes)
-        manual_btns2.addWidget(self.replace_selected_step_btn)
-        self.replace_selected_step_btn.setToolTip("Replace the chosen manual sequence step with currently selected node(s) on the canvas")
-
-        manual_seq_group.addLayout(manual_btns2)
-        exec_layout.addWidget(self.manual_sequence_widget)
-
-        # (Removed debug button: 'Mark Weights Processed')
-
-        exec_layout.addWidget(QLabel(""))  # Spacer
-
-        # Play/Pause/Step/Reset and speed controls
-        btn_layout = QHBoxLayout()
-        self.play_btn = QPushButton("▶ Start")
-        self.play_btn.clicked.connect(self.play_graph)
-        btn_layout.addWidget(self.play_btn)
-        self.pause_btn = QPushButton("⏸ Pause")
-        self.pause_btn.clicked.connect(self.pause_graph)
-        self.pause_btn.setEnabled(False)
-        btn_layout.addWidget(self.pause_btn)
-
-        # Explicit Resume button (separate from Play)
-        self.resume_btn = QPushButton("⤻ Resume")
-        self.resume_btn.clicked.connect(self.resume_graph)
-        self.resume_btn.setEnabled(False)
-        btn_layout.addWidget(self.resume_btn)
-        exec_layout.addLayout(btn_layout)
-
-        self.step_btn = QPushButton("Step →")
-        self.step_btn.clicked.connect(self.step_graph)
-        exec_layout.addWidget(self.step_btn)
-
-        self.reset_btn = QPushButton("⏹ Reset")
-        self.reset_btn.clicked.connect(self.reset_graph)
-        exec_layout.addWidget(self.reset_btn)
-
-        # Add Rebuild button in the Execution Controls for convenience
-        self.rebuild_exec_btn = QPushButton("🔁 Rebuild")
-        self.rebuild_exec_btn.setToolTip("Rebuild the graph from canvas without running it")
-        self.rebuild_exec_btn.clicked.connect(self.rebuild_graph)
-        exec_layout.addWidget(self.rebuild_exec_btn)
-
-        steps_layout = QHBoxLayout()
-        steps_layout.addWidget(QLabel("Max Steps:"))
-        self.max_steps_spin = QSpinBox()
-        # Allow a much larger maximum to remove the previous 10,000 hard cap.
-        # Keep a practical upper bound to avoid accidental huge numbers; can be adjusted later.
-        self.max_steps_spin.setRange(1, 100000000)
-        self.max_steps_spin.setValue(100)
-        steps_layout.addWidget(self.max_steps_spin)
-        exec_layout.addLayout(steps_layout)
-
-        speed_layout = QVBoxLayout()
-        self.max_speed_btn = QPushButton("⚡ Max Speed (0ms)")
-        self.max_speed_btn.setCheckable(True)
-        self.max_speed_btn.setToolTip("Set visualization delay to 0ms (maximum speed with visualization)")
-        self.max_speed_btn.clicked.connect(self.on_max_speed_toggled)
-        speed_layout.addWidget(self.max_speed_btn)
-
-        self.skip_viz_check = QCheckBox("Skip Graph Visualization")
-        self.skip_viz_check.setToolTip("Run all steps without updating graph visuals, then update at the end (faster)")
-        self.skip_viz_check.stateChanged.connect(self.on_skip_viz_changed)
-        speed_layout.addWidget(self.skip_viz_check)
-
-        self.skip_plot_check = QCheckBox("Skip Plot Updates")
-        self.skip_plot_check.setToolTip("Run without updating plot window during execution (faster)")
-        self.skip_plot_check.stateChanged.connect(self.on_skip_plot_changed)
-        speed_layout.addWidget(self.skip_plot_check)
-
-        self.verbose_check = QCheckBox("Verbose Terminal Output")
-        self.verbose_check.setToolTip("Enable detailed logging to terminal (may slow down execution)")
-        self.verbose_check.stateChanged.connect(self.on_verbose_changed)
-        speed_layout.addWidget(self.verbose_check)
-
-        self.dim_processed_check = QCheckBox("Dim Processed Nodes (Debug)")
-        self.dim_processed_check.setToolTip("Dim nodes that are marked 'processed' by the forward processor")
-        self.dim_processed_check.stateChanged.connect(self.on_dim_processed_changed)
-        speed_layout.addWidget(self.dim_processed_check)
-
-        speed_layout.addWidget(QLabel("Visualization Delay (ms/step):"))
-        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
-        self.speed_slider.setRange(10, 2000)
-        self.speed_slider.setValue(500)
-        self.speed_slider.valueChanged.connect(self.on_speed_changed)
-        speed_layout.addWidget(self.speed_slider)
-
-        # Allow the user to type an exact speed value (ms/step)
-        spin_layout = QHBoxLayout()
-        self.speed_spin = QSpinBox()
-        self.speed_spin.setRange(10, 2000)
-        self.speed_spin.setValue(500)
-        self.speed_spin.setSingleStep(10)
-        self.speed_spin.valueChanged.connect(self.on_speed_spin_changed)
-        spin_layout.addWidget(self.speed_spin)
-
-        self.speed_label = QLabel("500 ms")
-        spin_layout.addWidget(self.speed_label)
-        spin_layout.addStretch()
-        speed_layout.addLayout(spin_layout)
-        exec_layout.addLayout(speed_layout)
-
-        self.step_label = QLabel("Step: 0")
-        exec_layout.addWidget(self.step_label)
-
-        exec_layout.addWidget(QLabel(""))  # Spacer
-
-        # --- Visualization controls
-        viz_label = QLabel("<b>Visualization</b>")
-        viz_layout.addWidget(viz_label)
-
-        self.colorize_check = QCheckBox("Colorize by Value")
-        self.colorize_check.stateChanged.connect(self.on_colorize_changed)
-        viz_layout.addWidget(self.colorize_check)
-
-        self.auto_range_btn = QPushButton("Auto Detect Min/Max")
-        self.auto_range_btn.clicked.connect(self.auto_detect_range)
-        self.auto_range_btn.setEnabled(False)
-        viz_layout.addWidget(self.auto_range_btn)
-
-        color_range_layout = QVBoxLayout()
-        min_layout = QHBoxLayout()
-        min_layout.addWidget(QLabel("Min Value:"))
-        self.min_value_label = QLabel("0.0")
-        self.min_value_label.setStyleSheet("font-weight: bold;")
-        min_layout.addWidget(self.min_value_label)
-        min_layout.addStretch()
-        color_range_layout.addLayout(min_layout)
-
-        max_layout = QHBoxLayout()
-        max_layout.addWidget(QLabel("Max Value:"))
-        self.max_value_label = QLabel("1.0")
-        self.max_value_label.setStyleSheet("font-weight: bold;")
-        max_layout.addWidget(self.max_value_label)
-        max_layout.addStretch()
-        color_range_layout.addLayout(max_layout)
-
-        viz_layout.addLayout(color_range_layout)
-
-        gradient_layout = QVBoxLayout()
-        min_color_layout = QHBoxLayout()
-        min_color_layout.addWidget(QLabel("Min Color:"))
-        self.min_color_btn = QPushButton()
-        self.min_color_btn.setFixedSize(60, 25)
-        self.min_color_btn.setStyleSheet(f"background-color: {self.min_gradient_color.name()};")
-        self.min_color_btn.clicked.connect(self.choose_min_color)
-        min_color_layout.addWidget(self.min_color_btn)
-        min_color_layout.addStretch()
-        gradient_layout.addLayout(min_color_layout)
-
-        max_color_layout = QHBoxLayout()
-        max_color_layout.addWidget(QLabel("Max Color:"))
-        self.max_color_btn = QPushButton()
-        self.max_color_btn.setFixedSize(60, 25)
-        self.max_color_btn.setStyleSheet(f"background-color: {self.max_gradient_color.name()};")
-        self.max_color_btn.clicked.connect(self.choose_max_color)
-        max_color_layout.addWidget(self.max_color_btn)
-        max_color_layout.addStretch()
-        gradient_layout.addLayout(max_color_layout)
-
-        viz_layout.addLayout(gradient_layout)
-
-        viz_layout.addWidget(QLabel(""))  # Spacer
-
-        # Node appearance controls (moved to Visualization)
-        appearance_label = QLabel("<b>Node Appearance</b>")
-        viz_layout.addWidget(appearance_label)
-
-        node_color_layout = QHBoxLayout()
-        node_color_layout.addWidget(QLabel("Node Color:"))
-        self.node_color_btn = QPushButton()
-        self.node_color_btn.setFixedSize(60, 25)
-        self.default_node_color = QColor(100, 150, 200)
-        self.node_color_btn.setStyleSheet(f"background-color: {self.default_node_color.name()};")
-        self.node_color_btn.clicked.connect(self.choose_node_color)
-        node_color_layout.addWidget(self.node_color_btn)
-        node_color_layout.addStretch()
-        viz_layout.addLayout(node_color_layout)
-
-        text_color_layout = QHBoxLayout()
-        text_color_layout.addWidget(QLabel("Text Color:"))
-        self.text_color_btn = QPushButton()
-        self.text_color_btn.setFixedSize(60, 25)
-        self.default_text_color = QColor(255, 255, 255)
-        self.text_color_btn.setStyleSheet(f"background-color: {self.default_text_color.name()};")
-        self.text_color_btn.clicked.connect(self.choose_text_color)
-        text_color_layout.addWidget(self.text_color_btn)
-        text_color_layout.addStretch()
-        viz_layout.addLayout(text_color_layout)
-
-        self.apply_colors_btn = QPushButton("Apply to All Nodes")
-        self.apply_colors_btn.clicked.connect(self.apply_node_colors)
-        viz_layout.addWidget(self.apply_colors_btn)
-
-        self.apply_selected_colors_btn = QPushButton("Apply to Selected")
-        self.apply_selected_colors_btn.clicked.connect(self.apply_node_colors_selected)
-        viz_layout.addWidget(self.apply_selected_colors_btn)
-
-        # Grid & Snapping controls
-        self.grid_group_label = QLabel("<b>Grid & Snap</b>")
-        viz_layout.addWidget(self.grid_group_label)
-
-        # Show grid checkbox
-        self.show_grid_check = QCheckBox("Show Grid")
-        self.show_grid_check.setToolTip("Toggle drawing the background grid")
-        # Default: show grid on
-        self.show_grid_check.setChecked(True)
-        self.show_grid_check.stateChanged.connect(lambda s: self.canvas.set_show_grid(s == Qt.CheckState.Checked.value))
-        viz_layout.addWidget(self.show_grid_check)
-
-        # Snap to grid checkbox
-        self.snap_grid_check = QCheckBox("Snap to Grid")
-        self.snap_grid_check.setToolTip("Snap node positions to grid on move/paste/drop")
-        self.snap_grid_check.setChecked(True)
-        self.snap_grid_check.stateChanged.connect(lambda s: self.canvas.set_snap_to_grid(s == Qt.CheckState.Checked.value))
-        viz_layout.addWidget(self.snap_grid_check)
-
-        # Snap while dragging checkbox
-        self.snap_while_dragging_check = QCheckBox("Snap while dragging")
-        self.snap_while_dragging_check.setToolTip("If enabled nodes snap to grid while dragging; otherwise snap on release")
-        self.snap_while_dragging_check.setChecked(True)
-        self.snap_while_dragging_check.stateChanged.connect(lambda s: self.canvas.set_snap_while_dragging(s == Qt.CheckState.Checked.value))
-        viz_layout.addWidget(self.snap_while_dragging_check)
-
-        # Grid mode selector (1x1 or 4x4)
-        self.grid_mode_combo = QComboBox()
-        self.grid_mode_combo.addItems(["Node cell (1×1)", "Node 4×4"])
-        self.grid_mode_combo.setCurrentIndex(0)  # Default to grid cell (1x1) for MLP layouts
-        # Map to internal modes: index 0 -> '1x1', index 1 -> '4x4'
-        def on_grid_mode_changed(idx):
-            mode = '1x1' if idx == 0 else '4x4'
-            self.canvas.set_grid_mode(mode)
-            # Update displayed grid size
-            try:
-                self.grid_size_label.setText(f"Grid Cell: {self.canvas.grid_size}px")
-            except Exception:
-                pass
-        self.grid_mode_combo.currentIndexChanged.connect(on_grid_mode_changed)
-        grid_mode_layout = QHBoxLayout()
-        grid_mode_layout.addWidget(QLabel("Grid Mode:"))
-        grid_mode_layout.addWidget(self.grid_mode_combo)
-        grid_mode_layout.addStretch()
-        viz_layout.addLayout(grid_mode_layout)
-
-        self.grid_size_label = QLabel(f"Grid Cell: {self.canvas.grid_size}px")
-        viz_layout.addWidget(self.grid_size_label)
-
-        # Snap Granularity (grid cell vs node-block)
-        self.snap_gran_combo = QComboBox()
-        self.snap_gran_combo.addItems(["Snap to Grid Cell", "Snap to Node Block (4×) "])
-        self.snap_gran_combo.setCurrentIndex(1)  # default to node block
-        def on_snap_gran_changed(idx):
-            if idx == 0:
-                # Snap to one grid cell
-                self.canvas.snap_step = 1
-            else:
-                # Snap to node block
-                self.canvas.snap_step = 4
-        self.snap_gran_combo.currentIndexChanged.connect(on_snap_gran_changed)
-        snap_gran_layout = QHBoxLayout()
-        snap_gran_layout.addWidget(QLabel("Snap Granularity:"))
-        snap_gran_layout.addWidget(self.snap_gran_combo)
-        snap_gran_layout.addStretch()
-        viz_layout.addLayout(snap_gran_layout)
-        # Trigger initial update of grid label and canvas mode
-        on_grid_mode_changed(self.grid_mode_combo.currentIndex())
-
-        # Move Apply ANN Colors to Visualization per request
-        self.ann_colors_btn = QPushButton("Apply ANN Colors")
-        self.ann_colors_btn.clicked.connect(self.canvas.apply_ann_colors)
-        viz_layout.addWidget(self.ann_colors_btn)
-
-        viz_layout.addStretch()
-
-        # --- Layout controls (graph layout algorithms)
-        layout_label = QLabel("<b>Graph Layout</b>")
-        layout_ctrl_layout.addWidget(layout_label)
-
-        # Layout algorithm buttons
-        self.layout_sugiyama_btn = QPushButton("Hierarchical (Sugiyama)")
-        self.layout_sugiyama_btn.setToolTip("Sugiyama algorithm for DAGs - optimal for computational flow graphs")
-        self.layout_sugiyama_btn.clicked.connect(lambda: self.apply_graph_layout('sugiyama'))
-        layout_ctrl_layout.addWidget(self.layout_sugiyama_btn)
-
-        self.layout_tree_btn = QPushButton("Tree Layout")
-        self.layout_tree_btn.setToolTip("Walker's tree layout - best for tree-structured graphs")
-        self.layout_tree_btn.clicked.connect(lambda: self.apply_graph_layout('tree'))
-        layout_ctrl_layout.addWidget(self.layout_tree_btn)
-
-        self.layout_mlp_btn = QPushButton("Neural Network Layers")
-        self.layout_mlp_btn.setToolTip("Auto-detect MLP structure from node names (inputs, weights, activations, etc.)")
-        self.layout_mlp_btn.clicked.connect(lambda: self.apply_graph_layout('mlp_layered'))
-        layout_ctrl_layout.addWidget(self.layout_mlp_btn)
-
-        self.layout_mlp_full_btn = QPushButton("MLP Layout (Full)")
-        self.layout_mlp_full_btn.setToolTip("Manual MLP layout with forward pass and backprop positioning")
-        self.layout_mlp_full_btn.clicked.connect(lambda: self.apply_graph_layout('mlp_layout'))
-        layout_ctrl_layout.addWidget(self.layout_mlp_full_btn)
-
-        # Layout direction option
-        direction_layout = QHBoxLayout()
-        direction_layout.addWidget(QLabel("Direction:"))
-        self.layout_direction_combo = QComboBox()
-        self.layout_direction_combo.addItems(["Left → Right", "Top → Bottom"])
-        self.layout_direction_combo.setCurrentIndex(0)  # Default LR
-        self.layout_direction_combo.setToolTip("Data flow direction for layout")
-        direction_layout.addWidget(self.layout_direction_combo)
-        direction_layout.addStretch()
-        layout_ctrl_layout.addLayout(direction_layout)
-
-        # Node spacing control
-        spacing_layout = QHBoxLayout()
-        spacing_layout.addWidget(QLabel("Spacing:"))
-        self.layout_spacing_spin = QSpinBox()
-        self.layout_spacing_spin.setRange(50, 500)
-        self.layout_spacing_spin.setValue(80)  # Default to 80px (matches grid cell size)
-        self.layout_spacing_spin.setSingleStep(10)
-        self.layout_spacing_spin.setSuffix(" px")
-        self.layout_spacing_spin.setToolTip("Spacing between nodes in the layout")
-        spacing_layout.addWidget(self.layout_spacing_spin)
-        spacing_layout.addStretch()
-        layout_ctrl_layout.addLayout(spacing_layout)
-
-        # Library status indicator
-        self.layout_status_label = QLabel()
-        self._update_layout_status_label()
-        layout_ctrl_layout.addWidget(self.layout_status_label)
-
-        layout_ctrl_layout.addStretch()
-
-        # --- Plotting controls
-        plotting_label = QLabel("<b>Plotting</b>")
-        plot_layout.addWidget(plotting_label)
-
-        self.open_plot_btn = QPushButton("📊 Open Plot Window")
-        self.open_plot_btn.clicked.connect(self.open_plot_window)
-        plot_layout.addWidget(self.open_plot_btn)
-
-        self.add_to_plot_btn = QPushButton("➕ Add Selected to Plot")
-        self.add_to_plot_btn.clicked.connect(self.add_selected_to_plot)
-        plot_layout.addWidget(self.add_to_plot_btn)
-
-        # Plot backend selection
-        backend_layout = QHBoxLayout()
-        backend_layout.addWidget(QLabel("Plot Backend:"))
-        self.plot_backend_combo = QComboBox()
-        self.plot_backend_combo.addItems(["PyQtGraph", "Matplotlib"])
-        # Default: PyQtGraph if available; keep Matplotlib as fallback
-        # The UI combobox is user-visible; use it when creating new plot windows
-        self.plot_backend_combo.setCurrentIndex(0)
-        self.plot_backend_combo.currentIndexChanged.connect(self._on_plot_backend_changed)
-        backend_layout.addWidget(self.plot_backend_combo)
-        plot_layout.addLayout(backend_layout)
-
-        plot_layout.addStretch()
-
-        # Add collapsible sections to main layout
-        # Order: Execution -> Layout -> Visualization -> Plotting
-        layout.addWidget(CollapsibleSection("Execution", exec_container, expanded=True))
-        layout.addWidget(CollapsibleSection("Layout", layout_container, expanded=True))
-        layout.addWidget(CollapsibleSection("Visualization", viz_container, expanded=False))
-        layout.addWidget(CollapsibleSection("Plotting", plot_container, expanded=False))
-
-        layout.addStretch()
-
-        # Set the widget inside the scroll area
-        scroll.setWidget(widget)
-        dock.setWidget(scroll)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-        self.control_dock = dock
-    
     def create_actions(self):
-        """Create menu actions."""
-        # File actions
-        self.new_action = QAction("&New", self)
-        self.new_action.setShortcut(QKeySequence.StandardKey.New)
-        self.new_action.triggered.connect(self.new_graph)
-        
-        self.open_action = QAction("&Open...", self)
-        self.open_action.setShortcut(QKeySequence.StandardKey.Open)
-        self.open_action.triggered.connect(self.open_graph)
-        
-        self.save_action = QAction("&Save", self)
-        self.save_action.setShortcut(QKeySequence.StandardKey.Save)
-        self.save_action.triggered.connect(self.save_graph)
-        
-        self.exit_action = QAction("E&xit", self)
-        self.exit_action.setShortcut(QKeySequence.StandardKey.Quit)
-        self.exit_action.triggered.connect(self.close)
-        
-        # Edit actions
-        self.delete_action = QAction("&Delete", self)
-        self.delete_action.setShortcut(QKeySequence.StandardKey.Delete)
-        self.delete_action.triggered.connect(self.canvas.remove_selected_items)
-        
-        self.edit_node_action = QAction("&Edit Node...", self)
-        self.edit_node_action.setShortcut(QKeySequence("Ctrl+E"))
-        self.edit_node_action.triggered.connect(self.edit_selected_node)
-        
-        # Copy / Cut / Paste actions for canvas
-        self.copy_action = QAction("&Copy", self)
-        self.copy_action.setShortcut(QKeySequence.StandardKey.Copy)
-        self.copy_action.triggered.connect(lambda: self.canvas.copy_selected())
+        """Create menu actions. Delegated to MenuToolbarController."""
+        self.menu_toolbar_controller.create_actions()
 
-        self.cut_action = QAction("Cu&t", self)
-        self.cut_action.setShortcut(QKeySequence.StandardKey.Cut)
-        self.cut_action.triggered.connect(lambda: self.canvas.cut_selected())
-
-        self.paste_action = QAction("&Paste", self)
-        self.paste_action.setShortcut(QKeySequence.StandardKey.Paste)
-        self.paste_action.triggered.connect(lambda: self.canvas.paste_clipboard())
-
-        # Tools action: Rebuild Graph
-        self.rebuild_action = QAction("Rebuild &Graph", self)
-        self.rebuild_action.setStatusTip("Rebuild the graph from the canvas without running it")
-        self.rebuild_action.triggered.connect(self.rebuild_graph)
-    
     def create_menus(self):
-        """Create menu bar."""
-        menubar = self.menuBar()
-        
-        # File menu
-        file_menu = menubar.addMenu("&File")
-        file_menu.addAction(self.new_action)
-        file_menu.addAction(self.open_action)
-        file_menu.addAction(self.save_action)
-        file_menu.addSeparator()
-        
-        # Examples submenu
-        examples_menu = file_menu.addMenu("&Examples")
-        self._populate_examples_menu(examples_menu)
-        
-        file_menu.addSeparator()
-        file_menu.addAction(self.exit_action)
-        
-        # Edit menu
-        edit_menu = menubar.addMenu("&Edit")
-        edit_menu.addAction(self.delete_action)
-        edit_menu.addAction(self.copy_action)
-        edit_menu.addAction(self.cut_action)
-        edit_menu.addAction(self.paste_action)
-        edit_menu.addAction(self.edit_node_action)
-        
-        # Tools menu
-        tools_menu = menubar.addMenu("&Tools")
-        
-        mlp_action = QAction("Generate &MLP...", self)
-        mlp_action.setShortcut(QKeySequence("Ctrl+M"))
-        mlp_action.setStatusTip("Generate a new Multi-Layer Perceptron network")
-        mlp_action.triggered.connect(self._show_mlp_dialog)
-        tools_menu.addAction(mlp_action)
-        
-        backprop_action = QAction("Add &Backpropagation...", self)
-        backprop_action.setShortcut(QKeySequence("Ctrl+B"))
-        backprop_action.setStatusTip("Add backpropagation training to current MLP")
-        backprop_action.triggered.connect(self._show_backprop_dialog)
-        tools_menu.addAction(backprop_action)
-        tools_menu.addSeparator()
-        # Add rebuild action to Tools
-        tools_menu.addAction(self.rebuild_action)
-        
-        # View menu
-        view_menu = menubar.addMenu("&View")
-        
-        fit_view_action = QAction("&Fit All Nodes", self)
-        fit_view_action.setShortcut(QKeySequence("F"))
-        fit_view_action.setStatusTip("Fit all nodes in view (F)")
-        fit_view_action.triggered.connect(self.canvas.fit_all_nodes_in_view)
-        view_menu.addAction(fit_view_action)
-        
-        view_menu.addSeparator()
-        view_menu.addAction(self.palette.toggleViewAction())
-        view_menu.addAction(self.control_dock.toggleViewAction())
-        # Console toggle (hidden by default)
-        try:
-            view_menu.addAction(self.console_dock.toggleViewAction())
-        except Exception:
-            pass
-    
+        """Create menu bar. Delegated to MenuToolbarController."""
+        self.menu_toolbar_controller.create_menus()
+
     def create_toolbars(self):
-        """Create toolbars."""
-        toolbar = QToolBar("Main Toolbar")
-        self.addToolBar(toolbar)
-        
-        toolbar.addAction(self.new_action)
-        toolbar.addAction(self.open_action)
-        toolbar.addAction(self.save_action)
-        toolbar.addSeparator()
-        toolbar.addAction(self.delete_action)
-        toolbar.addAction(self.edit_node_action)
-        toolbar.addSeparator()
-        
-        # Add Find Node search bar
-        from PyQt6.QtWidgets import QLineEdit
-        toolbar.addWidget(QLabel("Find Node:"))
-        self.search_box = QLineEdit()
-        self.search_box.setPlaceholderText("Search by node name...")
-        self.search_box.setMaximumWidth(200)
-        self.search_box.returnPressed.connect(self.find_node)
-        self.search_box.textChanged.connect(self.highlight_matching_nodes)
-        toolbar.addWidget(self.search_box)
-        
-        find_next_btn = QPushButton("Next")
-        find_next_btn.clicked.connect(self.find_next_node)
-        find_next_btn.setMaximumWidth(60)
-        toolbar.addWidget(find_next_btn)
-        
-        # Track search results
-        self.search_results = []
-        self.search_index = -1
-        # Add a small toolbar button for Rebuild Graph
-        self.rebuild_btn = QPushButton("🔁 Rebuild")
-        self.rebuild_btn.setToolTip("Rebuild the graph from the canvas without running it")
-        self.rebuild_btn.clicked.connect(self.rebuild_graph)
-        self.rebuild_btn.setMaximumWidth(120)
-        toolbar.addWidget(self.rebuild_btn)
-    
+        """Create toolbars. Delegated to MenuToolbarController."""
+        self.menu_toolbar_controller.create_toolbars()
+
     def create_status_bar(self):
-        """Create status bar."""
-        self.status_bar = QStatusBar()
-        self.setStatusBar(self.status_bar)
-        self.status_bar.showMessage("Ready")
+        """Create status bar. Delegated to MenuToolbarController."""
+        self.menu_toolbar_controller.create_status_bar()
 
     def create_console_panel(self):
-        """Create a docked console for verbose/debug output."""
-        dock = QDockWidget("Console", self)
-        dock.setAllowedAreas(Qt.DockWidgetArea.BottomDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
-
-        container = QWidget()
-        v = QVBoxLayout(container)
-        v.setContentsMargins(4, 4, 4, 4)
-
-        # Console text area (read-only)
-        self.console_text = QTextEdit()
-        self.console_text.setReadOnly(True)
-        # Dark theme to match app
-        self.console_text.setStyleSheet("background-color: #1e1e1e; color: #e6e6e6; font-family: Segoe UI; font-size: 11px;")
-        v.addWidget(self.console_text)
-
-        # Connect the signal so writes are thread-safe
-        try:
-            self.console_write.connect(self.console_text.append)
-        except Exception:
-            pass
-
-        # Controls: clear and echo-to-terminal
-        btn_layout = QHBoxLayout()
-        self.clear_console_btn = QPushButton("Clear")
-        self.clear_console_btn.clicked.connect(lambda: self.console_text.clear())
-        btn_layout.addWidget(self.clear_console_btn)
-
-        self.echo_terminal_check = QCheckBox("Echo to terminal")
-        self.echo_terminal_check.setChecked(True)
-        btn_layout.addWidget(self.echo_terminal_check)
-
-        btn_layout.addStretch()
-        v.addLayout(btn_layout)
-
-        dock.setWidget(container)
-        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock)
-        try:
-            dock.hide()
-        except Exception:
-            pass
-        self.console_dock = dock
-
-        # Redirect stdout/stderr to the in-app console (keeps original outputs)
-        class ConsoleRedirector:
-            def __init__(self, main_win, orig_stream, name='stdout'):
-                self.main_win = main_win
-                self.orig = orig_stream
-                self.name = name
-
-            def write(self, msg):
-                if not msg:
-                    return
-                try:
-                    # Emit signal to append safely in the GUI thread
-                    try:
-                        self.main_win.console_write.emit(msg)
-                    except Exception:
-                        # Fallback to directly appending if signal not connected
-                        try:
-                            self.main_win.console_text.append(msg)
-                        except Exception:
-                            pass
-                finally:
-                    try:
-                        # Always forward to the original stream so terminal still gets output
-                        self.orig.write(msg)
-                    except Exception:
-                        pass
-
-            def flush(self):
-                try:
-                    self.orig.flush()
-                except Exception:
-                    pass
-
-        try:
-            # Keep originals to restore later if needed
-            self._orig_stdout = sys.stdout
-            self._orig_stderr = sys.stderr
-            sys.stdout = ConsoleRedirector(self, self._orig_stdout, 'stdout')
-            sys.stderr = ConsoleRedirector(self, self._orig_stderr, 'stderr')
-        except Exception:
-            # If redirect fails, ignore silently
-            pass
+        """Create console panel. Delegated to ConsoleController."""
+        self.console_controller.create_console_panel()
 
     def write_to_console(self, message: str, verbose_only: bool = False):
-        """Append a message to the in-app console.
+        """Write to console. Delegated to ConsoleController."""
+        self.console_controller.write_to_console(message, verbose_only)
 
-        If `verbose_only` is True, the message is added only when verbose is enabled.
-        Always echoes to terminal when `self.echo_terminal_check` is checked.
-        """
-        try:
-            if verbose_only and not getattr(self, 'verbose_check', None):
-                # If verbose UI control hasn't been created yet, fall back to printing
-                print(message)
-                return
-
-            if verbose_only and not self.verbose_check.isChecked():
-                return
-
-            # Append message with newline and auto-scroll
-            self.console_text.append(message)
-            self.console_text.moveCursor(self.console_text.textCursor().End)
-
-            # Echo to terminal if requested (the ConsoleRedirector already forwards to original stdout)
-            # Keep this behavior intact for non-redirected code paths
-            if getattr(self, 'echo_terminal_check', None) and self.echo_terminal_check.isChecked():
-                try:
-                    # Use original stdout to avoid recursive redirection
-                    if hasattr(self, '_orig_stdout'):
-                        self._orig_stdout.write(message + "\n")
-                    else:
-                        print(message)
-                except Exception:
-                    try:
-                        print(message)
-                    except Exception:
-                        pass
-        except Exception:
-            # Fallback: print to terminal
-            print(message)
-    
     # Graph operations - delegated to FileIOController
-    
+
     def new_graph(self):
         """Create a new empty graph."""
         self.file_io_controller.new_graph()
@@ -1034,62 +241,19 @@ class MainWindow(QMainWindow):
         self.file_io_controller.save_graph()
     
     def edit_node(self, node_item):
-        """Open editor dialog for a specific node item."""
-        dialog = NodeEditorDialog(node_item.node, self)
-        
-        if dialog.exec():
-            # Update visuals
-            # Use NodeItem helper to reset text and re-center label
-            try:
-                node_item.set_label_text(node_item.node.name)
-            except Exception:
-                # Fallback to old behavior if NodeItem doesn't have helper
-                node_item.label.setPlainText(node_item.node.name)
-                try:
-                    rect = node_item.label.boundingRect()
-                    node_item.label.setPos(-rect.width() / 2, -rect.height() / 2 - 10)
-                except Exception:
-                    pass
-            node_item.update_value_display()
-            self.status_bar.showMessage(f"Node '{node_item.node.name}' updated")
+        """Open editor dialog for a specific node item. Delegated to NodeEditingController."""
+        self.node_editing_controller.edit_node(node_item)
 
     def replace_node(self, node_item):
-        """Prompt user to replace node type and perform swap using canvas.replace_node_item."""
-        from .replace_node_dialog import ReplaceNodeDialog
-        dlg = ReplaceNodeDialog(self)
-        if dlg.exec():
-            new_type = dlg.selected_type()
-            if new_type:
-                # Delegate orchestration to canvas
-                new_node = None
-                try:
-                    new_node = self.canvas.replace_node_item(node_item, new_type)
-                except Exception:
-                    new_node = None
-                if new_node:
-                    # Open editor to adjust node parameters right away
-                    try:
-                        self.edit_node(node_item)
-                    except Exception:
-                        pass
-                    self.status_bar.showMessage(f"Replaced node with type '{new_type}'")
-    
+        """Replace node type. Delegated to NodeEditingController."""
+        self.node_editing_controller.replace_node(node_item)
+
     def edit_selected_node(self):
-        """Open editor for the selected node."""
-        selected = self.canvas.scene.selectedItems()
-        
-        from .node_item import NodeItem
-        node_items = [item for item in selected if isinstance(item, NodeItem)]
-        
-        if not node_items:
-            QMessageBox.information(self, "No Selection", "Please select a node to edit.")
-            return
-        
-        node_item = node_items[0]
-        self.edit_node(node_item)
-    
+        """Open editor for the selected node. Delegated to NodeEditingController."""
+        self.node_editing_controller.edit_selected_node()
+
     # Execution controls - delegated to ExecutionController
-    
+
     def play_graph(self):
         """Start graph execution."""
         self.execution_controller.play()
@@ -1115,63 +279,8 @@ class MainWindow(QMainWindow):
         self.execution_controller.reset()
     
     def rebuild_graph(self):
-        """Rebuild the graph from canvas nodes and edges."""
-        # If canvas is empty, confirm with the user before wiping an existing graph
-        if not self.canvas.node_items:
-            reply = QMessageBox.question(self, "Rebuild Graph",
-                                         "Canvas is empty. Rebuilding will clear the existing graph. Continue?",
-                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            # Ensure the canvas scene rect includes all created nodes (useful for large graphs)
-            try:
-                self.canvas._update_scene_rect()
-            except Exception:
-                pass
-            # Center view on the scene center so large examples are visible immediately
-            try:
-                center = self.canvas.scene.sceneRect().center()
-                self.canvas.centerOn(center)
-            except Exception:
-                pass
-            if reply != QMessageBox.StandardButton.Yes:
-                self.status_bar.showMessage("Rebuild cancelled")
-                return
-        # Preserve starting_nodes and stopping_nodes before rebuilding
-        old_starting_nodes = list(self.graph.starting_nodes) if hasattr(self.graph, 'starting_nodes') else []
-        old_stopping_nodes = list(self.graph.stopping_nodes) if hasattr(self.graph, 'stopping_nodes') else []
-        old_manual_sequence = list(self.graph.manual_processing_sequence) if hasattr(self.graph, 'manual_processing_sequence') and self.graph.manual_processing_sequence else None
-        
-        new_graph = Graph()
-        
-        # Add all nodes
-        for node in self.canvas.node_items.keys():
-            new_graph.AddNode(node)
-        
-        # Add edges (connections)
-        for edge_item in self.canvas.edge_items:
-            source = edge_item.source_node.node
-            target = edge_item.target_node.node
-            
-            # Add connection - check if source is not already a predecessor of target
-            if source not in target.predecessors:
-                target.AddPreNode(source)
-        
-        # Update adjacency matrix
-        new_graph.UpdateAdjacencyMatrix()
-        
-        # Restore starting_nodes, stopping_nodes and manual sequence
-        new_graph.starting_nodes = old_starting_nodes
-        new_graph.stopping_nodes = old_stopping_nodes
-        new_graph.manual_processing_sequence = old_manual_sequence
-        
-        # Set the graph via the helper to synchronize canvas and runner
-        self.set_graph(new_graph)
-        # Update UI state
-        try:
-            self.update_starting_nodes_display()
-            self.update_stopping_nodes_display()
-        except Exception:
-            pass
-        self.status_bar.showMessage("Graph rebuilt from canvas")
+        """Rebuild the graph from canvas nodes and edges. Delegated to GraphEdgeController."""
+        self.graph_edge_controller.rebuild_graph()
     
     # Event handlers - delegated to ExecutionController
     
@@ -1186,71 +295,21 @@ class MainWindow(QMainWindow):
     def on_error(self, message):
         """Handle execution error."""
         self.execution_controller.on_error(message)
-    
-    def on_speed_changed(self, value):
-        """Handle speed slider change."""
-        # Keep spinbox in sync when slider moves
-        try:
-            if hasattr(self, 'speed_spin') and self.speed_spin.value() != value:
-                self.speed_spin.blockSignals(True)
-                self.speed_spin.setValue(value)
-                self.speed_spin.blockSignals(False)
-        except Exception:
-            pass
 
-        self.speed_label.setText(f"{value} ms")
-        self.graph_runner.set_speed(value)
+    # Speed and execution settings - delegated to ExecutionSettingsController
+
+    def on_speed_changed(self, value):
+        """Handle speed slider change. Delegated to ExecutionSettingsController."""
+        self.execution_settings_controller.on_speed_changed(value)
 
     def on_speed_spin_changed(self, value):
-        """Handle speed spinbox (typed) change."""
-        # Keep slider in sync when spinbox changes
-        try:
-            if hasattr(self, 'speed_slider') and self.speed_slider.value() != value:
-                self.speed_slider.blockSignals(True)
-                self.speed_slider.setValue(value)
-                self.speed_slider.blockSignals(False)
-        except Exception:
-            pass
+        """Handle speed spinbox change. Delegated to ExecutionSettingsController."""
+        self.execution_settings_controller.on_speed_spin_changed(value)
 
-        self.speed_label.setText(f"{value} ms")
-        self.graph_runner.set_speed(value)
-    
     def on_max_speed_toggled(self, checked):
-        """Handle max speed button toggle."""
-        if checked:
-            # Save current delay and set to 0ms (maximum speed)
-            self.saved_speed = self.speed_slider.value()
-            self.speed_slider.setEnabled(False)
-            if hasattr(self, 'speed_spin'):
-                self.speed_spin.setEnabled(False)
-            self.graph_runner.set_speed(0)
-            self.speed_label.setText("0 ms (MAX)")
-            self.max_speed_btn.setText("⚡ Max Speed (ON)")
-        else:
-            # Restore previous speed
-            self.speed_slider.setEnabled(True)
-            if hasattr(self, 'speed_spin'):
-                self.speed_spin.setEnabled(True)
-            if hasattr(self, 'saved_speed'):
-                # Restore both slider and spinbox without re-trigger loops
-                try:
-                    self.speed_slider.blockSignals(True)
-                    self.speed_slider.setValue(self.saved_speed)
-                    self.speed_slider.blockSignals(False)
-                except Exception:
-                    self.speed_slider.setValue(self.saved_speed)
+        """Handle max speed button toggle. Delegated to ExecutionSettingsController."""
+        self.execution_settings_controller.on_max_speed_toggled(checked)
 
-                try:
-                    if hasattr(self, 'speed_spin'):
-                        self.speed_spin.blockSignals(True)
-                        self.speed_spin.setValue(self.saved_speed)
-                        self.speed_spin.blockSignals(False)
-                except Exception:
-                    pass
-
-                self.graph_runner.set_speed(self.saved_speed)
-            self.max_speed_btn.setText("⚡ Max Speed (0ms)")
-    
     def on_skip_viz_changed(self, state):
         """Handle skip graph visualization checkbox change."""
         self.visualization_controller.on_skip_viz_changed(state)
@@ -1260,22 +319,8 @@ class MainWindow(QMainWindow):
         self.visualization_controller.on_skip_plot_changed(state)
     
     def on_verbose_changed(self, state):
-        """Handle verbose checkbox change."""
-        verbose_enabled = (state == Qt.CheckState.Checked.value)
-        
-        # Update the graph processor's verbose flag
-        if self.graph_runner and self.graph_runner.graph_processor:
-            self.graph_runner.graph_processor.verbose = verbose_enabled
-            
-            if verbose_enabled:
-                self.status_bar.showMessage("Verbose output enabled - check terminal")
-            else:
-                self.status_bar.showMessage("Verbose output disabled")
-        # Also write to console if available
-        try:
-            self.write_to_console(f"Verbose {'enabled' if verbose_enabled else 'disabled'}", verbose_only=False)
-        except Exception:
-            pass
+        """Handle verbose checkbox change. Delegated to ExecutionSettingsController."""
+        self.execution_settings_controller.on_verbose_changed(state)
 
     def on_dim_processed_changed(self, state):
         """Handle dim-processed checkbox change."""
@@ -1298,23 +343,8 @@ class MainWindow(QMainWindow):
         self.visualization_controller.choose_max_color()
     
     def on_edge_created(self, source_node, target_node):
-        """Handle edge creation."""
-        self.status_bar.showMessage(f"Connected {source_node.name} → {target_node.name}")
-        # Keep adjacency matrix updated and reset forward processing controls state if needed
-        try:
-            if self.graph:
-                self.graph.UpdateAdjacencyMatrix()
-        except Exception:
-            pass
-        try:
-            if hasattr(self, 'graph_runner') and getattr(self, 'graph_runner') is not None and hasattr(self.graph_runner, 'graph_processor'):
-                if getattr(self, 'processor_type', None) == 'forward' or getattr(self.graph_runner, 'processor_type', None) == 'forward':
-                    try:
-                        self.graph_runner.graph_processor.reset_forward_state()
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+        """Handle edge creation. Delegated to GraphEdgeController."""
+        self.graph_edge_controller.on_edge_created(source_node, target_node)
     
     def update_starting_nodes_display(self):
         """Update the starting nodes list display."""
@@ -1325,21 +355,8 @@ class MainWindow(QMainWindow):
         self.node_sequence_controller.add_selected_to_starting_nodes()
 
     def on_edge_removed(self, source_node, target_node):
-        self.status_bar.showMessage(f"Disconnected {source_node.name} → {target_node.name}")
-        try:
-            if self.graph:
-                self.graph.UpdateAdjacencyMatrix()
-        except Exception:
-            pass
-        # Reset the graph processor forward state so it reinitializes internal caches
-        try:
-            if hasattr(self, 'graph_runner') and getattr(self, 'graph_runner') is not None and hasattr(self.graph_runner, 'graph_processor'):
-                try:
-                    self.graph_runner.graph_processor.reset_forward_state()
-                except Exception:
-                    pass
-        except Exception:
-            pass
+        """Handle edge removal. Delegated to GraphEdgeController."""
+        self.graph_edge_controller.on_edge_removed(source_node, target_node)
 
     def update_stopping_nodes_display(self):
         """Update the stopping nodes list display."""
@@ -1419,40 +436,13 @@ class MainWindow(QMainWindow):
         self.node_sequence_controller.clear_starting_nodes()
     
     def on_processor_type_changed(self, index):
-        """Handle processor type selection change."""
-        # Map combo index: 0 -> forward, 1 -> concurrent, 2 -> manual
-        processor_type = "forward" if index == 0 else ("concurrent" if index == 1 else "manual")
-        self.graph_runner.set_processor_type(processor_type)
-        
-        # Show/hide forward and manual processing panels based on mode
-        is_forward_mode = (index == 0)
-        is_manual_mode = (index == 2)
-        self.starting_nodes_widget.setVisible(is_forward_mode)
-        self.stopping_nodes_widget.setVisible(is_forward_mode)
-        self.manual_sequence_widget.setVisible(is_manual_mode)
-        
-        # Disable threading combo for Forward and Manual Processing (not applicable)
-        # Threading only applies to Concurrent mode
-        self.threading_combo.setEnabled(index == 1)
-        
-        type_name = "Forward Processing" if index == 0 else ("Concurrent" if index == 1 else "Manual Processing")
-        self.status_bar.showMessage(f"Processor type: {type_name}")
-        
-        # Update starting nodes display when switching to Forward Processing
-        if index == 0:
-            self.update_starting_nodes_display()
-            self.update_stopping_nodes_display()
-        if index == 2:
-            # When switching to Manual Processing, show sequence from graph if present
-            self.load_manual_sequence_from_graph()
-    
+        """Handle processor type change. Delegated to ExecutionSettingsController."""
+        self.execution_settings_controller.on_processor_type_changed(index)
+
     def on_threading_mode_changed(self, index):
-        """Handle threading mode selection change."""
-        use_multithreading = (index == 1)  # 0 = Single Thread, 1 = Multi Thread
-        self.graph_runner.set_threading_mode(use_multithreading)
-        mode_name = "Multi-threaded" if use_multithreading else "Single-threaded"
-        self.status_bar.showMessage(f"Processing mode: {mode_name}")
-    
+        """Handle threading mode change. Delegated to ExecutionSettingsController."""
+        self.execution_settings_controller.on_threading_mode_changed(index)
+
     def choose_node_color(self):
         """Open color picker for node color."""
         self.visualization_controller.choose_node_color()
@@ -1490,428 +480,24 @@ class MainWindow(QMainWindow):
     # apply_diagonal_layout removed from GUI; layout algorithms are no longer exposed via controls
     
     def _populate_examples_menu(self, menu):
-        """Populate the examples menu with categories."""
-        from PyQt6.QtGui import QAction
-        
-        for category in self.examples_loader.get_categories():
-            category_menu = menu.addMenu(category.name)
-            category_menu.setToolTip(category.description)
-            
-            for name, description, builder in category.examples:
-                action = QAction(name, self)
-                action.setStatusTip(description)
-                action.triggered.connect(lambda checked, b=builder, n=name: self._load_example(b, n))
-                category_menu.addAction(action)
+        """Populate the examples menu with categories. Delegated to DialogController."""
+        self.dialog_controller.populate_examples_menu(menu)
     
     def _load_example(self, builder, name: str):
-        """Load an example graph."""
-        try:
-            # Build the example graph (log timing to help identify where GUI may freeze)
-            import time
-            build_t0 = time.time()
-            self.status_bar.showMessage(f"Building example: {name}...")
-            print(f"[GUI] Starting builder for example: {name}")
-            example_graph = builder()
-            build_t1 = time.time()
-            print(f"[GUI] Builder complete for example: {name} (duration: {build_t1 - build_t0:.3f}s)")
-            try:
-                self.status_bar.showMessage(f"Building example: {name} done ({len(example_graph.nodes)} nodes)")
-            except Exception:
-                pass
-            
-            # Clear current canvas
-            self.canvas.scene.clear()
-            self.canvas.node_items.clear()
-            self.canvas.edge_items.clear()
-            
-            # Load the new graph and synchronize canvas and runner
-            self.set_graph(example_graph)
-            
-            # DON'T reset when loading - it clears DataStreamNode data!
-            # self.graph_runner.reset()
-            
-            # Visualize the graph on canvas (log timing)
-            vis_t0 = time.time()
-            self.status_bar.showMessage(f"Applying layout and visualizing example: {name}...")
-            print(f"[GUI] Visualizing example: {name} - starting visualization with {len(example_graph.nodes)} nodes")
-            self._visualize_graph_on_canvas(example_graph)
-            vis_t1 = time.time()
-            print(f"[GUI] Visualization complete for example: {name} (duration: {vis_t1 - vis_t0:.3f}s)")
-            self.status_bar.showMessage(f"Loaded example: {name} (build {build_t1 - build_t0:.3f}s, vis {vis_t1 - vis_t0:.3f}s)")
-            
-            # Update starting nodes display
-            self.update_starting_nodes_display()
-            self.update_stopping_nodes_display()
-            
-            # Check if this is an MLP example and apply MLP layout automatically
-            is_mlp_example = any(keyword in name.lower() for keyword in ['mlp', 'xor', 'iris', 'diabetes', 'piecewise', 'neural'])
-            if is_mlp_example:
-                try:
-                    # Apply MLP layout with 80px spacing (grid cell size)
-                    self.apply_graph_layout('mlp_full', spacing=80)
-                    print(f"[GUI] Applied MLP Layout for example: {name}")
-                except Exception as e:
-                    print(f"[GUI] Failed to apply MLP layout: {e}")
-            
-            self.status_bar.showMessage(f"Loaded example: {name}")
-
-            # --- SYNC: Rebuild canonical graph map and ensure canvas items are bound ---
-            try:
-                # Rebuild adjacency matrix & id dictionary in case builder used nonstandard manipulations
-                if hasattr(self, 'graph') and self.graph is not None:
-                    try:
-                        self.graph.UpdateAdjacencyMatrix()
-                        # Rebuild id map (safeguard if any missing ids)
-                        try:
-                            self.graph.idToNodeDictionary = {n.id: n for n in self.graph.nodes if getattr(n, 'id', None) is not None}
-                        except Exception:
-                            pass
-                    except Exception:
-                        pass
-
-                # Reattach canvas reference and refresh visuals for all NodeItems
-                try:
-                    if hasattr(self, 'canvas') and self.canvas is not None:
-                        for node_obj, node_item in list(getattr(self.canvas, 'node_items', {}).items()):
-                            try:
-                                node_item.canvas = self.canvas
-                            except Exception:
-                                pass
-                            try:
-                                # Refresh node label and value display if widget methods exist
-                                if hasattr(node_item, 'set_label_text'):
-                                    node_item.set_label_text(getattr(node_item.node, 'name', ''))
-                                if hasattr(node_item, 'update_value_display'):
-                                    node_item.update_value_display()
-                            except Exception:
-                                pass
-                        try:
-                            # Ensure canvas repaints and the QGraphicsScene knows of the nodes
-                            self.canvas.scene.update()
-                            try:
-                                self.canvas.viewport().update()
-                            except Exception:
-                                pass
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-            except Exception:
-                pass
-            
-        except Exception as e:
-            import traceback
-            full_error = traceback.format_exc()
-            print(f"\n{'='*60}")
-            print(f"ERROR loading example '{name}':")
-            print(full_error)
-            print(f"{'='*60}\n")
-            QMessageBox.critical(
-                self,
-                "Error Loading Example",
-                f"Failed to load example '{name}':\n{str(e)}\n\nSee console for full traceback."
-            )
+        """Load an example graph. Delegated to DialogController."""
+        self.dialog_controller.load_example(builder, name)
     
     def _show_mlp_dialog(self):
-        """Show dialog to generate MLP graph."""
-        dialog = MLPGeneratorDialog(self)
-        if dialog.exec():
-            generated_graph = dialog.get_graph()
-            
-            # Clear current canvas
-            self.canvas.scene.clear()
-            self.canvas.node_items.clear()
-            self.canvas.edge_items.clear()
-            
-            # Load the generated graph and keep canvas/runner synchronized
-            self.set_graph(generated_graph)
-            # DON'T reset when loading - it clears DataStreamNode data!
-            # self.graph_runner.reset()
-            
-            # Visualize the graph on canvas
-            self._visualize_graph_on_canvas(generated_graph)
-            self.update_stopping_nodes_display()
-            self.status_bar.showMessage("MLP generated successfully")
+        """Show dialog to generate MLP graph. Delegated to DialogController."""
+        self.dialog_controller.show_mlp_dialog()
     
     def _show_backprop_dialog(self):
-        """Show dialog to add backpropagation to existing MLP."""
-        if not self.graph or len(self.graph.nodes) == 0:
-            QMessageBox.warning(
-                self,
-                "No Graph",
-                "Please load or create a graph first."
-            )
-            return
-        
-        dialog = BackpropDialog(self.graph, self)
-        if dialog.exec():
-            generated_graph = dialog.get_graph()
-            
-            # Clear current canvas
-            self.canvas.scene.clear()
-            self.canvas.node_items.clear()
-            self.canvas.edge_items.clear()
-            
-            # Load the graph with backprop and keep the UI/runner in sync
-            self.set_graph(generated_graph)
-            # DON'T reset when loading - it clears DataStreamNode data!
-            # self.graph_runner.reset()
-            
-            # Visualize the graph on canvas
-            self._visualize_graph_on_canvas(generated_graph)
-            self.update_stopping_nodes_display()
-            
-            self.status_bar.showMessage("Backpropagation added successfully")
-    
+        """Show dialog to add backpropagation to existing MLP. Delegated to DialogController."""
+        self.dialog_controller.show_backprop_dialog()
+
     def _visualize_graph_on_canvas(self, graph: Graph):
-        """Visualize a graph object on the canvas."""
-        try:
-            # Import node_item here to avoid circular import
-            from .node_item import NodeItem
-            from .edge_item import EdgeItem
-            import networkx as nx
-            
-            # Create a networkx graph for layout
-            G = nx.DiGraph()
-            
-            # Add nodes to networkx graph
-            for node in graph.nodes:
-                G.add_node(node)
-            
-            # Add edges based on predecessors
-            for node in graph.nodes:
-                if hasattr(node, 'predecessors') and node.predecessors:
-                    for pred in node.predecessors:
-                        G.add_edge(pred, node)
-            
-            # Compute layout with ANN method (better spacing and works for all graphs)
-            import time
-            t0 = time.time()
-            num_nodes = len(G.nodes())
-            base_scale = 300
-            scale = base_scale * max(1.0, num_nodes / 15)
-            
-            # If all nodes have explicit GUI positions (loaded from file), use them as `pos`
-            gui_positions = {node: getattr(node, 'gui_pos', None) for node in graph.nodes}
-            use_gui_positions = False
-            if all(gui_positions.values()):
-                pos = {node: tuple(gui_positions[node]) for node in graph.nodes}
-                use_gui_positions = True
-            else:
-                # Use ANN layout directly for small/medium graphs; fall back for very large graphs
-                pos = None
-            # Only compute an automatic layout if GUI positions are NOT provided
-            if not use_gui_positions:
-                try:
-                    # Use the canvas apply_layout plumbing (no-op layout algorithms retained as stubs)
-                    pos = self.canvas.apply_layout('ann')
-                except Exception as e:
-                    # Fallback to networkx spring layout to avoid freezing on huge graphs
-                    try:
-                        print(f"[GUI] ANN layout not available ({e}); falling back to spring layout for {num_nodes} nodes")
-                        pos = nx.spring_layout(G, k=2.0/num_nodes**0.5, iterations=50, scale=scale, seed=42)
-                    except Exception:
-                        # Final fallback: circular layout
-                        pos = nx.circular_layout(G, scale=scale)
-            else:
-                # When using GUI positions we already set `pos` from node.gui_pos earlier
-                pass
-            t1 = time.time()
-            # Log time if verbose
-            try:
-                if hasattr(self, 'verbose_check') and self.verbose_check.isChecked():
-                    print(f"Layout computed in {t1 - t0:.3f}s for {num_nodes} nodes (ANN algorithm)")
-            except Exception:
-                pass
-            
-            # No offset needed, center at origin
-            offset_x = 0
-            offset_y = 0
-            
-            # Create node items with collision avoidance
-            # If using explicit GUI positions, temporarily disable snap to grid to preserve exact coordinates
-            if use_gui_positions:
-                try:
-                    old_snap = getattr(self.canvas, 'snap_to_grid', False)
-                    old_snap_while = getattr(self.canvas, 'snap_while_dragging', False)
-                    self.canvas.set_snap_to_grid(False)
-                    self.canvas.set_snap_while_dragging(False)
-                except Exception:
-                    old_snap = None
-                    old_snap_while = None
-            min_distance = 100  # Minimum distance between nodes
-            created_positions = {}  # Track created node positions
-            
-            # Create node items: creating in the UI thread may block; call processEvents periodically
-            for node_idx, node in enumerate(graph.nodes):
-                # Keep the UI responsive: process pending events before heavy node creation
-                if node_idx == 0:
-                    try:
-                        from PyQt6.QtWidgets import QApplication
-                        QApplication.processEvents()
-                    except Exception:
-                        pass
-                node_pos = pos.get(node, (0, 0))
-                x = node_pos[0] + offset_x
-                y = node_pos[1] + offset_y
-                
-                # Check for collisions and adjust position
-                adjusted_x, adjusted_y = x, y
-                # Optionally avoid moving weight (W_) and dW_ nodes so their computed ANN
-                # positions remain exact (diagonal); allow collision adjustments for others
-                nm = getattr(node, 'name', '')
-                # Use ContainerNode type detection for weights when possible; fallback to name prefixes for dW
-                try:
-                    from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
-                    is_container = isinstance(node, ContainerNode)
-                except Exception:
-                    is_container = False
-                skip_collision_adjustment = False
-                try:
-                    lock = getattr(self, 'lock_diagonal_layout_check', None)
-                    lock_enabled = lock.isChecked() if lock is not None else True
-                except Exception:
-                    lock_enabled = True
-                # If GUI positions are used, skip collision adjustment for all nodes.
-                # Otherwise, respect the lock setting for containers and dW/dw nodes.
-                skip_collision_adjustment = use_gui_positions or (lock_enabled and (is_container or nm.startswith('dW_') or nm.startswith('dw_')))
-                max_attempts = 50
-                
-                for attempt in range(max_attempts):
-                    collision = False
-                    for other_pos in created_positions.values():
-                        dx = adjusted_x - other_pos[0]
-                        dy = adjusted_y - other_pos[1]
-                        distance = (dx**2 + dy**2)**0.5
-                        
-                        if distance < min_distance and not skip_collision_adjustment:
-                            collision = True
-                            # Push away from collision
-                            if distance > 0:
-                                push_x = (dx / distance) * (min_distance - distance)
-                                push_y = (dy / distance) * (min_distance - distance)
-                                adjusted_x += push_x * 0.5
-                                adjusted_y += push_y * 0.5
-                            else:
-                                # If exactly overlapping, add random offset
-                                import random
-                                adjusted_x += random.uniform(-50, 50)
-                                adjusted_y += random.uniform(-50, 50)
-                    
-                    if not collision:
-                        break
-                
-                # Store position and create node
-                created_positions[node] = (adjusted_x, adjusted_y)
-                try:
-                    # Respect explicit GUI positions by preventing collision adjustments when requested
-                    if use_gui_positions:
-                        # Ensure we don't change the adjusted position
-                        node_item = NodeItem(node, adjusted_x, adjusted_y)
-                    else:
-                        node_item = NodeItem(node, adjusted_x, adjusted_y)
-                    # Allow node_item to access canvas for snapping logic
-                    try:
-                        node_item.canvas = self.canvas
-                    except Exception:
-                        pass
-                    self.canvas.scene.addItem(node_item)
-                    self.canvas.node_items[node] = node_item
-                    # If using GUI positions: reapply the exact requested position while snapping disabled
-                    if use_gui_positions:
-                        try:
-                            old_snap = getattr(self.canvas, 'snap_to_grid', False)
-                            old_snap_while = getattr(self.canvas, 'snap_while_dragging', False)
-                            self.canvas.set_snap_to_grid(False)
-                            self.canvas.set_snap_while_dragging(False)
-                        except Exception:
-                            old_snap = None
-                            old_snap_while = None
-
-                        try:
-                            node_item.setPos(adjusted_x, adjusted_y)
-                        except Exception:
-                            pass
-
-                        try:
-                            if old_snap is not None:
-                                self.canvas.set_snap_to_grid(old_snap)
-                            if old_snap_while is not None:
-                                self.canvas.set_snap_while_dragging(old_snap_while)
-                        except Exception:
-                            pass
-                except Exception as e:
-                    print(f"Failed to create NodeItem for node: {getattr(node, 'name', str(node))}")
-                    raise
-                # Keep the UI responsive during large creations (e.g., thousands of nodes)
-                if node_idx % 50 == 0:
-                    try:
-                        from PyQt6.QtWidgets import QApplication
-                        QApplication.processEvents()
-                    except Exception:
-                        pass
-            
-            # Create edge items
-            # Create edge items
-            t2 = time.time()
-            for edge_idx, node in enumerate(graph.nodes):
-                if hasattr(node, 'predecessors') and node.predecessors:
-                    target_item = self.canvas.node_items.get(node)
-                    if target_item:
-                        for pred in node.predecessors:
-                            source_item = self.canvas.node_items.get(pred)
-                            if source_item:
-                                try:
-                                    edge = EdgeItem(source_item, target_item)
-                                except Exception:
-                                    print(f"Failed to create EdgeItem: {pred.name if hasattr(pred, 'name') else pred} -> {node.name if hasattr(node, 'name') else node}")
-                                    raise
-                                self.canvas.scene.addItem(edge)
-                                self.canvas.edge_items.append(edge)
-                                source_item.add_edge(edge)
-                                target_item.add_edge(edge)
-                if edge_idx % 50 == 0:
-                    try:
-                        from PyQt6.QtWidgets import QApplication
-                        QApplication.processEvents()
-                    except Exception:
-                        pass
-            
-            t3 = time.time()
-            # Update visuals
-            try:
-                if self.colorize_enabled:
-                    self.auto_detect_range()
-                else:
-                    self.canvas.update_node_visuals(False, 0, 1)
-            except Exception as e:
-                print("Error while updating node visuals:")
-                import traceback
-                traceback.print_exc()
-                raise
-            t4 = time.time()
-            # Restore snap settings if we changed them
-            if use_gui_positions:
-                try:
-                    if old_snap is not None:
-                        self.canvas.set_snap_to_grid(old_snap)
-                    if old_snap_while is not None:
-                        self.canvas.set_snap_while_dragging(old_snap_while)
-                except Exception:
-                    pass
-            try:
-                if hasattr(self, 'verbose_check') and self.verbose_check.isChecked():
-                    print(f"Node creation {t2 - t1:.3f}s, Edge creation {t3 - t2:.3f}s, Visual update {t4 - t3:.3f}s")
-            except Exception:
-                pass
-            
-        except Exception as e:
-            QMessageBox.warning(
-                self,
-                "Visualization Error",
-                f"Graph loaded but visualization failed:\n{str(e)}\n\n"
-                "You can still run the graph, but the visual layout may not be optimal."
-            )
+        """Visualize a graph object on the canvas. Delegated to GraphBuilderController."""
+        self.graph_builder_controller.visualize_graph_on_canvas(graph)
     
     # Search functionality - delegated to SearchController
     
@@ -1931,137 +517,16 @@ class MainWindow(QMainWindow):
         """Focus on the current search result."""
         self.search_controller._focus_on_search_result()
 
-    # --- Layout methods ---
-    
+    # --- Layout methods - delegated to GraphLayoutController ---
+
     def _update_layout_status_label(self):
-        """Update the layout status label to show library availability."""
-        if layout_algorithms.is_grandalf_available():
-            self.layout_status_label.setText("✓ grandalf available (Sugiyama)")
-            self.layout_status_label.setStyleSheet("color: #4CAF50;")
-        elif layout_algorithms.is_networkx_available():
-            self.layout_status_label.setText("⚠ Using NetworkX fallback")
-            self.layout_status_label.setStyleSheet("color: #FFC107;")
-        else:
-            self.layout_status_label.setText("⚠ No layout library found")
-            self.layout_status_label.setStyleSheet("color: #f44336;")
-    
-    def apply_graph_layout(self, layout_type: str):
-        """Apply a graph layout algorithm to the current graph.
-        
-        Args:
-            layout_type: One of 'sugiyama', 'tree', or 'mlp_layered'
-        """
-        if not self.graph or not self.graph.nodes:
-            self.status_bar.showMessage("No graph to layout")
-            return
-        
-        # Get layout direction from combo
-        direction = 'LR' if self.layout_direction_combo.currentIndex() == 0 else 'TB'
-        
-        # Get node spacing from spin box
-        node_spacing = self.layout_spacing_spin.value()
-        layer_spacing = int(node_spacing * 1.5)  # Layer spacing proportional to node spacing
-        
-        # Build predecessors lookup function
-        def get_predecessors(node):
-            return getattr(node, 'predecessors', [])
-        
-        # Apply the selected layout algorithm
-        try:
-            if layout_type == 'sugiyama':
-                positions = layout_algorithms.sugiyama_layout(
-                    self.graph.nodes,
-                    get_predecessors,
-                    node_width=80,
-                    node_height=80,
-                    layer_spacing=layer_spacing,
-                    node_spacing=node_spacing,
-                    direction=direction
-                )
-            elif layout_type == 'tree':
-                positions = layout_algorithms.tree_layout(
-                    self.graph.nodes,
-                    get_predecessors,
-                    node_spacing=node_spacing,
-                    level_spacing=layer_spacing,
-                    direction=direction
-                )
-            elif layout_type == 'mlp_layered':
-                positions = layout_algorithms.mlp_layered_layout(
-                    self.graph.nodes,
-                    get_predecessors,
-                    node_spacing=node_spacing,
-                    layer_spacing=layer_spacing,
-                    direction=direction
-                )
-            elif layout_type == 'mlp_layout':
-                positions = layout_algorithms.mlp_layout(
-                    self.graph.nodes,
-                    get_predecessors,
-                    node_spacing=node_spacing,
-                    layer_spacing=layer_spacing,
-                    direction=direction
-                )
-            else:
-                self.status_bar.showMessage(f"Unknown layout type: {layout_type}")
-                return
-            
-            # Apply positions to nodes and update canvas
-            self._apply_layout_positions(positions)
-            
-            # Apply ANN colors for neural network layouts
-            if layout_type in ('mlp_layered', 'mlp_layout'):
-                self.canvas.apply_ann_colors()
-            
-            self.status_bar.showMessage(f"Applied {layout_type} layout to {len(positions)} nodes")
-            
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            QMessageBox.warning(
-                self,
-                "Layout Error",
-                f"Failed to apply {layout_type} layout:\n{str(e)}"
-            )
-    
+        """Update the layout status label. Delegated to GraphLayoutController."""
+        self.graph_layout_controller.update_layout_status_label()
+
+    def apply_graph_layout(self, layout_type: str, spacing: int = None):
+        """Apply a graph layout algorithm. Delegated to GraphLayoutController."""
+        self.graph_layout_controller.apply_graph_layout(layout_type, spacing)
+
     def _apply_layout_positions(self, positions: dict):
-        """Apply computed layout positions to nodes on the canvas.
-        
-        Args:
-            positions: Dictionary mapping nodes to (x, y) tuples
-        """
-        if not positions:
-            return
-        
-        # Center the layout around the origin
-        if positions:
-            xs = [p[0] for p in positions.values()]
-            ys = [p[1] for p in positions.values()]
-            center_x = (min(xs) + max(xs)) / 2
-            center_y = (min(ys) + max(ys)) / 2
-        else:
-            center_x, center_y = 0, 0
-        
-        # Apply positions to nodes
-        for node, (x, y) in positions.items():
-            # Center the layout
-            adj_x = x - center_x
-            adj_y = y - center_y
-            
-            # Update node's gui_pos
-            node.gui_pos = (adj_x, adj_y)
-            
-            # Update canvas item if it exists
-            if node in self.canvas.node_items:
-                item = self.canvas.node_items[node]
-                item.setPos(adj_x, adj_y)
-        
-        # Update all edges
-        for edge_item in self.canvas.edge_items:
-            try:
-                edge_item.update_position()
-            except Exception:
-                pass
-        
-        # Update scene rect
-        self.canvas._update_scene_rect()
+        """Apply layout positions. Delegated to GraphLayoutController."""
+        self.graph_layout_controller._apply_layout_positions(positions)

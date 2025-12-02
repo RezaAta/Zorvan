@@ -1,0 +1,24 @@
+name: cz_conventional_commits
+version: 0.1.0
+tag_format: "v$version"
+
+# Optional: scope and types customized
+types:
+  - feat
+  - fix
+  - docs
+  - style
+  - refactor
+  - perf
+  - test
+  - build
+  - ci
+  - chore
+  - revert
+
+
+# Mappings for git-cz interactive tool
+scope-separator: ": "
+
+# A simple default message format
+message-format: "{type}({scope}): {subject}\n\n{body}"

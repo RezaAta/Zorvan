@@ -1,0 +1,8 @@
+commitizen
+pre-commit
+black
+isort
+ruff
+pytest
+codecov
+coverage
