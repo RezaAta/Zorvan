@@ -409,7 +409,11 @@ class NodeItem(QGraphicsEllipseItem):
             # View predecessors menu item
             view_pred_action = menu.addAction("View Predecessors")
             replace_action = menu.addAction("Replace Node...")
+            menu.addSeparator()
+            reset_node_action = menu.addAction("🔄 Reset Node")
+
             action = menu.exec(event.screenPos())
+
             if action == view_pred_action:
                 try:
                     canvas = getattr(self, "canvas", None)
@@ -432,20 +436,35 @@ class NodeItem(QGraphicsEllipseItem):
                             main_window.replace_node(self)
                 except Exception:
                     pass
+            elif action == reset_node_action:
+                self._reset_node()
 
+        except Exception:
+            pass
+
+    def _reset_node(self):
+        """Reset this node's value to its default state."""
+        try:
+            if hasattr(self.node, "ResetValue"):
+                self.node.ResetValue()
+                self.update_value_display()
+                self.update()
         except Exception:
             pass
 
     def paint(self, painter, option, widget):
         """Custom paint to show selection state and active nodes."""
-        # Priority: Active > Selected > Custom > Default
+        # Priority: Active > Selected > Manual Color > Value Color > Default
         if self.is_active:
             # Active nodes get the brightest color (thinking brain effect)
             self.setBrush(QBrush(self.active_color))
         elif self.isSelected():
             self.setBrush(QBrush(self.selected_color))
+        elif self.manual_color is not None:
+            # Manual color (from ANN colors or user) takes priority over value-based color
+            self.setBrush(QBrush(self.manual_color))
         elif self.color is not None:
-            # Use custom color if set (from layout/coloring)
+            # Use value-based color if set (from colorization)
             self.setBrush(QBrush(self.color))
         else:
             # Restore default color when deselected

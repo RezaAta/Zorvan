@@ -653,13 +653,18 @@ class GraphCanvas(QGraphicsView):
     def update_node_visuals(
         self, colorize=False, min_val=0, max_val=1, min_color=None, max_color=None
     ):
-        """Update all node visuals (values and optionally colors)."""
+        """Update all node visuals (values and optionally colors).
+
+        Note: This only clears value-based color (node_item.color), not manual_color
+        which is set by ANN colors or user and persists across updates.
+        """
         for node_item in self.node_items.values():
             node_item.update_value_display()
             if colorize:
                 node_item.colorize_by_value(min_val, max_val, min_color, max_color)
             else:
-                # Reset color to None so paint() will use default_color
+                # Reset value-based color to None so paint() will use manual_color or default
+                # Note: We do NOT clear manual_color here - it persists across updates
                 node_item.color = None
                 node_item.update()
 
@@ -1450,12 +1455,16 @@ class GraphCanvas(QGraphicsView):
         """
         Apply ANN-specific color scheme to nodes.
 
+        These colors are set as manual_color, which persists across value-based
+        color updates (colorize_by_value) and node visual refreshes.
+
         Color scheme:
-        - White: Input streams, activations, additions, multiplication (forward pass)
+        - Gray: Input streams, activations, additions, multiplication (forward pass)
         - Blue: Weights (W_*, wn_*, wx_*), LR, dW nodes, weight-related multiplications
         - Green: Activation derivatives (D_*, *derivative), their multiplications
         - Red: Label streams, Error nodes
         - Purple/Pink: Backprop gradient nodes (EG_*, LRMult_*, WGS_*)
+        - Yellow/Gold: Buffer nodes
         """
 
         for node, node_item in self.node_items.items():
@@ -1508,10 +1517,16 @@ class GraphCanvas(QGraphicsView):
             else:
                 color = QColor(100, 100, 100)  # Dark gray (instead of white)
 
-            # Apply the color to the node item
+            # Apply the color as manual_color so it persists across updates
             if color:
-                node_item.color = color
+                node_item.manual_color = color
                 node_item.update()  # Force redraw
+
+    def clear_ann_colors(self):
+        """Clear all manual colors (ANN colors) from nodes, reverting to default colors."""
+        for node_item in self.node_items.values():
+            node_item.manual_color = None
+            node_item.update()
 
     def fit_all_nodes_in_view(self):
         """Fit all nodes into the current view, maintaining aspect ratio."""

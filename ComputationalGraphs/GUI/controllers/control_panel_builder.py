@@ -297,9 +297,31 @@ class ControlPanelBuilder:
         mw.step_btn.clicked.connect(mw.step_graph)
         parent_layout.addWidget(mw.step_btn)
 
-        mw.reset_btn = QPushButton("⏹ Reset")
+        # Reset controls - split into Restore Graph, Reset Processor, and Reset All
+        reset_row = QHBoxLayout()
+
+        mw.restore_graph_btn = QPushButton("📸 Restore")
+        mw.restore_graph_btn.setToolTip(
+            "Restore graph to iteration 0 state (node values) without changing iteration counter"
+        )
+        mw.restore_graph_btn.clicked.connect(mw.restore_graph)
+        reset_row.addWidget(mw.restore_graph_btn)
+
+        mw.reset_processor_btn = QPushButton("🔄 Reset Proc")
+        mw.reset_processor_btn.setToolTip(
+            "Reset iteration counter to 0 and reinitialize processor (preserves node values)"
+        )
+        mw.reset_processor_btn.clicked.connect(mw.reset_processor)
+        reset_row.addWidget(mw.reset_processor_btn)
+
+        mw.reset_btn = QPushButton("⏹ Reset All")
+        mw.reset_btn.setToolTip(
+            "Full reset: restore graph to iteration 0 AND reset processor/counter"
+        )
         mw.reset_btn.clicked.connect(mw.reset_graph)
-        parent_layout.addWidget(mw.reset_btn)
+        reset_row.addWidget(mw.reset_btn)
+
+        parent_layout.addLayout(reset_row)
 
         mw.rebuild_exec_btn = QPushButton("🔁 Rebuild")
         mw.rebuild_exec_btn.setToolTip("Rebuild graph from canvas")
@@ -392,10 +414,23 @@ class ControlPanelBuilder:
         # Grid & Snap controls
         self._build_grid_snap_controls(layout)
 
-        # ANN Colors button
+        # ANN Colors buttons
+        ann_colors_row = QHBoxLayout()
         mw.ann_colors_btn = QPushButton("Apply ANN Colors")
+        mw.ann_colors_btn.setToolTip(
+            "Apply color scheme based on node types (persists across updates)"
+        )
         mw.ann_colors_btn.clicked.connect(mw.canvas.apply_ann_colors)
-        layout.addWidget(mw.ann_colors_btn)
+        ann_colors_row.addWidget(mw.ann_colors_btn)
+
+        mw.clear_ann_colors_btn = QPushButton("Clear")
+        mw.clear_ann_colors_btn.setToolTip(
+            "Clear ANN colors and revert to default colors"
+        )
+        mw.clear_ann_colors_btn.clicked.connect(mw.canvas.clear_ann_colors)
+        ann_colors_row.addWidget(mw.clear_ann_colors_btn)
+
+        layout.addLayout(ann_colors_row)
 
         layout.addStretch()
         return container

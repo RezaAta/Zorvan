@@ -86,10 +86,114 @@ class ExecutionController:
         self.status_bar.showMessage("Paused")
 
     def resume(self):
-        """Resume a paused background execution."""
-        self.graph_runner.resume()
-        self._set_running_state()
-        self.status_bar.showMessage("Resumed execution")
+        """Resume execution - works both during pause and after completion.
+
+        If canvas has been modified (nodes added/removed), rebuilds the graph first.
+        If execution completed (current_step >= max_steps), extends the run by the
+        configured number of additional iterations without resetting the counter.
+        """
+        # Check if canvas has been modified - rebuild if needed
+        try:
+            canvas_nodes = (
+                set(self.canvas.node_items.keys())
+                if hasattr(self.canvas, "node_items") and self.canvas.node_items
+                else set()
+            )
+            graph_nodes = (
+                set(self.graph.nodes)
+                if self.graph and hasattr(self.graph, "nodes")
+                else set()
+            )
+            if canvas_nodes != graph_nodes:
+                self.main_window.rebuild_graph()
+        except Exception:
+            pass
+
+        # Check if execution completed (not just paused)
+        if self.graph_runner.current_step >= self.graph_runner.max_steps:
+            # Execution finished - start a new run continuing from current step
+            additional_steps = self.main_window.max_steps_spin.value()
+            new_max_steps = self.graph_runner.current_step + additional_steps
+
+            # Check if skip visualization (batch mode) is enabled
+            if self.main_window.skip_visualization:
+                self._run_batch_resume(additional_steps)
+            else:
+                # Start with reset_step_counter=False to continue from current step
+                self.graph_runner.start(new_max_steps, reset_step_counter=False)
+                self._set_running_state()
+                self.status_bar.showMessage(
+                    f"Resumed: running {additional_steps} more iterations (total: {new_max_steps})"
+                )
+        else:
+            # Normal resume from pause
+            self.graph_runner.resume()
+            self._set_running_state()
+            self.status_bar.showMessage("Resumed execution")
+
+    def _run_batch_resume(self, additional_steps):
+        """Run additional steps in batch mode after completion."""
+        from PyQt6.QtWidgets import QApplication
+
+        self._set_batch_mode_state()
+        start_step = self.graph_runner.current_step
+        self.status_bar.showMessage(
+            f"Batch mode: Running {additional_steps} more steps..."
+        )
+        QApplication.processEvents()
+
+        try:
+            processor = self.graph_runner.graph_processor
+            processor_type = self.graph_runner.processor_type
+            use_multithreading = self.graph_runner.use_multithreading
+
+            if processor_type == "forward":
+                starting_nodes = None
+                if hasattr(self.graph, "starting_nodes") and self.graph.starting_nodes:
+                    starting_nodes = self.graph.starting_nodes
+                processor.ForwardProcessing(
+                    iterations=additional_steps, starting_nodes=starting_nodes
+                )
+            elif processor_type == "manual":
+                processor.ManualProcessing(
+                    iterations=additional_steps,
+                    computation_sequence=getattr(
+                        self.graph, "manual_processing_sequence", None
+                    ),
+                )
+            else:
+                if use_multithreading:
+                    processor.ComputeGraph(additional_steps)
+                else:
+                    processor.ComputeGraphSingleThread(additional_steps)
+
+            # Update step counter
+            new_step = start_step + additional_steps
+            self.graph_runner.current_step = new_step
+            self.graph_runner.max_steps = new_step
+            self.main_window.step_label.setText(f"Step: {new_step}")
+
+            # Update visuals
+            if self.main_window.colorize_enabled:
+                self.main_window.auto_detect_range()
+            else:
+                self.canvas.update_node_visuals(False, 0, 1)
+
+            # Update plot
+            if (
+                self.main_window.plot_window
+                and self.main_window.plot_window.isVisible()
+            ):
+                self.main_window.plot_window.update_plot(new_step)
+
+            self.status_bar.showMessage(
+                f"Batch resume complete: {additional_steps} steps (total: {new_step})"
+            )
+        except Exception as e:
+            QMessageBox.critical(self.main_window, "Batch Resume Error", str(e))
+            self.status_bar.showMessage("Batch resume failed")
+        finally:
+            self._set_stopped_state()
 
     def step(self):
         """Execute a single step."""
@@ -99,7 +203,7 @@ class ExecutionController:
         self.graph_runner.single_step()
 
     def reset(self):
-        """Reset graph execution."""
+        """Full reset: restore graph to snapshot state AND reset processor."""
         self.graph_runner.reset()
         self.main_window.step_label.setText("Step: 0")
 
@@ -112,6 +216,54 @@ class ExecutionController:
             self.canvas.update_node_visuals(False, 0, 1)
 
         self.status_bar.showMessage("Reset complete")
+
+    def restore_graph(self):
+        """Restore graph to iteration 0 state without changing iteration counter.
+
+        This reverts all node values, buffer contents, and DataStream states to
+        the snapshot taken at iteration 0, but preserves the current step count.
+        """
+        current_step = self.graph_runner.current_step
+
+        if self.graph_runner.restore_graph_snapshot():
+            # Keep the iteration counter unchanged
+            self.graph_runner.current_step = current_step
+
+            # Update visuals
+            if self.main_window.colorize_enabled:
+                self.main_window.auto_detect_range()
+            else:
+                self.canvas.update_node_visuals(False, 0, 1)
+
+            self._set_stopped_state()
+            self.status_bar.showMessage(
+                f"Graph restored to iteration 0 state (step counter: {current_step})"
+            )
+        else:
+            QMessageBox.warning(
+                self.main_window,
+                "Restore Failed",
+                "No snapshot available. The graph has not been run yet or snapshot was not saved.",
+            )
+
+    def reset_processor(self):
+        """Reset only the processor and iteration counter, preserving node values.
+
+        This resets the iteration counter to 0 and reinitializes the processor state
+        but keeps all node values unchanged.
+        """
+        self.graph_runner.reset_processor()
+        self.main_window.step_label.setText("Step: 0")
+
+        self._set_stopped_state()
+
+        # Update visuals to show current node values
+        if self.main_window.colorize_enabled:
+            self.main_window.auto_detect_range()
+        else:
+            self.canvas.update_node_visuals(False, 0, 1)
+
+        self.status_bar.showMessage("Processor reset (node values preserved)")
 
     def run_batch_mode(self, max_steps):
         """Run all steps at once without updating visuals until complete."""
@@ -257,7 +409,12 @@ class ExecutionController:
         """Set UI to stopped state."""
         self.main_window.play_btn.setEnabled(True)
         self.main_window.pause_btn.setEnabled(False)
-        self.main_window.resume_btn.setEnabled(False)
+        # Enable resume if execution completed (allows continuing with more iterations)
+        can_resume = (
+            self.graph_runner.current_step > 0
+            and self.graph_runner.current_step >= self.graph_runner.max_steps
+        )
+        self.main_window.resume_btn.setEnabled(can_resume)
         self.main_window.threading_combo.setEnabled(True)
         if hasattr(self.main_window, "rebuild_btn"):
             self.main_window.rebuild_btn.setEnabled(True)

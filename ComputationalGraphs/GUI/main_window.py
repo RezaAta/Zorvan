@@ -321,6 +321,14 @@ class MainWindow(QMainWindow):
         """Reset graph execution."""
         self.execution_controller.reset()
 
+    def restore_graph(self):
+        """Restore graph to iteration 0 state without changing iteration counter."""
+        self.execution_controller.restore_graph()
+
+    def reset_processor(self):
+        """Reset only the processor and iteration counter, preserving node values."""
+        self.execution_controller.reset_processor()
+
     def rebuild_graph(self):
         """Rebuild the graph from canvas nodes and edges. Delegated to GraphEdgeController."""
         self.graph_edge_controller.rebuild_graph()
