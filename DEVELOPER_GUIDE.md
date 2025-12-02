@@ -18,6 +18,15 @@ pip install -r requirements.txt
 pip install -r requirements_dev.txt || pip install pytest pre-commit commitizen
 ```
 
+### GUI (optional)
+If you plan to run the GUI tests or use the graphical interface, install the GUI requirements:
+
+```powershell
+pip install -r requirements_gui.txt
+```
+
+For running GUI tests in CI without a display, Xvfb is used by the CI job, or on your local machine you can run tests directly if you have a desktop environment (or use a virtual display such as Xvfb on Linux).
+
 ## Running Tests
 
 ```powershell

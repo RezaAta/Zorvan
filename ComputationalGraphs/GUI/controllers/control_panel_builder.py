@@ -322,14 +322,14 @@ class ControlPanelBuilder:
 
         speed_layout.addWidget(QLabel("Visualization Delay (ms/step):"))
         mw.speed_slider = QSlider(Qt.Orientation.Horizontal)
-        mw.speed_slider.setRange(10, 2000)
+        mw.speed_slider.setRange(5, 2000)
         mw.speed_slider.setValue(500)
         mw.speed_slider.valueChanged.connect(mw.on_speed_changed)
         speed_layout.addWidget(mw.speed_slider)
 
         spin_layout = QHBoxLayout()
         mw.speed_spin = QSpinBox()
-        mw.speed_spin.setRange(10, 2000)
+        mw.speed_spin.setRange(5, 2000)
         mw.speed_spin.setValue(500)
         mw.speed_spin.setSingleStep(10)
         mw.speed_spin.valueChanged.connect(mw.on_speed_spin_changed)

@@ -1,0 +1,32 @@
+# conftest.py
+# Skip test collection for any test files that import PyQt6 when PyQt6 is not installed.
+import sys
+import importlib
+from pathlib import Path
+import pytest
+
+try:
+    import PyQt6  # type: ignore
+    _PYQT6_AVAILABLE = True
+except Exception:
+    _PYQT6_AVAILABLE = False
+
+
+def pytest_ignore_collect(path, config):
+    # Only check test files
+    if not path.ext == '.py':
+        return False
+    if not path.basename.startswith('test'):
+        return False
+    # If PyQt6 installed, don't ignore
+    if _PYQT6_AVAILABLE:
+        return False
+    # Read the file content and look for PyQt6-specific import or usage
+    try:
+        content = Path(path).read_text(encoding='utf-8')
+    except Exception:
+        return False
+    # If the content references 'PyQt6' or 'QApplication', we skip collection
+    if 'PyQt6' in content or 'QApplication' in content or 'from PyQt6' in content:
+        return True
+    return False
