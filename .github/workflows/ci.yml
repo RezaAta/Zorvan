@@ -85,7 +85,8 @@ jobs:
             sudo apt-get update && sudo apt-get install -y \
               graphviz \
               libegl1 \
-              libgl1-mesa-glx \
+              libgl1-mesa-dri \
+              libgl1 \
               libgbm1 \
               libxkbcommon0 \
               libxcb-xinerama0 \
@@ -97,10 +98,12 @@ jobs:
               libxcomposite1 \
               libxdamage1 \
               libnss3 \
-              libasound2 \
+              libasound2 || sudo apt-get install -y libasound2t64 \
               libatk1.0-0 \
               libatk-bridge2.0-0 \
               libgtk-3-0
+            # Some runners use different package names; try fallback packages if needed.
+            sudo apt-get install -y libegl1-mesa libgl1-mesa-dri libasound2t64 || true
 
       - name: Install Xvfb
         run: sudo apt-get update && sudo apt-get install -y xvfb
