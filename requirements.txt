@@ -2,4 +2,5 @@ numpy>=1.23
 matplotlib>=3.5
 scikit-learn>=1.2
 networkx>=2.8
+graphviz>=0.20
 # Optional (GUI) requirements are kept in requirements_gui.txt
