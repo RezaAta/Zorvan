@@ -12,6 +12,7 @@ jobs:
     env:
       PYTHONPATH: ${{ github.workspace }}
 
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -52,11 +53,12 @@ jobs:
 
   gui-tests:
     name: GUI Tests (optional)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     env:
       PYTHONPATH: ${{ github.workspace }}
+      QT_QPA_PLATFORM: xcb
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -83,6 +85,7 @@ jobs:
             pip install -e .
             # GUI tests need system graphviz and various Qt/OpenGL libraries.
             # Try installing a primary package set; if that fails, try a secondary (fallback) set.
+            set -x
             sudo apt-get update && sudo apt-get install -y --no-install-recommends \
               graphviz \
               libegl1 \
@@ -139,7 +142,7 @@ jobs:
           apt-cache policy libegl-mesa0 libegl1 libegl1-mesa libgbm1 || true
           echo "## Attempt explicit install of libegl-mesa0 and related packages"
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libegl-mesa0 libegl1-mesa libgbm1 libgl1-mesa-dri || true
+          sudo apt-get install -y --no-install-recommends libegl-mesa0 libegl1-mesa libgbm1 libgl1-mesa-dri libdrm2 libxext6 libx11-6 || true
           echo "## Run ldconfig to refresh dynamic linker cache"
           sudo ldconfig
           echo "## ldconfig -p | grep EGL after explicit install"
@@ -148,6 +151,58 @@ jobs:
           ls -l /usr/lib*/libEGL* || true
           echo "## dpkg listing after explicit install"
           dpkg -l | grep -E 'libegl|libgbm|mesa|libgl' || true
+
+      - name: Ensure libEGL present & scan system for Qt libs
+        run: |
+          echo "## ldconfig -p | grep EGL before"
+          sudo ldconfig -p | grep -E 'lib(EGL|GL)' || true
+          echo "## find libEGL.so* and libGL.so*"
+          set -x
+          find / -maxdepth 6 -name 'libEGL.so*' -print 2>/dev/null | head -n 50 || true
+          find / -maxdepth 6 -name 'libGL.so*' -print 2>/dev/null | head -n 50 || true
+          echo "## find Qt6 lib files"
+          find / -maxdepth 6 -name 'libQt6*' -print 2>/dev/null | head -n 50 || true
+          echo "## Attempt to run ldconfig again and show EGL/GL libs"
+          sudo ldconfig
+          sudo ldconfig -p | grep -E 'lib(EGL|GL)' || true
+          echo "## Show dpkg policy for libdrm, libx11 and libxext"
+          apt-cache policy libdrm2 libxext6 libx11-6 || true
+
+      - name: Enable 'universe' repo and attempt to install egl provider packages explicitly
+        run: |
+          echo "## Ensure universe repo is enabled"
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common || true
+          sudo add-apt-repository -y universe || true
+          sudo apt-get update
+          echo "## Attempt explicit install of provider packages and arch-specific variants"
+          set -x
+          sudo apt-get install -y --no-install-recommends libegl1-mesa libegl-mesa0 libegl1 libegl1-mesa:amd64 libegl-mesa0:amd64 libgbm1 libdrm2 libxext6 libx11-6 || true
+          echo "## ldconfig -p | grep EGL after explicit universe install"
+          sudo ldconfig -p | grep -E 'lib(EGL|GL)' || true
+          echo "## find libEGL.so* after universe install"
+          find / -maxdepth 6 -name 'libEGL.so*' -print 2>/dev/null | head -n 50 || true
+          echo "## Try PyQt6 import after explicit installs"
+          python - <<PY
+          try:
+            import PyQt6
+            from PyQt6.QtWidgets import QApplication
+            print('PyQt6 import ok')
+          except Exception as e:
+            import traceback
+            traceback.print_exc()
+            raise
+          PY
+
+      - name: apt install Qt6 runtime and python3-pyqt6 (if available)
+        run: |
+          echo "## apt-cache policy libqt6gui6 libqt6core6 python3-pyqt6"
+          apt-cache policy libqt6gui6 libqt6core6 python3-pyqt6 || true
+          echo "## Attempt to install libqt6gui6 & python3-pyqt6"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libqt6gui6 libqt6core6 python3-pyqt6 || true
+          echo "## dpkg -l grep qt6"
+          dpkg -l | grep -i qt6 || true
 
       - name: Find Qt shared libraries and show missing deps
         run: |
@@ -167,11 +222,30 @@ jobs:
         run: |
           python - <<PY
           try:
+            import os
+            # Prefer XCB platform plugin if available to avoid EGL
+            os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')
             import PyQt6
             from PyQt6.QtWidgets import QApplication
             print('PyQt6 import ok')
           except Exception as e:
             print('PyQt6 import failed', e)
+            raise
+          PY
+
+      - name: PyQt6 import - loader-level debug
+        run: |
+          echo "## LD_DEBUG loader output for Python process (imports PyQt6)"
+          LD_DEBUG=libs python - <<PY
+          try:
+            import os
+            os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')
+            import PyQt6
+            from PyQt6.QtWidgets import QApplication
+            print('PyQt6 import ok')
+          except Exception as e:
+            import traceback
+            traceback.print_exc()
             raise
           PY
 
