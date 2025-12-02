@@ -9,6 +9,18 @@ Thanks for contributing! This project uses a set of policies and tools to keep c
 - Use Conventional Commits via Commitizen: `feat:`, `fix:`, `chore:`. See below for usage.
 - Clean code principles: Apply Uncle Bob’s clean code best practices: readable names, small functions, single responsibility, and clear tests.
 
+## Solo Developer Workflow
+
+If you are working on this repository as a single contributor, we suggest the following convention to keep your workflow simple and the commit history tidy:
+
+- Keep tiny fixes and single-line changes on your current branch (e.g., `PyQTUI`). Small edits include: typos, small README updates, or `.gitignore` additions.
+- For anything larger than a trivial edit (feature development, refactors, API changes), create a topic branch (e.g., `feat/<name>` or `refactor/<name>`) to isolate the work and preserve an easy-to-review history.
+- Use descriptive Conventional Commits via `git cz` or `cz` for consistent commit messages.
+- Before merging big changes into `PyQTUI` or `main`, create a small, single-purpose pull request so CI checks and tests can run.
+- Keep branches short-lived: delete the branch after the PR is merged to avoid clutter.
+
+This approach balances the simplicity of working on one branch for tiny changes while preserving the benefits of branching for larger work.
+
 ## Commit Messages
 
 We use Conventional Commits. Install commitizen and use `git cz` or `cz` to create structured commit messages.

@@ -45,6 +45,17 @@ pre-commit run --all-files
 
 See `Tests/templates/` for test template skeletons.
 
+## Solo Developer Branching Guidance
+
+If you are primarily working alone on this repository, you can adopt the following simplified branching strategy:
+
+- Use the current branch (e.g., `PyQTUI`) for tiny changes such as typos, small documentation updates, or single-line code fixes.
+- For feature work, large refactors, or experimental changes, create a new topic branch with a descriptive name.
+- Keep commits focused and small. When merging large work into `PyQTUI` or `main`, consider squashing the topic branch or rebasing and cleaning up commit history.
+- Delete branches once they are merged to keep the repository tidy. If you need to preserve a branch as an archive for reference, consider pushing it to `origin/<name>` with a clear note in the PR body.
+
+This gives you the conveniences of a single-branch workflow for quick edits while preserving the safety and structure of branching for larger changes.
+
 ## CI and Checks
 
 CI is advisory by default; keep an eye on the CI checks and address issues proactively. Critical checks (tests) may become required later. The CI workflow reports linting, commit checks, and tests on PRs.
