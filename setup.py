@@ -23,6 +23,13 @@ setup(
     name="ComputationalGraphs",
     version="0.1.0",
     packages=find_packages(),
+    # Export some useful top-level scripts as modules so they are importable
+    # after `pip install -e .` (tests reference them as plain imports).
+    py_modules=[
+        "ClassicMLP",
+        "ClassicEATestOnDeJongSphereFunction",
+        "ClassicFuzzySystemOnFanControlProblem",
+    ],
     description="A python package to create and run computational graphs.",
     author="Reza Ataei",
     author_email="reza.a1999@yahoo.com",

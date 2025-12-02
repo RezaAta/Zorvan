@@ -33,6 +33,10 @@ class GraphProcessor:
             self.max_workers = max_workers
             self._auto_workers = False
 
+        # Backwards compatibility helper - some tests/legacy code check this attribute.
+        # Keep in sync with the inferred single-thread decision above.
+        self.use_single_thread_mode = self.max_workers <= 1
+
         if chunk_size is None:
             self.chunk_size = max(
                 1, num_nodes // (self.max_workers * 4) if num_nodes >= 4 else 1
