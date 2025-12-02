@@ -23,16 +23,9 @@ repos:
   # Keep ruff in CI: `ruff check .` (see .github/workflows/ci.yml).
 
   # Optional: run tests locally via pre-commit (use cautiously)
-  - repo: local
-    hooks:
-      - id: run-tests
-        name: run pytest before commit
-        entry: pytest -q
-        language: python
-        additional_dependencies: [pytest]
-        always_run: false
-        pass_filenames: false
-        stages: [pre-commit]
+  # Running the full test suite as part of pre-commit can be slow and fragile due
+  # to environment differences (e.g. GUI dependencies). Tests run in CI where
+  # required deps are available, so keep pre-commit local hooks focused on style.
 
   - repo: local
     hooks:
