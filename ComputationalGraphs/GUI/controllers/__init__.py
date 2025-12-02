@@ -9,11 +9,17 @@ from .execution_controller import ExecutionController
 from .file_io_controller import FileIOController
 from .search_controller import SearchController
 from .layout_manager import LayoutManager, NodeColorizer
+from .visualization_controller import VisualizationController
+from .node_sequence_controller import NodeSequenceController
+from .plotting_controller import PlottingController
 
 __all__ = [
     'ExecutionController', 
     'FileIOController', 
     'SearchController',
     'LayoutManager',
-    'NodeColorizer'
+    'NodeColorizer',
+    'VisualizationController',
+    'NodeSequenceController',
+    'PlottingController',
 ]

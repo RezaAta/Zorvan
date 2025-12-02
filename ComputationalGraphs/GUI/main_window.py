@@ -5,11 +5,11 @@ Main window for the ComputationalGraphs visual editor.
 from PyQt6.QtWidgets import (QMainWindow, QToolBar, QStatusBar, QDockWidget,
                              QVBoxLayout, QHBoxLayout, QWidget, QPushButton,
                              QLabel, QSlider, QSpinBox, QMessageBox,
-                             QCheckBox, QColorDialog, QComboBox, QScrollArea, QListWidget,
-                             QDialog, QApplication, QTextEdit)
+                             QCheckBox, QComboBox, QScrollArea, QListWidget,
+                             QApplication, QTextEdit)
 from PyQt6.QtCore import Qt, pyqtSignal
 import sys
-from PyQt6.QtGui import QAction, QKeySequence, QColor, QBrush, QFont
+from PyQt6.QtGui import QAction, QKeySequence, QColor, QFont
 
 from .graph_canvas import GraphCanvas
 from .node_palette import NodePalette
@@ -18,11 +18,14 @@ from .graph_runner import GraphRunner
 from .examples_loader import ExamplesLoader
 from .mlp_dialog import MLPGeneratorDialog
 from .backprop_dialog import BackpropDialog
-from .plot_window import PlotConfigDialog, create_plot_window
+from .plot_window import PlotConfigDialog, create_plot_window  # Import at top to init PyQtGraph config early
 from . import layouts as layout_algorithms
 
 # Import refactored controllers
-from .controllers import ExecutionController, FileIOController, SearchController
+from .controllers import (
+    ExecutionController, FileIOController, SearchController, 
+    VisualizationController, NodeSequenceController, PlottingController
+)
 
 from ComputationalGraphs.Core.Graph import Graph
 
@@ -111,6 +114,9 @@ class MainWindow(QMainWindow):
         self.execution_controller = ExecutionController(self)
         self.file_io_controller = FileIOController(self)
         self.search_controller = SearchController(self)
+        self.visualization_controller = VisualizationController(self)
+        self.node_sequence_controller = NodeSequenceController(self)
+        self.plotting_controller = PlottingController(self)
         
         # State (must be before init_ui)
         self.colorize_enabled = False
@@ -1247,31 +1253,11 @@ class MainWindow(QMainWindow):
     
     def on_skip_viz_changed(self, state):
         """Handle skip graph visualization checkbox change."""
-        self.skip_visualization = (state == Qt.CheckState.Checked.value)
-        
-        if self.skip_visualization:
-            # Disable speed controls when skipping graph updates
-            self.speed_slider.setEnabled(False)
-            if hasattr(self, 'speed_spin'):
-                self.speed_spin.setEnabled(False)
-            self.max_speed_btn.setEnabled(False)
-            self.status_bar.showMessage("Graph visualization skipped - will update at end")
-        else:
-            # Re-enable speed controls
-            self.speed_slider.setEnabled(not self.max_speed_btn.isChecked())
-            if hasattr(self, 'speed_spin'):
-                self.speed_spin.setEnabled(not self.max_speed_btn.isChecked())
-            self.max_speed_btn.setEnabled(True)
-            self.status_bar.showMessage("Graph visualization enabled")
+        self.visualization_controller.on_skip_viz_changed(state)
     
     def on_skip_plot_changed(self, state):
         """Handle skip plot updates checkbox change."""
-        self.skip_plotting = (state == Qt.CheckState.Checked.value)
-        
-        if self.skip_plotting:
-            self.status_bar.showMessage("Plot updates skipped - will update at end")
-        else:
-            self.status_bar.showMessage("Plot updates enabled")
+        self.visualization_controller.on_skip_plot_changed(state)
     
     def on_verbose_changed(self, state):
         """Handle verbose checkbox change."""
@@ -1293,95 +1279,23 @@ class MainWindow(QMainWindow):
 
     def on_dim_processed_changed(self, state):
         """Handle dim-processed checkbox change."""
-        # Use the checkbox directly elsewhere; but keep a convenience attribute
-        self.dim_processed_enabled = (state == Qt.CheckState.Checked.value)
-        # Reset opacities when toggled off
-        if not self.dim_processed_check.isChecked():
-            for node_item in self.canvas.node_items.values():
-                node_item.setOpacity(1.0)
-                try:
-                    node_item.update()
-                except Exception:
-                    pass
-        self.status_bar.showMessage("Dim processed nodes: " + ("ON" if self.dim_processed_check.isChecked() else "OFF"))
+        self.visualization_controller.on_dim_processed_changed(state)
     
     def on_colorize_changed(self, state):
         """Handle colorize checkbox change."""
-        self.colorize_enabled = (state == Qt.CheckState.Checked.value)
-        self.auto_range_btn.setEnabled(self.colorize_enabled)
-        
-        if self.colorize_enabled:
-            # Auto detect min/max on first enable
-            self.auto_detect_range()
-        else:
-            self.canvas.update_node_visuals(False, 0, 1)
+        self.visualization_controller.on_colorize_changed(state)
     
     def auto_detect_range(self):
         """Automatically detect min and max values from current node values."""
-        if not self.canvas.node_items:
-            self.status_bar.showMessage("No nodes to analyze")
-            return
-        
-        # Collect all numeric values
-        values = []
-        for node_item in self.canvas.node_items.values():
-            value = node_item.node.value
-            if isinstance(value, (int, float)):
-                values.append(value)
-        
-        if not values:
-            self.status_bar.showMessage("No numeric values found")
-            return
-        
-        # Set min and max numeric values
-        self.min_value_range = min(values)
-        self.max_value_range = max(values)
-        
-        # Update labels
-        self.min_value_label.setText(f"{self.min_value_range:.2f}")
-        self.max_value_label.setText(f"{self.max_value_range:.2f}")
-        
-        # Update visuals with numeric range and color gradient
-        if self.colorize_enabled:
-            self.canvas.update_node_visuals(
-                True, 
-                self.min_value_range, 
-                self.max_value_range,
-                self.min_gradient_color,
-                self.max_gradient_color
-            )
-        
-        self.status_bar.showMessage(f"Auto detected range: {self.min_value_range:.2f} to {self.max_value_range:.2f}")
+        self.visualization_controller.auto_detect_range()
     
     def choose_min_color(self):
         """Choose color for minimum values."""
-        color = QColorDialog.getColor(self.min_gradient_color, self, "Choose Min Value Color")
-        if color.isValid():
-            self.min_gradient_color = color
-            self.min_color_btn.setStyleSheet(f"background-color: {color.name()};")
-            if self.colorize_enabled:
-                self.canvas.update_node_visuals(
-                    True,
-                    self.min_value_range,
-                    self.max_value_range,
-                    self.min_gradient_color,
-                    self.max_gradient_color
-                )
+        self.visualization_controller.choose_min_color()
     
     def choose_max_color(self):
         """Choose color for maximum values."""
-        color = QColorDialog.getColor(self.max_gradient_color, self, "Choose Max Value Color")
-        if color.isValid():
-            self.max_gradient_color = color
-            self.max_color_btn.setStyleSheet(f"background-color: {color.name()};")
-            if self.colorize_enabled:
-                self.canvas.update_node_visuals(
-                    True,
-                    self.min_value_range,
-                    self.max_value_range,
-                    self.min_gradient_color,
-                    self.max_gradient_color
-                )
+        self.visualization_controller.choose_max_color()
     
     def on_edge_created(self, source_node, target_node):
         """Handle edge creation."""
@@ -1404,49 +1318,11 @@ class MainWindow(QMainWindow):
     
     def update_starting_nodes_display(self):
         """Update the starting nodes list display."""
-        self.starting_nodes_list.clear()
-        
-        if not self.graph:
-            return
-        
-        # Check if graph has starting_nodes attribute
-        if hasattr(self.graph, 'starting_nodes') and self.graph.starting_nodes:
-            for node in self.graph.starting_nodes:
-                self.starting_nodes_list.addItem(node.name)
-        else:
-            # Auto-detect nodes with no predecessors and show in gray (not set)
-            source_nodes = [node for node in self.graph.nodes if len(node.predecessors) == 0]
-            for node in source_nodes:
-                item_text = f"(auto) {node.name}"
-                self.starting_nodes_list.addItem(item_text)
+        self.node_sequence_controller.update_starting_nodes_display()
     
     def add_selected_to_starting_nodes(self):
         """Add selected nodes from canvas to starting nodes list."""
-        if not self.graph:
-            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
-            return
-        
-        # Get selected nodes from canvas
-        selected_items = [item for item in self.canvas.scene.selectedItems() 
-                         if hasattr(item, 'node')]
-        
-        if not selected_items:
-            QMessageBox.information(self, "No Selection", "Please select node(s) on the canvas first.")
-            return
-        
-        # Initialize starting_nodes if not exists
-        if not hasattr(self.graph, 'starting_nodes') or self.graph.starting_nodes is None:
-            self.graph.starting_nodes = []
-        
-        # Add selected nodes to starting_nodes (avoid duplicates)
-        added_count = 0
-        for item in selected_items:
-            if item.node not in self.graph.starting_nodes:
-                self.graph.starting_nodes.append(item.node)
-                added_count += 1
-        
-        self.update_starting_nodes_display()
-        self.status_bar.showMessage(f"Added {added_count} node(s) to starting nodes")
+        self.node_sequence_controller.add_selected_to_starting_nodes()
 
     def on_edge_removed(self, source_node, target_node):
         self.status_bar.showMessage(f"Disconnected {source_node.name} → {target_node.name}")
@@ -1467,78 +1343,19 @@ class MainWindow(QMainWindow):
 
     def update_stopping_nodes_display(self):
         """Update the stopping nodes list display."""
-        self.stopping_nodes_list.clear()
-
-        if not self.graph:
-            return
-
-        if hasattr(self.graph, 'stopping_nodes') and self.graph.stopping_nodes:
-            for node in self.graph.stopping_nodes:
-                self.stopping_nodes_list.addItem(node.name)
+        self.node_sequence_controller.update_stopping_nodes_display()
 
     def add_selected_to_stopping_nodes(self):
         """Add selected nodes from canvas to stopping nodes list."""
-        if not self.graph:
-            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
-            return
-
-        selected_items = [item for item in self.canvas.scene.selectedItems() 
-                         if hasattr(item, 'node')]
-
-        if not selected_items:
-            QMessageBox.information(self, "No Selection", "Please select node(s) on the canvas first.")
-            return
-
-        if not hasattr(self.graph, 'stopping_nodes') or self.graph.stopping_nodes is None:
-            self.graph.stopping_nodes = []
-
-        added_count = 0
-        for item in selected_items:
-            if item.node not in self.graph.stopping_nodes:
-                self.graph.stopping_nodes.append(item.node)
-                added_count += 1
-
-        self.update_stopping_nodes_display()
-        self.status_bar.showMessage(f"Added {added_count} node(s) to stopping nodes")
+        self.node_sequence_controller.add_selected_to_stopping_nodes()
 
     def remove_from_stopping_nodes(self):
         """Remove selected nodes from stopping nodes list."""
-        if not self.graph or not hasattr(self.graph, 'stopping_nodes') or not self.graph.stopping_nodes:
-            return
-
-        selected_items = self.stopping_nodes_list.selectedItems()
-        if not selected_items:
-            QMessageBox.information(self, "No Selection", "Please select node(s) from the stopping nodes list.")
-            return
-
-        removed_count = 0
-        for item in selected_items:
-            node_name = item.text()
-            for node in self.graph.stopping_nodes[:]:
-                if node.name == node_name:
-                    self.graph.stopping_nodes.remove(node)
-                    removed_count += 1
-                    break
-
-        self.update_stopping_nodes_display()
-        self.status_bar.showMessage(f"Removed {removed_count} node(s) from stopping nodes")
+        self.node_sequence_controller.remove_from_stopping_nodes()
 
     def auto_detect_stopping_nodes(self):
         """Auto-detect stopping nodes (ContainerNodes / weights)."""
-        if not self.graph:
-            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
-            return
-
-        from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
-        candidates = [n for n in self.graph.nodes if isinstance(n, ContainerNode)]
-
-        if not candidates:
-            QMessageBox.warning(self, "No Candidates", "No ContainerNode candidates found.")
-            return
-
-        self.graph.stopping_nodes = candidates
-        self.update_stopping_nodes_display()
-        self.status_bar.showMessage(f"Auto-detected {len(candidates)} stopping node(s)")
+        self.node_sequence_controller.auto_detect_stopping_nodes()
 
     def mark_weights_processed(self):
         """Debug helper: mark all ContainerNodes as processed via the graph processor."""
@@ -1556,252 +1373,50 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.information(self, "Not Supported", "Processor does not support marking container nodes as processed.")
 
-
     def clear_stopping_nodes(self):
         """Clear all stopping nodes."""
-        if not self.graph:
-            return
-
-        if hasattr(self.graph, 'stopping_nodes'):
-            self.graph.stopping_nodes = []
-
-        self.update_stopping_nodes_display()
-        self.status_bar.showMessage("Cleared all stopping nodes")
+        self.node_sequence_controller.clear_stopping_nodes()
 
     # --- Manual Sequence UI Handlers
     def add_selected_to_manual_sequence(self):
         """Add a step to the manual sequence using currently selected nodes on canvas."""
-        if not self.graph:
-            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
-            return
-
-        selected_items = [item for item in self.canvas.scene.selectedItems() if hasattr(item, 'node')]
-        if not selected_items:
-            QMessageBox.information(self, "No Selection", "Please select node(s) on the canvas first.")
-            return
-
-        step_nodes = [item.node for item in selected_items]
-        # Append step (list of Node objects) to manual sequence UI and graph property
-        # If graph manual sequence is None, initialize
-        if not hasattr(self.graph, 'manual_processing_sequence') or self.graph.manual_processing_sequence is None:
-            self.graph.manual_processing_sequence = []
-        self.graph.manual_processing_sequence.append(step_nodes)
-        step_label = f"Step {len(self.graph.manual_processing_sequence)-1}: " + ", ".join([n.name for n in step_nodes])
-        self.manual_sequence_list.addItem(step_label)
-        self.status_bar.showMessage("Added manual sequence step (Selected nodes)")
+        self.node_sequence_controller.add_selected_to_manual_sequence()
 
     def add_selected_nodes_to_selected_step(self):
         """Append currently selected canvas nodes to the chosen manual sequence step."""
-        if not self.graph:
-            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
-            return
-
-        # Determine the selected step (use first selected entry)
-        selected_steps = self.manual_sequence_list.selectedItems()
-        if not selected_steps:
-            QMessageBox.information(self, "No Step Selected", "Please select a manual sequence step in the list.")
-            return
-        # Use the first selected step index
-        step_index = self.manual_sequence_list.row(selected_steps[0])
-
-        # Get selected nodes from canvas
-        selected_items = [item for item in self.canvas.scene.selectedItems() if hasattr(item, 'node')]
-        if not selected_items:
-            QMessageBox.information(self, "No Selection", "Please select node(s) on the canvas first.")
-            return
-
-        nodes_to_add = [item.node for item in selected_items]
-
-        if not hasattr(self.graph, 'manual_processing_sequence') or self.graph.manual_processing_sequence is None:
-            self.graph.manual_processing_sequence = []
-
-        # Ensure the step exists (expand list if necessary)
-        while len(self.graph.manual_processing_sequence) <= step_index:
-            self.graph.manual_processing_sequence.append([])
-
-        step = self.graph.manual_processing_sequence[step_index]
-        added = 0
-        for n in nodes_to_add:
-            if n not in step:
-                step.append(n)
-                added += 1
-
-        # Update UI entry
-        labels = [n.name for n in step]
-        self.manual_sequence_list.item(step_index).setText(f"Step {step_index}: " + ", ".join(labels))
-        self.status_bar.showMessage(f"Added {added} node(s) to Step {step_index}")
+        self.node_sequence_controller.add_selected_nodes_to_selected_step()
 
     def replace_selected_step_with_selected_nodes(self):
         """Replace the chosen manual sequence step contents with the currently selected canvas nodes."""
-        if not self.graph:
-            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
-            return
-
-        selected_steps = self.manual_sequence_list.selectedItems()
-        if not selected_steps:
-            QMessageBox.information(self, "No Step Selected", "Please select a manual sequence step in the list.")
-            return
-        step_index = self.manual_sequence_list.row(selected_steps[0])
-
-        selected_items = [item for item in self.canvas.scene.selectedItems() if hasattr(item, 'node')]
-        if not selected_items:
-            QMessageBox.information(self, "No Selection", "Please select node(s) on the canvas first.")
-            return
-
-        nodes_to_set = [item.node for item in selected_items]
-
-        if not hasattr(self.graph, 'manual_processing_sequence') or self.graph.manual_processing_sequence is None:
-            self.graph.manual_processing_sequence = []
-
-        while len(self.graph.manual_processing_sequence) <= step_index:
-            self.graph.manual_processing_sequence.append([])
-
-        self.graph.manual_processing_sequence[step_index] = list(nodes_to_set)
-
-        # Update UI entry
-        labels = [n.name for n in nodes_to_set]
-        self.manual_sequence_list.item(step_index).setText(f"Step {step_index}: " + ", ".join(labels))
-        self.status_bar.showMessage(f"Replaced Step {step_index} with {len(nodes_to_set)} node(s)")
+        self.node_sequence_controller.replace_selected_step_with_selected_nodes()
 
     def remove_from_manual_sequence(self):
         """Remove selected step(s) from manual sequence UI and update graph property."""
-        if not self.graph or not hasattr(self.graph, 'manual_processing_sequence') or not self.graph.manual_processing_sequence:
-            QMessageBox.information(self, "No Sequence", "Manual sequence is empty.")
-            return
-
-        selected_items = self.manual_sequence_list.selectedItems()
-        if not selected_items:
-            QMessageBox.information(self, "No Selection", "Please select step(s) from the manual sequence list.")
-            return
-
-        for item in selected_items:
-            row = self.manual_sequence_list.row(item)
-            self.manual_sequence_list.takeItem(row)
-            try:
-                del self.graph.manual_processing_sequence[row]
-            except Exception:
-                pass
-
-        # Rebuild displayed labels to reflect new indices
-        self.load_manual_sequence_from_graph()
-        self.status_bar.showMessage("Removed selected step(s) from manual sequence")
+        self.node_sequence_controller.remove_from_manual_sequence()
 
     def clear_manual_sequence(self):
         """Clear manual sequence from UI and graph property."""
-        self.manual_sequence_list.clear()
-        if hasattr(self.graph, 'manual_processing_sequence'):
-            try:
-                self.graph.manual_processing_sequence = None
-            except Exception:
-                pass
-        self.status_bar.showMessage("Manual sequence cleared")
+        self.node_sequence_controller.clear_manual_sequence()
 
     def apply_manual_sequence_to_graph(self):
         """Take steps from UI list and set the graph manual_processing_sequence property accordingly."""
-        if not self.graph:
-            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
-            return
-
-        sequence = []
-        for i in range(self.manual_sequence_list.count()):
-            item_text = self.manual_sequence_list.item(i).text()
-            # Format: "Step N: a, b, c"
-            if ':' in item_text:
-                _, nodes_str = item_text.split(':', 1)
-                node_names = [n.strip() for n in nodes_str.split(',') if n.strip()]
-            else:
-                node_names = [n.strip() for n in item_text.split(',') if n.strip()]
-
-            # Resolve node names to Node objects or pass through id strings (Graph handles resolution)
-            step = []
-            for nm in node_names:
-                # If name matches a node id, prefer id
-                if nm in self.graph.idToNodeDictionary:
-                    step.append(self.graph.idToNodeDictionary[nm])
-                else:
-                    # match by node name
-                    matches = [n for n in self.graph.nodes if getattr(n, 'name', None) == nm]
-                    if matches:
-                        step.append(matches[0])
-                    else:
-                        # Fall back to string name - set_manual_processing_sequence handles strictness
-                        step.append(nm)
-            sequence.append(step)
-
-        try:
-            self.graph.set_manual_processing_sequence(sequence, strict=False)
-            self.status_bar.showMessage("Manual sequence applied to graph")
-        except Exception as e:
-            QMessageBox.critical(self, "Apply Failed", f"Failed to set manual sequence: {e}")
+        self.node_sequence_controller.apply_manual_sequence_to_graph()
 
     def load_manual_sequence_from_graph(self):
         """Load the current graph.manual_processing_sequence into the UI list."""
-        self.manual_sequence_list.clear()
-        if not self.graph or not hasattr(self.graph, 'manual_processing_sequence') or not self.graph.manual_processing_sequence:
-            return
-
-        for i, step in enumerate(self.graph.manual_processing_sequence):
-            try:
-                labels = [n.name if hasattr(n, 'name') else (n.id if hasattr(n, 'id') else str(n)) for n in step]
-                step_label = f"Step {i}: " + ", ".join(labels)
-            except Exception:
-                step_label = f"Step {i}"
-            self.manual_sequence_list.addItem(step_label)
+        self.node_sequence_controller.load_manual_sequence_from_graph()
     
     def remove_from_starting_nodes(self):
         """Remove selected nodes from starting nodes list."""
-        if not self.graph or not hasattr(self.graph, 'starting_nodes') or not self.graph.starting_nodes:
-            return
-        
-        # Get selected items from the list
-        selected_items = self.starting_nodes_list.selectedItems()
-        if not selected_items:
-            QMessageBox.information(self, "No Selection", "Please select node(s) from the starting nodes list.")
-            return
-        
-        # Remove nodes by name
-        removed_count = 0
-        for item in selected_items:
-            node_name = item.text().replace("(auto) ", "")  # Remove auto prefix if present
-            # Find and remove the node
-            for node in self.graph.starting_nodes[:]:  # Use slice to modify while iterating
-                if node.name == node_name:
-                    self.graph.starting_nodes.remove(node)
-                    removed_count += 1
-                    break
-        
-        self.update_starting_nodes_display()
-        self.status_bar.showMessage(f"Removed {removed_count} node(s) from starting nodes")
+        self.node_sequence_controller.remove_from_starting_nodes()
     
     def auto_detect_starting_nodes(self):
         """Auto-detect starting nodes (nodes with no predecessors)."""
-        if not self.graph:
-            QMessageBox.warning(self, "No Graph", "Please load a graph first.")
-            return
-        
-        # Find nodes with no predecessors
-        source_nodes = [node for node in self.graph.nodes if len(node.predecessors) == 0]
-        
-        if not source_nodes:
-            QMessageBox.warning(self, "No Sources Found", 
-                              "No nodes with zero predecessors found.\nGraph may have cycles or all nodes have inputs.")
-            return
-        
-        # Set as starting nodes
-        self.graph.starting_nodes = source_nodes
-        self.update_starting_nodes_display()
-        self.status_bar.showMessage(f"Auto-detected {len(source_nodes)} starting node(s)")
+        self.node_sequence_controller.auto_detect_starting_nodes()
     
     def clear_starting_nodes(self):
         """Clear all starting nodes."""
-        if not self.graph:
-            return
-        
-        if hasattr(self.graph, 'starting_nodes'):
-            self.graph.starting_nodes = []
-        
-        self.update_starting_nodes_display()
-        self.status_bar.showMessage("Cleared all starting nodes")
+        self.node_sequence_controller.clear_starting_nodes()
     
     def on_processor_type_changed(self, index):
         """Handle processor type selection change."""
@@ -1840,188 +1455,35 @@ class MainWindow(QMainWindow):
     
     def choose_node_color(self):
         """Open color picker for node color."""
-        color = QColorDialog.getColor(self.default_node_color, self, "Choose Node Color")
-        if color.isValid():
-            self.default_node_color = color
-            self.node_color_btn.setStyleSheet(f"background-color: {color.name()};")
+        self.visualization_controller.choose_node_color()
     
     def choose_text_color(self):
         """Open color picker for text color."""
-        color = QColorDialog.getColor(self.default_text_color, self, "Choose Text Color")
-        if color.isValid():
-            self.default_text_color = color
-            self.text_color_btn.setStyleSheet(f"background-color: {color.name()};")
+        self.visualization_controller.choose_text_color()
     
     def apply_node_colors(self):
         """Apply selected colors to all nodes."""
-        for node_item in self.canvas.node_items.values():
-            # Update node fill color
-            node_item.default_color = self.default_node_color
-            node_item.setBrush(QBrush(self.default_node_color))
-            
-            # Update text color
-            node_item.label.setDefaultTextColor(self.default_text_color)
-            # Guard against NodeItem instances that might not have created their
-            # value_label attribute (e.g., loaded from older saved state)
-            if hasattr(node_item, 'value_label') and node_item.value_label is not None:
-                node_item.value_label.setDefaultTextColor(self.default_text_color)
-            
-            # Trigger repaint
-            node_item.update()
-        
-        self.status_bar.showMessage(f"Applied colors to {len(self.canvas.node_items)} nodes")
+        self.visualization_controller.apply_node_colors()
 
     def apply_node_colors_selected(self):
         """Apply selected colors only to currently selected node items on the canvas."""
-        from .node_item import NodeItem
-
-        selected_items = self.canvas.scene.selectedItems()
-        node_items = [item for item in selected_items if isinstance(item, NodeItem)]
-
-        if not node_items:
-            QMessageBox.information(self, "No Selection", "Please select node(s) on the canvas first.")
-            return
-
-        for node_item in node_items:
-            node_item.default_color = self.default_node_color
-            node_item.setBrush(QBrush(self.default_node_color))
-            node_item.label.setDefaultTextColor(self.default_text_color)
-            if hasattr(node_item, 'value_label') and node_item.value_label is not None:
-                node_item.value_label.setDefaultTextColor(self.default_text_color)
-            node_item.update()
-
-        self.status_bar.showMessage(f"Applied colors to {len(node_items)} selected node(s)")
+        self.visualization_controller.apply_node_colors_selected()
     
     def open_plot_window(self):
         """Open the plot configuration dialog and create plot window."""
-        if not self.graph or len(self.graph.nodes) == 0:
-            QMessageBox.warning(self, "No Graph", "Please load or create a graph first.")
-            return
-        
-        # Get max iterations from the control panel
-        default_max_iter = self.max_steps_spin.value()
-        
-        # Open configuration dialog
-        config_dialog = PlotConfigDialog(self.graph, default_max_iter, self)
-        if config_dialog.exec() == QDialog.DialogCode.Accepted:
-            selected_nodes = config_dialog.get_selected_nodes()
-            
-            if not selected_nodes:
-                QMessageBox.warning(self, "No Nodes Selected", 
-                                  "Please select at least one node to plot.")
-                return
-            
-            max_iterations = config_dialog.get_max_iterations()
-            
-            # Close existing plot window if any and backend mismatch
-            if self.plot_window:
-                # If existing backend is different from selected backend, recreate
-                selected_backend = 'pyqtgraph' if self.plot_backend_combo.currentText() == 'PyQtGraph' else 'matplotlib'
-                try:
-                    existing_backend = getattr(self.plot_window, 'backend', 'matplotlib')
-                except Exception:
-                    existing_backend = 'matplotlib'
-                if existing_backend != selected_backend:
-                    self.plot_window.close()
-                    self.plot_window = None
-            
-            # Create new plot window (respecting backend choice)
-            backend = 'pyqtgraph' if self.plot_backend_combo.currentText() == 'PyQtGraph' else 'matplotlib'
-            self.plot_window = create_plot_window(selected_nodes, max_iterations, None, backend=backend)
-            # Show backend name in the title
-            selected_backend = backend
-            display_backend = 'PyQtGraph' if selected_backend == 'pyqtgraph' else 'Matplotlib'
-            self.plot_window.setWindowTitle(f"Node Values Plot - Computational Graphs ({display_backend})")
-            self.plot_window.show()
-            
-            # Update plot with current iteration (if graph is running)
-            if hasattr(self.graph_runner, '_iteration_counter'):
-                self.plot_window.update_plot(self.graph_runner._iteration_counter)
-            
-            self.status_bar.showMessage(f"Plotting {len(selected_nodes)} nodes")
+        self.plotting_controller.open_plot_window()
     
     def add_selected_to_plot(self):
         """Add currently selected node(s) in the canvas to the plot window."""
-        selected_items = self.canvas.scene.selectedItems()
-        
-        if not selected_items:
-            QMessageBox.information(self, "No Selection", 
-                                   "Please select a node in the canvas first.")
-            return
-        
-        # Filter for node items only
-        from .node_item import NodeItem
-        node_items = [item for item in selected_items if isinstance(item, NodeItem)]
-        
-        if not node_items:
-            QMessageBox.information(self, "No Nodes Selected", 
-                                   "Please select a node (not an edge).")
-            return
-        
-        # Create plot window if it doesn't exist
-        # If there's a plot window but with a different backend, recreate
-        if self.plot_window:
-            selected_backend = 'pyqtgraph' if self.plot_backend_combo.currentText() == 'PyQtGraph' else 'matplotlib'
-            existing_backend = getattr(self.plot_window, 'backend', 'matplotlib')
-            if existing_backend != selected_backend:
-                # recreate with selected backend
-                self.plot_window.close()
-                self.plot_window = None
-
-        if not self.plot_window or not self.plot_window.isVisible():
-            # Create with first selected node as standalone window
-            max_iterations = self.max_steps_spin.value()
-            first_node = node_items[0].node
-            backend = 'pyqtgraph' if self.plot_backend_combo.currentText() == 'PyQtGraph' else 'matplotlib'
-            self.plot_window = create_plot_window([first_node], max_iterations, None, backend=backend)
-            # Show backend name in the title
-            selected_backend = backend
-            display_backend = 'PyQtGraph' if selected_backend == 'pyqtgraph' else 'Matplotlib'
-            self.plot_window.setWindowTitle(f"Node Values Plot - Computational Graphs ({display_backend})")
-            self.plot_window.show()
-            node_items = node_items[1:]  # Remove first node since it's already added
-        
-        # Add remaining selected nodes to plot
-        for node_item in node_items:
-            self.plot_window.add_node(node_item.node)
-        
-        node_count = len([item for item in selected_items if isinstance(item, NodeItem)])
-        self.status_bar.showMessage(f"Added {node_count} node(s) to plot")
+        self.plotting_controller.add_selected_to_plot()
 
     def _on_plot_backend_changed(self, index):
         """Handle plot backend change; if a plot is open with a different backend, recreate it."""
-        self._ensure_plot_backend_consistency()
+        self.plotting_controller.on_backend_changed(index)
 
     def _ensure_plot_backend_consistency(self):
         """If a plot window exists with a different backend than the selected dropdown, re-create it and preserve plotted nodes."""
-        if not hasattr(self, 'plot_backend_combo'):
-            return
-        selected_backend = 'pyqtgraph' if self.plot_backend_combo.currentText() == 'PyQtGraph' else 'matplotlib'
-        if getattr(self, 'plot_window', None) is None:
-            return
-        existing_backend = getattr(self.plot_window, 'backend', 'matplotlib')
-        if existing_backend == selected_backend:
-            return
-
-        # preserve listed nodes
-        try:
-            current_nodes = list(self.plot_window.nodes)
-            max_iterations = getattr(self.plot_window, 'max_iterations', self.max_steps_spin.value())
-        except Exception:
-            current_nodes = []
-            max_iterations = self.max_steps_spin.value()
-
-        # Close and recreate
-        try:
-            self.plot_window.close()
-        except Exception:
-            pass
-        backend = selected_backend
-        self.plot_window = create_plot_window(current_nodes, max_iterations, None, backend=backend)
-        # Show backend name in the title
-        display_backend = 'PyQtGraph' if selected_backend == 'pyqtgraph' else 'Matplotlib'
-        self.plot_window.setWindowTitle(f"Node Values Plot - Computational Graphs ({display_backend})")
-        self.plot_window.show()
+        self.plotting_controller.ensure_backend_consistency()
 
     # Debug/dump_layout helper removed from GUI
 

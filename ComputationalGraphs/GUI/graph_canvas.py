@@ -606,6 +606,10 @@ class GraphCanvas(QGraphicsView):
             node_item.update_value_display()
             if colorize:
                 node_item.colorize_by_value(min_val, max_val, min_color, max_color)
+            else:
+                # Reset color to None so paint() will use default_color
+                node_item.color = None
+                node_item.update()
 
     def highlight_selected_nodes_for_connection(self, on: bool):
         """Highlight all currently selected nodes for connection preview."""
