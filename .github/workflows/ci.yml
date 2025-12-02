@@ -128,8 +128,26 @@ jobs:
           echo "OS release:" && lsb_release -a || cat /etc/os-release || true
           echo "## ldconfig -p | grep EGL"
           sudo ldconfig -p | grep -E 'lib(EGL|GL)' || true
-          echo "## Check for files in /usr/lib*
+          echo "## Check for files in /usr/lib*"
           ls -l /usr/lib*/libEGL* || true
+          echo "## dpkg-query for egl/gl packages"
+          dpkg-query -W -f='${Package}\t${Status}\t${Version}\n' 'libegl*' 'libgl*' 'mesa*' || true
+
+      - name: Show apt policy and attempt explicit libegl install
+        run: |
+          echo "## apt-cache policy for libegl packages"
+          apt-cache policy libegl-mesa0 libegl1 libegl1-mesa libgbm1 || true
+          echo "## Attempt explicit install of libegl-mesa0 and related packages"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libegl-mesa0 libegl1-mesa libgbm1 libgl1-mesa-dri || true
+          echo "## Run ldconfig to refresh dynamic linker cache"
+          sudo ldconfig
+          echo "## ldconfig -p | grep EGL after explicit install"
+          sudo ldconfig -p | grep -E 'lib(EGL|GL)' || true
+          echo "## Check for files in /usr/lib* after explicit install"
+          ls -l /usr/lib*/libEGL* || true
+          echo "## dpkg listing after explicit install"
+          dpkg -l | grep -E 'libegl|libgbm|mesa|libgl' || true
 
       - name: Find Qt shared libraries and show missing deps
         run: |
