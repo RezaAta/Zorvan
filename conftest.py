@@ -18,7 +18,9 @@ def pytest_ignore_collect(path, config):
     # Only check test files
     if not path.ext == ".py":
         return False
-    if not path.basename.startswith("test"):
+    # pytest collection patterns include `test_*.py` and `*_test.py`.
+    # Support both conventions (prefix or suffix) and also files in `Tests/`.
+    if not (path.name.startswith("test") or path.name.endswith("_test.py")):
         return False
     # If PyQt6 installed, don't ignore
     if _PYQT6_AVAILABLE:
@@ -29,6 +31,12 @@ def pytest_ignore_collect(path, config):
     except Exception:
         return False
     # If the content references 'PyQt6' or 'QApplication', we skip collection
-    if "PyQt6" in content or "QApplication" in content or "from PyQt6" in content:
+    if (
+        "PyQt6" in content
+        or "QApplication" in content
+        or "from PyQt6" in content
+        or "QtWidgets" in content
+        or "QWidget" in content
+    ):
         return True
     return False
