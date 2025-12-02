@@ -5,7 +5,15 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QToolTip
 import pyqtgraph as pg
-pg.setConfigOptions(antialias=True)  # Enable antialiasing globally for crisp lines
+# Enable antialiasing and OpenGL acceleration by default for PyQtGraph visuals.
+# OpenGL usage can be toggled from the UI – set the default to True per latest preference.
+try:
+    pg.setConfigOptions(antialias=True, useOpenGL=True, useQOpenGLWidget=True)
+except Exception:
+    try:
+        pg.setConfigOptions(antialias=True, useOpenGL=True)
+    except Exception:
+        pg.setConfigOptions(antialias=True)
 import numpy as np
 
 
@@ -37,6 +45,7 @@ class PlotWindowPG(QWidget):
         self.setWindowTitle('Node Values Plot (pyqtgraph)')
         self.resize(900, 600)
         layout = QVBoxLayout()
+        self.main_layout = layout
 
         self.plot_widget = pg.PlotWidget()
         # Use white background for better visibility
@@ -73,6 +82,20 @@ class PlotWindowPG(QWidget):
         self.pause_plot_check = QCheckBox('Pause Plot')
         self.pause_plot_check.setChecked(False)
         control_layout.addWidget(self.pause_plot_check)
+
+        self.antialias_check = QCheckBox('Antialiasing')
+        self.antialias_check.setChecked(True)  # On by default for smooth lines
+        self.antialias_check.setToolTip('Disable for better performance with jagged/noisy data')
+        self.antialias_check.stateChanged.connect(self._on_antialias_changed)
+        control_layout.addWidget(self.antialias_check)
+
+        # Use OpenGL rendering option (PyQtGraph / hardware accel)
+        self.use_opengl_check = QCheckBox('Use OpenGL')
+        # Default enabled for smoother rendering but can be toggled by the user
+        self.use_opengl_check.setChecked(True)
+        self.use_opengl_check.setToolTip('Enable OpenGL accelerated rendering (may change smoothing/perf)')
+        self.use_opengl_check.stateChanged.connect(self._on_use_opengl_changed)
+        control_layout.addWidget(self.use_opengl_check)
 
         control_layout.addStretch()
 
@@ -115,6 +138,33 @@ class PlotWindowPG(QWidget):
         if node in self.curves:
             self.curves[node].setVisible(visible)
 
+    def _on_antialias_changed(self, state):
+        """Refresh curves with new antialiasing setting."""
+        use_antialias = self.antialias_check.isChecked()
+        for node, curve in self.curves.items():
+            ys = self.data.get(node, [])
+            if ys:
+                xs = list(range(len(ys)))
+                curve.setData(xs, ys, antialias=use_antialias)
+
+    # Removed: _on_opengl_changed in favor of _on_use_opengl_changed
+
+    def _on_use_opengl_changed(self, state):
+        """Enable/disable OpenGL rendering for PyQtGraph.
+
+        Note: For the change to take effect reliably we recreate the PlotWidget instance.
+        """
+        use_open_gl = bool(self.use_opengl_check.isChecked())
+        try:
+            pg.setConfigOptions(useOpenGL=use_open_gl, useQOpenGLWidget=use_open_gl)
+        except Exception:
+            try:
+                pg.setConfigOptions(useOpenGL=use_open_gl)
+            except Exception:
+                pass
+        # Recreate the widget so the change is applied
+        self._recreate_plot_widget()
+
     def _setup_plot(self):
         self.curves = {}
         for i, node in enumerate(self.nodes):
@@ -154,6 +204,54 @@ class PlotWindowPG(QWidget):
             self._mouse_proxy = pg.SignalProxy(self.plot_widget.scene().sigMouseMoved, rateLimit=60, slot=self._on_mouse_moved)
         except Exception:
             self._mouse_proxy = None
+
+    # Note: _recreate_plot_widget() defined later in file; utility removed to keep single definition
+
+    def _recreate_plot_widget(self):
+        """Recreate the PlotWidget and transfer existing curves/data.
+
+        This is used when switching OpenGL or other rendering settings that are only
+        applied at widget creation time.
+        """
+        # Keep references to current plot data and visibility state
+        saved_data = self.data.copy()
+        saved_nodes = list(self.nodes)
+        saved_visibility = {node: (item.checkState() == Qt.CheckState.Checked)
+                            for node in self.nodes for item in []}
+
+        # Remove old widget from layout and delete
+        try:
+            self.main_layout.removeWidget(self.plot_widget)
+            self.plot_widget.deleteLater()
+        except Exception:
+            pass
+
+        # Create new plot_widget and insert at the top of the layout
+        self.plot_widget = pg.PlotWidget()
+        # Use white background and grid similar to initial setup
+        try:
+            self.plot_widget.setBackground('w')
+        except Exception:
+            try:
+                self.plot_widget.setBackground((255, 255, 255))
+            except Exception:
+                pass
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
+        self.plot_widget.setLabel('bottom', 'Iteration')
+        self.plot_widget.setLabel('left', 'Value')
+        self.main_layout.insertWidget(0, self.plot_widget)
+
+        # Setup plot and add existing curves back
+        self._setup_plot()
+        # Transfer data
+        for node in saved_nodes:
+            if node in saved_data:
+                self.data[node] = saved_data[node]
+        # Re-set data for each curve
+        for node, curve in list(self.curves.items()):
+            ys = self.data.get(node, [])
+            xs = list(range(len(ys)))
+            curve.setData(xs, ys, antialias=self.antialias_check.isChecked())
 
     def _generate_unique_legend_label(self, base_label, existing_names):
         """Return a unique label based on base_label, modifying existing_names in-place.
@@ -264,11 +362,7 @@ class PlotWindowPG(QWidget):
         for node, curve in self.curves.items():
             ys = self.data.get(node, [])
             xs = list(range(len(ys)))
-            # Use antialiasing for smoother lines
-            try:
-                curve.setData(xs, ys, antialias=True)
-            except Exception:
-                curve.setData(xs, ys)
+            curve.setData(xs, ys, antialias=self.antialias_check.isChecked())
 
         if self.autoscale_check.isChecked():
             # Determine y range
