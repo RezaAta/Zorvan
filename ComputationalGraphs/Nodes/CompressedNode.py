@@ -1,5 +1,6 @@
-from ComputationalGraphs.Nodes.Node import Node
 from concurrent.futures import ThreadPoolExecutor
+
+from ComputationalGraphs.Nodes.Node import Node
 
 
 # CompressedNode: A Node with a list of nodes
@@ -8,7 +9,7 @@ class CompressedNode(Node):
         self.listOfNodes = nodes if nodes else []
         self.value = self.listOfNodes[-1].value if self.listOfNodes else 0
         super().__init__(name)
-        self.computationType = 'complex'
+        self.computationType = "complex"
 
     def SetComputationStructure(self):
         """
@@ -16,9 +17,11 @@ class CompressedNode(Node):
         The structure is represented as the concatenation of all node names in the list.
         """
         if self.listOfNodes:
-            self.computationStructure = ''.join(node.id for node in self.listOfNodes)
+            self.computationStructure = "".join(node.id for node in self.listOfNodes)
         else:
-            self.computationStructure = self.id  # If no nodes are present, return an empty string
+            self.computationStructure = (
+                self.id
+            )  # If no nodes are present, return an empty string
 
     def UpdateComputationTime(self):
         """
@@ -26,7 +29,9 @@ class CompressedNode(Node):
         The computation time is set to the sum computation time of all its nodes.
         """
         if self.listOfNodes:
-            self.computationTime = sum(node.computationTime for node in self.listOfNodes)
+            self.computationTime = sum(
+                node.computationTime for node in self.listOfNodes
+            )
         else:
             self.computationTime = 1
 

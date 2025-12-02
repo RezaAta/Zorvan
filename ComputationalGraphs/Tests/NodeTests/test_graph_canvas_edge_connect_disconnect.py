@@ -1,23 +1,26 @@
 import sys
+
 from PyQt6.QtWidgets import QApplication
+
 from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
+from ComputationalGraphs.GUI.main_window import MainWindow
+from ComputationalGraphs.GUI.replace_node_dialog import ReplaceNodeDialog
+from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.GUI.replace_node_dialog import ReplaceNodeDialog
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
-from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.GUI.main_window import MainWindow
+
 
 def test_graph_canvas_connect_disconnect():
     app = QApplication(sys.argv)
     g = Graph()
-    ds = DataStreamNode(name='ds', data=[10,20,30])
-    disp = DisplayNode(name='disp')
+    ds = DataStreamNode(name="ds", data=[10, 20, 30])
+    disp = DisplayNode(name="disp")
     disp.value = 42
-    buff = BufferNode(name='b', size=3)
+    buff = BufferNode(name="b", size=3)
     g.AddNode(ds, disp, buff)
 
     canvas = GraphCanvas()
@@ -49,10 +52,10 @@ def test_gui_rewire_buffer_after_replace():
     app = QApplication(sys.argv)
     g = Graph()
     # data stream has values [5,6,7]
-    ds = DataStreamNode(name='ds', data=[5,6,7])
-    disp = DisplayNode(name='disp')
+    ds = DataStreamNode(name="ds", data=[5, 6, 7])
+    disp = DisplayNode(name="disp")
     disp.value = 999
-    buff = BufferNode(name='b', size=3)
+    buff = BufferNode(name="b", size=3)
     g.AddNode(ds, disp, buff)
 
     canvas = GraphCanvas()
@@ -85,10 +88,10 @@ def test_predecessors_dialog_disconnect():
     app = QApplication(sys.argv)
     window = MainWindow()
     g = window.graph
-    ds = DataStreamNode(name='ds', data=[1,2,3])
-    disp = DisplayNode(name='disp')
+    ds = DataStreamNode(name="ds", data=[1, 2, 3])
+    disp = DisplayNode(name="disp")
     disp.value = 42
-    buff = BufferNode(name='b', size=2)
+    buff = BufferNode(name="b", size=2)
     g.AddNode(ds, disp, buff)
 
     ds_item = window.canvas.add_node_item(ds, x=0, y=0)
@@ -101,6 +104,7 @@ def test_predecessors_dialog_disconnect():
 
     # Open predecessors dialog and disconnect
     from ComputationalGraphs.GUI.predecessors_dialog import PredecessorsDialog
+
     dlg = PredecessorsDialog(buff_item, window.canvas)
     dlg.disconnect_pred(disp)
     # Pred list must update
@@ -114,8 +118,8 @@ def test_predecessors_dialog_updates_on_external_delete():
     window = MainWindow()
     g = window.graph
     # nodes
-    disp = DisplayNode(name='disp')
-    buff = BufferNode(name='b', size=2)
+    disp = DisplayNode(name="disp")
+    buff = BufferNode(name="b", size=2)
     g.AddNode(disp, buff)
 
     disp_item = window.canvas.add_node_item(disp, x=200, y=0)
@@ -124,6 +128,7 @@ def test_predecessors_dialog_updates_on_external_delete():
 
     assert disp in buff.predecessors
     from ComputationalGraphs.GUI.predecessors_dialog import PredecessorsDialog
+
     dlg = PredecessorsDialog(buff_item, window.canvas)
     # Initially, should have one predecessor
     assert dlg.list_widget.count() == 1
@@ -141,10 +146,10 @@ def test_predecessors_dialog_updates_on_external_delete():
 def test_predecessors_dialog_disconnect():
     app = QApplication(sys.argv)
     g = Graph()
-    ds = DataStreamNode(name='ds', data=[1,2,3])
-    disp = DisplayNode(name='disp')
+    ds = DataStreamNode(name="ds", data=[1, 2, 3])
+    disp = DisplayNode(name="disp")
     disp.value = 88
-    buff = BufferNode(name='b', size=3)
+    buff = BufferNode(name="b", size=3)
     g.AddNode(ds, disp, buff)
 
     canvas = GraphCanvas()
@@ -159,6 +164,7 @@ def test_predecessors_dialog_disconnect():
 
     # Open predecessors dialog and disconnect disp programmatically
     from ComputationalGraphs.GUI.predecessors_dialog import PredecessorsDialog
+
     dlg = PredecessorsDialog(buff_item, canvas)
     dlg.disconnect_pred(disp)
     assert disp not in buff.predecessors
@@ -174,8 +180,8 @@ def test_rebuild_graph_syncs_canvas_and_graph():
     window = MainWindow()
 
     # Create nodes that haven't been added to the window.graph
-    ds = DataStreamNode(name='ds', data=[1, 2, 3])
-    buff = BufferNode(name='b', size=2)
+    ds = DataStreamNode(name="ds", data=[1, 2, 3])
+    buff = BufferNode(name="b", size=2)
 
     # Add nodes visually to canvas only
     ds_item = window.canvas.add_node_item(ds, x=0, y=0)
@@ -185,7 +191,7 @@ def test_rebuild_graph_syncs_canvas_and_graph():
     window.rebuild_graph()
 
     # The canvas.graph should now be the same as window.graph (synchronized by set_graph)
-    assert getattr(window.canvas, 'graph', None) is window.graph
+    assert getattr(window.canvas, "graph", None) is window.graph
 
     # Create an edge visually and ensure the authoritative graph reflects it
     edge = window.canvas.add_edge_item(ds, buff)
@@ -202,9 +208,9 @@ def test_rebuild_graph_syncs_canvas_and_graph():
 def test_graph_canvas_replace_node_item():
     app = QApplication(sys.argv)
     g = Graph()
-    ds = DataStreamNode(name='ds', data=[1, 2, 3])
-    add = AdditionNode(name='add')
-    mul = MultiplicationNode(name='mul')
+    ds = DataStreamNode(name="ds", data=[1, 2, 3])
+    add = AdditionNode(name="add")
+    mul = MultiplicationNode(name="mul")
     g.AddNode(ds, add, mul)
     # connect ds -> add -> mul
     g.ConnectPreNode(add, ds)
@@ -217,7 +223,7 @@ def test_graph_canvas_replace_node_item():
     mul_item = canvas.add_node_item(mul, x=400, y=0)
 
     # Replace add node with a multiplication node
-    new_node = canvas.replace_node_item(add_item, 'MultiplicationNode')
+    new_node = canvas.replace_node_item(add_item, "MultiplicationNode")
     assert new_node is not None
     assert new_node in g.nodes
     assert add not in g.nodes
@@ -234,7 +240,7 @@ def test_replace_dialog_search_does_not_crash():
     # Construct dialog and simulate typing
     dlg = ReplaceNodeDialog()
     # Set a search text to activate filtering
-    dlg.search_bar.setText('mul')
+    dlg.search_bar.setText("mul")
     # Ensure selected_type remains None if nothing selected
     assert dlg.selected_type() is None
     app.quit()

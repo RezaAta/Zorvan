@@ -1,14 +1,26 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QListWidget, QListWidgetItem, QWidget, QToolButton, QSizePolicy
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
+    QSizePolicy,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class PredecessorsDialog(QDialog):
     """Dialog showing a node's predecessors with option to disconnect them."""
+
     def __init__(self, node_item, canvas, parent=None):
         super().__init__(parent)
         self.node_item = node_item
         self.canvas = canvas
-        self.graph = getattr(canvas, 'graph', None)
+        self.graph = getattr(canvas, "graph", None)
         self.setWindowTitle(f"Predecessors of {node_item.node.name}")
         self.resize(300, 400)
 
@@ -17,7 +29,9 @@ class PredecessorsDialog(QDialog):
         self.list_widget = QListWidget()
         self.list_widget.setSpacing(6)
         self.list_widget.setUniformItemSizes(False)
-        self.list_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.list_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         layout.addWidget(self.list_widget)
 
         # Close/Refresh buttons
@@ -37,9 +51,9 @@ class PredecessorsDialog(QDialog):
         self.setMinimumHeight(120)
         # Listen for canvas-level edge changes so the dialog can refresh in real time
         try:
-            if hasattr(self.canvas, 'edge_removed'):
+            if hasattr(self.canvas, "edge_removed"):
                 self.canvas.edge_removed.connect(self._on_canvas_edge_changed)
-            if hasattr(self.canvas, 'edge_created'):
+            if hasattr(self.canvas, "edge_created"):
                 self.canvas.edge_created.connect(self._on_canvas_edge_changed)
         except Exception:
             pass
@@ -49,16 +63,16 @@ class PredecessorsDialog(QDialog):
         # Resolve the authoritative node instance from the graph (by name/id), if available.
         graph_node = None
         try:
-            if hasattr(self.canvas, 'graph') and self.canvas.graph is not None:
+            if hasattr(self.canvas, "graph") and self.canvas.graph is not None:
                 # Prefer id match then name match
-                node_id = getattr(self.node_item.node, 'id', None)
-                node_name = getattr(self.node_item.node, 'name', None)
+                node_id = getattr(self.node_item.node, "id", None)
+                node_name = getattr(self.node_item.node, "name", None)
                 if node_id and node_id in self.canvas.graph.idToNodeDictionary:
                     graph_node = self.canvas.graph.idToNodeDictionary[node_id]
                 else:
                     # fallback: find by name
                     for gn in self.canvas.graph.nodes:
-                        if getattr(gn, 'name', None) == node_name:
+                        if getattr(gn, "name", None) == node_name:
                             graph_node = gn
                             break
         except Exception:
@@ -68,7 +82,11 @@ class PredecessorsDialog(QDialog):
         if graph_node is not None:
             preds_by_obj = set(graph_node.predecessors)
         else:
-            preds_by_obj = set(self.node_item.node.predecessors) if hasattr(self.node_item.node, 'predecessors') else set()
+            preds_by_obj = (
+                set(self.node_item.node.predecessors)
+                if hasattr(self.node_item.node, "predecessors")
+                else set()
+            )
         # Also check canvas edge items in case visual edges exist but graph hasn't been updated
         try:
             for edge in self.canvas.edge_items:
@@ -89,24 +107,28 @@ class PredecessorsDialog(QDialog):
             # Small tool button with X icon
             try:
                 from PyQt6.QtWidgets import QToolButton
+
                 btn = QToolButton()
-                btn.setText('✕')
+                btn.setText("✕")
                 btn.setFixedSize(26, 26)
-                btn.setToolTip('Disconnect predecessor')
-                btn.setStyleSheet('font-size: 12px; padding: 0px;')
+                btn.setToolTip("Disconnect predecessor")
+                btn.setStyleSheet("font-size: 12px; padding: 0px;")
             except Exception:
-                btn = QPushButton('X')
+                btn = QPushButton("X")
                 btn.setFixedSize(28, 28)
-                btn.setStyleSheet('font-size: 12px; padding: 0px;')
-            label = QLabel(p.name if hasattr(p, 'name') else str(p))
-            label.setStyleSheet('padding-left: 6px')
+                btn.setStyleSheet("font-size: 12px; padding: 0px;")
+            label = QLabel(p.name if hasattr(p, "name") else str(p))
+            label.setStyleSheet("padding-left: 6px")
             # Expand label to use remaining width
-            label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            label.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            )
             # Clear elide by allowing word wrap if too long
             label.setWordWrap(False)
             # Slightly larger font for readability
             try:
                 from PyQt6.QtGui import QFont
+
                 f = label.font()
                 f.setPointSize(max(9, f.pointSize()))
                 label.setFont(f)
@@ -123,6 +145,7 @@ class PredecessorsDialog(QDialog):
 
             list_item = QListWidgetItem()
             from PyQt6.QtCore import QSize
+
             min_size = QSize(320, 44)
             size_hint = row_widget.sizeHint().expandedTo(min_size)
             list_item.setSizeHint(size_hint)
@@ -136,13 +159,13 @@ class PredecessorsDialog(QDialog):
                 # Determine authoritative graph node object
                 graph_node = None
                 try:
-                    node_id = getattr(self.node_item.node, 'id', None)
-                    node_name = getattr(self.node_item.node, 'name', None)
+                    node_id = getattr(self.node_item.node, "id", None)
+                    node_name = getattr(self.node_item.node, "name", None)
                     if node_id and node_id in self.canvas.graph.idToNodeDictionary:
                         graph_node = self.canvas.graph.idToNodeDictionary[node_id]
                     else:
                         for gn in self.canvas.graph.nodes:
-                            if getattr(gn, 'name', None) == node_name:
+                            if getattr(gn, "name", None) == node_name:
                                 graph_node = gn
                                 break
                 except Exception:
@@ -156,12 +179,14 @@ class PredecessorsDialog(QDialog):
                         if p is pred_node:
                             pred_to_remove = p
                             break
-                        if getattr(p, 'name', None) == getattr(pred_node, 'name', None):
+                        if getattr(p, "name", None) == getattr(pred_node, "name", None):
                             pred_to_remove = p
                             break
 
                 try:
-                    self.graph.DisconnectPreNode(graph_node or self.node_item.node, pred_to_remove)
+                    self.graph.DisconnectPreNode(
+                        graph_node or self.node_item.node, pred_to_remove
+                    )
                 except Exception:
                     pass
             # Also remove visual edges from canvas
@@ -177,13 +202,17 @@ class PredecessorsDialog(QDialog):
                     else:
                         # try by name
                         try:
-                            if getattr(src_node, 'name', None) == getattr(pred_node, 'name', None):
+                            if getattr(src_node, "name", None) == getattr(
+                                pred_node, "name", None
+                            ):
                                 match_src = True
                         except Exception:
                             pass
                     if match_src and tgt_node is self.node_item.node:
                         try:
-                            self.canvas.edge_removed.emit(pred_node, self.node_item.node)
+                            self.canvas.edge_removed.emit(
+                                pred_node, self.node_item.node
+                            )
                         except Exception:
                             pass
                         edge.remove()
@@ -208,12 +237,12 @@ class PredecessorsDialog(QDialog):
     def closeEvent(self, event):
         # Detach canvas signals to avoid memory leaks
         try:
-            if hasattr(self.canvas, 'edge_removed'):
+            if hasattr(self.canvas, "edge_removed"):
                 try:
                     self.canvas.edge_removed.disconnect(self._on_canvas_edge_changed)
                 except Exception:
                     pass
-            if hasattr(self.canvas, 'edge_created'):
+            if hasattr(self.canvas, "edge_created"):
                 try:
                     self.canvas.edge_created.disconnect(self._on_canvas_edge_changed)
                 except Exception:

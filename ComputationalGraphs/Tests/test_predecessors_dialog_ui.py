@@ -1,18 +1,19 @@
 from PyQt6.QtWidgets import QApplication
+
 from ComputationalGraphs.GUI.main_window import MainWindow
 from ComputationalGraphs.GUI.predecessors_dialog import PredecessorsDialog
+from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.Nodes.BufferNode import BufferNode
 
 
 def test_predecessors_dialog_layout():
     app = QApplication([])
     win = MainWindow()
     g = win.graph
-    ds = DataStreamNode('ds', data=[1, 2])
-    d1 = DisplayNode('disp1')
-    b = BufferNode('b')
+    ds = DataStreamNode("ds", data=[1, 2])
+    d1 = DisplayNode("disp1")
+    b = BufferNode("b")
     g.AddNode(ds, d1, b)
     disp_item = win.canvas.add_node_item(d1, 10, 10)
     buf_item = win.canvas.add_node_item(b, 200, 10)

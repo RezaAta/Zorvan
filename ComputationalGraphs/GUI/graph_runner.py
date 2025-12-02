@@ -2,38 +2,42 @@
 Graph execution runner with Qt integration.
 """
 
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 import threading
 import time
+
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+
+from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 
 
 class GraphRunner(QObject):
     """Manages graph execution with timer-based stepping."""
-    
+
     step_completed = pyqtSignal(int)  # Emits current step number
     execution_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        
+
         self.graph = None
         self.graph_processor = None
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.step)
-        
+
         self.current_step = 0
         self.max_steps = 0
         self.is_running = False
         self.step_interval = 500  # milliseconds
         self.use_multithreading = False  # Default to single thread
-        self.processor_type = "concurrent"  # "forward" or "concurrent" - default to concurrent
+        self.processor_type = (
+            "concurrent"  # "forward" or "concurrent" - default to concurrent
+        )
         self.active_nodes = []  # Track active nodes for forward processing highlighting
         self._exec_thread = None
         self._exec_controller = None
-    
+
     def set_graph(self, graph):
         """Set the graph to execute."""
         self.graph = graph
@@ -41,18 +45,22 @@ class GraphRunner(QObject):
         self.graph_processor = GraphProcessor(graph=self.graph, verbose=False)
         try:
             parent = self.parent()
-            if parent is not None and hasattr(parent, 'verbose_check'):
+            if parent is not None and hasattr(parent, "verbose_check"):
                 # If the verbose checkbox exists on the parent window, use its state
                 self.graph_processor.verbose = parent.verbose_check.isChecked()
         except Exception:
             # If anything goes wrong reading UI state, leave verbose as created
             pass
-        
+
         # If using forward processing, reset state to ensure fresh initialization
-        if self.processor_type == "forward" and hasattr(self.graph_processor, 'reset_forward_state'):
+        if self.processor_type == "forward" and hasattr(
+            self.graph_processor, "reset_forward_state"
+        ):
             self.graph_processor.reset_forward_state()
         # If using manual processing, reset manual state to ensure index starts at 0
-        if self.processor_type == "manual" and hasattr(self.graph_processor, 'reset_manual_state'):
+        if self.processor_type == "manual" and hasattr(
+            self.graph_processor, "reset_manual_state"
+        ):
             self.graph_processor.reset_manual_state()
 
         # If using forward processing, prefer graph-level preparation:
@@ -60,20 +68,20 @@ class GraphRunner(QObject):
         # `PrepareForForwardProcessing(processor)` which marks source and container
         # nodes as processed for the first forward pass. Call that if available.
         if self.processor_type == "forward":
-            if hasattr(self.graph, 'PrepareForForwardProcessing'):
+            if hasattr(self.graph, "PrepareForForwardProcessing"):
                 try:
                     # Let the graph prepare itself using the processor instance
                     self.graph.PrepareForForwardProcessing(self.graph_processor)
                 except Exception:
                     # Fall back to any processor helper if graph-level prep fails
-                    if hasattr(self.graph_processor, 'mark_source_nodes_as_processed'):
+                    if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
                         try:
                             self.graph_processor.mark_source_nodes_as_processed()
                         except Exception:
                             pass
             else:
                 # If graph does not provide PrepareForForwardProcessing, attempt processor helper
-                if hasattr(self.graph_processor, 'mark_source_nodes_as_processed'):
+                if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
                     try:
                         self.graph_processor.mark_source_nodes_as_processed()
                     except Exception:
@@ -82,7 +90,7 @@ class GraphRunner(QObject):
             # Marking container (weight) nodes should be handled explicitly
             # by graph builders or user actions so they can participate in
             # forward-processing cycles and updates correctly.
-    
+
     def start(self, max_steps=100):
         """Start continuous execution."""
         if not self.graph:
@@ -106,7 +114,9 @@ class GraphRunner(QObject):
             return
 
         # Create execution controller from GraphProcessor options and keep a reference
-        exec_opts = GraphProcessor.ExecutionOptions(step_interval_ms=self.step_interval, allow_pause=True)
+        exec_opts = GraphProcessor.ExecutionOptions(
+            step_interval_ms=self.step_interval, allow_pause=True
+        )
         controller = GraphProcessor.ExecutionController.from_options(exec_opts)
         self._exec_controller = controller
         self._exec_options = exec_opts
@@ -116,37 +126,56 @@ class GraphRunner(QObject):
             try:
                 if self.processor_type == "forward":
                     starting_nodes = None
-                    if hasattr(self.graph, 'starting_nodes') and self.graph.starting_nodes:
+                    if (
+                        hasattr(self.graph, "starting_nodes")
+                        and self.graph.starting_nodes
+                    ):
                         starting_nodes = self.graph.starting_nodes
 
                     iterations_run = 0
-                    while iterations_run < self.max_steps and not controller.stop_event.is_set():
+                    while (
+                        iterations_run < self.max_steps
+                        and not controller.stop_event.is_set()
+                    ):
                         # Respect pause
                         while controller.pause_event.is_set():
                             time.sleep(0.01)
 
                         # Run a single forward iteration
-                        self.graph_processor.ForwardProcessing(iterations=1, starting_nodes=starting_nodes)
+                        self.graph_processor.ForwardProcessing(
+                            iterations=1, starting_nodes=starting_nodes
+                        )
                         iterations_run += 1
                         self.current_step += 1
 
                         # Update active nodes for highlighting
-                        if hasattr(self.graph_processor, '_currently_processing_nodes'):
-                            self.active_nodes = list(self.graph_processor._currently_processing_nodes)
+                        if hasattr(self.graph_processor, "_currently_processing_nodes"):
+                            self.active_nodes = list(
+                                self.graph_processor._currently_processing_nodes
+                            )
                         else:
                             self.active_nodes = []
 
                         # Emit progress
                         self.step_completed.emit(self.current_step)
                         # Respect step interval (responsive to pause/stop)
-                        interval_ms = getattr(controller, 'step_interval_ms', self.step_interval) or 0
+                        interval_ms = (
+                            getattr(controller, "step_interval_ms", self.step_interval)
+                            or 0
+                        )
                         if interval_ms:
                             slept = 0
                             # Sleep in small increments so pause/stop remains responsive
-                            while slept < interval_ms and not controller.stop_event.is_set():
+                            while (
+                                slept < interval_ms
+                                and not controller.stop_event.is_set()
+                            ):
                                 if controller.pause_event.is_set():
                                     # If paused, block here until unpaused or stopped
-                                    while controller.pause_event.is_set() and not controller.stop_event.is_set():
+                                    while (
+                                        controller.pause_event.is_set()
+                                        and not controller.stop_event.is_set()
+                                    ):
                                         time.sleep(0.01)
                                     if controller.stop_event.is_set():
                                         break
@@ -157,31 +186,50 @@ class GraphRunner(QObject):
                 elif self.processor_type == "manual":
                     # Manual processing: call ManualProcessing for one iteration
                     iterations_run = 0
-                    while iterations_run < self.max_steps and not controller.stop_event.is_set():
+                    while (
+                        iterations_run < self.max_steps
+                        and not controller.stop_event.is_set()
+                    ):
                         # Respect pause
                         while controller.pause_event.is_set():
                             time.sleep(0.01)
 
                         # Execute one manual processing iteration (uses graph.manual_processing_sequence)
-                        self.graph_processor.ManualProcessing(iterations=1, computation_sequence=getattr(self.graph, 'manual_processing_sequence', None))
+                        self.graph_processor.ManualProcessing(
+                            iterations=1,
+                            computation_sequence=getattr(
+                                self.graph, "manual_processing_sequence", None
+                            ),
+                        )
                         iterations_run += 1
                         self.current_step += 1
 
                         # Update active nodes for highlighting
-                        if hasattr(self.graph_processor, '_currently_processing_nodes'):
-                            self.active_nodes = list(self.graph_processor._currently_processing_nodes)
+                        if hasattr(self.graph_processor, "_currently_processing_nodes"):
+                            self.active_nodes = list(
+                                self.graph_processor._currently_processing_nodes
+                            )
                         else:
                             self.active_nodes = []
 
                         # Emit progress
                         self.step_completed.emit(self.current_step)
                         # Respect step interval
-                        interval_ms = getattr(controller, 'step_interval_ms', self.step_interval) or 0
+                        interval_ms = (
+                            getattr(controller, "step_interval_ms", self.step_interval)
+                            or 0
+                        )
                         if interval_ms:
                             slept = 0
-                            while slept < interval_ms and not controller.stop_event.is_set():
+                            while (
+                                slept < interval_ms
+                                and not controller.stop_event.is_set()
+                            ):
                                 if controller.pause_event.is_set():
-                                    while controller.pause_event.is_set() and not controller.stop_event.is_set():
+                                    while (
+                                        controller.pause_event.is_set()
+                                        and not controller.stop_event.is_set()
+                                    ):
                                         time.sleep(0.01)
                                     if controller.stop_event.is_set():
                                         break
@@ -193,9 +241,19 @@ class GraphRunner(QObject):
                     # Concurrent mode: let processor run iterations and call back per-iteration
                     if self.use_multithreading:
                         # Pass the actual controller instance so runtime changes affect the running loop
-                        self.graph_processor.ComputeGraph(self.max_steps, exec_options=exec_opts, on_iteration_complete=lambda it: self._on_iter_complete(it), controller=controller)
+                        self.graph_processor.ComputeGraph(
+                            self.max_steps,
+                            exec_options=exec_opts,
+                            on_iteration_complete=lambda it: self._on_iter_complete(it),
+                            controller=controller,
+                        )
                     else:
-                        self.graph_processor.ComputeGraphSingleThread(self.max_steps, exec_options=exec_opts, on_iteration_complete=lambda it: self._on_iter_complete(it), controller=controller)
+                        self.graph_processor.ComputeGraphSingleThread(
+                            self.max_steps,
+                            exec_options=exec_opts,
+                            on_iteration_complete=lambda it: self._on_iter_complete(it),
+                            controller=controller,
+                        )
 
             except Exception as e:
                 self.error_occurred.emit(f"Execution error: {str(e)}")
@@ -217,8 +275,12 @@ class GraphRunner(QObject):
 
         # Update active nodes (concurrent mode doesn't track active nodes)
         try:
-            if self.processor_type == 'forward' and hasattr(self.graph_processor, '_currently_processing_nodes'):
-                self.active_nodes = list(self.graph_processor._currently_processing_nodes)
+            if self.processor_type == "forward" and hasattr(
+                self.graph_processor, "_currently_processing_nodes"
+            ):
+                self.active_nodes = list(
+                    self.graph_processor._currently_processing_nodes
+                )
             else:
                 self.active_nodes = []
         except Exception:
@@ -229,16 +291,16 @@ class GraphRunner(QObject):
             self.step_completed.emit(self.current_step)
         except Exception:
             pass
-    
+
     def pause(self):
         """Pause execution."""
         # Pause background execution if controller present
         if self._exec_controller is not None:
             try:
                 # Use controller API
-                if hasattr(self._exec_controller, 'pause'):
+                if hasattr(self._exec_controller, "pause"):
                     self._exec_controller.pause()
-                elif hasattr(self._exec_controller, 'pause_event'):
+                elif hasattr(self._exec_controller, "pause_event"):
                     self._exec_controller.pause_event.set()
             except Exception:
                 pass
@@ -248,16 +310,16 @@ class GraphRunner(QObject):
         except Exception:
             pass
         self.is_running = False
-    
+
     def resume(self):
         """Resume execution."""
         # Resume background execution if controller present
         if self._exec_controller is not None:
             try:
                 # Use controller API
-                if hasattr(self._exec_controller, 'resume'):
+                if hasattr(self._exec_controller, "resume"):
                     self._exec_controller.resume()
-                elif hasattr(self._exec_controller, 'pause_event'):
+                elif hasattr(self._exec_controller, "pause_event"):
                     self._exec_controller.pause_event.clear()
             except Exception:
                 pass
@@ -269,7 +331,7 @@ class GraphRunner(QObject):
                     self.timer.start(self.step_interval)
                 except Exception:
                     pass
-    
+
     def step(self):
         """Execute one step of the graph."""
         if not self.graph or self.current_step >= self.max_steps:
@@ -285,55 +347,72 @@ class GraphRunner(QObject):
                 # Execute one iteration
                 # Explicitly pass starting_nodes to ensure correct initialization
                 starting_nodes = None
-                if hasattr(self.graph, 'starting_nodes') and self.graph.starting_nodes:
+                if hasattr(self.graph, "starting_nodes") and self.graph.starting_nodes:
                     starting_nodes = self.graph.starting_nodes
-                
-                self.graph_processor.ForwardProcessing(iterations=1, starting_nodes=starting_nodes)
-                
+
+                self.graph_processor.ForwardProcessing(
+                    iterations=1, starting_nodes=starting_nodes
+                )
+
                 # Track nodes that were just processed (for highlighting)
-                if hasattr(self.graph_processor, '_currently_processing_nodes'):
-                    self.active_nodes = list(self.graph_processor._currently_processing_nodes)
+                if hasattr(self.graph_processor, "_currently_processing_nodes"):
+                    self.active_nodes = list(
+                        self.graph_processor._currently_processing_nodes
+                    )
                 else:
                     self.active_nodes = []
-                
+
                 # Note: We don't stop when active_remaining == 0 because the graph
                 # may reactivate nodes in subsequent iterations (e.g., DataStreamNodes cycling)
             elif self.processor_type == "manual":
                 # Single-step manual processing uses graph.manual_processing_sequence
-                self.graph_processor.ManualProcessing(iterations=1, computation_sequence=getattr(self.graph, 'manual_processing_sequence', None))
-                if hasattr(self.graph_processor, '_currently_processing_nodes'):
-                    self.active_nodes = list(self.graph_processor._currently_processing_nodes)
+                self.graph_processor.ManualProcessing(
+                    iterations=1,
+                    computation_sequence=getattr(
+                        self.graph, "manual_processing_sequence", None
+                    ),
+                )
+                if hasattr(self.graph_processor, "_currently_processing_nodes"):
+                    self.active_nodes = list(
+                        self.graph_processor._currently_processing_nodes
+                    )
                 else:
                     self.active_nodes = []
             else:
                 # Concurrent processing (traditional)
                 self.active_nodes = []  # No active node tracking for concurrent
                 # For manual stepping use a short-lived exec options object
-                step_opts = GraphProcessor.ExecutionOptions(step_interval_ms=0, allow_pause=False)
+                step_opts = GraphProcessor.ExecutionOptions(
+                    step_interval_ms=0, allow_pause=False
+                )
                 if self.use_multithreading:
                     self.graph_processor.ComputeGraph(1, exec_options=step_opts)
                 else:
-                    self.graph_processor.ComputeGraphSingleThread(1, exec_options=step_opts)
-            
+                    self.graph_processor.ComputeGraphSingleThread(
+                        1, exec_options=step_opts
+                    )
+
             self.current_step += 1
             self.step_completed.emit(self.current_step)
-            
+
             if self.current_step >= self.max_steps:
                 self.stop()
-        
+
         except Exception as e:
-            self.error_occurred.emit(f"Execution error at step {self.current_step}: {str(e)}")
+            self.error_occurred.emit(
+                f"Execution error at step {self.current_step}: {str(e)}"
+            )
             self.stop()
-    
+
     def stop(self):
         """Stop execution."""
         # Signal background worker to stop
         if self._exec_controller is not None:
             try:
                 # Use controller API
-                if hasattr(self._exec_controller, 'stop'):
+                if hasattr(self._exec_controller, "stop"):
                     self._exec_controller.stop()
-                elif hasattr(self._exec_controller, 'stop_event'):
+                elif hasattr(self._exec_controller, "stop_event"):
                     self._exec_controller.stop_event.set()
             except Exception:
                 pass
@@ -356,53 +435,55 @@ class GraphRunner(QObject):
 
         self.is_running = False
         self.execution_finished.emit()
-    
+
     def reset(self):
         """Reset execution state."""
         self.stop()
         self.current_step = 0
         self.active_nodes = []
-        
+
         # Reset all nodes
         if self.graph:
             for node in self.graph.nodes:
-                if hasattr(node, 'ResetValue'):
+                if hasattr(node, "ResetValue"):
                     node.ResetValue()
-        
+
         # Reset forward processing state
         if self.processor_type == "forward" and self.graph_processor:
-            if hasattr(self.graph_processor, 'reset_forward_state'):
+            if hasattr(self.graph_processor, "reset_forward_state"):
                 self.graph_processor.reset_forward_state()
-            
+
             # Re-prepare the graph for forward processing after reset.
             # Prefer graph-level preparation which may mark both sources
             # and containers; otherwise call processor helpers.
-            if hasattr(self.graph, 'PrepareForForwardProcessing'):
+            if hasattr(self.graph, "PrepareForForwardProcessing"):
                 try:
                     self.graph.PrepareForForwardProcessing(self.graph_processor)
                 except Exception:
-                    if hasattr(self.graph_processor, 'mark_source_nodes_as_processed'):
+                    if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
                         try:
                             self.graph_processor.mark_source_nodes_as_processed()
                         except Exception:
                             pass
-                    if hasattr(self.graph_processor, 'mark_container_nodes_as_processed'):
+                    if hasattr(
+                        self.graph_processor, "mark_container_nodes_as_processed"
+                    ):
                         try:
                             self.graph_processor.mark_container_nodes_as_processed()
                         except Exception:
                             pass
             else:
-                if hasattr(self.graph_processor, 'mark_source_nodes_as_processed'):
+                if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
                     try:
                         self.graph_processor.mark_source_nodes_as_processed()
                     except Exception:
                         pass
-                if hasattr(self.graph_processor, 'mark_container_nodes_as_processed'):
+                if hasattr(self.graph_processor, "mark_container_nodes_as_processed"):
                     try:
                         self.graph_processor.mark_container_nodes_as_processed()
                     except Exception:
                         pass
-    
+
     def set_speed(self, interval_ms):
         """Set the step interval in milliseconds."""
         # Allow 0ms for maximum speed (Qt timer accepts 0 to fire as fast as possible)
@@ -416,7 +497,7 @@ class GraphRunner(QObject):
 
         # Propagate to stored exec options and controller if present
         try:
-            if hasattr(self, '_exec_options') and self._exec_options is not None:
+            if hasattr(self, "_exec_options") and self._exec_options is not None:
                 try:
                     self._exec_options.step_interval_ms = self.step_interval
                 except Exception:
@@ -424,61 +505,63 @@ class GraphRunner(QObject):
 
             if self._exec_controller is not None:
                 # Prefer controller API attribute if available
-                if hasattr(self._exec_controller, 'step_interval_ms'):
+                if hasattr(self._exec_controller, "step_interval_ms"):
                     try:
                         self._exec_controller.step_interval_ms = self.step_interval
                     except Exception:
                         pass
         except Exception:
             pass
-    
+
     def set_threading_mode(self, use_multithreading):
         """Set whether to use multithreading for graph execution.
-        
+
         Args:
             use_multithreading: True for multi-threaded, False for single-threaded
         """
         self.use_multithreading = use_multithreading
-    
+
     def set_processor_type(self, processor_type):
         """Set the processor type for graph execution.
-        
+
         Args:
-            processor_type: "forward" for Forward Processing (autonomous execution), 
+            processor_type: "forward" for Forward Processing (autonomous execution),
                           "concurrent" for traditional concurrent processing
         """
         self.processor_type = processor_type
-        
+
         # Reset forward state when switching to Forward Processing
         if processor_type == "forward" and self.graph_processor:
-            if hasattr(self.graph_processor, 'reset_forward_state'):
+            if hasattr(self.graph_processor, "reset_forward_state"):
                 self.graph_processor.reset_forward_state()
-            
+
             # Prefer graph-level preparation which may mark both sources and
             # container (weight) nodes appropriately. Fall back to processor
             # helpers if graph-level method is not available.
-            if hasattr(self.graph, 'PrepareForForwardProcessing'):
+            if hasattr(self.graph, "PrepareForForwardProcessing"):
                 try:
                     self.graph.PrepareForForwardProcessing(self.graph_processor)
                 except Exception:
                     # Fallback to processor helpers
-                    if hasattr(self.graph_processor, 'mark_source_nodes_as_processed'):
+                    if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
                         try:
                             self.graph_processor.mark_source_nodes_as_processed()
                         except Exception:
                             pass
-                    if hasattr(self.graph_processor, 'mark_container_nodes_as_processed'):
+                    if hasattr(
+                        self.graph_processor, "mark_container_nodes_as_processed"
+                    ):
                         try:
                             self.graph_processor.mark_container_nodes_as_processed()
                         except Exception:
                             pass
             else:
-                if hasattr(self.graph_processor, 'mark_source_nodes_as_processed'):
+                if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
                     try:
                         self.graph_processor.mark_source_nodes_as_processed()
                     except Exception:
                         pass
-                if hasattr(self.graph_processor, 'mark_container_nodes_as_processed'):
+                if hasattr(self.graph_processor, "mark_container_nodes_as_processed"):
                     try:
                         self.graph_processor.mark_container_nodes_as_processed()
                     except Exception:
@@ -487,12 +570,16 @@ class GraphRunner(QObject):
             # Marking container (weight) nodes should be handled explicitly
             # by graph builders or user actions so they can participate in
             # forward-processing cycles and updates correctly.
-            if processor_type == "manual" and self.graph_processor and hasattr(self.graph_processor, 'reset_manual_state'):
+            if (
+                processor_type == "manual"
+                and self.graph_processor
+                and hasattr(self.graph_processor, "reset_manual_state")
+            ):
                 try:
                     self.graph_processor.reset_manual_state()
                 except Exception:
                     pass
-    
+
     def single_step(self):
         """Execute a single step without timer."""
         if not self.is_running:

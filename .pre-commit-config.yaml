@@ -18,11 +18,9 @@ repos:
     hooks:
       - id: isort
 
-  - repo: https://github.com/charliermarsh/ruff
-    rev: v0.0.300
-    hooks:
-      - id: ruff
-        args: ["--fix", "--select=E,F,W"]
+  # Note: ruff checks are still run in CI; the pre-commit ruff hook was removed because
+  # some ruff releases are unclonable by pre-commit (pre-commit requires a stable tag).
+  # Keep ruff in CI: `ruff check .` (see .github/workflows/ci.yml).
 
   # Optional: run tests locally via pre-commit (use cautiously)
   - repo: local
@@ -30,7 +28,8 @@ repos:
       - id: run-tests
         name: run pytest before commit
         entry: pytest -q
-        language: system
+        language: python
+        additional_dependencies: [pytest]
         always_run: false
         pass_filenames: false
         stages: [pre-commit]

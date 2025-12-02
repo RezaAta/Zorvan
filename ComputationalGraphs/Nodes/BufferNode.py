@@ -1,12 +1,20 @@
-from ComputationalGraphs.Nodes.BasicNode import BasicNode
 from copy import deepcopy
 from typing import Any
 
+from ComputationalGraphs.Nodes.BasicNode import BasicNode
+
+
 class BufferNode(BasicNode):
-    def __init__(self, name: str = "", data=None, size: int = 1, allowNone: bool = True):
+    def __init__(
+        self, name: str = "", data=None, size: int = 1, allowNone: bool = True
+    ):
         super().__init__(name, 0)
-        self.buffer = list(data) if data is not None else [None] * size  # Start with given data or a list of None of length size
-        self.bufferSize = max(size, len(self.buffer))  # Set buffer size based on max of size or initial data length
+        self.buffer = (
+            list(data) if data is not None else [None] * size
+        )  # Start with given data or a list of None of length size
+        self.bufferSize = max(
+            size, len(self.buffer)
+        )  # Set buffer size based on max of size or initial data length
         self.value = self.buffer[0] if self.buffer else None
         self.batchSize = 1
         self.inclusive = False
@@ -22,6 +30,7 @@ class BufferNode(BasicNode):
         item = input
         try:
             import numpy as _np
+
             # np.ndarray (0-d) or np.generic convert to Python scalar
             if isinstance(input, _np.ndarray):
                 # zero-d arrays -> item(), else keep array

@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
-from ComputationalGraphs.Core.MLPAnfisGraph import MLPAnfisGraph
+
 from ComputationalGraphs.Core.BackpropAnfisGraph import BackpropAnfisGraph
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Core.MLPAnfisGraph import MLPAnfisGraph
 
 
 def run_training_log(epochs=200, learning_rate=0.1):
@@ -66,12 +67,12 @@ def run_training_log(epochs=200, learning_rate=0.1):
 
     # Plot MSE
     plt.plot(mse_history)
-    plt.xlabel('Epoch')
-    plt.ylabel('MSE')
-    plt.title('ANFIS Concurrent Training MSE')
+    plt.xlabel("Epoch")
+    plt.ylabel("MSE")
+    plt.title("ANFIS Concurrent Training MSE")
     plt.grid(True)
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_training_log(epochs=200, learning_rate=0.08)

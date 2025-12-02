@@ -1,8 +1,11 @@
 import numpy as np
+
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 from ComputationalGraphs.Nodes.SigmoidDerivativeNode import SigmoidDerivativeNode
+
+
 class SigmoidNode(BasicNode):
-    def __init__(self, name: str = "", value = 0):
+    def __init__(self, name: str = "", value=0):
         super().__init__(name, value)
         self.inputCount = 1
         self.batchSize = 1
@@ -10,7 +13,7 @@ class SigmoidNode(BasicNode):
         self.derivative = SigmoidDerivativeNode
 
     def Operation(self, x):
-        return (1 / (1 + np.exp(-x)))
+        return 1 / (1 + np.exp(-x))
 
     def IsValidInput(self, inp):
         """

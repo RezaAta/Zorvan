@@ -1,9 +1,12 @@
 import sys
 import unittest
+
 from PyQt6.QtWidgets import QApplication
+
 from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 from ComputationalGraphs.GUI.node_item import NodeItem
+from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+
 
 class ManualUITest(unittest.TestCase):
     @classmethod
@@ -13,13 +16,15 @@ class ManualUITest(unittest.TestCase):
 
     def test_console_hidden_by_default(self):
         win = MainWindow()
-        self.assertFalse(win.console_dock.isVisible(), "Console should be hidden by default")
+        self.assertFalse(
+            win.console_dock.isVisible(), "Console should be hidden by default"
+        )
 
     def test_manual_sequence_add_replace(self):
         win = MainWindow()
         # Create sample nodes
-        n1 = DisplayNode('A', value=1)
-        n2 = DisplayNode('B', value=2)
+        n1 = DisplayNode("A", value=1)
+        n2 = DisplayNode("B", value=2)
         win.graph.AddNode(n1, n2)
         item1 = NodeItem(n1)
         item2 = NodeItem(n2)
@@ -47,5 +52,6 @@ class ManualUITest(unittest.TestCase):
         win.replace_selected_step_with_selected_nodes()
         self.assertEqual(win.graph.manual_processing_sequence[0], [n2])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

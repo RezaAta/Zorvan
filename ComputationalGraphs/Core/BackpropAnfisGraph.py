@@ -1,12 +1,16 @@
 from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
-from ComputationalGraphs.Nodes.DivisionNode import DivisionNode
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
-from ComputationalGraphs.Nodes.GaussianCenterDerivativeNode import GaussianCenterDerivativeNode
-from ComputationalGraphs.Nodes.GaussianSigmaDerivativeNode import GaussianSigmaDerivativeNode
 from ComputationalGraphs.Nodes.BufferNode import BufferNode
+from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+from ComputationalGraphs.Nodes.DivisionNode import DivisionNode
+from ComputationalGraphs.Nodes.GaussianCenterDerivativeNode import (
+    GaussianCenterDerivativeNode,
+)
+from ComputationalGraphs.Nodes.GaussianSigmaDerivativeNode import (
+    GaussianSigmaDerivativeNode,
+)
+from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
+from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
 
 
 class BackpropAnfisGraph(BackpropGraph):
@@ -33,19 +37,27 @@ class BackpropAnfisGraph(BackpropGraph):
         output_node = None
         numerator = None
         for n in self.mlp_graph.nodes:
-            if n.name == 'Denominator':
+            if n.name == "Denominator":
                 denom = n
-            if n.name == 'Numerator':
+            if n.name == "Numerator":
                 numerator = n
-            if hasattr(n, '__class__') and n.__class__.__name__ == 'DivisionNode' and n.name.startswith('y'):
+            if (
+                hasattr(n, "__class__")
+                and n.__class__.__name__ == "DivisionNode"
+                and n.name.startswith("y")
+            ):
                 output_node = n
 
         if denom is None or output_node is None:
-            raise RuntimeError("Could not find required ANFIS output/denominator nodes in graph.")
+            raise RuntimeError(
+                "Could not find required ANFIS output/denominator nodes in graph."
+            )
 
         # Use the output error node (assumes single output)
         if not self.mlp_graph.errorLayer:
-            raise RuntimeError("ANFIS graph has no errorLayer; ensure _CreateErrorLayer() ran.")
+            raise RuntimeError(
+                "ANFIS graph has no errorLayer; ensure _CreateErrorLayer() ran."
+            )
         error_node = self.mlp_graph.errorLayer[0]
 
         # For every consequent ContainerNode q_k, build normalized-rule -> gradient -> lr chain
@@ -79,10 +91,10 @@ class BackpropAnfisGraph(BackpropGraph):
             def collect_mf_preds(node):
                 # recursively collect GaussianMembershipNode leaves
                 preds = []
-                if hasattr(node, 'predecessors') and node.predecessors:
+                if hasattr(node, "predecessors") and node.predecessors:
                     for p in node.predecessors:
                         # GaussianMembershipNode className
-                        if p.__class__.__name__ == 'GaussianMembershipNode':
+                        if p.__class__.__name__ == "GaussianMembershipNode":
                             preds.append(p)
                         else:
                             preds.extend(collect_mf_preds(p))
@@ -98,12 +110,20 @@ class BackpropAnfisGraph(BackpropGraph):
 
                 # center derivative node for this MF
                 dmu_dc = GaussianCenterDerivativeNode(name=f"dmu_dc_k{k}_m{i}")
-                dmu_dc.AddPreNode(mu_node.predecessors[0], mu_node.predecessors[1], mu_node.predecessors[2])
+                dmu_dc.AddPreNode(
+                    mu_node.predecessors[0],
+                    mu_node.predecessors[1],
+                    mu_node.predecessors[2],
+                )
                 self.AddNode(dmu_dc)
 
                 # sigma derivative
                 dmu_ds = GaussianSigmaDerivativeNode(name=f"dmu_ds_k{k}_m{i}")
-                dmu_ds.AddPreNode(mu_node.predecessors[0], mu_node.predecessors[1], mu_node.predecessors[2])
+                dmu_ds.AddPreNode(
+                    mu_node.predecessors[0],
+                    mu_node.predecessors[1],
+                    mu_node.predecessors[2],
+                )
                 self.AddNode(dmu_ds)
 
                 # grad contribution to center: grad_wk * other * dmu_dc

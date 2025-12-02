@@ -4,6 +4,7 @@ ExecutionSettingsController - Manages execution speed and display settings.
 Extracted from MainWindow as part of Clean Code refactoring.
 Handles speed slider/spinbox, max speed toggle, verbose output, and related settings.
 """
+
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 class ExecutionSettingsController:
     """Controller for execution speed and display settings."""
 
-    def __init__(self, main_window: 'MainWindow'):
+    def __init__(self, main_window: "MainWindow"):
         self.main_window = main_window
 
     def on_speed_changed(self, value: int):
@@ -28,7 +29,7 @@ class ExecutionSettingsController:
 
         # Keep spinbox in sync when slider moves
         try:
-            if hasattr(mw, 'speed_spin') and mw.speed_spin.value() != value:
+            if hasattr(mw, "speed_spin") and mw.speed_spin.value() != value:
                 mw.speed_spin.blockSignals(True)
                 mw.speed_spin.setValue(value)
                 mw.speed_spin.blockSignals(False)
@@ -48,7 +49,7 @@ class ExecutionSettingsController:
 
         # Keep slider in sync when spinbox changes
         try:
-            if hasattr(mw, 'speed_slider') and mw.speed_slider.value() != value:
+            if hasattr(mw, "speed_slider") and mw.speed_slider.value() != value:
                 mw.speed_slider.blockSignals(True)
                 mw.speed_slider.setValue(value)
                 mw.speed_slider.blockSignals(False)
@@ -70,7 +71,7 @@ class ExecutionSettingsController:
             # Save current delay and set to 0ms (maximum speed)
             mw.saved_speed = mw.speed_slider.value()
             mw.speed_slider.setEnabled(False)
-            if hasattr(mw, 'speed_spin'):
+            if hasattr(mw, "speed_spin"):
                 mw.speed_spin.setEnabled(False)
             mw.graph_runner.set_speed(0)
             mw.speed_label.setText("0 ms (MAX)")
@@ -78,11 +79,11 @@ class ExecutionSettingsController:
         else:
             # Restore previous speed
             mw.speed_slider.setEnabled(True)
-            if hasattr(mw, 'speed_spin'):
+            if hasattr(mw, "speed_spin"):
                 mw.speed_spin.setEnabled(True)
-            
-            restore_speed = getattr(mw, 'saved_speed', 500)  # Default to 500 if not set
-            
+
+            restore_speed = getattr(mw, "saved_speed", 500)  # Default to 500 if not set
+
             # Restore both slider and spinbox without re-trigger loops
             try:
                 mw.speed_slider.blockSignals(True)
@@ -92,7 +93,7 @@ class ExecutionSettingsController:
                 mw.speed_slider.setValue(restore_speed)
 
             try:
-                if hasattr(mw, 'speed_spin'):
+                if hasattr(mw, "speed_spin"):
                     mw.speed_spin.blockSignals(True)
                     mw.speed_spin.setValue(restore_speed)
                     mw.speed_spin.blockSignals(False)
@@ -110,7 +111,7 @@ class ExecutionSettingsController:
             state: Qt checkbox state value
         """
         mw = self.main_window
-        verbose_enabled = (state == Qt.CheckState.Checked.value)
+        verbose_enabled = state == Qt.CheckState.Checked.value
 
         # Update the graph processor's verbose flag
         if mw.graph_runner and mw.graph_runner.graph_processor:
@@ -125,7 +126,7 @@ class ExecutionSettingsController:
         try:
             mw.write_to_console(
                 f"Verbose {'enabled' if verbose_enabled else 'disabled'}",
-                verbose_only=False
+                verbose_only=False,
             )
         except Exception:
             pass
@@ -139,14 +140,14 @@ class ExecutionSettingsController:
         mw = self.main_window
 
         # Map combo index: 0 -> forward, 1 -> concurrent, 2 -> manual
-        processor_type = "forward" if index == 0 else (
-            "concurrent" if index == 1 else "manual"
+        processor_type = (
+            "forward" if index == 0 else ("concurrent" if index == 1 else "manual")
         )
         mw.graph_runner.set_processor_type(processor_type)
 
         # Show/hide forward and manual processing panels based on mode
-        is_forward_mode = (index == 0)
-        is_manual_mode = (index == 2)
+        is_forward_mode = index == 0
+        is_manual_mode = index == 2
 
         # Threading combo only relevant for concurrent mode
         try:
@@ -167,7 +168,7 @@ class ExecutionSettingsController:
         except Exception:
             pass
 
-        mode_name = processor_type.replace('_', ' ').title()
+        mode_name = processor_type.replace("_", " ").title()
         mw.status_bar.showMessage(f"Processor type: {mode_name}")
 
         # Update starting nodes display when switching to Forward Processing
@@ -192,7 +193,7 @@ class ExecutionSettingsController:
             index: Combo box index (0=single thread, 1=multi thread)
         """
         mw = self.main_window
-        use_multithreading = (index == 1)  # 0 = Single Thread, 1 = Multi Thread
+        use_multithreading = index == 1  # 0 = Single Thread, 1 = Multi Thread
         mw.graph_runner.set_threading_mode(use_multithreading)
         mode_name = "Multi-threaded" if use_multithreading else "Single-threaded"
         mw.status_bar.showMessage(f"Processing mode: {mode_name}")

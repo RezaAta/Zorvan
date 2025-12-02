@@ -68,7 +68,7 @@ def add_selected_to_plot(self):
 ```python
 def remove_selected_node(self):
     """Remove the selected node from the plot."""
-    
+
 def add_node(self, node):
     """Add a new node to the plot."""
 ```
@@ -117,7 +117,7 @@ config_dialog = PlotConfigDialog(self.graph, default_max_iter, self)
 ### 6. ✅ Plot Window is Non-Blocking
 **Status**: Already implemented (QWidget, not modal QDialog)
 
-**Confirmation**: 
+**Confirmation**:
 - Plot window is a `QWidget`, not a modal dialog
 - Users can interact with both main window and plot window
 - Draggable, resizable, independent window

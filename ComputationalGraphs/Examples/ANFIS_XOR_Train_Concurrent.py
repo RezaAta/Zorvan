@@ -4,10 +4,11 @@ This example wires the ANFIS graph and its ANFIS-specific backprop graph
 into a combined `Graph` and runs concurrent training similar to the
 existing MLP examples.
 """
-from ComputationalGraphs.Core.MLPAnfisGraph import MLPAnfisGraph
+
 from ComputationalGraphs.Core.BackpropAnfisGraph import BackpropAnfisGraph
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Core.MLPAnfisGraph import MLPAnfisGraph
 
 
 def run_training(epochs=50, learning_rate=0.5):
@@ -65,5 +66,5 @@ def run_training(epochs=50, learning_rate=0.5):
         print(f"sample {i}: in=({X[0][i]},{X[1][i]}) out={out.value:.4f}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_training(epochs=60, learning_rate=0.3)

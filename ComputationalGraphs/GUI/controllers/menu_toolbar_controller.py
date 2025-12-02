@@ -4,12 +4,11 @@ MenuToolbarController - Manages menu bar, actions, and toolbars.
 Extracted from MainWindow as part of Clean Code refactoring.
 Handles creation of actions, menus, toolbars, and status bar.
 """
+
 from typing import TYPE_CHECKING
 
-from PyQt6.QtWidgets import (
-    QToolBar, QStatusBar, QLabel, QPushButton, QLineEdit
-)
 from PyQt6.QtGui import QAction, QKeySequence
+from PyQt6.QtWidgets import QLabel, QLineEdit, QPushButton, QStatusBar, QToolBar
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -18,7 +17,7 @@ if TYPE_CHECKING:
 class MenuToolbarController:
     """Controller for menu bar, actions, and toolbars."""
 
-    def __init__(self, main_window: 'MainWindow'):
+    def __init__(self, main_window: "MainWindow"):
         self.main_window = main_window
 
     def create_actions(self):
@@ -66,7 +65,9 @@ class MenuToolbarController:
 
         # Tools action: Rebuild Graph
         mw.rebuild_action = QAction("Rebuild &Graph", mw)
-        mw.rebuild_action.setStatusTip("Rebuild the graph from the canvas without running it")
+        mw.rebuild_action.setStatusTip(
+            "Rebuild the graph from the canvas without running it"
+        )
         mw.rebuild_action.triggered.connect(mw.rebuild_graph)
 
     def create_menus(self):
@@ -167,7 +168,9 @@ class MenuToolbarController:
 
         # Add a small toolbar button for Rebuild Graph
         mw.rebuild_btn = QPushButton("🔁 Rebuild")
-        mw.rebuild_btn.setToolTip("Rebuild the graph from the canvas without running it")
+        mw.rebuild_btn.setToolTip(
+            "Rebuild the graph from the canvas without running it"
+        )
         mw.rebuild_btn.clicked.connect(mw.rebuild_graph)
         mw.rebuild_btn.setMaximumWidth(120)
         toolbar.addWidget(mw.rebuild_btn)

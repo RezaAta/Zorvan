@@ -2,15 +2,15 @@
 Minimal test for SubtractionNode behavior
 """
 
-from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
-from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
+from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
 
 # Create simple graph: a - b
-print("="*70)
+print("=" * 70)
 print("Testing SubtractionNode: a - b")
-print("="*70)
+print("=" * 70)
 
 a_node = ContainerNode(name="a", value=10.0)
 b_node = ContainerNode(name="b", value=3.0)

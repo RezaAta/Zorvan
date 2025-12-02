@@ -9,15 +9,16 @@ This example builds a small ANFIS-like network for XOR using:
 Training: simple finite-difference gradient descent applied to ContainerNode parameters.
 This avoids changing existing fuzzy nodes and does not modify repo backprop graphs.
 """
+
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 from ComputationalGraphs.Nodes import (
-    DisplayNode,
+    AdditionNode,
     ContainerNode,
+    DisplayNode,
+    DivisionNode,
     MinNode,
     MultiplicationNode,
-    AdditionNode,
-    DivisionNode,
 )
 from ComputationalGraphs.Nodes.GaussianMembershipNode import GaussianMembershipNode
 
@@ -39,13 +40,17 @@ def build_anfis_xor():
     for i in range(2):
         c = ContainerNode(f"c_x1_m{i}", value=0.0 if i == 0 else 1.0)
         s = ContainerNode(f"s_x1_m{i}", value=0.5)
-        centers.append(c); sigmas.append(s); params.extend([c, s])
+        centers.append(c)
+        sigmas.append(s)
+        params.extend([c, s])
         g.AddNode(c, s)
 
     for i in range(2):
         c = ContainerNode(f"c_x2_m{i}", value=0.0 if i == 0 else 1.0)
         s = ContainerNode(f"s_x2_m{i}", value=0.5)
-        centers.append(c); sigmas.append(s); params.extend([c, s])
+        centers.append(c)
+        sigmas.append(s)
+        params.extend([c, s])
         g.AddNode(c, s)
 
     # Gaussian membership nodes
@@ -156,10 +161,11 @@ def run_training(epochs=200, lr=0.5, eps=1e-3):
     # Final evaluation
     print("Final outputs:")
     for (xa, xb), tgt in data:
-        x1.value = xa; x2.value = xb
+        x1.value = xa
+        x2.value = xb
         gp.ComputeGraphSingleThread(8)
         print(f"in=({xa},{xb}) target={tgt} out={out.value:.4f}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_training(epochs=120, lr=0.3, eps=1e-4)

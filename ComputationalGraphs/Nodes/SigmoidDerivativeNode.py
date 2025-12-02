@@ -1,7 +1,8 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 
+
 class SigmoidDerivativeNode(BasicNode):
-    def __init__(self, name: str = "", value = 0):
+    def __init__(self, name: str = "", value=0):
         super().__init__(name, value)
         self.inputCount = 1
         self.batchSize = 1
@@ -18,4 +19,5 @@ class SigmoidDerivativeNode(BasicNode):
         Check if the input is valid for the operation (must be a number, including numpy types).
         """
         import numpy as np
+
         return isinstance(inp, (int, float, np.integer, np.floating))

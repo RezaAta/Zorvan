@@ -1,8 +1,7 @@
 from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-
+from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 
 # Example setup
 graph = Graph()

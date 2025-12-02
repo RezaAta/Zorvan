@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 
+
 class Node(ABC):
     def __init__(self, name: str, inclusive=True, forcedBatchProcessing=False):
         self.name = name
         self.predecessors = []  # List of predecessor nodes
-        self.inputs = []        # Store the inputs to be processed
-        self.value = 0.0        # Initial value of the node
+        self.inputs = []  # Store the inputs to be processed
+        self.value = 0.0  # Initial value of the node
         self.midCalculation = False  # Tracks if node is mid-calculation
         self.midCalculationValue = 0
         self.batchSize = 2  # Set batch size to 2 for this example
@@ -27,8 +28,8 @@ class Node(ABC):
         """Update the inputs array with the valid values of predecessor nodes."""
         # Use list comprehension for better performance than loop with append
         self.inputs = [
-            predecessor.value 
-            for predecessor in self.predecessors 
+            predecessor.value
+            for predecessor in self.predecessors
             if self.IsValidInput(predecessor.value)
         ]
 
@@ -51,9 +52,9 @@ class Node(ABC):
                     break
 
                 # Process the batch
-                batch = self.inputs[:self.batchSize]
+                batch = self.inputs[: self.batchSize]
                 self.midCalculationValue = self.Operation(*batch)
-                self.inputs = self.inputs[self.batchSize:]  # Remove processed inputs
+                self.inputs = self.inputs[self.batchSize :]  # Remove processed inputs
 
                 if not self.inputs:
                     self.midCalculation = False  # Finished processing all inputs
@@ -66,12 +67,14 @@ class Node(ABC):
                     break
 
                 # Start processing the first batch
-                batch = self.inputs[:self.batchSize]
+                batch = self.inputs[: self.batchSize]
                 self.midCalculationValue = self.Operation(*batch)
-                self.inputs = self.inputs[self.batchSize:]  # Remove processed inputs
+                self.inputs = self.inputs[self.batchSize :]  # Remove processed inputs
 
                 if self.inputs:
-                    self.midCalculation = True  # Set mid-calculation for remaining inputs
+                    self.midCalculation = (
+                        True  # Set mid-calculation for remaining inputs
+                    )
                 else:
                     self.value = self.midCalculationValue
                     break

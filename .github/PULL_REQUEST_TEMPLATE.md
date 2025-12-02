@@ -11,4 +11,3 @@ Provide a short description of the change and the intent.
 
 ## Details
 Provide additional context, motivation, or links to related issues.
-

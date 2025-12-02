@@ -16,15 +16,15 @@ Successfully added Examples menu and MLP/Backpropagation automation tools to you
 - **Basic**:
   - Fibonacci Sequence (recursive computation)
   - Simple Addition Chain (sequential operations)
-  
+
 - **Neural Networks**:
   - XOR Problem (2-2-1 with backpropagation)
   - Simple MLP (1-1-1 minimal network)
   - Iris Classification (4-5-3-3 multi-class)
-  
+
 - **Fuzzy Systems**:
   - Temperature Control (fan speed control)
-  
+
 - **Evolutionary Algorithms**:
   - De Jong Sphere Function (genetic optimization)
 
@@ -35,7 +35,7 @@ Successfully added Examples menu and MLP/Backpropagation automation tools to you
   - Choose activation functions (Sigmoid, ReLU, Linear)
   - Dynamic layer size controls
   - Real-time validation
-  
+
 **Usage**: Tools → Generate MLP... (Ctrl+M)
 
 ### 3. `backprop_dialog.py`
@@ -44,7 +44,7 @@ Successfully added Examples menu and MLP/Backpropagation automation tools to you
   - Configurable learning rate
   - Validates MLP structure
   - Combines forward and backward passes
-  
+
 **Usage**: Tools → Add Backpropagation... (Ctrl+B)
 
 ## Modified Files
@@ -293,4 +293,3 @@ sequence = [[a, b], [c]]
 proc = GraphProcessor(graph)
 proc.ManualProcessing(iterations=3, computation_sequence=sequence)
 ```
-

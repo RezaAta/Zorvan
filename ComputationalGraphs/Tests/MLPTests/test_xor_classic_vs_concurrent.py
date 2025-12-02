@@ -2,41 +2,42 @@
 Comparison test: Classic MLP vs Concurrent Computational Graph MLP on XOR problem
 Using exact configuration from TestingOnXOR.py
 """
-import time
+
 import random
-import numpy as np
+import time
+
 import matplotlib.pyplot as plt
-from sklearn.metrics import precision_score, recall_score, f1_score
+import numpy as np
+from sklearn.metrics import f1_score, precision_score, recall_score
 
 # Classic MLP import
 from ClassicMLP import ClassicMLP
+from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
+from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 
 # Computational Graph imports
 from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 from ComputationalGraphs.Nodes.LinearNode import LinearNode
+from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 
-
-print("="*80)
+print("=" * 80)
 print("XOR PROBLEM: CLASSIC MLP vs CONCURRENT COMPUTATIONAL GRAPH (FIXED)")
-print("="*80)
+print("=" * 80)
 print("\nConfiguration from TestingOnXOR.py:")
 print("  Architecture: 2-2-1 (2 inputs, 2 hidden neurons, 1 output)")
 print("  Hidden Activation: Sigmoid")
 print("  Output Activation: Linear")
 print("  Learning Rate: 0.5")
 print("  Training: 2000 epochs × 4 iterations = 8000 total iterations")
-print("="*80)
+print("=" * 80)
 
 # XOR Dataset
 # Graph format: row-per-feature
 X_graph = [[0.0, 0.0, 1.0, 1.0], [0.0, 1.0, 0.0, 1.0]]
 y_graph = [[0.0, 1.0, 1.0, 0.0]]
 
-# Classic format: row-per-sample  
+# Classic format: row-per-sample
 X_classic = np.array([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]])
 y_classic = np.array([[0.0], [1.0], [1.0], [0.0]])
 
@@ -46,7 +47,7 @@ ground_truth = np.array([0, 1, 1, 0])
 # TEST 1: CLASSIC MLP
 # ============================================================================
 print("\n[1/2] CLASSIC MLP")
-print("-"*80)
+print("-" * 80)
 
 # Match graph configuration exactly: 2 inputs, 1 hidden layer with 2 neurons, 1 output
 # Set seed for Classic MLP (uses np.random)
@@ -57,7 +58,7 @@ classic_mlp = ClassicMLP(
     output_size=1,
     hidden_activation="sigmoid",
     output_activation="linear",
-    learning_rate=0.5
+    learning_rate=0.5,
 )
 
 print("\nClassic MLP Initial Weights:")
@@ -84,7 +85,9 @@ predictions_classic = classic_mlp.predict(X_classic).flatten()
 predictions_binary_classic = (predictions_classic > 0.5).astype(int)
 
 # Metrics
-precision_classic = precision_score(ground_truth, predictions_binary_classic, zero_division=0)
+precision_classic = precision_score(
+    ground_truth, predictions_binary_classic, zero_division=0
+)
 recall_classic = recall_score(ground_truth, predictions_binary_classic, zero_division=0)
 f1_classic = f1_score(ground_truth, predictions_binary_classic, zero_division=0)
 mae_classic = np.mean(np.abs(ground_truth - predictions_classic))
@@ -92,17 +95,21 @@ final_mse_classic = mse_history_classic[-1]
 
 print(f"Training Time: {classic_time:.4f}s")
 print(f"Final MSE: {final_mse_classic:.6f}")
-print(f"Metrics - Precision: {precision_classic:.4f}, Recall: {recall_classic:.4f}, F1: {f1_classic:.4f}")
+print(
+    f"Metrics - Precision: {precision_classic:.4f}, Recall: {recall_classic:.4f}, F1: {f1_classic:.4f}"
+)
 print(f"MAE: {mae_classic:.4f}")
 print("\nPredictions:")
 for i in range(len(X_classic)):
-    print(f"  [{X_classic[i,0]:.1f}, {X_classic[i,1]:.1f}] -> {predictions_classic[i]:.4f} (Binary: {predictions_binary_classic[i]}) | True: {ground_truth[i]}")
+    print(
+        f"  [{X_classic[i,0]:.1f}, {X_classic[i,1]:.1f}] -> {predictions_classic[i]:.4f} (Binary: {predictions_binary_classic[i]}) | True: {ground_truth[i]}"
+    )
 
 # ============================================================================
 # TEST 2: CONCURRENT COMPUTATIONAL GRAPH (WITH FIXED BACKPROP)
 # ============================================================================
 print("\n[2/2] CONCURRENT COMPUTATIONAL GRAPH (FIXED)")
-print("-"*80)
+print("-" * 80)
 
 # Build MLP Graph - exact configuration from TestingOnXOR.py
 # Set seed for Concurrent Graph (uses random.uniform)
@@ -113,7 +120,7 @@ mlpGraph = MLPGraph(
     numHiddenLayers=1,
     # hiddenLayerSizes not specified -> defaults to [numInputs] = [2]
     activationFunction=SigmoidNode,
-    outputLayerType=LinearNode
+    outputLayerType=LinearNode,
 )
 mlpGraph.BuildMLP()
 
@@ -200,7 +207,7 @@ MSEOverEpochs = []
 for i in range(totalIterations):
     mse = 0
     for errorBuffer in errorBuffers:
-        mse += (errorBuffer.buffer[i])**2
+        mse += (errorBuffer.buffer[i]) ** 2
     mse = mse / len(errorBuffers)
     MSEOverEpochs.append(mse)
 
@@ -218,7 +225,9 @@ predictions_graph = np.array(predictionBuffers[0].buffer)
 predictions_binary_graph = (predictions_graph > 0.5).astype(int)
 
 # Metrics
-precision_graph = precision_score(ground_truth, predictions_binary_graph, zero_division=0)
+precision_graph = precision_score(
+    ground_truth, predictions_binary_graph, zero_division=0
+)
 recall_graph = recall_score(ground_truth, predictions_binary_graph, zero_division=0)
 f1_graph = f1_score(ground_truth, predictions_binary_graph, zero_division=0)
 mae_graph = np.mean(np.abs(ground_truth - predictions_graph))
@@ -226,39 +235,59 @@ final_mse_graph = mse_history_graph[-1]
 
 print(f"Training Time: {graph_time:.4f}s")
 print(f"Final MSE: {final_mse_graph:.6f}")
-print(f"Metrics - Precision: {precision_graph:.4f}, Recall: {recall_graph:.4f}, F1: {f1_graph:.4f}")
+print(
+    f"Metrics - Precision: {precision_graph:.4f}, Recall: {recall_graph:.4f}, F1: {f1_graph:.4f}"
+)
 print(f"MAE: {mae_graph:.4f}")
 print("\nPredictions:")
 for i in range(len(X_graph[0])):
-    print(f"  [{X_graph[0][i]:.1f}, {X_graph[1][i]:.1f}] -> {predictions_graph[i]:.4f} (Binary: {predictions_binary_graph[i]}) | True: {ground_truth[i]}")
+    print(
+        f"  [{X_graph[0][i]:.1f}, {X_graph[1][i]:.1f}] -> {predictions_graph[i]:.4f} (Binary: {predictions_binary_graph[i]}) | True: {ground_truth[i]}"
+    )
 
 # ============================================================================
 # COMPARISON SUMMARY
 # ============================================================================
-print("\n" + "="*80)
+print("\n" + "=" * 80)
 print("COMPARISON SUMMARY")
-print("="*80)
+print("=" * 80)
 print(f"{'Metric':<30} {'Classic MLP':<20} {'Concurrent Graph':<20} {'Difference'}")
-print("-"*80)
-print(f"{'Training Time (s)':<30} {classic_time:<20.4f} {graph_time:<20.4f} {abs(classic_time - graph_time):.4f}")
-print(f"{'Final MSE':<30} {final_mse_classic:<20.6f} {final_mse_graph:<20.6f} {abs(final_mse_classic - final_mse_graph):.6f}")
-print(f"{'Precision':<30} {precision_classic:<20.4f} {precision_graph:<20.4f} {abs(precision_classic - precision_graph):.4f}")
-print(f"{'Recall':<30} {recall_classic:<20.4f} {recall_graph:<20.4f} {abs(recall_classic - recall_graph):.4f}")
-print(f"{'F1 Score':<30} {f1_classic:<20.4f} {f1_graph:<20.4f} {abs(f1_classic - f1_graph):.4f}")
-print(f"{'MAE':<30} {mae_classic:<20.4f} {mae_graph:<20.4f} {abs(mae_classic - mae_graph):.4f}")
+print("-" * 80)
+print(
+    f"{'Training Time (s)':<30} {classic_time:<20.4f} {graph_time:<20.4f} {abs(classic_time - graph_time):.4f}"
+)
+print(
+    f"{'Final MSE':<30} {final_mse_classic:<20.6f} {final_mse_graph:<20.6f} {abs(final_mse_classic - final_mse_graph):.6f}"
+)
+print(
+    f"{'Precision':<30} {precision_classic:<20.4f} {precision_graph:<20.4f} {abs(precision_classic - precision_graph):.4f}"
+)
+print(
+    f"{'Recall':<30} {recall_classic:<20.4f} {recall_graph:<20.4f} {abs(recall_classic - recall_graph):.4f}"
+)
+print(
+    f"{'F1 Score':<30} {f1_classic:<20.4f} {f1_graph:<20.4f} {abs(f1_classic - f1_graph):.4f}"
+)
+print(
+    f"{'MAE':<30} {mae_classic:<20.4f} {mae_graph:<20.4f} {abs(mae_classic - mae_graph):.4f}"
+)
 
 # Analyze convergence
 if final_mse_classic < 0.3 and final_mse_graph < 0.3:
     print("\nResult: Both implementations converged successfully!")
 elif final_mse_classic < 0.3:
-    print("\nResult: Classic MLP converged, but Concurrent Graph did not (likely gradient delay)")
+    print(
+        "\nResult: Classic MLP converged, but Concurrent Graph did not (likely gradient delay)"
+    )
 elif final_mse_graph < 0.3:
     print("\nResult: Concurrent Graph converged, but Classic MLP did not")
 else:
     print("\nResult: Neither implementation converged - both stuck at high MSE")
-    print("Note: Linear output activation cannot solve XOR (needs sigmoid for binary classification)")
+    print(
+        "Note: Linear output activation cannot solve XOR (needs sigmoid for binary classification)"
+    )
 
-print("="*80)
+print("=" * 80)
 
 # ============================================================================
 # PLOT LEARNING CURVES
@@ -266,26 +295,46 @@ print("="*80)
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
 # Linear scale
-axes[0].plot(mse_history_classic, label='Classic MLP', linewidth=2, alpha=0.8, color='blue')
-axes[0].plot(mse_history_graph, label='Concurrent Graph (FIXED)', linewidth=2, alpha=0.8, color='orange')
-axes[0].set_xlabel('Epoch', fontsize=12)
-axes[0].set_ylabel('Mean Squared Error', fontsize=12)
-axes[0].set_title('Learning Curves Comparison (Linear Scale)', fontsize=14, fontweight='bold')
+axes[0].plot(
+    mse_history_classic, label="Classic MLP", linewidth=2, alpha=0.8, color="blue"
+)
+axes[0].plot(
+    mse_history_graph,
+    label="Concurrent Graph (FIXED)",
+    linewidth=2,
+    alpha=0.8,
+    color="orange",
+)
+axes[0].set_xlabel("Epoch", fontsize=12)
+axes[0].set_ylabel("Mean Squared Error", fontsize=12)
+axes[0].set_title(
+    "Learning Curves Comparison (Linear Scale)", fontsize=14, fontweight="bold"
+)
 axes[0].legend(fontsize=11)
 axes[0].grid(True, alpha=0.3)
 
 # Log scale
-axes[1].plot(mse_history_classic, label='Classic MLP', linewidth=2, alpha=0.8, color='blue')
-axes[1].plot(mse_history_graph, label='Concurrent Graph (FIXED)', linewidth=2, alpha=0.8, color='orange')
-axes[1].set_xlabel('Epoch', fontsize=12)
-axes[1].set_ylabel('Mean Squared Error', fontsize=12)
-axes[1].set_title('Learning Curves Comparison (Log Scale)', fontsize=14, fontweight='bold')
-axes[1].set_yscale('log')
+axes[1].plot(
+    mse_history_classic, label="Classic MLP", linewidth=2, alpha=0.8, color="blue"
+)
+axes[1].plot(
+    mse_history_graph,
+    label="Concurrent Graph (FIXED)",
+    linewidth=2,
+    alpha=0.8,
+    color="orange",
+)
+axes[1].set_xlabel("Epoch", fontsize=12)
+axes[1].set_ylabel("Mean Squared Error", fontsize=12)
+axes[1].set_title(
+    "Learning Curves Comparison (Log Scale)", fontsize=14, fontweight="bold"
+)
+axes[1].set_yscale("log")
 axes[1].legend(fontsize=11)
 axes[1].grid(True, alpha=0.3)
 
 plt.tight_layout()
-plt.savefig('xor_classic_vs_concurrent_comparison.png', dpi=150, bbox_inches='tight')
+plt.savefig("xor_classic_vs_concurrent_comparison.png", dpi=150, bbox_inches="tight")
 print("\nLearning curves saved to: xor_classic_vs_concurrent_comparison.png")
 plt.show()
 

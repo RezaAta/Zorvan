@@ -1,8 +1,12 @@
-from ComputationalGraphs.Nodes.Node import Node
-from ComputationalGraphs.Nodes.BasicNode import BasicNode  # Import the abstract BasicNode class
-from ComputationalGraphs.Nodes.AbstractNode import AbstractNode
-from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
 from graphviz import Digraph
+
+from ComputationalGraphs.Nodes.AbstractNode import AbstractNode
+from ComputationalGraphs.Nodes.BasicNode import (  # Import the abstract BasicNode class
+    BasicNode,
+)
+from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
+from ComputationalGraphs.Nodes.Node import Node
+
 
 class Graph:
     def __init__(self):
@@ -14,37 +18,43 @@ class Graph:
         # Each item in the list represents the set of nodes to process at a single iteration.
         # Accepts Node objects, node ids (strings), or node indices (ints).
         self.manual_processing_sequence = None
-        
+
         # Counters for the first naming convention
         self.abstract_counter = 1
         self.compressed_counter = 1
         self.basic_counter = 0  # Using alphabet positions for basic nodes
         self.basic_suffix_counter = 1  # Used when a-z are all used up
 
-    def GenerateIdForNode(self,node):
+    def GenerateIdForNode(self, node):
         """
         Generate a new id for a node based on the type and naming convention.
         """
-        if isinstance(node,AbstractNode):
+        if isinstance(node, AbstractNode):
             id = f"A{self.abstract_counter}"
             self.abstract_counter += 1
-        elif isinstance(node,CompressedNode):
+        elif isinstance(node, CompressedNode):
             id = f"C{self.compressed_counter}"
             self.compressed_counter += 1
-        elif isinstance(node,BasicNode):
+        elif isinstance(node, BasicNode):
             # Generate a letter for basic nodes
             if self.basic_counter < 26:  # 'a' to 'z'
                 id = chr(97 + self.basic_counter)  # ASCII 'a' = 97
                 self.basic_counter += 1
             else:
                 # If 'a' to 'z' are used, use suffixes like 'a1', 'b1', etc.
-                base_letter = chr(97 + (self.basic_counter % 26))  # Cycle through 'a' to 'z'
+                base_letter = chr(
+                    97 + (self.basic_counter % 26)
+                )  # Cycle through 'a' to 'z'
                 id = f"{base_letter}{self.basic_suffix_counter}"
                 self.basic_counter += 1
-                if self.basic_counter % 26 == 0:  # Every full cycle increases the suffix
+                if (
+                    self.basic_counter % 26 == 0
+                ):  # Every full cycle increases the suffix
                     self.basic_suffix_counter += 1
         else:
-            raise ValueError("Unknown node type. Must be 'abstract', 'compressed', or 'basic'.")
+            raise ValueError(
+                "Unknown node type. Must be 'abstract', 'compressed', or 'basic'."
+            )
 
         # Ensure uniqueness by appending a counter if the id is already used
         original_id = id
@@ -58,7 +68,9 @@ class Graph:
     def AddNode(self, *nodeObjects):
         """Add an existing node object to the graph."""
         for nodeObject in nodeObjects:
-            nodeObject.id = self.GenerateIdForNode(nodeObject)  # Generate a unique id for the node
+            nodeObject.id = self.GenerateIdForNode(
+                nodeObject
+            )  # Generate a unique id for the node
             self.nodes.append(nodeObject)
             self.idToNodeDictionary[nodeObject.id] = nodeObject
 
@@ -66,14 +78,18 @@ class Graph:
             size = len(self.adjacencyMatrix)
             for row in self.adjacencyMatrix:
                 row.append(0)  # Extend existing rows for the new node column
-            self.adjacencyMatrix.append([0] * (size + 1))  # Add new row for the new node
+            self.adjacencyMatrix.append(
+                [0] * (size + 1)
+            )  # Add new row for the new node
 
             # Update adjacency matrix for the new node's predecessors
             node_index = self.nodes.index(nodeObject)
             for predecessor in nodeObject.predecessors:
                 if predecessor in self.nodes:
                     pred_index = self.nodes.index(predecessor)
-                    self.adjacencyMatrix[pred_index][node_index] = 1  # Connection from predecessor to new node
+                    self.adjacencyMatrix[pred_index][
+                        node_index
+                    ] = 1  # Connection from predecessor to new node
 
     def ConnectPreNode(self, node, *preNodes):
         for preNode in preNodes:
@@ -83,7 +99,9 @@ class Graph:
             # Update adjacency matrix for the new connection
             node_index = self.nodes.index(node)
             preNode_index = self.nodes.index(preNode)
-            self.adjacencyMatrix[preNode_index][node_index] = 1  # Connection from predecessor to node
+            self.adjacencyMatrix[preNode_index][
+                node_index
+            ] = 1  # Connection from predecessor to node
 
     def DisconnectPreNode(self, node, *preNodes):
         """Disconnect predecessor(s) from a node and update the adjacency matrix."""
@@ -96,7 +114,9 @@ class Graph:
                     node.predecessors.remove(preNode)
                     # Debug output to help with synchronization issues
                     try:
-                        print(f"Graph: removed predecessor {getattr(preNode, 'name', str(preNode))} from {getattr(node, 'name', str(node))}")
+                        print(
+                            f"Graph: removed predecessor {getattr(preNode, 'name', str(preNode))} from {getattr(node, 'name', str(node))}"
+                        )
                     except Exception:
                         pass
                 except Exception:
@@ -109,25 +129,25 @@ class Graph:
             matched = None
             if isinstance(preNode, str):
                 for cand in candidates:
-                    if hasattr(cand, 'name') and cand.name == preNode:
+                    if hasattr(cand, "name") and cand.name == preNode:
                         matched = cand
                         break
-                    if hasattr(cand, 'id') and cand.id == preNode:
+                    if hasattr(cand, "id") and cand.id == preNode:
                         matched = cand
                         break
             else:
                 # preNode is a Node (or similar) but a different object instance - try matching by id/name
                 try:
-                    pid = getattr(preNode, 'id', None)
-                    pname = getattr(preNode, 'name', None)
+                    pid = getattr(preNode, "id", None)
+                    pname = getattr(preNode, "name", None)
                 except Exception:
                     pid = None
                     pname = None
                 for cand in candidates:
-                    if pid is not None and getattr(cand, 'id', None) == pid:
+                    if pid is not None and getattr(cand, "id", None) == pid:
                         matched = cand
                         break
-                    if pname is not None and getattr(cand, 'name', None) == pname:
+                    if pname is not None and getattr(cand, "name", None) == pname:
                         matched = cand
                         break
 
@@ -135,7 +155,9 @@ class Graph:
                 try:
                     node.predecessors.remove(matched)
                     try:
-                        print(f"Graph: removed predecessor {getattr(matched, 'name', str(matched))} from {getattr(node, 'name', str(node))} (matched)")
+                        print(
+                            f"Graph: removed predecessor {getattr(matched, 'name', str(matched))} from {getattr(node, 'name', str(node))} (matched)"
+                        )
                     except Exception:
                         pass
                 except Exception:
@@ -176,10 +198,9 @@ class Graph:
             else:
                 raise ValueError(f"Node '{nodeToRemove}' not found in the graph.")
 
-
     def __repr__(self):
         return f"Graph with {len(self.nodes)} nodes."
-    
+
     def AbstractNodes(self, nodes):
         """
         Create an AbstractNode from a set of nodes.
@@ -208,7 +229,7 @@ class Graph:
         self.RemoveNode(*oldNode)
         self.UpdateAdjacencyMatrix()
 
-    def ReplicateConnections(self,newNode: Node,*oldNodes: Node):
+    def ReplicateConnections(self, newNode: Node, *oldNodes: Node):
         """
         Replicate the connections of old nodes in the graph to the new node.
         - newNode: The node that will take over connections from old nodes.
@@ -227,7 +248,9 @@ class Graph:
             if oldNode in self.nodes:
                 oldNodeIndex = self.nodes.index(oldNode)
                 for j in range(len(self.adjacencyMatrix[oldNodeIndex])):
-                    if self.adjacencyMatrix[oldNodeIndex][j] == 1:  # If old node connects to another node
+                    if (
+                        self.adjacencyMatrix[oldNodeIndex][j] == 1
+                    ):  # If old node connects to another node
                         self.nodes[j].AddPreNode(newNode)
 
         # Recompute adjacency matrix to reflect new connections
@@ -242,7 +265,16 @@ class Graph:
         if oldNode is None or newNode is None:
             return
         # Copy simple attributes if they exist on both nodes
-        simple_attrs = ['value', 'data', 'size', 'index', 'inputCount', 'batchSize', 'inclusive', 'forcedBatchProcessing']
+        simple_attrs = [
+            "value",
+            "data",
+            "size",
+            "index",
+            "inputCount",
+            "batchSize",
+            "inclusive",
+            "forcedBatchProcessing",
+        ]
         for attr in simple_attrs:
             try:
                 if hasattr(oldNode, attr) and hasattr(newNode, attr):
@@ -251,12 +283,18 @@ class Graph:
                 pass
         # Special-case ContainerNode initial value
         try:
-            if getattr(oldNode, '__class__', None) is not None and getattr(newNode, '__class__', None) is not None:
-                if oldNode.__class__.__name__ == 'ContainerNode' and hasattr(oldNode, 'value') and hasattr(newNode, 'value'):
+            if (
+                getattr(oldNode, "__class__", None) is not None
+                and getattr(newNode, "__class__", None) is not None
+            ):
+                if (
+                    oldNode.__class__.__name__ == "ContainerNode"
+                    and hasattr(oldNode, "value")
+                    and hasattr(newNode, "value")
+                ):
                     newNode.value = oldNode.value
         except Exception:
             pass
-            
 
     def CompressNodes(self, nodes):
         """
@@ -266,18 +304,20 @@ class Graph:
         self.RemoveNode(*nodes)
         self.AddNode(compressed)
         return compressed
-    
-    def DisplayGraph(self, fileName = "ComputationalGraph"):
+
+    def DisplayGraph(self, fileName="ComputationalGraph"):
         """Visualize the MLP graph in a left-to-right layout using Graphviz."""
-        dot = Digraph(format='svg')
-        dot.attr(rankdir='LR')  # Set the layout to be left-to-right
+        dot = Digraph(format="svg")
+        dot.attr(rankdir="LR")  # Set the layout to be left-to-right
         for node in self.nodes:
-            dot.node(node.name, label=f"{node.name}\n({type(node).__name__})\n{node.value}")
+            dot.node(
+                node.name, label=f"{node.name}\n({type(node).__name__})\n{node.value}"
+            )
         for i, row in enumerate(self.adjacencyMatrix):
             for j, connection in enumerate(row):
                 if connection == 1:
                     dot.edge(self.nodes[i].name, self.nodes[j].name)
-        dot.render(filename = fileName, view=True)
+        dot.render(filename=fileName, view=True)
 
     def __RemoveNodeFromAdjacencyMatrix(self, index):
         del self.adjacencyMatrix[index]
@@ -300,7 +340,6 @@ class Graph:
         else:
             node = identifier
         return node
-    
 
     def ResetNodeValues(self):
         for node in self.nodes:
@@ -310,17 +349,17 @@ class Graph:
         """
         Build a dictionary mapping each node to its list of successor nodes.
         A successor is any node that has this node as a predecessor.
-        
+
         Returns:
             dict: {node: [list of successor nodes]}
         """
         successor_map = {node: [] for node in self.nodes}
-        
+
         for node in self.nodes:
             for predecessor in node.predecessors:
                 if predecessor in successor_map:
                     successor_map[predecessor].append(node)
-        
+
         return successor_map
 
     def set_manual_processing_sequence(self, sequence, strict=True):
@@ -346,12 +385,16 @@ class Graph:
                     node_obj = self.idToNodeDictionary.get(entry)
                     if node_obj is None:
                         # Try matching by name
-                        matches = [n for n in self.nodes if getattr(n, 'name', None) == entry]
+                        matches = [
+                            n for n in self.nodes if getattr(n, "name", None) == entry
+                        ]
                         if len(matches) == 1:
                             node_obj = matches[0]
                         elif len(matches) > 1:
                             if strict:
-                                raise ValueError(f"Ambiguous node name '{entry}' matches multiple nodes.")
+                                raise ValueError(
+                                    f"Ambiguous node name '{entry}' matches multiple nodes."
+                                )
                             else:
                                 node_obj = matches[0]
                 elif isinstance(entry, int):
@@ -364,13 +407,17 @@ class Graph:
 
                 if node_obj is None:
                     if strict:
-                        raise ValueError(f"Node identifier '{entry}' not found in graph.")
+                        raise ValueError(
+                            f"Node identifier '{entry}' not found in graph."
+                        )
                     else:
                         continue
 
                 if node_obj not in self.nodes:
                     if strict:
-                        raise ValueError(f"Node '{node_obj}' is not part of this graph.")
+                        raise ValueError(
+                            f"Node '{node_obj}' is not part of this graph."
+                        )
                     else:
                         continue
 
@@ -389,4 +436,3 @@ class Graph:
 
     # any node that old nodes are in its pred list
     # put the new abstract node in its pred list
-    

@@ -1,9 +1,10 @@
-from ClassicMLP import ClassicMLP
+import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.datasets import load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
-import numpy as np
+
+from ClassicMLP import ClassicMLP
 
 # Load Diabetes Dataset
 data = load_diabetes()
@@ -23,7 +24,9 @@ X = X[non_outlier_mask.flatten()]
 y = y[non_outlier_mask.flatten()]
 
 # Split and scale the data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 scaler_X = StandardScaler()
 X_train = scaler_X.fit_transform(X_train)
 X_test = scaler_X.transform(X_test)
@@ -37,7 +40,7 @@ mlp = ClassicMLP(
     hidden_activation="sigmoid",
     output_activation="linear",
     learning_rate=0.00001,
-    use_bias=False
+    use_bias=False,
 )
 mse_history = mlp.train(X_train, y_train, epochs=500, batch_size=1)
 
@@ -46,9 +49,9 @@ mae = mlp.evaluate(X_test, y_test)
 print(f"Test MAE: {mae:.4f}")
 
 # Plot training loss
-plt.plot(mse_history, label='Training Loss (MSE)')
-plt.title('Training Loss Curve')
-plt.xlabel('Epochs')
-plt.ylabel('Loss (MSE)')
+plt.plot(mse_history, label="Training Loss (MSE)")
+plt.title("Training Loss Curve")
+plt.xlabel("Epochs")
+plt.ylabel("Loss (MSE)")
 plt.legend()
 plt.show()

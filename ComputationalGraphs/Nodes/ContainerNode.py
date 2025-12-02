@@ -1,5 +1,6 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 
+
 class ContainerNode(BasicNode):
     def __init__(self, name: str = "", value=0):
         super().__init__(name, value)
@@ -11,7 +12,7 @@ class ContainerNode(BasicNode):
         """
         Perform Sum on the given inputs. Ensure inputs length matches inputCount.
         """
-        return (self.value - i)
+        return self.value - i
 
     def IsValidInput(self, input):
         """

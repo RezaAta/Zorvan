@@ -1,8 +1,9 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 from ComputationalGraphs.Nodes.ReLUDerivativeNode import ReLUDerivativeNode
 
+
 class ReLUNode(BasicNode):
-    def __init__(self, name: str = "", value = 0):
+    def __init__(self, name: str = "", value=0):
         super().__init__(name, value)
         self.inputCount = 1
         self.batchSize = 1
@@ -11,7 +12,7 @@ class ReLUNode(BasicNode):
 
     def Operation(self, x):
         return max(0, x)
-    
+
     def IsValidInput(self, inp):
         if isinstance(inp, (float, int)):
             return True

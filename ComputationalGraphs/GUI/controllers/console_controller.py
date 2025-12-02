@@ -4,14 +4,20 @@ ConsoleController - Manages the in-app console panel and output redirection.
 Extracted from MainWindow as part of Clean Code refactoring.
 Handles console panel creation, stdout/stderr redirection, and console output.
 """
+
 import sys
 from typing import TYPE_CHECKING
 
-from PyQt6.QtWidgets import (
-    QDockWidget, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QCheckBox, QTextEdit
-)
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QDockWidget,
+    QHBoxLayout,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 if TYPE_CHECKING:
     from ..main_window import MainWindow
@@ -20,7 +26,7 @@ if TYPE_CHECKING:
 class ConsoleController:
     """Controller for in-app console panel and output management."""
 
-    def __init__(self, main_window: 'MainWindow'):
+    def __init__(self, main_window: "MainWindow"):
         self.main_window = main_window
         self._orig_stdout = None
         self._orig_stderr = None
@@ -28,11 +34,11 @@ class ConsoleController:
     def create_console_panel(self):
         """Create a docked console for verbose/debug output."""
         mw = self.main_window
-        
+
         dock = QDockWidget("Console", mw)
         dock.setAllowedAreas(
-            Qt.DockWidgetArea.BottomDockWidgetArea | 
-            Qt.DockWidgetArea.RightDockWidgetArea
+            Qt.DockWidgetArea.BottomDockWidgetArea
+            | Qt.DockWidgetArea.RightDockWidgetArea
         )
 
         container = QWidget()
@@ -84,7 +90,7 @@ class ConsoleController:
         mw = self.main_window
 
         class ConsoleRedirector:
-            def __init__(self, main_win, orig_stream, name='stdout'):
+            def __init__(self, main_win, orig_stream, name="stdout"):
                 self.main_win = main_win
                 self.orig = orig_stream
                 self.name = name
@@ -122,8 +128,8 @@ class ConsoleController:
             # Also store on main_window for write_to_console access
             mw._orig_stdout = self._orig_stdout
             mw._orig_stderr = self._orig_stderr
-            sys.stdout = ConsoleRedirector(mw, self._orig_stdout, 'stdout')
-            sys.stderr = ConsoleRedirector(mw, self._orig_stderr, 'stderr')
+            sys.stdout = ConsoleRedirector(mw, self._orig_stdout, "stdout")
+            sys.stderr = ConsoleRedirector(mw, self._orig_stderr, "stderr")
         except Exception:
             # If redirect fails, ignore silently
             pass
@@ -136,9 +142,9 @@ class ConsoleController:
             verbose_only: If True, only write when verbose mode is enabled
         """
         mw = self.main_window
-        
+
         try:
-            if verbose_only and not getattr(mw, 'verbose_check', None):
+            if verbose_only and not getattr(mw, "verbose_check", None):
                 # If verbose UI control hasn't been created yet, fall back to printing
                 print(message)
                 return
@@ -151,13 +157,15 @@ class ConsoleController:
             mw.console_text.moveCursor(mw.console_text.textCursor().End)
 
             # Echo to terminal if requested
-            if (getattr(mw, 'echo_terminal_check', None) and 
-                mw.echo_terminal_check.isChecked()):
+            if (
+                getattr(mw, "echo_terminal_check", None)
+                and mw.echo_terminal_check.isChecked()
+            ):
                 try:
                     # Use original stdout to avoid recursive redirection
                     if self._orig_stdout:
                         self._orig_stdout.write(message + "\n")
-                    elif hasattr(mw, '_orig_stdout'):
+                    elif hasattr(mw, "_orig_stdout"):
                         mw._orig_stdout.write(message + "\n")
                     else:
                         print(message)

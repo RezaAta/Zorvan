@@ -1,7 +1,7 @@
 from ..Core.Graph import Graph
+from ..Core.GraphProcessor import GraphProcessor
 from ..Nodes.AdditionNode import AdditionNode
 from ..Nodes.DisplayNode import DisplayNode
-from ..Core.GraphProcessor import GraphProcessor
 
 
 # Example setup
@@ -16,9 +16,7 @@ def RunFibonacciFunction():
     graph.ConnectPreNode(fibn, fibn, fib1)
     graph.ConnectPreNode(fib1, fibn)
 
-
-
-# Initialize processor with parallel execution
+    # Initialize processor with parallel execution
     processor = GraphProcessor(graph, max_workers=4)
     processor.ComputeGraph(iterations=10)
 

@@ -1,7 +1,8 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 
+
 class ReLUDerivativeNode(BasicNode):
-    def __init__(self, name: str = "", value = 0):
+    def __init__(self, name: str = "", value=0):
         super().__init__(name, value)
         self.inputCount = 1
         self.batchSize = 1

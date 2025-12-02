@@ -1,12 +1,13 @@
+import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
-import numpy as np
-import matplotlib.pyplot as plt
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
+
 from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Core.MLPGraph import MLPGraph
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 
 # Step 1: Load and preprocess the Iris dataset
@@ -23,10 +24,18 @@ encoder = OneHotEncoder(sparse_output=False)
 y_onehot = encoder.fit_transform(y.reshape(-1, 1))
 
 # Train-test split
-X_train, X_test, y_train, y_test = train_test_split(X, y_onehot, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y_onehot, test_size=0.2, random_state=42
+)
 
 # Step 2: Build the MLP graph
-mlpGraph = MLPGraph(numInputs=4, numOutputs=3, numHiddenLayers=2, hiddenLayerSizes=[6, 4],activationFunction = SigmoidNode)
+mlpGraph = MLPGraph(
+    numInputs=4,
+    numOutputs=3,
+    numHiddenLayers=2,
+    hiddenLayerSizes=[6, 4],
+    activationFunction=SigmoidNode,
+)
 mlpGraph.BuildMLP()
 
 # Initialize random weights for the MLP
@@ -54,7 +63,7 @@ fullMLPGraph.UpdateAdjacencyMatrix()
 fullGraphProcessor = GraphProcessor(fullMLPGraph, max_workers=16, verbose=False)
 
 # Warm up the network to ensure valid values
-networkLength = 3 * (len(mlpGraph.hiddenLayers)+1)
+networkLength = 3 * (len(mlpGraph.hiddenLayers) + 1)
 fullGraphProcessor.ComputeGraph(networkLength)
 
 epochs = 100 * networkLength
@@ -62,7 +71,7 @@ mse_values = []
 
 for epoch in range(epochs):
     fullGraphProcessor.ComputeGraph(1)
-    
+
     # Compute Mean Squared Error
     mse = sum(node.value**2 for node in mlpGraph.errorLayer) / len(mlpGraph.errorLayer)
     mse_values.append(mse)
@@ -95,7 +104,8 @@ predicted_classes = np.argmax(predictions, axis=1)
 actual_classes = np.argmax(actuals, axis=1)
 
 # Compute metrics
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import f1_score, precision_score, recall_score
+
 precision = precision_score(actual_classes, predicted_classes, average="weighted")
 recall = recall_score(actual_classes, predicted_classes, average="weighted")
 f1 = f1_score(actual_classes, predicted_classes, average="weighted")

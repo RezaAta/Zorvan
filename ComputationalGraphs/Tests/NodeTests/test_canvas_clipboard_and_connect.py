@@ -1,5 +1,7 @@
 import sys
+
 from PyQt6.QtWidgets import QApplication
+
 from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 
@@ -8,8 +10,8 @@ def test_copy_paste_nodes():
     app = QApplication(sys.argv)
     canvas = GraphCanvas()
     # Create two nodes and an edge between them
-    n1 = DisplayNode(name='d1')
-    n2 = DisplayNode(name='d2')
+    n1 = DisplayNode(name="d1")
+    n2 = DisplayNode(name="d2")
     ni1 = canvas.add_node_item(n1, 0, 0)
     ni2 = canvas.add_node_item(n2, 100, 100)
     # Connect them
@@ -33,8 +35,8 @@ def test_copy_paste_nodes():
 def test_cut_paste_nodes():
     app = QApplication(sys.argv)
     canvas = GraphCanvas()
-    n1 = DisplayNode(name='d1')
-    n2 = DisplayNode(name='d2')
+    n1 = DisplayNode(name="d1")
+    n2 = DisplayNode(name="d2")
     ni1 = canvas.add_node_item(n1, 0, 0)
     ni2 = canvas.add_node_item(n2, 100, 100)
     canvas.add_edge_item(n1, n2)
@@ -56,8 +58,8 @@ def test_cut_paste_nodes():
 def test_start_connection_sets_mode_and_highlights():
     app = QApplication(sys.argv)
     canvas = GraphCanvas()
-    n1 = DisplayNode(name='d1')
-    n2 = DisplayNode(name='d2')
+    n1 = DisplayNode(name="d1")
+    n2 = DisplayNode(name="d2")
     ni1 = canvas.add_node_item(n1, 0, 0)
     ni2 = canvas.add_node_item(n2, 100, 100)
     # Start connection from ni1 (should set connection_mode, highlight and lock movement)
@@ -67,15 +69,17 @@ def test_start_connection_sets_mode_and_highlights():
     assert not ni1.flags() & ni1.GraphicsItemFlag.ItemIsMovable or True
     # Add an edge to simulate completion
     canvas.add_edge_item(n1, n2)
-    assert any(e for e in canvas.edge_items if e.source_node == ni1 and e.target_node == ni2)
+    assert any(
+        e for e in canvas.edge_items if e.source_node == ni1 and e.target_node == ni2
+    )
     app.quit()
 
 
 def test_remove_selected_items_removes_multiple():
     app = QApplication(sys.argv)
     canvas = GraphCanvas()
-    nodes = [DisplayNode(name=f'd{i}') for i in range(3)]
-    items = [canvas.add_node_item(n, i*20, i*20) for i, n in enumerate(nodes)]
+    nodes = [DisplayNode(name=f"d{i}") for i in range(3)]
+    items = [canvas.add_node_item(n, i * 20, i * 20) for i, n in enumerate(nodes)]
     # Select all
     for it in items:
         it.setSelected(True)

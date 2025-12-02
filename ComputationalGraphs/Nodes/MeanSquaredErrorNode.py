@@ -1,5 +1,6 @@
-from ComputationalGraphs.Nodes.MovingAverageNode import MovingAverageNode
 from copy import deepcopy
+
+from ComputationalGraphs.Nodes.MovingAverageNode import MovingAverageNode
 
 
 class MeanSquaredErrorNode(MovingAverageNode):
@@ -13,8 +14,17 @@ class MeanSquaredErrorNode(MovingAverageNode):
     so it can be used interchangeably where a moving-average-like buffer node is expected.
     """
 
-    def __init__(self, name: str = "", data=None, size: int = 10, mode='continuous', allowNone: bool = False):
-        super().__init__(name=name, data=data, size=size, mode=mode, allowNone=allowNone)
+    def __init__(
+        self,
+        name: str = "",
+        data=None,
+        size: int = 10,
+        mode="continuous",
+        allowNone: bool = False,
+    ):
+        super().__init__(
+            name=name, data=data, size=size, mode=mode, allowNone=allowNone
+        )
 
         # Initialize value to 0.0 (MovingAverageNode already does this, but ensure consistency)
         self.value = 0.0
@@ -33,6 +43,7 @@ class MeanSquaredErrorNode(MovingAverageNode):
         item = input
         try:
             import numpy as _np
+
             if isinstance(input, _np.ndarray):
                 if input.shape == ():
                     item = input.item()
@@ -60,17 +71,20 @@ class MeanSquaredErrorNode(MovingAverageNode):
         valid_values = [v for v in self.buffer if v is not None]
 
         if len(valid_values) == 0:
-            return self.value if hasattr(self, 'value') else 0.0
+            return self.value if hasattr(self, "value") else 0.0
 
         # Mean of squared values
-        new_mse = float(sum((v ** 2 for v in valid_values)) / len(valid_values))
+        new_mse = float(sum((v**2 for v in valid_values)) / len(valid_values))
 
         # Update value depending on mode
-        if self.mode == 'continuous':
+        if self.mode == "continuous":
             self.value = new_mse
-        elif self.mode == 'batch':
+        elif self.mode == "batch":
             self.values_since_last_update += 1
-            if len(self.buffer) >= self.bufferSize and self.values_since_last_update >= self.bufferSize:
+            if (
+                len(self.buffer) >= self.bufferSize
+                and self.values_since_last_update >= self.bufferSize
+            ):
                 self.value = new_mse
                 self.values_since_last_update = 0
 

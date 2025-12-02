@@ -15,8 +15,8 @@
 **Impact:** Buffers allow concurrent processing by storing values for later use. Without buffers, values propagate immediately through active node processing.
 
 **MLPGraph (Concurrent):**
-self.inputLayer = [(DataStreamNode(name=f"x{i}"), 
-                    BufferNode(name=f"Buff_x{i}", size=((self.numHiddenLayers + 1) * 6))) 
+self.inputLayer = [(DataStreamNode(name=f"x{i}"),
+                    BufferNode(name=f"Buff_x{i}", size=((self.numHiddenLayers + 1) * 6)))
                    for i in range(self.numInputs)]
 ```
 - DataStreamNode + BufferNode pairs
@@ -70,7 +70,7 @@ hiddenLayer.append((additionNode, activationNode))
 **MLPGraph (Concurrent):**
 ```python
 labelLayerDelay = ((self.numHiddenLayers + 1) * 3)
-self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay=labelLayerDelay) 
+self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay=labelLayerDelay)
                   for i in range(self.numOutputs)]
 ```
 - Has `initialDelay` to synchronize with output arrival time
@@ -78,7 +78,7 @@ self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay=labelLayerDelay)
 
 **MLPGraphForwardProcessing:**
 ```python
-self.labelLayer = [DataStreamNode(name=f"Label_y{i}", initialDelay=0, streamDelay=0) 
+self.labelLayer = [DataStreamNode(name=f"Label_y{i}", initialDelay=0, streamDelay=0)
                   for i in range(self.numOutputs)]
 ```
 - `initialDelay=0, streamDelay=0` - no synchronization needed

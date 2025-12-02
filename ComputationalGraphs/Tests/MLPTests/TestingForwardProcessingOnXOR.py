@@ -3,26 +3,30 @@ Test MLPGraphForwardProcessing on XOR Problem
 Benchmark test matching the structure of existing XOR tests for comparison.
 """
 
-from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
-from ComputationalGraphs.Core.BackpropGraphForwardProcessing import BackpropGraphForwardProcessing
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
-import matplotlib.pyplot as plt
-import numpy as np
 import time
 
-print("="*70)
+import matplotlib.pyplot as plt
+import numpy as np
+
+from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
+    BackpropGraphForwardProcessing,
+)
+from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
+from ComputationalGraphs.Nodes.LinearNode import LinearNode
+from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+
+print("=" * 70)
 print("Testing MLPGraphForwardProcessing on XOR Problem")
-print("="*70)
+print("=" * 70)
 
 # XOR dataset
 X_train = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]
 y_train = [[0.0], [1.0], [1.0], [0.0]]
 
 # Hyperparameters (matching ClassicMLPTestOnXOR.py)
-hidden_layers = [2,2,2]
+hidden_layers = [2, 2, 2]
 learning_rate = 0.5
 epochs = 2000
 
@@ -38,9 +42,9 @@ mlp = MLPGraphForwardProcessing(
     numInputs=2,
     numOutputs=1,
     numHiddenLayers=1,
-    #hiddenLayerSizes=hidden_layers,
+    # hiddenLayerSizes=hidden_layers,
     activationFunction=SigmoidNode,
-    outputLayerType=LinearNode  # Linear output for regression
+    outputLayerType=LinearNode,  # Linear output for regression
 )
 mlp.BuildMLP()
 
@@ -71,18 +75,18 @@ print(f"Full graph: {len(fullGraph.nodes)} nodes")
 processor = GraphProcessor(fullGraph, verbose=False)
 
 # Show iteration calculation
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("Iteration Calculation")
-print("="*70)
+print("=" * 70)
 required_forward = mlp.GetRequiredIterations()
 required_full = mlp.GetRequiredIterationsWithBackprop()
 print(f"Required iterations (forward pass only): {required_forward}")
 print(f"Required iterations (with backprop): {required_full}")
 
 # Training with manual sample loading
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("Training (Manual Sample Loop)")
-print("="*70)
+print("=" * 70)
 
 # Load ALL data once - DataStreamNodes will cycle through it automatically
 print("Loading all training data into DataStreamNodes...")
@@ -92,7 +96,9 @@ mlp.LoadData(X_train, y_train)
 # This marks DataStream source nodes and Container weight nodes as 'processed'
 # so the first computation nodes (multiplications) can execute immediately.
 prep_counts = mlp.PrepareForForwardProcessing(processor)
-print(f"PrepareForForwardProcessing marked: sources={prep_counts[0]}, containers={prep_counts[1]}")
+print(
+    f"PrepareForForwardProcessing marked: sources={prep_counts[0]}, containers={prep_counts[1]}"
+)
 
 # Calculate iterations needed
 iterations_per_sample = mlp.GetPassLength()
@@ -104,7 +110,7 @@ print(f"Iterations per sample: {iterations_per_sample}")
 print(f"Samples per epoch: {num_samples}")
 print(f"Iterations per epoch: {iterations_per_epoch}")
 print(f"Total iterations: {total_iterations}")
- 
+
 # We'll attach error buffers to the error layer and run the entire training
 # inside the graph as a single continuous ForwardProcessing call (no epoch loop).
 
@@ -157,14 +163,14 @@ print("\nError buffer summary:")
 for i, buf in enumerate(error_buffers):
     total = len(buf.buffer)
     non_none = len([v for v in buf.buffer if v is not None])
-    sample_vals = buf.buffer[:min(40, total)]
+    sample_vals = buf.buffer[: min(40, total)]
     print(f"  Buffer {i}: size={total}, non-None={non_none}")
     print(f"    first {min(10,total)} values: {sample_vals[:10]}")
 
 # Testing - run inference on each sample
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("Testing")
-print("="*70)
+print("=" * 70)
 
 predictions = []
 ground_truth = []
@@ -181,7 +187,9 @@ processor.reset_forward_state()
 
 # Run inference for all samples
 forward_only = mlp.GetRequiredIterations()
-test_iterations = (forward_only + 2) * len(X_train)  # +2 for error calculation per sample
+test_iterations = (forward_only + 2) * len(
+    X_train
+)  # +2 for error calculation per sample
 processor.ForwardProcessing(iterations=test_iterations)
 
 # Collect predictions after processing (need to re-run each sample to get output)
@@ -189,25 +197,27 @@ processor.ForwardProcessing(iterations=test_iterations)
 for sample_idx, (X_sample, y_sample) in enumerate(zip(X_train, y_train)):
     # Load this specific sample
     mlp.LoadData([X_sample], [y_sample])
-    
+
     # Reset processor
     processor.reset_forward_state()
-    
+
     # Run forward pass
     processor.ForwardProcessing(iterations=forward_only + 2)
-    
+
     prediction = mlp.GetOutputValues()[0]
     actual = y_sample[0]
     error = mlp.GetErrorValues()[0]
-    
+
     predictions.append(prediction)
     ground_truth.append(actual)
     test_mae += abs(error)
-    
+
     # Binary prediction
     binary_pred = 1 if prediction > 0.5 else 0
-    
-    print(f"Input: {X_sample} -> Predicted: {prediction:.4f} ({binary_pred}), Actual: {actual:.0f}, Error: {error:.4f}")
+
+    print(
+        f"Input: {X_sample} -> Predicted: {prediction:.4f} ({binary_pred}), Actual: {actual:.0f}, Error: {error:.4f}"
+    )
 
 test_mae /= len(X_train)
 
@@ -215,23 +225,25 @@ print(f"\nTest MAE: {test_mae:.4f}")
 
 # Calculate accuracy
 predictions_binary = [1 if p > 0.5 else 0 for p in predictions]
-correct = sum([1 for i in range(len(ground_truth)) if predictions_binary[i] == ground_truth[i]])
+correct = sum(
+    [1 for i in range(len(ground_truth)) if predictions_binary[i] == ground_truth[i]]
+)
 accuracy = correct / len(ground_truth)
 
 print(f"Accuracy: {accuracy*100:.1f}% ({correct}/{len(ground_truth)})")
 
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("Test completed!")
-print("="*70)
+print("=" * 70)
 
 # Plot training curve
 plt.figure(figsize=(10, 6))
-plt.plot(range(1, epochs + 1), mse_history, linewidth=2, color='#2E86AB')
-plt.title('Training Loss Curve')
-plt.xlabel('Epochs')
-plt.ylabel('Mean Squared Error')
+plt.plot(range(1, epochs + 1), mse_history, linewidth=2, color="#2E86AB")
+plt.title("Training Loss Curve")
+plt.xlabel("Epochs")
+plt.ylabel("Mean Squared Error")
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('xor_forward_processing_training_curve.png', dpi=300, bbox_inches='tight')
+plt.savefig("xor_forward_processing_training_curve.png", dpi=300, bbox_inches="tight")
 print("\nPlot saved as 'xor_forward_processing_training_curve.png'")
 plt.show()

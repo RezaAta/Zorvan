@@ -1,16 +1,16 @@
 from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 
 
 def test_gui_edge_connect_disconnect_sim():
     g = Graph()
-    ds = DataStreamNode(name='ds', data=[10,20,30])
-    disp = DisplayNode(name='disp')
+    ds = DataStreamNode(name="ds", data=[10, 20, 30])
+    disp = DisplayNode(name="disp")
     disp.value = 42
-    buff = BufferNode(name='b', size=3)
+    buff = BufferNode(name="b", size=3)
     # Add to graph
     g.AddNode(ds, disp, buff)
 

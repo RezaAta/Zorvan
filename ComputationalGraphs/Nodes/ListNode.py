@@ -1,4 +1,6 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
+
+
 # ...existing code...
 class ListNode(BasicNode):
     def __init__(self, name: str = "", allowNone: bool = False):
@@ -9,7 +11,6 @@ class ListNode(BasicNode):
         self.inclusive = False
         self.allowNone = allowNone
         self._invalid_batch = False  # new flag to track invalidation within a timestep
-
 
     def Operation(self, input):
         # start fresh at the beginning of a batch
@@ -32,6 +33,6 @@ class ListNode(BasicNode):
             self.value = []
         self.value.append(input)
         return self.value
-        
+
     def IsValidInput(self, input):
         return True

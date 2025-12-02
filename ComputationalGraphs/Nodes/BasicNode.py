@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from ComputationalGraphs.Nodes.Node import Node
+
 from ComputationalGraphs.Nodes.AbstractNode import AbstractNode
+from ComputationalGraphs.Nodes.Node import Node
+
 
 # BasicNode class (Abstract)
 class BasicNode(Node, ABC):  # Inherits from both Node and ABC
@@ -8,13 +10,15 @@ class BasicNode(Node, ABC):  # Inherits from both Node and ABC
         super().__init__(name)  # Call Node's constructor
         self.value = value  # Node's value
         self.inputCount = 0  # Number of inputs
-        self.computationType = 'basic'  # Type of computation for the node
+        self.computationType = "basic"  # Type of computation for the node
 
     def ResetValue(self):
         self.value = 0
 
     def SetComputationStructure(self):
-        self.computationStructure = self.id  # If no nodes are present, return an empty string
+        self.computationStructure = (
+            self.id
+        )  # If no nodes are present, return an empty string
 
     def UpdateComputationTime(self):
         self.computationTime = 1

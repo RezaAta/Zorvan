@@ -1,10 +1,13 @@
+import inspect
 import json
 import os
 import zipfile
-import inspect
-import numpy as np
 from typing import Any, Dict
+
+import numpy as np
+
 from ComputationalGraphs.Core.Graph import Graph
+
 
 def _is_primitive(o):
     return isinstance(o, (int, float, bool, str, type(None)))
@@ -20,7 +23,7 @@ def _serialize_value(v):
             "__type__": "ndarray",
             "dtype": str(v.dtype),
             "shape": v.shape,
-            "data": v.tolist()
+            "data": v.tolist(),
         }
     # Lists / tuples
     if isinstance(v, (list, tuple)):
@@ -56,9 +59,9 @@ def _deserialize_value(v):
 def _get_node_attributes(node):
     attrs = {}
     for name, val in vars(node).items():
-        if name.startswith('_'):
+        if name.startswith("_"):
             continue
-        if name in ('predecessors', 'inputs'):
+        if name in ("predecessors", "inputs"):
             continue
         if inspect.isroutine(val):
             continue
@@ -78,7 +81,7 @@ def save(graph: Graph, filename: str, canvas=None, compress=True):
         "metadata": {"format": "CGJSON", "version": 1},
         "nodes": [],
         "edges": [],
-        "graph": {}
+        "graph": {},
     }
 
     # Node list
@@ -94,66 +97,85 @@ def save(graph: Graph, filename: str, canvas=None, compress=True):
                 continue
 
         node_entry = {
-            "id": getattr(node, 'id', None),
+            "id": getattr(node, "id", None),
             "type": type(node).__name__,
-            "name": getattr(node, 'name', None),
-            "attrs": attrs_serialized
+            "name": getattr(node, "name", None),
+            "attrs": attrs_serialized,
         }
 
         # Add visuals from canvas if provided
-        if canvas is not None and hasattr(canvas, 'node_items') and node in canvas.node_items:
+        if (
+            canvas is not None
+            and hasattr(canvas, "node_items")
+            and node in canvas.node_items
+        ):
             item = canvas.node_items[node]
             pos = item.pos()
             color = None
             try:
-                color = item.color.name() if getattr(item, 'color', None) is not None else None
+                color = (
+                    item.color.name()
+                    if getattr(item, "color", None) is not None
+                    else None
+                )
             except Exception:
                 color = None
-            node_entry['visuals'] = {
-                'x': pos.x(),
-                'y': pos.y(),
-                'radius': getattr(item, 'radius', None),
-                'color': color,
-                'label': item.label.toPlainText() if hasattr(item, 'label') else None
+            node_entry["visuals"] = {
+                "x": pos.x(),
+                "y": pos.y(),
+                "radius": getattr(item, "radius", None),
+                "color": color,
+                "label": item.label.toPlainText() if hasattr(item, "label") else None,
             }
 
-        doc['nodes'].append(node_entry)
+        doc["nodes"].append(node_entry)
 
     # Edges (predecessors mapping)
     for node in graph.nodes:
-        if hasattr(node, 'predecessors') and node.predecessors:
+        if hasattr(node, "predecessors") and node.predecessors:
             for pred in node.predecessors:
-                doc['edges'].append({"source": getattr(pred, 'id', None), "target": getattr(node, 'id', None)})
+                doc["edges"].append(
+                    {
+                        "source": getattr(pred, "id", None),
+                        "target": getattr(node, "id", None),
+                    }
+                )
 
     # Graph-level properties: starting_nodes, stopping_nodes, manual_processing_sequence
     try:
-        doc['graph']['starting_nodes'] = [getattr(n, 'id', None) for n in getattr(graph, 'starting_nodes', [])]
+        doc["graph"]["starting_nodes"] = [
+            getattr(n, "id", None) for n in getattr(graph, "starting_nodes", [])
+        ]
     except Exception:
-        doc['graph']['starting_nodes'] = []
+        doc["graph"]["starting_nodes"] = []
     try:
-        doc['graph']['stopping_nodes'] = [getattr(n, 'id', None) for n in getattr(graph, 'stopping_nodes', [])]
+        doc["graph"]["stopping_nodes"] = [
+            getattr(n, "id", None) for n in getattr(graph, "stopping_nodes", [])
+        ]
     except Exception:
-        doc['graph']['stopping_nodes'] = []
+        doc["graph"]["stopping_nodes"] = []
     try:
         # manual seq: convert node objects to ids
-        manual = getattr(graph, 'manual_processing_sequence', None)
+        manual = getattr(graph, "manual_processing_sequence", None)
         if manual:
-            doc['graph']['manual_processing_sequence'] = [[getattr(n, 'id', None) for n in step] for step in manual]
+            doc["graph"]["manual_processing_sequence"] = [
+                [getattr(n, "id", None) for n in step] for step in manual
+            ]
         else:
-            doc['graph']['manual_processing_sequence'] = None
+            doc["graph"]["manual_processing_sequence"] = None
     except Exception:
-        doc['graph']['manual_processing_sequence'] = None
+        doc["graph"]["manual_processing_sequence"] = None
 
     # Dump to file
     fname = filename
     root, ext = os.path.splitext(fname)
-    if ext.lower() in ('.cgz', '.zip') and compress:
+    if ext.lower() in (".cgz", ".zip") and compress:
         # Write JSON and compress
-        with zipfile.ZipFile(fname, 'w', zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr('graph.json', json.dumps(doc, default=str, indent=2))
+        with zipfile.ZipFile(fname, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("graph.json", json.dumps(doc, default=str, indent=2))
     else:
         # Dump plain JSON
-        with open(fname, 'w', encoding='utf-8') as f:
+        with open(fname, "w", encoding="utf-8") as f:
             json.dump(doc, f, indent=2, default=str)
 
 
@@ -161,6 +183,7 @@ def _find_node_class(typename: str):
     # Attempt to locate the node class by name in ComputationalGraphs.Nodes
     try:
         import ComputationalGraphs.Nodes as NodesPkg
+
         for name, obj in inspect.getmembers(NodesPkg):
             if name == typename and inspect.isclass(obj):
                 return obj
@@ -169,6 +192,7 @@ def _find_node_class(typename: str):
     # Fallback to search modules
     try:
         import ComputationalGraphs.Nodes as NodesPkg
+
         for name, obj in inspect.getmembers(NodesPkg):
             if inspect.isclass(obj) and obj.__name__ == typename:
                 return obj
@@ -180,11 +204,11 @@ def _find_node_class(typename: str):
 def load(filename: str) -> Graph:
     # Read file (.cgz zipped or .cgjson)
     root, ext = os.path.splitext(filename)
-    if ext.lower() in ('.cgz', '.zip'):
-        with zipfile.ZipFile(filename, 'r') as zf:
-            data = zf.read('graph.json').decode('utf-8')
+    if ext.lower() in (".cgz", ".zip"):
+        with zipfile.ZipFile(filename, "r") as zf:
+            data = zf.read("graph.json").decode("utf-8")
     else:
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, "r", encoding="utf-8") as f:
             data = f.read()
 
     doc = json.loads(data)
@@ -192,27 +216,33 @@ def load(filename: str) -> Graph:
     id_map = {}
 
     # Create nodes
-    for n in doc.get('nodes', []):
-        ntype = n.get('type', 'DisplayNode')
-        name = n.get('name', None)
+    for n in doc.get("nodes", []):
+        ntype = n.get("type", "DisplayNode")
+        name = n.get("name", None)
         cls = _find_node_class(ntype)
         try:
             # If class accepts name param, attempt to construct accordingly
             if cls is not None:
-                node = cls(name=name) if 'name' in inspect.signature(cls.__init__).parameters else cls()
+                node = (
+                    cls(name=name)
+                    if "name" in inspect.signature(cls.__init__).parameters
+                    else cls()
+                )
             else:
                 # Fallback to DisplayNode
                 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+
                 node = DisplayNode(name=name)
         except Exception:
             try:
                 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+
                 node = DisplayNode(name=name)
             except Exception:
                 raise
 
         # set attrs
-        attrs = n.get('attrs', {})
+        attrs = n.get("attrs", {})
         for ak, av in attrs.items():
             try:
                 parsed_val = _deserialize_value(av)
@@ -222,55 +252,59 @@ def load(filename: str) -> Graph:
                 continue
 
         # Convert some typed attributes to preferred types (e.g., tuple for gui_pos)
-        if hasattr(node, 'gui_pos') and isinstance(getattr(node, 'gui_pos'), list):
+        if hasattr(node, "gui_pos") and isinstance(getattr(node, "gui_pos"), list):
             try:
                 node.gui_pos = tuple(node.gui_pos)
             except Exception:
                 pass
 
         # Set id to match original
-        nid = n.get('id', None)
+        nid = n.get("id", None)
         node.id = nid
 
         # Store visuals (as temporary attributes) if present
-        vis = n.get('visuals', {})
+        vis = n.get("visuals", {})
         if vis:
             try:
-                node.gui_pos = (float(vis.get('x', 0.0)), float(vis.get('y', 0.0)))
+                node.gui_pos = (float(vis.get("x", 0.0)), float(vis.get("y", 0.0)))
             except Exception:
                 node.gui_pos = None
-            node.gui_color = vis.get('color', None)
+            node.gui_color = vis.get("color", None)
             try:
-                node.gui_radius = float(vis.get('radius')) if vis.get('radius') is not None else None
+                node.gui_radius = (
+                    float(vis.get("radius")) if vis.get("radius") is not None else None
+                )
             except Exception:
                 node.gui_radius = None
-            node.gui_label = vis.get('label', None)
+            node.gui_label = vis.get("label", None)
 
         graph.AddNode(node)
         id_map[nid] = node
 
     # Connect edges
-    for e in doc.get('edges', []):
-        src = id_map.get(e.get('source'))
-        tgt = id_map.get(e.get('target'))
+    for e in doc.get("edges", []):
+        src = id_map.get(e.get("source"))
+        tgt = id_map.get(e.get("target"))
         if src is not None and tgt is not None:
             tgt.AddPreNode(src)
 
     # Graph-level properties
     try:
-        starting_ids = doc.get('graph', {}).get('starting_nodes', [])
+        starting_ids = doc.get("graph", {}).get("starting_nodes", [])
         graph.starting_nodes = [id_map.get(i) for i in starting_ids if i in id_map]
     except Exception:
         pass
     try:
-        stopping_ids = doc.get('graph', {}).get('stopping_nodes', [])
+        stopping_ids = doc.get("graph", {}).get("stopping_nodes", [])
         graph.stopping_nodes = [id_map.get(i) for i in stopping_ids if i in id_map]
     except Exception:
         pass
     try:
-        manual_seq = doc.get('graph', {}).get('manual_processing_sequence')
+        manual_seq = doc.get("graph", {}).get("manual_processing_sequence")
         if manual_seq:
-            graph.manual_processing_sequence = [[id_map.get(i) for i in step if i in id_map] for step in manual_seq]
+            graph.manual_processing_sequence = [
+                [id_map.get(i) for i in step if i in id_map] for step in manual_seq
+            ]
     except Exception:
         pass
 

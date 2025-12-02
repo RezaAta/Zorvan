@@ -1,12 +1,12 @@
+import matplotlib.pyplot as plt
+import numpy as np
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import SGD
 from sklearn.datasets import load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
-import numpy as np
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import SGD
 
 # Load Diabetes Dataset
 data = load_diabetes()
@@ -26,7 +26,9 @@ X = X[non_outlier_mask.flatten()]
 y = y[non_outlier_mask.flatten()]
 
 # Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
 # Scale the features
 scaler = StandardScaler()
@@ -37,21 +39,32 @@ X_test = scaler.transform(X_test)
 def ones_initializer(shape, dtype=None):
     return tf.ones(shape, dtype=dtype)
 
+
 # Define the model with weights initialized to 1
-model = Sequential([
-    Dense(8, activation='sigmoid', input_shape=(X_train.shape[1],), 
-          kernel_initializer=ones_initializer, use_bias=False),
-    Dense(4, activation='sigmoid', 
-          kernel_initializer=ones_initializer, use_bias=False),
-    Dense(2, activation='sigmoid', 
-          kernel_initializer=ones_initializer, use_bias=False),
-    Dense(1, activation='linear', 
-          kernel_initializer=ones_initializer, use_bias=False)
-])
+model = Sequential(
+    [
+        Dense(
+            8,
+            activation="sigmoid",
+            input_shape=(X_train.shape[1],),
+            kernel_initializer=ones_initializer,
+            use_bias=False,
+        ),
+        Dense(
+            4, activation="sigmoid", kernel_initializer=ones_initializer, use_bias=False
+        ),
+        Dense(
+            2, activation="sigmoid", kernel_initializer=ones_initializer, use_bias=False
+        ),
+        Dense(
+            1, activation="linear", kernel_initializer=ones_initializer, use_bias=False
+        ),
+    ]
+)
 
 # Compile the model with SGD optimizer (no momentum, similar to your code)
 optimizer = SGD(learning_rate=0.00001)  # Same behavior as your custom backprop
-model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
+model.compile(optimizer=optimizer, loss="mse", metrics=["mae"])
 
 # Train the model (without validation data)
 history = model.fit(X_train, y_train, epochs=500, batch_size=1)
@@ -61,9 +74,9 @@ loss, mae = model.evaluate(X_test, y_test)
 print(f"Test Loss (MSE): {loss:.4f}, Test MAE: {mae:.4f}")
 
 # Plot training loss
-plt.plot(history.history['loss'], label='Training Loss (MSE)')
-plt.title('Training Loss Curve')
-plt.xlabel('Epochs')
-plt.ylabel('Loss (MSE)')
+plt.plot(history.history["loss"], label="Training Loss (MSE)")
+plt.title("Training Loss Curve")
+plt.xlabel("Epochs")
+plt.ylabel("Loss (MSE)")
 plt.legend()
 plt.show()

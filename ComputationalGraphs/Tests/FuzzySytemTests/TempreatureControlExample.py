@@ -1,36 +1,44 @@
+from ComputationalGraphs.Core.DrawioIO import DrawioIO
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.DrawioIO import DrawioIO
 from ComputationalGraphs.Nodes import (
-    MinNode,
-    MaxNode,
+    AdditionNode,
     DisplayNode,
-    PiecewiseLinearNode,
-    MultiplicationNode,
     DivisionNode,
-    AdditionNode
-    )
+    MaxNode,
+    MinNode,
+    MultiplicationNode,
+    PiecewiseLinearNode,
+)
 
 graph = Graph()
-graphProccessor = GraphProcessor(graph, verbose = True)
+graphProccessor = GraphProcessor(graph, verbose=True)
 
-humidityInputNode = DisplayNode("Humidity", value = 80)
-temperatureInputNode = DisplayNode("Tempreature", value = 44)
-graph.AddNode(temperatureInputNode,humidityInputNode)
+humidityInputNode = DisplayNode("Humidity", value=80)
+temperatureInputNode = DisplayNode("Tempreature", value=44)
+graph.AddNode(temperatureInputNode, humidityInputNode)
 
-hotTempreatureNode = PiecewiseLinearNode("hot tempreature",xs=[-20, 5, 25, 45, 100], mus=[0.0, 0.0, 0.5, 1.0, 1.0])
+hotTempreatureNode = PiecewiseLinearNode(
+    "hot tempreature", xs=[-20, 5, 25, 45, 100], mus=[0.0, 0.0, 0.5, 1.0, 1.0]
+)
 hotTempreatureNode.AddPreNode(temperatureInputNode)
 
-coldTempreatureNode = PiecewiseLinearNode("cold tempreature",xs=[-20, 5, 25, 45, 100], mus=[1.0, 1.0, 0.5, 0.0, 0.0])
+coldTempreatureNode = PiecewiseLinearNode(
+    "cold tempreature", xs=[-20, 5, 25, 45, 100], mus=[1.0, 1.0, 0.5, 0.0, 0.0]
+)
 coldTempreatureNode.AddPreNode(temperatureInputNode)
 
-highHumidity = PiecewiseLinearNode("high humidity",xs=[0, 25, 50, 75, 100], mus=[0.0, 0.0, 0.5, 1.0, 1.0])
+highHumidity = PiecewiseLinearNode(
+    "high humidity", xs=[0, 25, 50, 75, 100], mus=[0.0, 0.0, 0.5, 1.0, 1.0]
+)
 highHumidity.AddPreNode(humidityInputNode)
 
-lowHumidity = PiecewiseLinearNode("low humidity",xs=[0, 25, 50, 75, 100], mus=[1.0, 1.0, 0.5, 0.0, 0.0])
+lowHumidity = PiecewiseLinearNode(
+    "low humidity", xs=[0, 25, 50, 75, 100], mus=[1.0, 1.0, 0.5, 0.0, 0.0]
+)
 lowHumidity.AddPreNode(humidityInputNode)
 
-graph.AddNode(hotTempreatureNode,coldTempreatureNode,highHumidity,lowHumidity)
+graph.AddNode(hotTempreatureNode, coldTempreatureNode, highHumidity, lowHumidity)
 
 hotandhigh = MinNode("hot and high")
 hotandhigh.AddPreNode(hotTempreatureNode, highHumidity)
@@ -56,7 +64,7 @@ moderateSpeed = DisplayNode("Moderate Speed", 50)
 lowSpeed = DisplayNode("Low Speed", 25)
 graph.AddNode(highSpeed, moderateSpeed, lowSpeed)
 
-aH= MultiplicationNode("aH", 0.0)
+aH = MultiplicationNode("aH", 0.0)
 aH.AddPreNode(hotandhigh, highSpeed)
 aM = MultiplicationNode("aM", 0.0)
 aM.AddPreNode(hotandlowOrcoldandhigh, moderateSpeed)
@@ -87,5 +95,3 @@ graphProccessor.ComputeGraphSingleThread(3)
 # graphProccessor.graph = graph
 # graph.DisplayGraph("Fanspeed Fuzzy System")
 # graphProccessor.ComputeGraphSingleThread(10)
-
-

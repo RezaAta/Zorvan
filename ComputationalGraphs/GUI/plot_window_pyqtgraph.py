@@ -1,10 +1,21 @@
 """PyQtGraph-based plotting window for computational graph nodes."""
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QCheckBox, QComboBox, QListWidget, QListWidgetItem
+import pyqtgraph as pg
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QToolTip
-import pyqtgraph as pg
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
+    QToolTip,
+    QVBoxLayout,
+    QWidget,
+)
+
 # Enable antialiasing and OpenGL acceleration by default for PyQtGraph visuals.
 # OpenGL usage can be toggled from the UI – set the default to True per latest preference.
 try:
@@ -29,20 +40,30 @@ class PlotWindowPG(QWidget):
         self.nodes = list(nodes)
         self.max_iterations = max_iterations
         self.current_iteration = 0
-        self.backend = 'pyqtgraph'
+        self.backend = "pyqtgraph"
 
         # Data storage: {node: [values]}
         self.data = {node: [] for node in nodes}
 
         # Colors
-        self.colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
-                       '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+        self.colors = [
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22",
+            "#17becf",
+        ]
 
         self._setup_ui()
         self._setup_plot()
 
     def _setup_ui(self):
-        self.setWindowTitle('Node Values Plot (pyqtgraph)')
+        self.setWindowTitle("Node Values Plot (pyqtgraph)")
         self.resize(900, 600)
         layout = QVBoxLayout()
         self.main_layout = layout
@@ -50,50 +71,54 @@ class PlotWindowPG(QWidget):
         self.plot_widget = pg.PlotWidget()
         # Use white background for better visibility
         try:
-            self.plot_widget.setBackground('w')
+            self.plot_widget.setBackground("w")
         except Exception:
             try:
                 self.plot_widget.setBackground((255, 255, 255))
             except Exception:
                 pass
         self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_widget.setLabel('bottom', 'Iteration')
-        self.plot_widget.setLabel('left', 'Value')
+        self.plot_widget.setLabel("bottom", "Iteration")
+        self.plot_widget.setLabel("left", "Value")
         layout.addWidget(self.plot_widget)
 
         # Control buttons
         control_layout = QHBoxLayout()
-        self.clear_btn = QPushButton('Clear')
+        self.clear_btn = QPushButton("Clear")
         self.clear_btn.clicked.connect(self.clear_plot)
         control_layout.addWidget(self.clear_btn)
 
-        self.remove_btn = QPushButton('Remove Selected')
+        self.remove_btn = QPushButton("Remove Selected")
         self.remove_btn.clicked.connect(self.remove_selected_node)
         control_layout.addWidget(self.remove_btn)
 
-        self.autoscale_check = QCheckBox('Auto-scale Y')
+        self.autoscale_check = QCheckBox("Auto-scale Y")
         self.autoscale_check.setChecked(True)
         control_layout.addWidget(self.autoscale_check)
 
-        self.reset_zoom_btn = QPushButton('Reset Zoom')
+        self.reset_zoom_btn = QPushButton("Reset Zoom")
         self.reset_zoom_btn.clicked.connect(self.reset_zoom)
         control_layout.addWidget(self.reset_zoom_btn)
 
-        self.pause_plot_check = QCheckBox('Pause Plot')
+        self.pause_plot_check = QCheckBox("Pause Plot")
         self.pause_plot_check.setChecked(False)
         control_layout.addWidget(self.pause_plot_check)
 
-        self.antialias_check = QCheckBox('Antialiasing')
+        self.antialias_check = QCheckBox("Antialiasing")
         self.antialias_check.setChecked(True)  # On by default for smooth lines
-        self.antialias_check.setToolTip('Disable for better performance with jagged/noisy data')
+        self.antialias_check.setToolTip(
+            "Disable for better performance with jagged/noisy data"
+        )
         self.antialias_check.stateChanged.connect(self._on_antialias_changed)
         control_layout.addWidget(self.antialias_check)
 
         # Use OpenGL rendering option (PyQtGraph / hardware accel)
-        self.use_opengl_check = QCheckBox('Use OpenGL')
+        self.use_opengl_check = QCheckBox("Use OpenGL")
         # Default enabled for smoother rendering but can be toggled by the user
         self.use_opengl_check.setChecked(True)
-        self.use_opengl_check.setToolTip('Enable OpenGL accelerated rendering (may change smoothing/perf)')
+        self.use_opengl_check.setToolTip(
+            "Enable OpenGL accelerated rendering (may change smoothing/perf)"
+        )
         self.use_opengl_check.stateChanged.connect(self._on_use_opengl_changed)
         control_layout.addWidget(self.use_opengl_check)
 
@@ -107,10 +132,10 @@ class PlotWindowPG(QWidget):
         self.visibility_list.itemChanged.connect(self._on_visibility_changed)
         self.update_node_combo()
         self.node_combo.setMaximumWidth(200)
-        control_layout.addWidget(QLabel('Remove:'))
+        control_layout.addWidget(QLabel("Remove:"))
         control_layout.addWidget(self.node_combo)
 
-        self.iteration_label = QLabel(f'Iteration: 0 / {self.max_iterations}')
+        self.iteration_label = QLabel(f"Iteration: 0 / {self.max_iterations}")
         self.iteration_label.setMinimumWidth(150)
         control_layout.addWidget(self.iteration_label)
 
@@ -120,7 +145,7 @@ class PlotWindowPG(QWidget):
         # Visibility list label and widget (created earlier but added to layout now)
         # Populate with any nodes created so far
         self._populate_visibility_list()
-        layout.addWidget(QLabel('Plotted Nodes:'))
+        layout.addWidget(QLabel("Plotted Nodes:"))
         layout.addWidget(self.visibility_list)
 
     def _populate_visibility_list(self):
@@ -178,7 +203,7 @@ class PlotWindowPG(QWidget):
         # Add legend items, avoid duplicates
         try:
             existing_names = []
-            for (sample, label) in getattr(self.legend, 'items', []):
+            for sample, label in getattr(self.legend, "items", []):
                 try:
                     existing_names.append(label.text)
                 except Exception:
@@ -191,7 +216,9 @@ class PlotWindowPG(QWidget):
         for node, curve in self.curves.items():
             # Generate a unique label if there are duplicates already in legend
             try:
-                unique_label = self._generate_unique_legend_label(node.name, existing_names)
+                unique_label = self._generate_unique_legend_label(
+                    node.name, existing_names
+                )
                 self.legend.addItem(curve, unique_label)
             except Exception:
                 pass
@@ -201,7 +228,11 @@ class PlotWindowPG(QWidget):
 
         # Signal proxy to handle hover updates
         try:
-            self._mouse_proxy = pg.SignalProxy(self.plot_widget.scene().sigMouseMoved, rateLimit=60, slot=self._on_mouse_moved)
+            self._mouse_proxy = pg.SignalProxy(
+                self.plot_widget.scene().sigMouseMoved,
+                rateLimit=60,
+                slot=self._on_mouse_moved,
+            )
         except Exception:
             self._mouse_proxy = None
 
@@ -216,8 +247,11 @@ class PlotWindowPG(QWidget):
         # Keep references to current plot data and visibility state
         saved_data = self.data.copy()
         saved_nodes = list(self.nodes)
-        saved_visibility = {node: (item.checkState() == Qt.CheckState.Checked)
-                            for node in self.nodes for item in []}
+        saved_visibility = {
+            node: (item.checkState() == Qt.CheckState.Checked)
+            for node in self.nodes
+            for item in []
+        }
 
         # Remove old widget from layout and delete
         try:
@@ -230,15 +264,15 @@ class PlotWindowPG(QWidget):
         self.plot_widget = pg.PlotWidget()
         # Use white background and grid similar to initial setup
         try:
-            self.plot_widget.setBackground('w')
+            self.plot_widget.setBackground("w")
         except Exception:
             try:
                 self.plot_widget.setBackground((255, 255, 255))
             except Exception:
                 pass
         self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_widget.setLabel('bottom', 'Iteration')
-        self.plot_widget.setLabel('left', 'Value')
+        self.plot_widget.setLabel("bottom", "Iteration")
+        self.plot_widget.setLabel("left", "Value")
         self.main_layout.insertWidget(0, self.plot_widget)
 
         # Setup plot and add existing curves back
@@ -292,7 +326,11 @@ class PlotWindowPG(QWidget):
         self.curves[node] = curve
         # Add legend entry only if name not present
         try:
-            existing_names = [label.text for (sample, label) in getattr(self.legend, 'items', []) if hasattr(label, 'text')]
+            existing_names = [
+                label.text
+                for (sample, label) in getattr(self.legend, "items", [])
+                if hasattr(label, "text")
+            ]
         except Exception:
             existing_names = []
         try:
@@ -331,8 +369,10 @@ class PlotWindowPG(QWidget):
                 existing_names = []
                 for n, c in self.curves.items():
                     try:
-                            unique_label = self._generate_unique_legend_label(n.name, existing_names)
-                            self.legend.addItem(c, unique_label)
+                        unique_label = self._generate_unique_legend_label(
+                            n.name, existing_names
+                        )
+                        self.legend.addItem(c, unique_label)
                     except Exception:
                         pass
             except Exception:
@@ -342,7 +382,7 @@ class PlotWindowPG(QWidget):
         if self.pause_plot_check.isChecked():
             return
         self.current_iteration = iteration
-        self.iteration_label.setText(f'Iteration: {iteration} / {self.max_iterations}')
+        self.iteration_label.setText(f"Iteration: {iteration} / {self.max_iterations}")
         # Append iteration to data and update curves
         for node in self.nodes:
             value = node.value
@@ -375,7 +415,9 @@ class PlotWindowPG(QWidget):
                 if y_min == y_max:
                     y_min -= 0.5
                     y_max += 0.5
-                self.plot_widget.setYRange(y_min - 0.1 * (y_max - y_min), y_max + 0.1 * (y_max - y_min))
+                self.plot_widget.setYRange(
+                    y_min - 0.1 * (y_max - y_min), y_max + 0.1 * (y_max - y_min)
+                )
 
     def reset_zoom(self):
         # Reset X range based on iterations and auto-range Y
@@ -396,12 +438,7 @@ class PlotWindowPG(QWidget):
             # Threshold in pixels
             PIXEL_THRESHOLD = 10.0
 
-            best = {
-                'node': None,
-                'idx': None,
-                'y': None,
-                'dist': float('inf')
-            }
+            best = {"node": None, "idx": None, "y": None, "dist": float("inf")}
 
             for node, ys in self.data.items():
                 try:
@@ -430,7 +467,9 @@ class PlotWindowPG(QWidget):
                     except Exception:
                         # Map using explicit QPointF fallback
                         try:
-                            scene_pt = vb.mapViewToScene(pg.QtCore.QPointF(rel_idx, y_val))
+                            scene_pt = vb.mapViewToScene(
+                                pg.QtCore.QPointF(rel_idx, y_val)
+                            )
                         except Exception:
                             # If mapping fails, skip this series
                             continue
@@ -440,19 +479,16 @@ class PlotWindowPG(QWidget):
                     dy = scene_pt.y() - pos.y()
                     dist = (dx * dx + dy * dy) ** 0.5
 
-                    if dist < best['dist']:
-                        best.update({
-                            'node': node,
-                            'idx': rel_idx,
-                            'y': y_val,
-                            'dist': dist
-                        })
+                    if dist < best["dist"]:
+                        best.update(
+                            {"node": node, "idx": rel_idx, "y": y_val, "dist": dist}
+                        )
                 except Exception:
                     # Ignore errors for individual series to avoid breaking the hover
                     continue
 
             # If we found a nearest series within the pixel threshold - show that tooltip only
-            if best['node'] is not None and best['dist'] < PIXEL_THRESHOLD:
+            if best["node"] is not None and best["dist"] < PIXEL_THRESHOLD:
                 try:
                     tooltip = f"{best['node'].name}: {best['y']:.4f}"
                     QToolTip.showText(QCursor.pos(), tooltip)
@@ -474,7 +510,7 @@ class PlotWindowPG(QWidget):
 
     def clear_plot(self):
         self.current_iteration = 0
-        self.iteration_label.setText(f'Iteration: 0 / {self.max_iterations}')
+        self.iteration_label.setText(f"Iteration: 0 / {self.max_iterations}")
         for node in list(self.nodes):
             self.data[node] = []
             if node in self.curves:

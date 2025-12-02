@@ -1,5 +1,6 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 
+
 class DivisionNode(BasicNode):
     def __init__(self, name: str = "", value=0):
         super().__init__(name, value)
@@ -13,7 +14,7 @@ class DivisionNode(BasicNode):
         """
         if b == 0:
             return 0
-        
+
         return a / b
 
     def IsValidInput(self, input):
@@ -21,8 +22,9 @@ class DivisionNode(BasicNode):
         Check if inputs are valid for addition (e.g., must be numbers).
         """
         return isinstance(input, (int, float))
+
     def ProcessBatch(self):
         if (len(self.inputs) == 1) and (self.midCalculation is False):
-            self.value = self.Operation(0,self.inputs[0])
+            self.value = self.Operation(0, self.inputs[0])
         else:
             return super().ProcessBatch()

@@ -1,4 +1,5 @@
 import numpy as np
+
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 from ComputationalGraphs.Nodes.TanhDerivativeNode import TanhDerivativeNode
 

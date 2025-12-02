@@ -43,7 +43,7 @@ This design enables emergent behavior in complex systems - the intelligence come
 - **Challenge**: Neural networks block data flow - batch n must complete, update weights, before batch n+1
 - **Solution**: BufferNodes for synchronization (introduces gradient delay issue - see Known Issues)
 
-### 2. Forward Processing (`ForwardProcessing`) 
+### 2. Forward Processing (`ForwardProcessing`)
 **Inspiration**: Non-deterministic automata with active node propagation
 
 - **How**: Only "active nodes" (whose predecessors completed) compute per iteration (1 computation per active node)
@@ -85,8 +85,8 @@ Node naming follows convention: `A1`, `A2` (Abstract), `C1`, `C2` (Compressed), 
 
 ```python
 # Input layer: DataStream + Buffer pairs
-self.inputLayer = [(DataStreamNode(f"x{i}"), 
-                   BufferNode(f"Buff_x{i}", size=(layersAhead * 6))) 
+self.inputLayer = [(DataStreamNode(f"x{i}"),
+                   BufferNode(f"Buff_x{i}", size=(layersAhead * 6)))
                    for i in range(numInputs)]
 ```
 
@@ -250,7 +250,7 @@ class MyNode(BasicNode):
     def Operation(self, *inputs):
         # Your computation here
         return result
-    
+
     derivative = MyNodeDerivative  # Link to derivative class
 ```
 
@@ -258,7 +258,7 @@ class MyNode(BasicNode):
 
 **Concurrent Mode** (with buffers):
 ```python
-mlp = MLPGraph(numInputs=4, numOutputs=3, numHiddenLayers=2, 
+mlp = MLPGraph(numInputs=4, numOutputs=3, numHiddenLayers=2,
                hiddenLayerSizes=[5, 3], activationFunction=SigmoidNode)
 mlp.BuildMLP()
 backprop = BackpropGraph(mlp, learningRate=0.01)
@@ -312,7 +312,7 @@ for epoch in range(epochs):
     processor.ForwardProcessing(iterations=iterations_per_epoch)
 ```
 
-**Why this works**: 
+**Why this works**:
 - Source nodes (DataStreamNodes) have loaded data and don't need computation
 - Weight ContainerNodes have initial random values and don't need computation for first forward pass
 - Marking both as 'processed' breaks the cycle: Forward pass (needs weights) → Backprop (computes gradients) → Weight update
@@ -370,7 +370,7 @@ classic_initial_output = classic_mlp.weights[1].copy()
 
 # 2. Build MLPGraph with its own seed
 random.seed(42)
-mlpGraph = MLPGraph(numInputs=2, numOutputs=1, numHiddenLayers=1, 
+mlpGraph = MLPGraph(numInputs=2, numOutputs=1, numHiddenLayers=1,
                     hiddenLayerSizes=[2], ...)
 mlpGraph.BuildMLP()
 

@@ -1,5 +1,5 @@
-from ComputationalGraphs.Core.MLPAnfisGraph import MLPAnfisGraph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Core.MLPAnfisGraph import MLPAnfisGraph
 
 
 def run_smoke():
@@ -31,5 +31,5 @@ def run_smoke():
         print(f"in={inp} target={tgt} out={out_node.value}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_smoke()

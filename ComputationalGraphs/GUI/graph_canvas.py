@@ -2,30 +2,33 @@
 QGraphicsView-based canvas for displaying and editing the computational graph.
 """
 
-from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsItem
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPainter, QPen, QColor
-from .node_item import NodeItem
+from PyQt6.QtGui import QColor, QPainter, QPen
+from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene, QGraphicsView
+
 from .edge_item import EdgeItem
+from .node_item import NodeItem
 
 
 class GraphCanvas(QGraphicsView):
     """Interactive canvas for node graph editing."""
-    
+
     node_selected = pyqtSignal(object)  # Emits the selected node
     edge_created = pyqtSignal(object, object)  # Emits (source_node, target_node)
-    edge_removed = pyqtSignal(object, object)  # Emits (source_node, target_node) when an edge is removed
-    
+    edge_removed = pyqtSignal(
+        object, object
+    )  # Emits (source_node, target_node) when an edge is removed
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        
+
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
-        
+
         # Scene settings
         self.scene.setSceneRect(-2000, -2000, 4000, 4000)
         self.scene.setBackgroundBrush(QColor(35, 35, 35))  # Dark background
-        
+
         # View settings
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setRenderHint(QPainter.RenderHint.TextAntialiasing)
@@ -33,15 +36,15 @@ class GraphCanvas(QGraphicsView):
         self.setBackgroundBrush(QColor(35, 35, 35))  # Match scene background
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        
+
         # Enable drag and drop
         self.setAcceptDrops(True)
-        
+
         # Connection state
         self.connection_mode = False
         self.connection_start_nodes = []  # List[NodeItem] when multi-connecting
         self.temp_connection_lines = []  # List of QGraphicsLineItem for preview
-        
+
         # Panning state
         self.panning = False
         self.pan_start_pos = None
@@ -54,31 +57,40 @@ class GraphCanvas(QGraphicsView):
         except Exception:
             self.default_scene_rect = self.scene.sceneRect()
         self.canvas_padding = 500
-        
+
         # Grid / snap settings
         self.node_diameter = 80  # Default assumed diameter (2 * radius 40)
-        self.grid_mode = '1x1'  # '1x1' (grid cell) or '4x4' - default to 1x1 for MLP layouts
-        self.grid_size = self.node_diameter  # 80px for 1x1 mode (one grid cell = one node)
+        self.grid_mode = (
+            "1x1"  # '1x1' (grid cell) or '4x4' - default to 1x1 for MLP layouts
+        )
+        self.grid_size = (
+            self.node_diameter
+        )  # 80px for 1x1 mode (one grid cell = one node)
         self.grid_major_every = 4  # draw a major line every 4 cells (node size)
         self.grid_minor_color = QColor(45, 45, 45)
         self.grid_major_color = QColor(70, 70, 70)
         self.show_grid = False
         # Default to no grid snapping (preserve manual node positions typical for user layout)
         self.snap_to_grid = False
-        self.snap_while_dragging = True  # default: snap while dragging so users see snap live
+        self.snap_while_dragging = (
+            True  # default: snap while dragging so users see snap live
+        )
         self.snap_step = 1  # Snap in units of grid cells (1 for 1x1 mode)
-        
+
         # Node tracking
         self.node_items = {}  # Maps node objects to NodeItem widgets
         self.edge_items = []
         # Internal clipboard for copy/paste
         self._clipboard = None
-        
+
     def add_node_item(self, node, x=0, y=0):
         """Add a visual representation of a node to the canvas."""
         # snap initial position if enabled
         try:
-            if getattr(self, 'snap_to_grid', False) and getattr(self, 'grid_size', 0) > 0:
+            if (
+                getattr(self, "snap_to_grid", False)
+                and getattr(self, "grid_size", 0) > 0
+            ):
                 x, y = self.snap_point(x, y, step=self.snap_step)
         except Exception:
             pass
@@ -93,11 +105,13 @@ class GraphCanvas(QGraphicsView):
         self.node_items[node] = node_item
         # Ensure value_label exists for older or partially-initialized node items
         try:
-            if not hasattr(node_item, 'value_label') or node_item.value_label is None:
+            if not hasattr(node_item, "value_label") or node_item.value_label is None:
                 from PyQt6.QtWidgets import QGraphicsTextItem
+
                 node_item.value_label = QGraphicsTextItem("", node_item)
                 node_item.value_label.setDefaultTextColor(Qt.GlobalColor.white)
                 from PyQt6.QtGui import QFont
+
                 node_item.value_label.setFont(QFont("Arial", 8))
         except Exception:
             # If creation fails, don't block adding the node - leave as-is and skip value display
@@ -109,7 +123,7 @@ class GraphCanvas(QGraphicsView):
             pass
         # If requested, auto-expand the scene rect to include the new node
         try:
-            if getattr(self, 'auto_expand_to_nodes', False):
+            if getattr(self, "auto_expand_to_nodes", False):
                 self._update_scene_rect()
         except Exception:
             pass
@@ -134,8 +148,8 @@ class GraphCanvas(QGraphicsView):
     def set_grid_mode(self, mode: str):
         """Set grid mode: '1x1' for node=1 cell, '4x4' for node=4 cells. Mode affects grid_size."""
         try:
-            node_diam = getattr(self, 'node_diameter', 80)
-            if mode == '1x1':
+            node_diam = getattr(self, "node_diameter", 80)
+            if mode == "1x1":
                 self.grid_size = node_diam
                 self.snap_step = 1
             else:
@@ -155,12 +169,12 @@ class GraphCanvas(QGraphicsView):
 
         If step is None use self.snap_step.
         """
-        if not getattr(self, 'snap_to_grid', False):
+        if not getattr(self, "snap_to_grid", False):
             return x, y
-        if getattr(self, 'grid_size', 0) <= 0:
+        if getattr(self, "grid_size", 0) <= 0:
             return x, y
         try:
-            s = int(step or getattr(self, 'snap_step', 1))
+            s = int(step or getattr(self, "snap_step", 1))
             unit = self.grid_size * s
             sx = round(x / unit) * unit
             sy = round(y / unit) * unit
@@ -175,15 +189,17 @@ class GraphCanvas(QGraphicsView):
         """
         # Default dark background already set; draw grid lines on top
         super().drawBackground(painter, rect)
-        if not getattr(self, 'show_grid', False):
+        if not getattr(self, "show_grid", False):
             return
         # grid size in pixels
-        g = getattr(self, 'grid_size', 20)
+        g = getattr(self, "grid_size", 20)
         if g <= 0:
             return
 
-        from PyQt6.QtGui import QPen, QPainter
         import math
+
+        from PyQt6.QtGui import QPainter, QPen
+
         left = int(math.floor(rect.left() / g) * g)
         right = int(math.ceil(rect.right() / g) * g)
         top = int(math.floor(rect.top() / g) * g)
@@ -207,12 +223,12 @@ class GraphCanvas(QGraphicsView):
             painter.setPen(pen)
             painter.drawLine(left, y, right, y)
             y += g
-    
+
     def add_edge_item(self, source_node, target_node):
         """Add a visual edge between two nodes."""
         source_item = self.node_items.get(source_node)
         target_item = self.node_items.get(target_node)
-        
+
         if source_item and target_item:
             edge_item = EdgeItem(source_item, target_item)
             self.scene.addItem(edge_item)
@@ -220,10 +236,12 @@ class GraphCanvas(QGraphicsView):
             self.edge_created.emit(source_node, target_node)
             # If canvas holds a graph reference, update the graph connectivity
             try:
-                if hasattr(self, 'graph') and getattr(self, 'graph') is not None:
+                if hasattr(self, "graph") and getattr(self, "graph") is not None:
                     # Only connect if the nodes belong to the authoritative graph
                     try:
-                        if target_node in getattr(self.graph, 'nodes', []) and source_node in getattr(self.graph, 'nodes', []):
+                        if target_node in getattr(
+                            self.graph, "nodes", []
+                        ) and source_node in getattr(self.graph, "nodes", []):
                             self.graph.ConnectPreNode(target_node, source_node)
                     except Exception:
                         # If the connection fails, continue without blocking UI
@@ -231,13 +249,13 @@ class GraphCanvas(QGraphicsView):
             except Exception:
                 pass
             return edge_item
-        
+
         return None
-    
+
     def remove_selected_items(self):
         """Remove selected nodes and edges."""
         selected = self.scene.selectedItems()
-        
+
         for item in selected:
             # Handle node item deletion
             if isinstance(item, NodeItem):
@@ -258,7 +276,10 @@ class GraphCanvas(QGraphicsView):
 
                     # Disconnect in authoritative graph if available
                     try:
-                        if hasattr(self, 'graph') and getattr(self, 'graph') is not None:
+                        if (
+                            hasattr(self, "graph")
+                            and getattr(self, "graph") is not None
+                        ):
                             self.graph.DisconnectPreNode(tgt, src)
                     except Exception:
                         pass
@@ -296,6 +317,7 @@ class GraphCanvas(QGraphicsView):
             # (The earlier early return prevented removing more than one selection)
             # Handle edge item deletion (selected edge directly)
             from .edge_item import EdgeItem
+
             if isinstance(item, EdgeItem):
                 try:
                     src = item.source_node.node
@@ -305,7 +327,12 @@ class GraphCanvas(QGraphicsView):
                     tgt = None
                 # Disconnect in authoritative graph if available
                 try:
-                    if hasattr(self, 'graph') and getattr(self, 'graph') is not None and src is not None and tgt is not None:
+                    if (
+                        hasattr(self, "graph")
+                        and getattr(self, "graph") is not None
+                        and src is not None
+                        and tgt is not None
+                    ):
                         self.graph.DisconnectPreNode(tgt, src)
                 except Exception:
                     pass
@@ -322,12 +349,12 @@ class GraphCanvas(QGraphicsView):
                         self.edge_items.remove(item)
                 except Exception:
                     pass
-        
+
         # Update scene rect if auto-expand is enabled, but do NOT refit the view
         # (Refitting the view on every delete is disorienting for the user)
-        if getattr(self, 'auto_expand_to_nodes', False):
+        if getattr(self, "auto_expand_to_nodes", False):
             self._update_scene_rect()
-    
+
     def mousePressEvent(self, event):
         """Handle mouse press for panning with middle button."""
         if event.button() == Qt.MouseButton.MiddleButton:
@@ -339,14 +366,14 @@ class GraphCanvas(QGraphicsView):
             return
         else:
             super().mousePressEvent(event)
-    
+
     def mouseMoveEvent(self, event):
         """Handle mouse move for connection drawing and panning."""
         if self.panning and self.pan_start_pos:
             # Pan the view
             delta = event.position() - self.pan_start_pos
             self.pan_start_pos = event.position()
-            
+
             # Move the scrollbars
             self.horizontalScrollBar().setValue(
                 self.horizontalScrollBar().value() - int(delta.x())
@@ -359,6 +386,7 @@ class GraphCanvas(QGraphicsView):
         elif self.connection_mode and self.connection_start_nodes:
             # Draw temporary line
             from PyQt6.QtWidgets import QGraphicsLineItem
+
             if not self.temp_connection_lines:
                 # Create a preview line for each start node
                 for n in self.connection_start_nodes:
@@ -366,16 +394,18 @@ class GraphCanvas(QGraphicsView):
                     line.setPen(QPen(QColor(100, 100, 100), 2, Qt.PenStyle.DashLine))
                     self.scene.addItem(line)
                     self.temp_connection_lines.append(line)
-            
+
             # Update lines for each start node
             end_pos = self.mapToScene(event.position().toPoint())
             for i, n in enumerate(self.connection_start_nodes):
                 start_pos = n.scenePos()
-                self.temp_connection_lines[i].setLine(start_pos.x(), start_pos.y(), end_pos.x(), end_pos.y())
+                self.temp_connection_lines[i].setLine(
+                    start_pos.x(), start_pos.y(), end_pos.x(), end_pos.y()
+                )
             return
-        
+
         super().mouseMoveEvent(event)
-    
+
     def mouseReleaseEvent(self, event):
         """Handle mouse release for connection completion and panning."""
         if event.button() == Qt.MouseButton.MiddleButton and self.panning:
@@ -384,25 +414,28 @@ class GraphCanvas(QGraphicsView):
             self.pan_start_pos = None
             self.setCursor(Qt.CursorShape.ArrowCursor)
             event.accept()
-        
+
         elif self.connection_mode and self.connection_start_nodes:
             # Check if released over another node
             pos = self.mapToScene(event.position().toPoint())
             items = self.scene.items(pos)
-            
+
             target_node = None
             for item in items:
-                if isinstance(item, NodeItem) and item not in self.connection_start_nodes:
+                if (
+                    isinstance(item, NodeItem)
+                    and item not in self.connection_start_nodes
+                ):
                     # Accept connection if released anywhere on the target node
                     target_node = item
                     break
-            
+
             if target_node:
                 # Create edges from all start nodes to this target
                 for start in self.connection_start_nodes:
                     if start.node != target_node.node:
                         self.add_edge_item(start.node, target_node.node)
-            
+
             # Clean up
             if self.temp_connection_lines:
                 for line in self.temp_connection_lines:
@@ -411,17 +444,17 @@ class GraphCanvas(QGraphicsView):
                     except Exception:
                         pass
                 self.temp_connection_lines = []
-            
+
             # Re-enable movement on the source node(s) and remove their connection highlight
             for n in self.connection_start_nodes:
                 n.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
                 n.set_connection_highlight(False)
-            
+
             self.connection_mode = False
             self.connection_start_nodes = []
             self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
             return
-        
+
         super().mouseReleaseEvent(event)
 
     # (Spacebar panning feature removed) - keyboard events not used for panning.
@@ -465,58 +498,70 @@ class GraphCanvas(QGraphicsView):
 
         self.scale(factor, factor)
         event.accept()
-    
+
     def dragEnterEvent(self, event):
         """Accept drag events from the palette."""
         if event.mimeData().hasText():
             event.acceptProposedAction()
-    
+
     def dragMoveEvent(self, event):
         """Accept drag move events."""
         if event.mimeData().hasText():
             event.acceptProposedAction()
-    
+
     def dropEvent(self, event):
         """Handle drop event to create new node."""
         if event.mimeData().hasText():
             node_type = event.mimeData().text()
             drop_pos = self.mapToScene(event.position().toPoint())
-            
+
             # Import all node types
-            from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
-            from ComputationalGraphs.Nodes.DynamicDataStreamNode import DynamicDataStreamNode
-            from ComputationalGraphs.Nodes.BufferNode import BufferNode
-            from ComputationalGraphs.Nodes.SequencerNode import SequencerNode
-            from ComputationalGraphs.Nodes.ListNode import ListNode
-            from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
             from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-            from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
-            from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
-            from ComputationalGraphs.Nodes.DivisionNode import DivisionNode
-            from ComputationalGraphs.Nodes.MaxNode import MaxNode
-            from ComputationalGraphs.Nodes.MinNode import MinNode
-            from ComputationalGraphs.Nodes.MeanSquaredErrorNode import MeanSquaredErrorNode
-            from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
-            from ComputationalGraphs.Nodes.SigmoidDerivativeNode import SigmoidDerivativeNode
-            from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
-            from ComputationalGraphs.Nodes.ReLUDerivativeNode import ReLUDerivativeNode
-            from ComputationalGraphs.Nodes.LinearNode import LinearNode
-            from ComputationalGraphs.Nodes.TanhNode import TanhNode
-            from ComputationalGraphs.Nodes.TanhDerivativeNode import TanhDerivativeNode
-            from ComputationalGraphs.Nodes.GaussianNode import GaussianNode
-            from ComputationalGraphs.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
-            from ComputationalGraphs.Nodes.TournamentSelectionNode import TournamentSelectionNode
+            from ComputationalGraphs.Nodes.BufferNode import BufferNode
             from ComputationalGraphs.Nodes.BulkTournamentNode import BulkTournamentNode
+            from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
             from ComputationalGraphs.Nodes.CrossoverNode import CrossoverNode
-            from ComputationalGraphs.Nodes.SingleCrossoverNode import SingleCrossoverNode
-            from ComputationalGraphs.Nodes.MutationNode import MutaionNode
+            from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
             from ComputationalGraphs.Nodes.DeJongSphereNode import DeJongSphereNode
             from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+            from ComputationalGraphs.Nodes.DivisionNode import DivisionNode
+            from ComputationalGraphs.Nodes.DynamicDataStreamNode import (
+                DynamicDataStreamNode,
+            )
             from ComputationalGraphs.Nodes.ExtractListElement import ExtractListElement
-            
+            from ComputationalGraphs.Nodes.GaussianNode import GaussianNode
+            from ComputationalGraphs.Nodes.LinearNode import LinearNode
+            from ComputationalGraphs.Nodes.ListNode import ListNode
+            from ComputationalGraphs.Nodes.MaxNode import MaxNode
+            from ComputationalGraphs.Nodes.MeanSquaredErrorNode import (
+                MeanSquaredErrorNode,
+            )
+            from ComputationalGraphs.Nodes.MinNode import MinNode
+            from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
+            from ComputationalGraphs.Nodes.MutationNode import MutaionNode
+            from ComputationalGraphs.Nodes.PiecewiseLinearNode import (
+                PiecewiseLinearNode,
+            )
+            from ComputationalGraphs.Nodes.ReLUDerivativeNode import ReLUDerivativeNode
+            from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
+            from ComputationalGraphs.Nodes.SequencerNode import SequencerNode
+            from ComputationalGraphs.Nodes.SigmoidDerivativeNode import (
+                SigmoidDerivativeNode,
+            )
+            from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+            from ComputationalGraphs.Nodes.SingleCrossoverNode import (
+                SingleCrossoverNode,
+            )
+            from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
+            from ComputationalGraphs.Nodes.TanhDerivativeNode import TanhDerivativeNode
+            from ComputationalGraphs.Nodes.TanhNode import TanhNode
+            from ComputationalGraphs.Nodes.TournamentSelectionNode import (
+                TournamentSelectionNode,
+            )
+
             node = None
             node_id = len(self.node_items)
-            
+
             # Data nodes
             if node_type == "DataStreamNode":
                 node = DataStreamNode(name=f"Data_{node_id}", data=[1, 2, 3, 4, 5])
@@ -525,8 +570,13 @@ class GraphCanvas(QGraphicsView):
             elif node_type == "BufferNode":
                 node = BufferNode(name=f"Buffer_{node_id}", size=3)
             elif node_type == "MovingAverageNode":
-                from ComputationalGraphs.Nodes.MovingAverageNode import MovingAverageNode
-                node = MovingAverageNode(name=f"MovAvg_{node_id}", size=10, mode='continuous')
+                from ComputationalGraphs.Nodes.MovingAverageNode import (
+                    MovingAverageNode,
+                )
+
+                node = MovingAverageNode(
+                    name=f"MovAvg_{node_id}", size=10, mode="continuous"
+                )
             elif node_type == "SequencerNode":
                 node = SequencerNode(name=f"Seq_{node_id}")
             elif node_type == "ListNode":
@@ -536,7 +586,7 @@ class GraphCanvas(QGraphicsView):
                 node = ExtractListElement(name=f"ExtractList_{node_id}", index=0)
             elif node_type == "ContainerNode":
                 node = ContainerNode(name=f"Container_{node_id}")
-            
+
             # Arithmetic nodes
             elif node_type == "AdditionNode":
                 node = AdditionNode(name=f"Add_{node_id}")
@@ -546,7 +596,7 @@ class GraphCanvas(QGraphicsView):
                 node = MultiplicationNode(name=f"Mul_{node_id}")
             elif node_type == "DivisionNode":
                 node = DivisionNode(name=f"Div_{node_id}")
-            
+
             # Statistical nodes
             elif node_type == "MaxNode":
                 node = MaxNode(name=f"Max_{node_id}")
@@ -554,7 +604,7 @@ class GraphCanvas(QGraphicsView):
                 node = MinNode(name=f"Min_{node_id}")
             elif node_type == "MeanSquaredErrorNode":
                 node = MeanSquaredErrorNode(name=f"MSE_{node_id}")
-            
+
             # Activation functions
             elif node_type == "SigmoidNode":
                 node = SigmoidNode(name=f"Sigmoid_{node_id}")
@@ -574,7 +624,7 @@ class GraphCanvas(QGraphicsView):
                 node = GaussianNode(name=f"Gauss_{node_id}")
             elif node_type == "PiecewiseLinearNode":
                 node = PiecewiseLinearNode(name=f"Piecewise_{node_id}")
-            
+
             # Evolutionary algorithm nodes
             elif node_type == "TournamentSelectionNode":
                 node = TournamentSelectionNode(name=f"Tournament_{node_id}")
@@ -588,19 +638,21 @@ class GraphCanvas(QGraphicsView):
                 node = MutaionNode(name=f"Mutation_{node_id}")
             elif node_type == "DeJongSphereNode":
                 node = DeJongSphereNode(name=f"DeJong_{node_id}")
-            
+
             # Utility nodes
             elif node_type == "DisplayNode":
                 node = DisplayNode(name=f"Display_{node_id}")
-            
+
             if node:
                 self.add_node_item(node, drop_pos.x(), drop_pos.y())
                 event.acceptProposedAction()
 
     # Note: _create_node_by_type and the earlier replace_node_item implementation were removed
     # in favor of the dynamic `replace_node_item()` implementation defined later in this file.
-    
-    def update_node_visuals(self, colorize=False, min_val=0, max_val=1, min_color=None, max_color=None):
+
+    def update_node_visuals(
+        self, colorize=False, min_val=0, max_val=1, min_color=None, max_color=None
+    ):
         """Update all node visuals (values and optionally colors)."""
         for node_item in self.node_items.values():
             node_item.update_value_display()
@@ -613,18 +665,20 @@ class GraphCanvas(QGraphicsView):
 
     def highlight_selected_nodes_for_connection(self, on: bool):
         """Highlight all currently selected nodes for connection preview."""
-        selected_items = [item for item in self.scene.selectedItems() if isinstance(item, NodeItem)]
+        selected_items = [
+            item for item in self.scene.selectedItems() if isinstance(item, NodeItem)
+        ]
         for item in selected_items:
             item.set_connection_highlight(on)
-    
+
     def highlight_active_nodes(self, active_nodes):
         """Highlight active nodes during Forward Processing execution.
-        
+
         Args:
             active_nodes: List of Node objects that are currently active
         """
         active_node_set = set(active_nodes)
-        
+
         for node, node_item in self.node_items.items():
             is_active = node in active_node_set
             node_item.set_active(is_active)
@@ -637,7 +691,11 @@ class GraphCanvas(QGraphicsView):
         """
         try:
             # Determine selected start nodes: use current selection if start_node_item is selected
-            selected_items = [item for item in self.scene.selectedItems() if isinstance(item, NodeItem)]
+            selected_items = [
+                item
+                for item in self.scene.selectedItems()
+                if isinstance(item, NodeItem)
+            ]
             if start_node_item in selected_items:
                 self.connection_start_nodes = selected_items
             else:
@@ -670,50 +728,57 @@ class GraphCanvas(QGraphicsView):
 
         Returns the new node or None.
         """
-        import inspect
         import importlib
+        import inspect
         import pkgutil
-        
+
         try:
             import ComputationalGraphs.Nodes as NodesPkg
+
             cls = None
-            
+
             # First try the direct package exports
             for name, obj in inspect.getmembers(NodesPkg):
                 if inspect.isclass(obj) and obj.__name__ == class_name:
                     cls = obj
                     break
-            
+
             # If not found in exports, scan all submodules
             if cls is None:
                 for importer, modname, ispkg in pkgutil.iter_modules(NodesPkg.__path__):
                     try:
-                        module = importlib.import_module(f'ComputationalGraphs.Nodes.{modname}')
+                        module = importlib.import_module(
+                            f"ComputationalGraphs.Nodes.{modname}"
+                        )
                         if hasattr(module, class_name):
                             cls = getattr(module, class_name)
                             break
                     except Exception:
                         continue
-            
+
             if cls is None:
-                print(f"[Copy/Paste] Warning: Class '{class_name}' not found in Nodes package")
+                print(
+                    f"[Copy/Paste] Warning: Class '{class_name}' not found in Nodes package"
+                )
                 return None
-            
+
             # Attribute-to-parameter mappings for nodes where stored attribute names
             # differ from constructor parameter names
             attr_to_param_mappings = {
-                'BufferNode': {'buffer': 'data', 'bufferSize': 'size'},
-                'DataStreamNode': {'streamIndex': None},  # None means skip this attr for constructor
+                "BufferNode": {"buffer": "data", "bufferSize": "size"},
+                "DataStreamNode": {
+                    "streamIndex": None
+                },  # None means skip this attr for constructor
             }
-            
+
             # Build constructor kwargs from attrs that match constructor parameters
             constructor_kwargs = {}
             if attrs:
                 try:
                     sig = inspect.signature(cls.__init__)
-                    param_names = set(sig.parameters.keys()) - {'self'}
+                    param_names = set(sig.parameters.keys()) - {"self"}
                     mappings = attr_to_param_mappings.get(class_name, {})
-                    
+
                     for attr_name, attr_val in attrs.items():
                         # Check if this attribute maps to a different parameter name
                         if attr_name in mappings:
@@ -722,15 +787,15 @@ class GraphCanvas(QGraphicsView):
                                 continue  # Skip this attribute
                         else:
                             param_name = attr_name
-                        
+
                         # Only include if parameter exists in constructor
                         if param_name in param_names:
                             constructor_kwargs[param_name] = attr_val
                 except Exception:
                     # Fallback: just try 'name' if available
-                    if 'name' in attrs:
-                        constructor_kwargs['name'] = attrs['name']
-            
+                    if "name" in attrs:
+                        constructor_kwargs["name"] = attrs["name"]
+
             # Create the node
             try:
                 new_node = cls(**constructor_kwargs) if constructor_kwargs else cls()
@@ -740,29 +805,29 @@ class GraphCanvas(QGraphicsView):
                     new_node = cls()
                 except Exception:
                     return None
-            
+
             return new_node
-            
+
         except Exception as e:
             print(f"[Copy/Paste] Error creating node '{class_name}': {e}")
             return None
 
     def _get_node_attributes(self, node):
         """Extract all serializable attributes from a node for copying.
-        
+
         Excludes internal/private attributes, predecessors, inputs, and callable methods.
         Similar approach to CGJsonIO._get_node_attributes.
         """
         import inspect
         from copy import deepcopy
-        
+
         attrs = {}
         for attr_name, val in vars(node).items():
             # Skip private/internal attributes
-            if attr_name.startswith('_'):
+            if attr_name.startswith("_"):
                 continue
             # Skip graph connection attributes (will be recreated)
-            if attr_name in ('predecessors', 'inputs', 'id'):
+            if attr_name in ("predecessors", "inputs", "id"):
                 continue
             # Skip callable methods
             if inspect.isroutine(val):
@@ -780,7 +845,7 @@ class GraphCanvas(QGraphicsView):
 
     def _generate_unique_name(self, base_name):
         """Generate a unique node name by appending _copy or incrementing counter.
-        
+
         Examples:
             'Node_1' -> 'Node_1_copy'
             'Node_1_copy' -> 'Node_1_copy2'
@@ -788,15 +853,16 @@ class GraphCanvas(QGraphicsView):
         """
         if not base_name:
             base_name = "Node"
-        
-        existing_names = {n.name for n in self.node_items.keys() if hasattr(n, 'name')}
-        
+
+        existing_names = {n.name for n in self.node_items.keys() if hasattr(n, "name")}
+
         # If name doesn't exist yet, we can use it (but we still want to mark as copy)
         # Check if it already ends with _copy or _copyN
         import re
-        copy_pattern = re.compile(r'^(.+?)_copy(\d*)$')
+
+        copy_pattern = re.compile(r"^(.+?)_copy(\d*)$")
         match = copy_pattern.match(base_name)
-        
+
         if match:
             # Already a copy, increment the counter
             root_name = match.group(1)
@@ -809,41 +875,43 @@ class GraphCanvas(QGraphicsView):
             root_name = base_name
             candidate = f"{base_name}_copy"
             counter = 1
-        
+
         # Ensure uniqueness
         while candidate in existing_names:
             counter += 1
             candidate = f"{root_name}_copy{counter}"
-        
+
         return candidate
 
     def copy_selected(self):
         """Copy selected nodes and internal edges to the internal clipboard.
-        
+
         Stores all node attributes (not just name/value/data) so that pasted
         nodes are true duplicates of the originals.
         """
-        selected_items = [item for item in self.scene.selectedItems() if isinstance(item, NodeItem)]
+        selected_items = [
+            item for item in self.scene.selectedItems() if isinstance(item, NodeItem)
+        ]
         if not selected_items:
             return
-        
+
         nodes_info = []
         node_to_index = {}
-        
+
         for idx, item in enumerate(selected_items):
             n = item.node
             node_to_index[n] = idx
-            
+
             # Collect ALL node attributes
             attrs = self._get_node_attributes(n)
-            
+
             node_info = {
-                'class': type(n).__name__,
-                'attrs': attrs,
-                'gui_pos': (float(item.pos().x()), float(item.pos().y()))
+                "class": type(n).__name__,
+                "attrs": attrs,
+                "gui_pos": (float(item.pos().x()), float(item.pos().y())),
             }
             nodes_info.append(node_info)
-        
+
         # Collect internal edges between selected nodes
         edges = []
         for edge in list(self.edge_items):
@@ -855,7 +923,7 @@ class GraphCanvas(QGraphicsView):
             except Exception:
                 pass
 
-        self._clipboard = {'nodes': nodes_info, 'edges': edges}
+        self._clipboard = {"nodes": nodes_info, "edges": edges}
 
     def cut_selected(self):
         """Copy selected nodes then remove them from the canvas."""
@@ -869,14 +937,15 @@ class GraphCanvas(QGraphicsView):
         New nodes get unique names (with _copy suffix) and are placed at cursor position
         or viewport center, maintaining their relative positions to each other.
         """
-        from PyQt6.QtGui import QCursor
         from copy import deepcopy
-        
+
+        from PyQt6.QtGui import QCursor
+
         if not self._clipboard:
             return
-        
-        nodes_info = self._clipboard.get('nodes', [])
-        edges = self._clipboard.get('edges', [])
+
+        nodes_info = self._clipboard.get("nodes", [])
+        edges = self._clipboard.get("edges", [])
         if not nodes_info:
             return
 
@@ -897,7 +966,9 @@ class GraphCanvas(QGraphicsView):
             base_y = 0
 
         # Compute centroid of copied nodes to preserve relative positions
-        gui_positions = [info.get('gui_pos') for info in nodes_info if info.get('gui_pos')]
+        gui_positions = [
+            info.get("gui_pos") for info in nodes_info if info.get("gui_pos")
+        ]
         if gui_positions:
             copy_center_x = sum(p[0] for p in gui_positions) / len(gui_positions)
             copy_center_y = sum(p[1] for p in gui_positions) / len(gui_positions)
@@ -907,46 +978,53 @@ class GraphCanvas(QGraphicsView):
 
         new_nodes = []
         for idx, info in enumerate(nodes_info):
-            class_name = info.get('class')
-            attrs = info.get('attrs', {})
-            
+            class_name = info.get("class")
+            attrs = info.get("attrs", {})
+
             # Generate unique name for the copy
-            original_name = attrs.get('name', f'Node_{idx}')
+            original_name = attrs.get("name", f"Node_{idx}")
             unique_name = self._generate_unique_name(original_name)
-            
+
             # Update attrs with the unique name for constructor
             attrs_for_creation = deepcopy(attrs)
-            attrs_for_creation['name'] = unique_name
-            
+            attrs_for_creation["name"] = unique_name
+
             # Create the node with constructor-compatible attributes
-            new_node = self._create_node_by_class_name(class_name, attrs=attrs_for_creation)
-            
+            new_node = self._create_node_by_class_name(
+                class_name, attrs=attrs_for_creation
+            )
+
             if new_node is None:
                 # Fallback: create a DisplayNode
                 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+
                 new_node = DisplayNode(name=unique_name)
-                print(f"[Copy/Paste] Warning: Could not create {class_name}, using DisplayNode")
-            
+                print(
+                    f"[Copy/Paste] Warning: Could not create {class_name}, using DisplayNode"
+                )
+
             # Set any remaining attributes that weren't handled by constructor
             for attr_name, attr_val in attrs.items():
-                if attr_name == 'name':
+                if attr_name == "name":
                     continue  # Already set with unique name
                 try:
                     # Only set if the attribute exists on the node or is a known attribute
                     if hasattr(new_node, attr_name):
                         setattr(new_node, attr_name, deepcopy(attr_val))
                 except Exception as e:
-                    print(f"[Copy/Paste] Warning: Could not set attribute '{attr_name}': {e}")
+                    print(
+                        f"[Copy/Paste] Warning: Could not set attribute '{attr_name}': {e}"
+                    )
 
             # Add node to the authoritative graph if available
-            if hasattr(self, 'graph') and self.graph is not None:
+            if hasattr(self, "graph") and self.graph is not None:
                 try:
                     self.graph.AddNode(new_node)
                 except Exception as e:
                     print(f"[Copy/Paste] Warning: Could not add node to graph: {e}")
 
             # Calculate position - maintain relative positions from original
-            gui_pos = info.get('gui_pos')
+            gui_pos = info.get("gui_pos")
             if gui_pos:
                 rel_x = gui_pos[0] - copy_center_x
                 rel_y = gui_pos[1] - copy_center_y
@@ -968,16 +1046,16 @@ class GraphCanvas(QGraphicsView):
                 self.add_edge_item(s_node, t_node)
             except Exception as e:
                 print(f"[Copy/Paste] Warning: Could not recreate edge: {e}")
-        
+
         # Select newly pasted nodes for better UX
         for it in list(self.scene.selectedItems()):
             it.setSelected(False)
-        
+
         for n in new_nodes:
             ni = self.node_items.get(n)
             if ni:
                 ni.setSelected(True)
-    
+
     def apply_layout(self, layout_type="spring"):
         """No-op layout plumbing: preserve method signature for compatibility.
 
@@ -992,9 +1070,12 @@ class GraphCanvas(QGraphicsView):
             # Construct a positions mapping based on gui_pos (if present) or current item positions
             for node, item in self.node_items.items():
                 try:
-                    if hasattr(node, 'gui_pos') and node.gui_pos is not None:
+                    if hasattr(node, "gui_pos") and node.gui_pos is not None:
                         # node.gui_pos may be tuple/list-like; coerce to (x,y)
-                        if isinstance(node.gui_pos, (tuple, list)) and len(node.gui_pos) >= 2:
+                        if (
+                            isinstance(node.gui_pos, (tuple, list))
+                            and len(node.gui_pos) >= 2
+                        ):
                             pos[node] = (float(node.gui_pos[0]), float(node.gui_pos[1]))
                         else:
                             pos[node] = (float(item.pos().x()), float(item.pos().y()))
@@ -1007,7 +1088,7 @@ class GraphCanvas(QGraphicsView):
                     except Exception:
                         pos[node] = (0.0, 0.0)
 
-            if layout_type == 'ann':
+            if layout_type == "ann":
                 self.apply_ann_colors()
 
             # Refresh edges and update the scene rect
@@ -1022,7 +1103,7 @@ class GraphCanvas(QGraphicsView):
             pass
 
         return pos
-    
+
     def _compute_ann_layout(self, G, scale):
         """ANN layout removed: compatibility stub.
 
@@ -1031,7 +1112,7 @@ class GraphCanvas(QGraphicsView):
         """
         pos = {}
         for node in G.nodes():
-            if hasattr(node, 'gui_pos') and node.gui_pos is not None:
+            if hasattr(node, "gui_pos") and node.gui_pos is not None:
                 pos[node] = tuple(node.gui_pos)
             else:
                 pos[node] = (0.0, 0.0)
@@ -1061,7 +1142,7 @@ class GraphCanvas(QGraphicsView):
         import re
         from collections import defaultdict
 
-        node_names = {node: getattr(node, 'name', str(node)) for node in G.nodes()}
+        node_names = {node: getattr(node, "name", str(node)) for node in G.nodes()}
 
         # Helpers
         def match_name(pattern, name):
@@ -1081,66 +1162,66 @@ class GraphCanvas(QGraphicsView):
 
         for node in G.nodes():
             name = node_names[node]
-            m = match_name(r'^x(\d+)$', name)
+            m = match_name(r"^x(\d+)$", name)
             if m:
                 inputs.append((node, int(m.group(1))))
                 continue
-            m = match_name(r'^Buff_x(\d+)$', name)
+            m = match_name(r"^Buff_x(\d+)$", name)
             if m:
                 buffs_x[int(m.group(1))] = node
                 continue
-            m = match_name(r'^W_x(\d+)H(\d+)N(\d+)$', name)
+            m = match_name(r"^W_x(\d+)H(\d+)N(\d+)$", name)
             if m:
                 i = int(m.group(1))
                 layer = int(m.group(2))
                 j = int(m.group(3))
-                weights[(layer, f'x{i}')].append((node, i, j))
+                weights[(layer, f"x{i}")].append((node, i, j))
                 continue
-            m = match_name(r'^W_H(\d+)N(\d+)H(\d+)N(\d+)$', name)
+            m = match_name(r"^W_H(\d+)N(\d+)H(\d+)N(\d+)$", name)
             if m:
                 from_layer = int(m.group(1))
                 i = int(m.group(2))
                 to_l = int(m.group(3))
                 j = int(m.group(4))
-                weights[(to_l, f'H{from_layer}')].append((node, i, j))
+                weights[(to_l, f"H{from_layer}")].append((node, i, j))
                 continue
-            m = match_name(r'^Mul_([A-Za-z].+)$', name)
+            m = match_name(r"^Mul_([A-Za-z].+)$", name)
             if m:
                 muls.append(node)
                 continue
-            m = match_name(r'^Add_(?:L|H)(\d+)N(\d+)$', name)
+            m = match_name(r"^Add_(?:L|H)(\d+)N(\d+)$", name)
             if m:
                 layer = int(m.group(1))
                 n = int(m.group(2))
                 adds[layer].append((node, n))
                 continue
-            m = match_name(r'^Act_(?:L|H)(\d+)N(\d+)$', name)
+            m = match_name(r"^Act_(?:L|H)(\d+)N(\d+)$", name)
             if m:
                 layer = int(m.group(1))
                 n = int(m.group(2))
                 acts[layer].append((node, n))
                 continue
-            m = match_name(r'^Buff_H(\d+)N(\d+)$', name)
+            m = match_name(r"^Buff_H(\d+)N(\d+)$", name)
             if m:
                 layer = int(m.group(1))
                 n = int(m.group(2))
                 buffs_h[layer].append((node, n))
                 continue
-            m = match_name(r'^D_H(\d+)N(\d+)$', name)
+            m = match_name(r"^D_H(\d+)N(\d+)$", name)
             if m:
                 layer = int(m.group(1))
                 n = int(m.group(2))
                 derivatives.append((node, layer, n))
                 continue
-            m = match_name(r'^D_y(\d+)$', name)
+            m = match_name(r"^D_y(\d+)$", name)
             if m:
-                derivatives.append((node, 'y', int(m.group(1))))
+                derivatives.append((node, "y", int(m.group(1))))
                 continue
-            m = match_name(r'^Add_y(\d+)$', name)
+            m = match_name(r"^Add_y(\d+)$", name)
             if m:
                 outputs_add.append((node, int(m.group(1))))
                 continue
-            m = match_name(r'^y(\d+)$', name)
+            m = match_name(r"^y(\d+)$", name)
             if m:
                 outputs_act.append((node, int(m.group(1))))
                 continue
@@ -1149,7 +1230,14 @@ class GraphCanvas(QGraphicsView):
         # Number of grid steps reserved per hidden layer (columns per layer)
         step_per_layer = 8
         num_hidden_layers = max(adds.keys()) + 1 if adds else 0
-        max_hidden_neurons = max((max([n for (_, n) in nodes]) + 1) if nodes else 0 for nodes in adds.values()) if adds else 0
+        max_hidden_neurons = (
+            max(
+                (max([n for (_, n) in nodes]) + 1) if nodes else 0
+                for nodes in adds.values()
+            )
+            if adds
+            else 0
+        )
         max_rows = max([len(inputs), max_hidden_neurons, len(outputs_add)])
         if max_rows == 0:
             max_rows = 1
@@ -1157,12 +1245,18 @@ class GraphCanvas(QGraphicsView):
         # Determine cell size using canvas grid settings when available.
         try:
             # unit equals node-sized step (grid_size * snap_step usually equals node diameter)
-            grid_unit = int(getattr(self, 'grid_size', 20)) * int(getattr(self, 'snap_step', 4))
+            grid_unit = int(getattr(self, "grid_size", 20)) * int(
+                getattr(self, "snap_step", 4)
+            )
             cell_w = grid_unit
             cell_h = grid_unit
         except Exception:
             # Fallback to previous manual calculation
-            radii = [item.radius for item in self.node_items.values() if hasattr(item, 'radius')]
+            radii = [
+                item.radius
+                for item in self.node_items.values()
+                if hasattr(item, "radius")
+            ]
             avg_radius = sum(radii) / len(radii) if radii else 40
             cell_w = avg_radius * 2 + 40
             cell_h = avg_radius * 2 + 40
@@ -1176,7 +1270,10 @@ class GraphCanvas(QGraphicsView):
             y = row * cell_h
             # Snap final coordinates to grid if grid snapping enabled
             try:
-                if getattr(self, 'snap_to_grid', False) and getattr(self, 'grid_size', 0) > 0:
+                if (
+                    getattr(self, "snap_to_grid", False)
+                    and getattr(self, "grid_size", 0) > 0
+                ):
                     x, y = self.snap_point(x, y, step=self.snap_step)
             except Exception:
                 pass
@@ -1197,15 +1294,15 @@ class GraphCanvas(QGraphicsView):
 
         # Hidden layer placements (add/act/buff)
         for layer, nodes in adds.items():
-            for (node, n) in nodes:
+            for node, n in nodes:
                 base = 2 + (layer * step_per_layer)
                 pos[node] = cell_to_pixel(base + 2, n)
         for layer, nodes in acts.items():
-            for (node, n) in nodes:
+            for node, n in nodes:
                 base = 2 + (layer * step_per_layer)
                 pos[node] = cell_to_pixel(base + 3, n)
         for layer, nodes in buffs_h.items():
-            for (node, n) in nodes:
+            for node, n in nodes:
                 base = 2 + (layer * step_per_layer)
                 # Place hidden layer buffer top-right of activation if possible
                 # Place hidden buffer top-right (above) activation if possible
@@ -1221,7 +1318,7 @@ class GraphCanvas(QGraphicsView):
         for key, wlist in weights.items():
             # group by target neuron j
             grouped_by_j = defaultdict(list)
-            for (node, i, j) in wlist:
+            for node, i, j in wlist:
                 grouped_by_j[j].append((node, i, j))
             for j, items in grouped_by_j.items():
                 # Sort by source index (i) to make distribution deterministic
@@ -1232,7 +1329,11 @@ class GraphCanvas(QGraphicsView):
                 for idx_in_group, (node, i, j2) in enumerate(items_sorted):
                     row = start_row + idx_in_group
                     target_layer = key[0] if isinstance(key[0], int) else 0
-                    base = 2 + ((max(0, target_layer - 1)) * step_per_layer) if target_layer > 0 else 2
+                    base = (
+                        2 + ((max(0, target_layer - 1)) * step_per_layer)
+                        if target_layer > 0
+                        else 2
+                    )
                     # Column offset using target neuron j for diagonal cascading across neurons
                     col = base + j
                     pos[node] = cell_to_pixel(col, row)
@@ -1241,7 +1342,7 @@ class GraphCanvas(QGraphicsView):
 
         for node in muls:
             name = node_names[node]
-            m = re.match(r'^Mul_x(\d+)H(\d+)$', name)
+            m = re.match(r"^Mul_x(\d+)H(\d+)$", name)
             if m:
                 j = int(m.group(2))
                 # Align the mul node based on the corresponding weight node row if available
@@ -1249,17 +1350,21 @@ class GraphCanvas(QGraphicsView):
                 i = int(m.group(1))
                 # Search for matching weight node in weights[(0,'x')] list
                 assigned_row = None
-                if (0, 'x') in weights:
-                    for (wn, si, sj) in weights[(0, 'x')]:
+                if (0, "x") in weights:
+                    for wn, si, sj in weights[(0, "x")]:
                         if si == i and sj == j:
                             assigned_row = weight_row_map.get(wn)
                             assigned_col = weight_col_map.get(wn)
                             break
                 row = assigned_row if assigned_row is not None else j
-                col = (assigned_col + 1) if assigned_row is not None and 'assigned_col' in locals() else 3
+                col = (
+                    (assigned_col + 1)
+                    if assigned_row is not None and "assigned_col" in locals()
+                    else 3
+                )
                 pos[node] = cell_to_pixel(col, row)
                 continue
-            m = re.match(r'^Mul_H(\d+)N(\d+)H(\d+)N(\d+)$', name)
+            m = re.match(r"^Mul_H(\d+)N(\d+)H(\d+)N(\d+)$", name)
             if m:
                 to_l = int(m.group(3))
                 j = int(m.group(4))
@@ -1267,9 +1372,9 @@ class GraphCanvas(QGraphicsView):
                 i = int(m.group(2))
                 assigned_row = None
                 assigned_col = None
-                key = (to_l, f'H{to_l-1}' )
+                key = (to_l, f"H{to_l-1}")
                 if key in weights:
-                    for (wn, si, sj) in weights[key]:
+                    for wn, si, sj in weights[key]:
                         if si == i and sj == j:
                             assigned_row = weight_row_map.get(wn)
                             assigned_col = weight_col_map.get(wn)
@@ -1279,7 +1384,7 @@ class GraphCanvas(QGraphicsView):
                 col = (assigned_col + 1) if assigned_col is not None else base + 1
                 pos[node] = cell_to_pixel(col, row)
                 continue
-            m = re.match(r'^Mul_H(\d+)N(\d+)y(\d+)$', name)
+            m = re.match(r"^Mul_H(\d+)N(\d+)y(\d+)$", name)
             if m:
                 from_l = int(m.group(1))
                 j = int(m.group(3))
@@ -1291,14 +1396,14 @@ class GraphCanvas(QGraphicsView):
 
         # Output positions
         last_group_base = 2 + (num_hidden_layers * step_per_layer)
-        for (node, idx) in outputs_add:
+        for node, idx in outputs_add:
             pos[node] = cell_to_pixel(last_group_base + 2, idx)
-        for (node, idx) in outputs_act:
+        for node, idx in outputs_act:
             pos[node] = cell_to_pixel(last_group_base + 3, idx)
 
         # Derivatives placed relative to corresponding buffers
-        for (node, layer, n) in derivatives:
-            if layer == 'y':
+        for node, layer, n in derivatives:
+            if layer == "y":
                 col = last_group_base + 4
                 row = n
             else:
@@ -1308,43 +1413,43 @@ class GraphCanvas(QGraphicsView):
             pos[node] = cell_to_pixel(col, row)
 
         return pos
-    
+
     def _update_scene_rect(self):
         """Update scene rect to encompass all nodes with padding."""
         if not self.node_items:
             return
-        
+
         # Find bounds of all nodes
-        min_x = float('inf')
-        max_x = float('-inf')
-        min_y = float('inf')
-        max_y = float('-inf')
-        
+        min_x = float("inf")
+        max_x = float("-inf")
+        min_y = float("inf")
+        max_y = float("-inf")
+
         for node_item in self.node_items.values():
             pos = node_item.pos()
             radius = node_item.radius
-            
+
             min_x = min(min_x, pos.x() - radius)
             max_x = max(max_x, pos.x() + radius)
             min_y = min(min_y, pos.y() - radius)
             max_y = max(max_y, pos.y() + radius)
-        
+
         # Add padding based on canvas setting
-        padding = getattr(self, 'canvas_padding', 500)
+        padding = getattr(self, "canvas_padding", 500)
         min_x -= padding
         max_x += padding
         min_y -= padding
         max_y += padding
-        
+
         # Update scene rect
         width = max_x - min_x
         height = max_y - min_y
         self.scene.setSceneRect(min_x, min_y, width, height)
-    
+
     def apply_ann_colors(self):
         """
         Apply ANN-specific color scheme to nodes.
-        
+
         Color scheme:
         - White: Input streams, activations, additions, multiplication (forward pass)
         - Blue: Weights (W_*, wn_*, wx_*), LR, dW nodes, weight-related multiplications
@@ -1352,37 +1457,57 @@ class GraphCanvas(QGraphicsView):
         - Red: Label streams, Error nodes
         - Purple/Pink: Backprop gradient nodes (EG_*, LRMult_*, WGS_*)
         """
-        
+
         for node, node_item in self.node_items.items():
-            name = node.name if hasattr(node, 'name') else str(node)
+            name = node.name if hasattr(node, "name") else str(node)
             color = None
-            
+
             # Red: Label streams and Error nodes
-            if name.startswith('Label_') or name.startswith('yd') or name.startswith('Error_') or (name.startswith('e') and 'E' in name):
+            if (
+                name.startswith("Label_")
+                or name.startswith("yd")
+                or name.startswith("Error_")
+                or (name.startswith("e") and "E" in name)
+            ):
                 color = QColor(180, 60, 60)  # Dark red
-            
+
             # Blue: Weights, LR, dW nodes
-            elif (name.startswith('W_') or name.startswith('wn') or name.startswith('wx') or 
-                  name == 'LearningRate' or name == 'LR' or name.startswith('dW_')):
+            elif (
+                name.startswith("W_")
+                or name.startswith("wn")
+                or name.startswith("wx")
+                or name == "LearningRate"
+                or name == "LR"
+                or name.startswith("dW_")
+            ):
                 color = QColor(60, 100, 180)  # Dark blue
-            
+
             # Yellow/Gold: Buffer nodes
-            elif 'Buff' in name or 'Buffer' in name or 'buffer' in name:
+            elif "Buff" in name or "Buffer" in name or "buffer" in name:
                 color = QColor(200, 149, 62)  # Yellow/Gold #c8953e
-            
+
             # Green: Activation derivatives and their multiplications
-            elif name.startswith('D_') or 'derivative' in name.lower() or 'Derivative' in name:
+            elif (
+                name.startswith("D_")
+                or "derivative" in name.lower()
+                or "Derivative" in name
+            ):
                 color = QColor(60, 150, 60)  # Dark green
-            
+
             # Purple: Backprop gradient nodes (EG, LRMult, WGS, weighted gradients)
-            elif (name.startswith('EG_') or name.startswith('LRMult_') or name.startswith('WGS_') or 
-                  name.startswith('WG_') or name.startswith('Weighted')):
+            elif (
+                name.startswith("EG_")
+                or name.startswith("LRMult_")
+                or name.startswith("WGS_")
+                or name.startswith("WG_")
+                or name.startswith("Weighted")
+            ):
                 color = QColor(120, 80, 150)  # Dark purple
-            
+
             # Gray: Everything else (inputs, activations, additions, forward multiplications)
             else:
                 color = QColor(100, 100, 100)  # Dark gray (instead of white)
-            
+
             # Apply the color to the node item
             if color:
                 node_item.color = color
@@ -1414,9 +1539,11 @@ class GraphCanvas(QGraphicsView):
             The new node object if replacement succeeded, else None.
         """
         import inspect
+
         # find node class by name inside ComputationalGraphs.Nodes package
         try:
             import ComputationalGraphs.Nodes as NodesPkg
+
             cls = None
             for name, obj in inspect.getmembers(NodesPkg):
                 if inspect.isclass(obj) and obj.__name__ == new_type:
@@ -1428,8 +1555,8 @@ class GraphCanvas(QGraphicsView):
             kwargs = {}
             try:
                 sig = inspect.signature(cls.__init__)
-                if 'name' in sig.parameters:
-                    kwargs['name'] = getattr(node_item.node, 'name', None)
+                if "name" in sig.parameters:
+                    kwargs["name"] = getattr(node_item.node, "name", None)
             except Exception:
                 pass
             try:
@@ -1442,9 +1569,13 @@ class GraphCanvas(QGraphicsView):
                     return None
 
             # If we have an authoritative graph, perform a Graph.ReplaceNode operation
-            g = getattr(self, 'graph', None)
-            old_node = getattr(node_item, 'node', None)
-            if g is not None and old_node is not None and old_node in getattr(g, 'nodes', []):
+            g = getattr(self, "graph", None)
+            old_node = getattr(node_item, "node", None)
+            if (
+                g is not None
+                and old_node is not None
+                and old_node in getattr(g, "nodes", [])
+            ):
                 try:
                     g.ReplaceNode(new_node, old_node)
                 except Exception:
@@ -1472,7 +1603,7 @@ class GraphCanvas(QGraphicsView):
                 node_item.node = new_node
                 # Update label text
                 try:
-                    node_item.set_label_text(getattr(new_node, 'name', ''))
+                    node_item.set_label_text(getattr(new_node, "name", ""))
                 except Exception:
                     pass
                 # update value display

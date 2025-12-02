@@ -2,31 +2,55 @@
 Main window for the ComputationalGraphs visual editor.
 """
 
-from PyQt6.QtWidgets import (
-    QMainWindow, QDockWidget, QVBoxLayout, QHBoxLayout, QWidget, QPushButton,
-    QLabel, QSlider, QSpinBox, QMessageBox, QCheckBox, QComboBox, QScrollArea,
-    QListWidget, QApplication, QToolButton, QSizePolicy
-)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
-
-from .graph_canvas import GraphCanvas
-from .node_palette import NodePalette
-from .graph_runner import GraphRunner
-from .examples_loader import ExamplesLoader
-# Import plot_window early to init PyQtGraph config
-from .plot_window import PlotConfigDialog, create_plot_window  # noqa: F401
-
-# Import refactored controllers
-from .controllers import (
-    ExecutionController, FileIOController, SearchController,
-    VisualizationController, NodeSequenceController, PlottingController,
-    GraphBuilderController, DialogController, GraphLayoutController,
-    ExecutionSettingsController, GraphEdgeController, NodeEditingController,
-    ConsoleController, MenuToolbarController, ControlPanelBuilder
+from PyQt6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QDockWidget,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QSlider,
+    QSpinBox,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ComputationalGraphs.Core.Graph import Graph
+
+# Import refactored controllers
+from .controllers import (
+    ConsoleController,
+    ControlPanelBuilder,
+    DialogController,
+    ExecutionController,
+    ExecutionSettingsController,
+    FileIOController,
+    GraphBuilderController,
+    GraphEdgeController,
+    GraphLayoutController,
+    MenuToolbarController,
+    NodeEditingController,
+    NodeSequenceController,
+    PlottingController,
+    SearchController,
+    VisualizationController,
+)
+from .examples_loader import ExamplesLoader
+from .graph_canvas import GraphCanvas
+from .graph_runner import GraphRunner
+from .node_palette import NodePalette
+
+# Import plot_window early to init PyQtGraph config
+from .plot_window import PlotConfigDialog, create_plot_window  # noqa: F401
 
 
 class CollapsibleSection(QWidget):
@@ -35,23 +59,36 @@ class CollapsibleSection(QWidget):
     The header is a checkable QToolButton that toggles visibility of the
     provided content widget. Keeps layout margins consistent.
     """
+
     def __init__(self, title: str, content_widget: QWidget, expanded: bool = True):
         super().__init__()
         self.toggle_button = QToolButton()
         self.toggle_button.setText(title)
         self.toggle_button.setCheckable(True)
         self.toggle_button.setChecked(expanded)
-        self.toggle_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.toggle_button.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
         # Make header occupy the full horizontal width and style the active state
-        self.toggle_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.toggle_button.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
         self.toggle_button.setStyleSheet(
             "QToolButton { text-align: left; padding: 6px 8px; border-radius: 6px; font-weight: bold; }"
             "QToolButton:checked { background-color: #239483; color: white; }"
         )
         # Ensure arrow and text align nicely and font weight is clear
-        self.toggle_button.setFont(QFont(self.toggle_button.font().family(), self.toggle_button.font().pointSize(), QFont.Weight.Bold))
+        self.toggle_button.setFont(
+            QFont(
+                self.toggle_button.font().family(),
+                self.toggle_button.font().pointSize(),
+                QFont.Weight.Bold,
+            )
+        )
         # Use small arrow to indicate expand/collapse
-        self.toggle_button.setArrowType(Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow)
+        self.toggle_button.setArrowType(
+            Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow
+        )
 
         self.content = content_widget
 
@@ -69,13 +106,16 @@ class CollapsibleSection(QWidget):
 
     def on_toggled(self, checked: bool):
         self.content.setVisible(checked)
-        self.toggle_button.setArrowType(Qt.ArrowType.DownArrow if checked else Qt.ArrowType.RightArrow)
+        self.toggle_button.setArrowType(
+            Qt.ArrowType.DownArrow if checked else Qt.ArrowType.RightArrow
+        )
 
 
 class MainWindow(QMainWindow):
     """Main application window for the graph editor."""
+
     console_write = pyqtSignal(str)
-    
+
     def __init__(self):
         super().__init__()
         # Set a consistent application font for UI (adjustable)
@@ -84,10 +124,10 @@ class MainWindow(QMainWindow):
         except Exception:
             # If QApplication not available or font fails, ignore silently
             pass
-        
+
         self.setWindowTitle("Computational Graphs Visual Editor")
         self.resize(1200, 800)
-        
+
         # Core components
         # Create a new Graph object and use set_graph to keep everything in sync
         new_graph = Graph()
@@ -100,12 +140,12 @@ class MainWindow(QMainWindow):
             self.graph = new_graph
             self.graph_runner.set_graph(self.graph)
         self.examples_loader = ExamplesLoader()
-        
+
         # Connect signals
         self.graph_runner.step_completed.connect(self.on_step_completed)
         self.graph_runner.execution_finished.connect(self.on_execution_finished)
         self.graph_runner.error_occurred.connect(self.on_error)
-        
+
         # Initialize controllers (refactored from monolithic methods)
         self.execution_controller = ExecutionController(self)
         self.file_io_controller = FileIOController(self)
@@ -122,7 +162,7 @@ class MainWindow(QMainWindow):
         self.console_controller = ConsoleController(self)
         self.menu_toolbar_controller = MenuToolbarController(self)
         self.control_panel_builder = ControlPanelBuilder(self)
-        
+
         # State (must be before init_ui)
         self.colorize_enabled = False
         self.min_value_range = 0.0  # Numeric min value
@@ -132,10 +172,10 @@ class MainWindow(QMainWindow):
         self.skip_visualization = False  # Skip graph canvas updates
         self.skip_plotting = False  # Skip plot window updates
         self.saved_speed = 500  # For max speed toggle
-        
+
         # Plot window
         self.plot_window = None
-        
+
         self.init_ui()
         self.create_actions()
         self.create_menus()
@@ -155,7 +195,10 @@ class MainWindow(QMainWindow):
             pass
         try:
             # GraphRunner expects set_graph to be called so it uses the same graph
-            if hasattr(self, 'graph_runner') and getattr(self, 'graph_runner') is not None:
+            if (
+                hasattr(self, "graph_runner")
+                and getattr(self, "graph_runner") is not None
+            ):
                 self.graph_runner.set_graph(graph)
         except Exception:
             pass
@@ -165,7 +208,7 @@ class MainWindow(QMainWindow):
             self.update_stopping_nodes_display()
         except Exception:
             pass
-    
+
     def init_ui(self):
         """Initialize the UI components."""
         # Central widget - Graph Canvas
@@ -177,7 +220,7 @@ class MainWindow(QMainWindow):
             pass
         # Default grid & snap settings (recommended)
         try:
-            self.canvas.set_grid_mode('4x4')
+            self.canvas.set_grid_mode("4x4")
             self.canvas.set_snap_to_grid(True)
             # Default: enable snap while dragging so snap is visible
             self.canvas.set_snap_while_dragging(True)
@@ -188,16 +231,16 @@ class MainWindow(QMainWindow):
         self.canvas.edge_created.connect(self.on_edge_created)
         self.canvas.edge_removed.connect(self.on_edge_removed)
         self.setCentralWidget(self.canvas)
-        
+
         # Left dock - Node Palette
         self.palette = NodePalette(self)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.palette)
-        
+
         # Right dock - Controls
         self.create_control_panel()
         # Bottom dock - Console for verbose/debug output
         self.create_console_panel()
-    
+
     def create_control_panel(self):
         """Create the control panel dock. Delegated to ControlPanelBuilder."""
         self.control_panel_builder.build()
@@ -231,15 +274,15 @@ class MainWindow(QMainWindow):
     def new_graph(self):
         """Create a new empty graph."""
         self.file_io_controller.new_graph()
-    
+
     def open_graph(self):
         """Open a graph from file."""
         self.file_io_controller.open_graph()
-    
+
     def save_graph(self):
         """Save the current graph to file."""
         self.file_io_controller.save_graph()
-    
+
     def edit_node(self, node_item):
         """Open editor dialog for a specific node item. Delegated to NodeEditingController."""
         self.node_editing_controller.edit_node(node_item)
@@ -257,11 +300,11 @@ class MainWindow(QMainWindow):
     def play_graph(self):
         """Start graph execution."""
         self.execution_controller.play()
-    
+
     def run_batch_mode(self, max_steps):
         """Run all steps at once without updating visuals until complete."""
         self.execution_controller.run_batch_mode(max_steps)
-    
+
     def pause_graph(self):
         """Pause graph execution."""
         self.execution_controller.pause()
@@ -269,29 +312,29 @@ class MainWindow(QMainWindow):
     def resume_graph(self):
         """Resume a paused background execution."""
         self.execution_controller.resume()
-    
+
     def step_graph(self):
         """Execute a single step."""
         self.execution_controller.step()
-    
+
     def reset_graph(self):
         """Reset graph execution."""
         self.execution_controller.reset()
-    
+
     def rebuild_graph(self):
         """Rebuild the graph from canvas nodes and edges. Delegated to GraphEdgeController."""
         self.graph_edge_controller.rebuild_graph()
-    
+
     # Event handlers - delegated to ExecutionController
-    
+
     def on_step_completed(self, step):
         """Handle step completion."""
         self.execution_controller.on_step_completed(step)
-    
+
     def on_execution_finished(self):
         """Handle execution completion."""
         self.execution_controller.on_execution_finished()
-    
+
     def on_error(self, message):
         """Handle execution error."""
         self.execution_controller.on_error(message)
@@ -313,11 +356,11 @@ class MainWindow(QMainWindow):
     def on_skip_viz_changed(self, state):
         """Handle skip graph visualization checkbox change."""
         self.visualization_controller.on_skip_viz_changed(state)
-    
+
     def on_skip_plot_changed(self, state):
         """Handle skip plot updates checkbox change."""
         self.visualization_controller.on_skip_plot_changed(state)
-    
+
     def on_verbose_changed(self, state):
         """Handle verbose checkbox change. Delegated to ExecutionSettingsController."""
         self.execution_settings_controller.on_verbose_changed(state)
@@ -325,31 +368,31 @@ class MainWindow(QMainWindow):
     def on_dim_processed_changed(self, state):
         """Handle dim-processed checkbox change."""
         self.visualization_controller.on_dim_processed_changed(state)
-    
+
     def on_colorize_changed(self, state):
         """Handle colorize checkbox change."""
         self.visualization_controller.on_colorize_changed(state)
-    
+
     def auto_detect_range(self):
         """Automatically detect min and max values from current node values."""
         self.visualization_controller.auto_detect_range()
-    
+
     def choose_min_color(self):
         """Choose color for minimum values."""
         self.visualization_controller.choose_min_color()
-    
+
     def choose_max_color(self):
         """Choose color for maximum values."""
         self.visualization_controller.choose_max_color()
-    
+
     def on_edge_created(self, source_node, target_node):
         """Handle edge creation. Delegated to GraphEdgeController."""
         self.graph_edge_controller.on_edge_created(source_node, target_node)
-    
+
     def update_starting_nodes_display(self):
         """Update the starting nodes list display."""
         self.node_sequence_controller.update_starting_nodes_display()
-    
+
     def add_selected_to_starting_nodes(self):
         """Add selected nodes from canvas to starting nodes list."""
         self.node_sequence_controller.add_selected_to_starting_nodes()
@@ -376,19 +419,31 @@ class MainWindow(QMainWindow):
 
     def mark_weights_processed(self):
         """Debug helper: mark all ContainerNodes as processed via the graph processor."""
-        if not self.graph or not hasattr(self, 'graph_runner') or not self.graph_runner.graph_processor:
-            QMessageBox.warning(self, "No Graph/Processor", "Graph or processor not available.")
+        if (
+            not self.graph
+            or not hasattr(self, "graph_runner")
+            or not self.graph_runner.graph_processor
+        ):
+            QMessageBox.warning(
+                self, "No Graph/Processor", "Graph or processor not available."
+            )
             return
 
         gp = self.graph_runner.graph_processor
-        if hasattr(gp, 'mark_container_nodes_as_processed'):
+        if hasattr(gp, "mark_container_nodes_as_processed"):
             count = gp.mark_container_nodes_as_processed()
-            self.status_bar.showMessage(f"Marked {count} container nodes as processed (debug)")
+            self.status_bar.showMessage(
+                f"Marked {count} container nodes as processed (debug)"
+            )
             # Force a visual update so dimming/active highlights reflect new status
             self.canvas.update_node_visuals(False, 0, 1)
             self.canvas.highlight_active_nodes(self.graph_runner.active_nodes)
         else:
-            QMessageBox.information(self, "Not Supported", "Processor does not support marking container nodes as processed.")
+            QMessageBox.information(
+                self,
+                "Not Supported",
+                "Processor does not support marking container nodes as processed.",
+            )
 
     def clear_stopping_nodes(self):
         """Clear all stopping nodes."""
@@ -422,19 +477,19 @@ class MainWindow(QMainWindow):
     def load_manual_sequence_from_graph(self):
         """Load the current graph.manual_processing_sequence into the UI list."""
         self.node_sequence_controller.load_manual_sequence_from_graph()
-    
+
     def remove_from_starting_nodes(self):
         """Remove selected nodes from starting nodes list."""
         self.node_sequence_controller.remove_from_starting_nodes()
-    
+
     def auto_detect_starting_nodes(self):
         """Auto-detect starting nodes (nodes with no predecessors)."""
         self.node_sequence_controller.auto_detect_starting_nodes()
-    
+
     def clear_starting_nodes(self):
         """Clear all starting nodes."""
         self.node_sequence_controller.clear_starting_nodes()
-    
+
     def on_processor_type_changed(self, index):
         """Handle processor type change. Delegated to ExecutionSettingsController."""
         self.execution_settings_controller.on_processor_type_changed(index)
@@ -446,11 +501,11 @@ class MainWindow(QMainWindow):
     def choose_node_color(self):
         """Open color picker for node color."""
         self.visualization_controller.choose_node_color()
-    
+
     def choose_text_color(self):
         """Open color picker for text color."""
         self.visualization_controller.choose_text_color()
-    
+
     def apply_node_colors(self):
         """Apply selected colors to all nodes."""
         self.visualization_controller.apply_node_colors()
@@ -458,11 +513,11 @@ class MainWindow(QMainWindow):
     def apply_node_colors_selected(self):
         """Apply selected colors only to currently selected node items on the canvas."""
         self.visualization_controller.apply_node_colors_selected()
-    
+
     def open_plot_window(self):
         """Open the plot configuration dialog and create plot window."""
         self.plotting_controller.open_plot_window()
-    
+
     def add_selected_to_plot(self):
         """Add currently selected node(s) in the canvas to the plot window."""
         self.plotting_controller.add_selected_to_plot()
@@ -478,19 +533,19 @@ class MainWindow(QMainWindow):
     # Debug/dump_layout helper removed from GUI
 
     # apply_diagonal_layout removed from GUI; layout algorithms are no longer exposed via controls
-    
+
     def _populate_examples_menu(self, menu):
         """Populate the examples menu with categories. Delegated to DialogController."""
         self.dialog_controller.populate_examples_menu(menu)
-    
+
     def _load_example(self, builder, name: str):
         """Load an example graph. Delegated to DialogController."""
         self.dialog_controller.load_example(builder, name)
-    
+
     def _show_mlp_dialog(self):
         """Show dialog to generate MLP graph. Delegated to DialogController."""
         self.dialog_controller.show_mlp_dialog()
-    
+
     def _show_backprop_dialog(self):
         """Show dialog to add backpropagation to existing MLP. Delegated to DialogController."""
         self.dialog_controller.show_backprop_dialog()
@@ -498,21 +553,21 @@ class MainWindow(QMainWindow):
     def _visualize_graph_on_canvas(self, graph: Graph):
         """Visualize a graph object on the canvas. Delegated to GraphBuilderController."""
         self.graph_builder_controller.visualize_graph_on_canvas(graph)
-    
+
     # Search functionality - delegated to SearchController
-    
+
     def highlight_matching_nodes(self):
         """Highlight all nodes matching the search text."""
         self.search_controller.highlight_matching_nodes()
-    
+
     def find_node(self):
         """Find and zoom to the first matching node."""
         self.search_controller.find_node()
-    
+
     def find_next_node(self):
         """Find and zoom to the next matching node."""
         self.search_controller.find_next_node()
-    
+
     def _focus_on_search_result(self):
         """Focus on the current search result."""
         self.search_controller._focus_on_search_result()

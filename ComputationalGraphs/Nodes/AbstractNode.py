@@ -1,5 +1,7 @@
-from ComputationalGraphs.Nodes.Node import Node
 from concurrent.futures import ThreadPoolExecutor
+
+from ComputationalGraphs.Nodes.Node import Node
+
 
 class AbstractNode(Node):
 
@@ -9,7 +11,7 @@ class AbstractNode(Node):
             self.predecessors = [node for node in nodes]
         else:
             self.nodes = set()  # Set of nodes
-            
+
         super().__init__(name)
         self.computationalType = "complex"  # Computational type is complex
         self.value = [node.value for node in self.nodes]

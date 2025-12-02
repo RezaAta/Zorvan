@@ -1,5 +1,7 @@
 import numpy as np
+
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
+
 
 class PiecewiseLinearNode(BasicNode):
     """
@@ -10,10 +12,13 @@ class PiecewiseLinearNode(BasicNode):
     If x == xi exactly: returns μi.
     Otherwise linearly interpolates between adjacent knots.
     """
-    def __init__(self,
-                 name: str = "",
-                 xs: list[float] = [0, 50, 100],
-                 mus: list[float] = [0.0, 0.5, 1.0]):
+
+    def __init__(
+        self,
+        name: str = "",
+        xs: list[float] = [0, 50, 100],
+        mus: list[float] = [0.0, 0.5, 1.0],
+    ):
         super().__init__(name=name, value=0.0)
         assert len(xs) == len(mus) >= 2, "Need at least two support points"
         sorted_pairs = sorted(zip(xs, mus), key=lambda p: p[0])

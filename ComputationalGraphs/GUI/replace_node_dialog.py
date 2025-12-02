@@ -1,8 +1,18 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QTreeWidget, QTreeWidgetItem, QPushButton, QHBoxLayout
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+)
+
 
 class ReplaceNodeDialog(QDialog):
     """Simple dialog to select a node type for replacement. Returns node_type string."""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Replace Node")
@@ -32,12 +42,19 @@ class ReplaceNodeDialog(QDialog):
         # Populate node categories. Import NodePalette to copy categories.
         try:
             from .node_palette import NodePalette
+
             palette = NodePalette()
             self.node_categories = palette.node_categories
         except Exception:
             # fallback to minimal list if palette is unavailable
             self.node_categories = {
-                "Basic": {"description": "Basic nodes", "nodes": [("AdditionNode","Addition","Adds"), ("MultiplicationNode","Multiplication","Multiply")]}
+                "Basic": {
+                    "description": "Basic nodes",
+                    "nodes": [
+                        ("AdditionNode", "Addition", "Adds"),
+                        ("MultiplicationNode", "Multiplication", "Multiply"),
+                    ],
+                }
             }
 
         self.all_items = []
@@ -47,7 +64,7 @@ class ReplaceNodeDialog(QDialog):
             desc_item = QTreeWidgetItem([f"  {data.get('description', '')}"])
             desc_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
             cat_item.addChild(desc_item)
-            for node_type, display, desc in data.get('nodes', []):
+            for node_type, display, desc in data.get("nodes", []):
                 it = QTreeWidgetItem([f"{display}\n    {desc}"])
                 it.setData(0, Qt.ItemDataRole.UserRole, node_type)
                 it.setToolTip(0, f"{display}\n{desc}\nType: {node_type}")

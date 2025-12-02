@@ -1,7 +1,8 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 
+
 class TournamentSelectionNode(BasicNode):
-    def __init__(self, name: str = "", value = None, tournamentSize:int = 3):
+    def __init__(self, name: str = "", value=None, tournamentSize: int = 3):
         super().__init__(name, value)  # Call the parent BasicNode constructor
         self.inputCount = 2  # Default input count for the multiplication node
         self.tournamentSize = tournamentSize
@@ -13,7 +14,7 @@ class TournamentSelectionNode(BasicNode):
     def Operation(self, candidate, fitness):
         self.candidates.append(candidate)
         self.fitnesses.append(fitness)
-        
+
         if len(self.candidates) >= self.tournamentSize:
             minFitness = min(self.fitnesses)
             index = self.fitnesses.index(minFitness)
@@ -22,9 +23,8 @@ class TournamentSelectionNode(BasicNode):
             self.candidates.clear()
             self.fitnesses.clear()
             return winner
-        else: 
+        else:
             return None
-    
 
     def IsValidInput(self, inp):
         """

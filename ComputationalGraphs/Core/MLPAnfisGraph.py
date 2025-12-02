@@ -1,13 +1,13 @@
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
 from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.Core.MLPGraph import MLPGraph
 from ComputationalGraphs.Nodes import (
-    DisplayNode,
+    AdditionNode,
     ContainerNode,
+    DataStreamNode,
+    DisplayNode,
+    DivisionNode,
     MinNode,
     MultiplicationNode,
-    AdditionNode,
-    DivisionNode,
-    DataStreamNode,
 )
 from ComputationalGraphs.Nodes.GaussianMembershipNode import GaussianMembershipNode
 
@@ -23,7 +23,11 @@ class MLPAnfisGraph(MLPGraph):
     def __init__(self, numInputs, numOutputs=1, mfs_per_input=2):
         # Initialize MLPGraph internals (we won't use hidden layers)
         super().__init__(numInputs=numInputs, numOutputs=numOutputs, numHiddenLayers=0)
-        self.mfs_per_input = mfs_per_input if isinstance(mfs_per_input, (list, tuple)) else [mfs_per_input] * numInputs
+        self.mfs_per_input = (
+            mfs_per_input
+            if isinstance(mfs_per_input, (list, tuple))
+            else [mfs_per_input] * numInputs
+        )
         self.memberships = []
         self.rule_nodes = []
         self.consequents = []
@@ -46,7 +50,9 @@ class MLPAnfisGraph(MLPGraph):
         for inp_idx in range(self.numInputs):
             mfs = []
             for mf_idx in range(self.mfs_per_input[inp_idx]):
-                c = ContainerNode(name=f"c_x{inp_idx}_m{mf_idx}", value=0.0 if mf_idx == 0 else 1.0)
+                c = ContainerNode(
+                    name=f"c_x{inp_idx}_m{mf_idx}", value=0.0 if mf_idx == 0 else 1.0
+                )
                 s = ContainerNode(name=f"s_x{inp_idx}_m{mf_idx}", value=0.5)
                 g = GaussianMembershipNode(name=f"G_x{inp_idx}_m{mf_idx}")
                 # connect: input data node is inputLayer[inp_idx][0]
@@ -58,6 +64,7 @@ class MLPAnfisGraph(MLPGraph):
         # Build rules: cartesian product of MF indices across inputs
         # Use product t-norm (multiplicative rule) implemented by chaining MultiplicationNode
         from itertools import product
+
         from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 
         self.rule_nodes = []
@@ -68,7 +75,9 @@ class MLPAnfisGraph(MLPGraph):
                 continue
             current = preds[0]
             for idx in range(1, len(preds)):
-                mult = MultiplicationNode(name=f"R_{''.join(str(i) for i in combo)}_m{idx}")
+                mult = MultiplicationNode(
+                    name=f"R_{''.join(str(i) for i in combo)}_m{idx}"
+                )
                 mult.AddPreNode(current, preds[idx])
                 self.AddNode(mult)
                 current = mult

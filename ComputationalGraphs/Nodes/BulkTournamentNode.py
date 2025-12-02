@@ -1,12 +1,20 @@
-from ComputationalGraphs.Nodes.BasicNode import BasicNode
 import random
 
+from ComputationalGraphs.Nodes.BasicNode import BasicNode
+
+
 class BulkTournamentNode(BasicNode):
-    def __init__(self, name: str = "", value = None, tournamentSize: int = 3, 
-                 populationSize: int = 30, num_selections: int = None):
+    def __init__(
+        self,
+        name: str = "",
+        value=None,
+        tournamentSize: int = 3,
+        populationSize: int = 30,
+        num_selections: int = None,
+    ):
         """
         Bulk tournament selection node.
-        
+
         Args:
             name: Node name
             value: Initial value
@@ -20,7 +28,9 @@ class BulkTournamentNode(BasicNode):
         self.tournamentSize = tournamentSize
         self.populationSize = populationSize
         # If num_selections not specified, select same as population size (no elitism)
-        self.num_selections = num_selections if num_selections is not None else populationSize
+        self.num_selections = (
+            num_selections if num_selections is not None else populationSize
+        )
         self.population = []
         self.selected = []
         self.fitnesses = []
@@ -38,18 +48,19 @@ class BulkTournamentNode(BasicNode):
             if candidate is not None and fitness is not None:
                 self.population.append(candidate)
                 self.fitnesses.append(fitness)
-            
+
             if len(self.population) == self.populationSize:
                 # Perform tournament selection for num_selections individuals
                 self.selected = []
                 for _ in range(self.num_selections):
-                    candidates = random.sample(list(zip(self.population, self.fitnesses)), self.tournamentSize)
+                    candidates = random.sample(
+                        list(zip(self.population, self.fitnesses)), self.tournamentSize
+                    )
                     winner = min(candidates, key=lambda x: x[1])[0]
                     self.selected.append(winner)
-                
+
                 return self.selected[-1]
             return None
-    
 
     def IsValidInput(self, inp):
         """

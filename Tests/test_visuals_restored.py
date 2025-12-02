@@ -1,9 +1,11 @@
+import math
 import sys
 import unittest
+
 from PyQt6.QtWidgets import QApplication
-from ComputationalGraphs.GUI.main_window import MainWindow
+
 from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
-import math
+from ComputationalGraphs.GUI.main_window import MainWindow
 
 
 class VisualsRestoredTest(unittest.TestCase):
@@ -15,11 +17,11 @@ class VisualsRestoredTest(unittest.TestCase):
         win = MainWindow()
         loader = ExamplesLoader()
         # Use a simple addition chain example
-        g = loader.categories['basic'].examples[1][2]()
+        g = loader.categories["basic"].examples[1][2]()
         # assign GUI positions/colors to all nodes
         for idx, node in enumerate(g.nodes):
             node.gui_pos = (idx * 30.0, idx * 45.0)
-            node.gui_color = '#123456'
+            node.gui_color = "#123456"
             node.gui_radius = 40
 
         # Visualize graph on canvas using our modified function
@@ -37,5 +39,5 @@ class VisualsRestoredTest(unittest.TestCase):
             self.assertTrue(isinstance(pos.y(), float))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

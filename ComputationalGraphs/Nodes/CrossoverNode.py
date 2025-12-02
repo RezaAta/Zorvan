@@ -1,15 +1,19 @@
-from ComputationalGraphs.Nodes.BasicNode import BasicNode
 import random
+
+from ComputationalGraphs.Nodes.BasicNode import BasicNode
+
 
 # BasicNode class (Abstract)
 class CrossoverNode(BasicNode):  # Inherits from both Node and ABC
-    def __init__(self, name: str = "", rate: float = 0.9, value: int = None, delay:int = 1):
+    def __init__(
+        self, name: str = "", rate: float = 0.9, value: int = None, delay: int = 1
+    ):
         super().__init__(name, value)  # Call Node's constructor
         self.inputCount = 2  # Number of inputs
         self.batchSize = 2  # Number of inputs
         self.delay = delay
         self.iteration = 0
-        self.computationType = 'basic'  # Type of computation for the node
+        self.computationType = "basic"  # Type of computation for the node
         self.inclusive = False
         self.rate = rate
 
@@ -21,7 +25,7 @@ class CrossoverNode(BasicNode):  # Inherits from both Node and ABC
             point = random.randint(1, len(p1) - 1)
             return [p1[:point] + p2[point:], p2[:point] + p1[point:]]
         else:
-            self.iteration +=1
+            self.iteration += 1
 
     def IsValidInput(self, input):
         """Check if the inputs are valid. To be defined by subclasses."""

@@ -2,14 +2,9 @@
 GUI module for ComputationalGraphs visual editor.
 """
 
-from .main_window import MainWindow
-from .examples_loader import ExamplesLoader
-from .mlp_dialog import MLPGeneratorDialog
 from .backprop_dialog import BackpropDialog
+from .examples_loader import ExamplesLoader
+from .main_window import MainWindow
+from .mlp_dialog import MLPGeneratorDialog
 
-__all__ = [
-    'MainWindow',
-    'ExamplesLoader',
-    'MLPGeneratorDialog',
-    'BackpropDialog'
-]
+__all__ = ["MainWindow", "ExamplesLoader", "MLPGeneratorDialog", "BackpropDialog"]

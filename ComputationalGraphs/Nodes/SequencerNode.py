@@ -1,5 +1,6 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 
+
 class SequencerNode(BasicNode):
     def __init__(self, name: str = "", data=None):
         super().__init__(name, 0)
@@ -12,22 +13,27 @@ class SequencerNode(BasicNode):
     def ResetValue(self):
         self.buffer.clear()
         self.value = 0
+
     # This node can take multiple inputs, streamline them inside a buffer, and output them one by one in each iteration.
     def Operation(self, input):
         # if input is not None:
         if not self.midCalculation and not len(self.buffer) == 0:
             self.buffer.pop(0)
-        
+
         if input is not None:
             # If input is a list of lists (multiple genomes/individuals), extend to add each
             # If input is a single list (one genome/individual) or other type, append as-is
-            if isinstance(input, list) and len(input) > 0 and isinstance(input[0], list):
+            if (
+                isinstance(input, list)
+                and len(input) > 0
+                and isinstance(input[0], list)
+            ):
                 # List of lists - extend to add each individual
                 self.buffer.extend(input)
             else:
                 # Single item (could be a genome, which is a list) - append as single unit
                 self.buffer.append(input)
-    
+
         if len(self.buffer) == 0:
             return None
         else:
@@ -35,14 +41,11 @@ class SequencerNode(BasicNode):
 
         # else:
         #     return None
-        
+
     def IsValidInput(self, input):
         return True
-
 
     def ResetBuffer(self):
         """Clear the buffer for fresh computations."""
         self.buffer.clear()
         self.value = None
-
-    

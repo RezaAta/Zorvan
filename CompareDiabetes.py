@@ -4,20 +4,24 @@
 2. Default Computational Graph (BufferNodes + temporal delays)
 3. Forward Processing (New computational graph - NO buffers, NO delays)
 """
+
 import time
+
 import numpy as np
 from sklearn.datasets import load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
+from ClassicMLP import ClassicMLP
 from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
-from ComputationalGraphs.Core.BackpropGraphForwardProcessing import BackpropGraphForwardProcessing
+from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
+    BackpropGraphForwardProcessing,
+)
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Core.MLPGraph import MLPGraph
+from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
-from ClassicMLP import ClassicMLP
 
 print("=" * 80)
 print("DIABETES DATASET - PERFORMANCE COMPARISON")
@@ -40,7 +44,9 @@ X = X[non_outlier_mask.flatten()]
 y = y[non_outlier_mask.flatten()]
 
 # Split and scale
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 scaler_X = StandardScaler()
 X_train = scaler_X.fit_transform(X_train)
 X_test = scaler_X.transform(X_test)
@@ -71,14 +77,14 @@ mlp_classic = ClassicMLP(
     hidden_activation="sigmoid",
     output_activation="linear",
     learning_rate=learning_rate,
-    use_bias=False
+    use_bias=False,
 )
 
 start = time.perf_counter()
 for epoch in range(epochs):
     for i in range(len(X_train)):
-        x_sample = X_train[i:i+1]
-        y_sample = y_train[i:i+1]
+        x_sample = X_train[i : i + 1]
+        y_sample = y_train[i : i + 1]
         # Use forward_pass and backward_pass directly to avoid verbose output
         activations = mlp_classic.forward_pass(x_sample)
         mlp_classic.backward_pass(x_sample, y_sample, activations)
@@ -111,14 +117,11 @@ mlp_default = MLPGraph(
     numHiddenLayers=len(hidden_layers),
     hiddenLayerSizes=hidden_layers,
     activationFunction=SigmoidNode,
-    outputLayerType=SigmoidNode  # Using Sigmoid for output like the original
+    outputLayerType=SigmoidNode,  # Using Sigmoid for output like the original
 )
 mlp_default.BuildMLP()
 
-backprop_default = BackpropGraph(
-    mlpGraph=mlp_default,
-    learningRate=learning_rate
-)
+backprop_default = BackpropGraph(mlpGraph=mlp_default, learningRate=learning_rate)
 backprop_default.BuildBackprop()
 
 # Combine graphs
@@ -178,12 +181,14 @@ predictions_default = np.array(predictions_default)
 
 # Only calculate MAE if we have valid predictions
 if len(predictions_default) >= len(X_test):
-    predictions_default = predictions_default[:len(X_test)]  # Trim to test set size
+    predictions_default = predictions_default[: len(X_test)]  # Trim to test set size
     mae_default = np.mean(np.abs(predictions_default.flatten() - y_test.flatten()))
     print(f"Test MAE: {mae_default:.4f}")
 else:
-    mae_default = float('nan')
-    print(f"Test MAE: N/A (insufficient predictions: {len(predictions_default)}/{len(X_test)})")
+    mae_default = float("nan")
+    print(
+        f"Test MAE: N/A (insufficient predictions: {len(predictions_default)}/{len(X_test)})"
+    )
 
 # ============================================================================
 # 3. FORWARD PROCESSING (New approach - NO buffers, NO delays)
@@ -197,13 +202,12 @@ mlp_forward = MLPGraphForwardProcessing(
     numHiddenLayers=len(hidden_layers),
     hiddenLayerSizes=hidden_layers,
     activationFunction=SigmoidNode,
-    outputLayerType=SigmoidNode
+    outputLayerType=SigmoidNode,
 )
 mlp_forward.BuildMLP()
 
 backprop_forward = BackpropGraphForwardProcessing(
-    mlpGraph=mlp_forward,
-    learningRate=learning_rate
+    mlpGraph=mlp_forward, learningRate=learning_rate
 )
 backprop_forward.BuildBackprop()
 
@@ -222,7 +226,9 @@ print("Temporal delay: 0 timesteps (immediate)")
 
 # Calculate network depth: need enough timesteps for signal to propagate through
 # For MLP: input -> hidden layers -> output -> error -> backprop through layers
-network_depth_forward = 2 * (mlp_forward.numHiddenLayers + 2)  # +2 for input and output layers
+network_depth_forward = 2 * (
+    mlp_forward.numHiddenLayers + 2
+)  # +2 for input and output layers
 print(f"Network depth (timesteps per sample): {network_depth_forward}")
 
 # Calculate actual total timesteps needed
@@ -254,7 +260,11 @@ for i in range(len(X_test)):
     mlp_forward.LoadData(X_test[i], y_test[i])
     processor_forward.ForwardProcessing(iterations=network_depth_forward)
     # outputLayer is a list of tuples (node, container), get the node
-    output_node = mlp_forward.outputLayer[0][0] if isinstance(mlp_forward.outputLayer[0], tuple) else mlp_forward.outputLayer[0]
+    output_node = (
+        mlp_forward.outputLayer[0][0]
+        if isinstance(mlp_forward.outputLayer[0], tuple)
+        else mlp_forward.outputLayer[0]
+    )
     predictions_forward.append(output_node.value)
 
 predictions_forward = np.array(predictions_forward)
@@ -270,9 +280,15 @@ print("=" * 80)
 
 print(f"\nMethod                                   Time/iter       Relative      MAE")
 print("-" * 80)
-print(f"Classic (Pure NumPy)                     {classic_per_iter:8.4f} ms        1.00x     {mae_classic:.4f}")
-print(f"Default Graph (BufferNodes)              {default_per_iter:8.4f} ms       {default_per_iter/classic_per_iter:5.2f}x     {mae_default:.4f}")
-print(f"Forward Processing (No Buffers)          {forward_per_iter:8.4f} ms       {forward_per_iter/classic_per_iter:5.2f}x     {mae_forward:.4f}")
+print(
+    f"Classic (Pure NumPy)                     {classic_per_iter:8.4f} ms        1.00x     {mae_classic:.4f}"
+)
+print(
+    f"Default Graph (BufferNodes)              {default_per_iter:8.4f} ms       {default_per_iter/classic_per_iter:5.2f}x     {mae_default:.4f}"
+)
+print(
+    f"Forward Processing (No Buffers)          {forward_per_iter:8.4f} ms       {forward_per_iter/classic_per_iter:5.2f}x     {mae_forward:.4f}"
+)
 
 print("\n" + "-" * 80)
 print("Key Comparisons:")

@@ -1,5 +1,6 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 
+
 class AdditionNode(BasicNode):
     def __init__(self, name: str = "", value=0):
         super().__init__(name, value)
@@ -18,9 +19,11 @@ class AdditionNode(BasicNode):
         Check if inputs are valid for addition (must be numbers, including numpy types).
         """
         import numpy as np
+
         return isinstance(input, (int, float, np.integer, np.floating))
+
     def ProcessBatch(self):
         if (len(self.inputs) == 1) and (self.midCalculation is False):
-            self.value = self.Operation(0,self.inputs[0])
+            self.value = self.Operation(0, self.inputs[0])
         else:
             return super().ProcessBatch()

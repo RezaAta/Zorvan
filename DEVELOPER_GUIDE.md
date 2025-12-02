@@ -18,6 +18,21 @@ pip install -r requirements.txt
 pip install -r requirements_dev.txt || pip install pytest pre-commit commitizen
 ```
 
+### One-step Bootstrapping
+To simplify environment setup you can use the included `scripts/bootstrap` helpers:
+Windows PowerShell:
+```powershell
+.\scripts\bootstrap.ps1
+# To include GUI requirements too:
+.\scripts\bootstrap.ps1 -InstallGui
+```
+UNIX / macOS:
+```bash
+./scripts/bootstrap.sh
+# To include GUI requirements too:
+./scripts/bootstrap.sh --gui
+```
+
 ### GUI (optional)
 If you plan to run the GUI tests or use the graphical interface, install the GUI requirements:
 

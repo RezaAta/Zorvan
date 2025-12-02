@@ -4,32 +4,41 @@ ControlPanelBuilder - Builds the control panel dock widget.
 Extracted from MainWindow as part of Clean Code refactoring.
 Handles creation of all control panel UI widgets.
 """
+
 from typing import TYPE_CHECKING
 
-from PyQt6.QtWidgets import (
-    QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
-    QLabel, QPushButton, QComboBox, QListWidget, QSpinBox,
-    QSlider, QCheckBox
-)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDockWidget,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QPushButton,
+    QScrollArea,
+    QSlider,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
 if TYPE_CHECKING:
-    from ..main_window import MainWindow, CollapsibleSection
+    from ..main_window import CollapsibleSection, MainWindow
 
 
 class ControlPanelBuilder:
     """Builder for the control panel dock widget."""
 
-    def __init__(self, main_window: 'MainWindow'):
+    def __init__(self, main_window: "MainWindow"):
         self.mw = main_window
 
     def build(self):
         """Build and return the control panel dock widget."""
         dock = QDockWidget("Controls", self.mw)
         dock.setAllowedAreas(
-            Qt.DockWidgetArea.RightDockWidgetArea |
-            Qt.DockWidgetArea.LeftDockWidgetArea
+            Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.LeftDockWidgetArea
         )
 
         scroll = QScrollArea()
@@ -51,7 +60,9 @@ class ControlPanelBuilder:
         # Add collapsible sections
         layout.addWidget(CollapsibleSection("Execution", exec_container, expanded=True))
         layout.addWidget(CollapsibleSection("Layout", layout_container, expanded=True))
-        layout.addWidget(CollapsibleSection("Visualization", viz_container, expanded=False))
+        layout.addWidget(
+            CollapsibleSection("Visualization", viz_container, expanded=False)
+        )
         layout.addWidget(CollapsibleSection("Plotting", plot_container, expanded=False))
         layout.addStretch()
 
@@ -73,7 +84,9 @@ class ControlPanelBuilder:
         proc_layout = QHBoxLayout()
         proc_layout.addWidget(QLabel("Processor:"))
         mw.processor_combo = QComboBox()
-        mw.processor_combo.addItems(["Forward Processing", "Concurrent", "Manual Processing"])
+        mw.processor_combo.addItems(
+            ["Forward Processing", "Concurrent", "Manual Processing"]
+        )
         mw.processor_combo.setCurrentIndex(1)
         mw.processor_combo.currentIndexChanged.connect(mw.on_processor_type_changed)
         proc_layout.addWidget(mw.processor_combo)
@@ -227,7 +240,9 @@ class ControlPanelBuilder:
 
         mw.add_to_selected_step_btn = QPushButton("Add to Selected Step")
         mw.add_to_selected_step_btn.setToolTip("Add selected node(s) to chosen step")
-        mw.add_to_selected_step_btn.clicked.connect(mw.add_selected_nodes_to_selected_step)
+        mw.add_to_selected_step_btn.clicked.connect(
+            mw.add_selected_nodes_to_selected_step
+        )
         btn_row1.addWidget(mw.add_to_selected_step_btn)
 
         mw.remove_step_btn = QPushButton("Remove Step")
@@ -250,7 +265,9 @@ class ControlPanelBuilder:
 
         mw.replace_selected_step_btn = QPushButton("Replace Selected Step")
         mw.replace_selected_step_btn.setToolTip("Replace step with selected nodes")
-        mw.replace_selected_step_btn.clicked.connect(mw.replace_selected_step_with_selected_nodes)
+        mw.replace_selected_step_btn.clicked.connect(
+            mw.replace_selected_step_with_selected_nodes
+        )
         btn_row2.addWidget(mw.replace_selected_step_btn)
         group.addLayout(btn_row2)
 
@@ -415,7 +432,9 @@ class ControlPanelBuilder:
         min_color_layout.addWidget(QLabel("Min Color:"))
         mw.min_color_btn = QPushButton()
         mw.min_color_btn.setFixedSize(60, 25)
-        mw.min_color_btn.setStyleSheet(f"background-color: {mw.min_gradient_color.name()};")
+        mw.min_color_btn.setStyleSheet(
+            f"background-color: {mw.min_gradient_color.name()};"
+        )
         mw.min_color_btn.clicked.connect(mw.choose_min_color)
         min_color_layout.addWidget(mw.min_color_btn)
         min_color_layout.addStretch()
@@ -425,7 +444,9 @@ class ControlPanelBuilder:
         max_color_layout.addWidget(QLabel("Max Color:"))
         mw.max_color_btn = QPushButton()
         mw.max_color_btn.setFixedSize(60, 25)
-        mw.max_color_btn.setStyleSheet(f"background-color: {mw.max_gradient_color.name()};")
+        mw.max_color_btn.setStyleSheet(
+            f"background-color: {mw.max_gradient_color.name()};"
+        )
         mw.max_color_btn.clicked.connect(mw.choose_max_color)
         max_color_layout.addWidget(mw.max_color_btn)
         max_color_layout.addStretch()
@@ -443,7 +464,9 @@ class ControlPanelBuilder:
         mw.node_color_btn = QPushButton()
         mw.node_color_btn.setFixedSize(60, 25)
         mw.default_node_color = QColor(100, 150, 200)
-        mw.node_color_btn.setStyleSheet(f"background-color: {mw.default_node_color.name()};")
+        mw.node_color_btn.setStyleSheet(
+            f"background-color: {mw.default_node_color.name()};"
+        )
         mw.node_color_btn.clicked.connect(mw.choose_node_color)
         node_color_layout.addWidget(mw.node_color_btn)
         node_color_layout.addStretch()
@@ -454,7 +477,9 @@ class ControlPanelBuilder:
         mw.text_color_btn = QPushButton()
         mw.text_color_btn.setFixedSize(60, 25)
         mw.default_text_color = QColor(255, 255, 255)
-        mw.text_color_btn.setStyleSheet(f"background-color: {mw.default_text_color.name()};")
+        mw.text_color_btn.setStyleSheet(
+            f"background-color: {mw.default_text_color.name()};"
+        )
         mw.text_color_btn.clicked.connect(mw.choose_text_color)
         text_color_layout.addWidget(mw.text_color_btn)
         text_color_layout.addStretch()
@@ -493,7 +518,9 @@ class ControlPanelBuilder:
         mw.snap_while_dragging_check.setToolTip("Snap nodes while dragging")
         mw.snap_while_dragging_check.setChecked(True)
         mw.snap_while_dragging_check.stateChanged.connect(
-            lambda s: mw.canvas.set_snap_while_dragging(s == Qt.CheckState.Checked.value)
+            lambda s: mw.canvas.set_snap_while_dragging(
+                s == Qt.CheckState.Checked.value
+            )
         )
         parent_layout.addWidget(mw.snap_while_dragging_check)
 
@@ -503,7 +530,7 @@ class ControlPanelBuilder:
         mw.grid_mode_combo.setCurrentIndex(0)
 
         def on_grid_mode_changed(idx):
-            mode = '1x1' if idx == 0 else '4x4'
+            mode = "1x1" if idx == 0 else "4x4"
             mw.canvas.set_grid_mode(mode)
             try:
                 mw.grid_size_label.setText(f"Grid Cell: {mw.canvas.grid_size}px")
@@ -549,22 +576,26 @@ class ControlPanelBuilder:
 
         mw.layout_sugiyama_btn = QPushButton("Hierarchical (Sugiyama)")
         mw.layout_sugiyama_btn.setToolTip("Sugiyama algorithm for DAGs")
-        mw.layout_sugiyama_btn.clicked.connect(lambda: mw.apply_graph_layout('sugiyama'))
+        mw.layout_sugiyama_btn.clicked.connect(
+            lambda: mw.apply_graph_layout("sugiyama")
+        )
         layout.addWidget(mw.layout_sugiyama_btn)
 
         mw.layout_tree_btn = QPushButton("Tree Layout")
         mw.layout_tree_btn.setToolTip("Walker's tree layout")
-        mw.layout_tree_btn.clicked.connect(lambda: mw.apply_graph_layout('tree'))
+        mw.layout_tree_btn.clicked.connect(lambda: mw.apply_graph_layout("tree"))
         layout.addWidget(mw.layout_tree_btn)
 
         mw.layout_mlp_btn = QPushButton("Neural Network Layers")
         mw.layout_mlp_btn.setToolTip("Auto-detect MLP structure")
-        mw.layout_mlp_btn.clicked.connect(lambda: mw.apply_graph_layout('mlp_layered'))
+        mw.layout_mlp_btn.clicked.connect(lambda: mw.apply_graph_layout("mlp_layered"))
         layout.addWidget(mw.layout_mlp_btn)
 
         mw.layout_mlp_full_btn = QPushButton("MLP Layout (Full)")
         mw.layout_mlp_full_btn.setToolTip("Full MLP layout with backprop")
-        mw.layout_mlp_full_btn.clicked.connect(lambda: mw.apply_graph_layout('mlp_layout'))
+        mw.layout_mlp_full_btn.clicked.connect(
+            lambda: mw.apply_graph_layout("mlp_layout")
+        )
         layout.addWidget(mw.layout_mlp_full_btn)
 
         # Direction

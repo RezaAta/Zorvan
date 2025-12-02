@@ -15,21 +15,29 @@ temporal delays and achieve performance comparable to classical implementations.
 """
 
 import random
+
 from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
+from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 from ComputationalGraphs.Nodes.LinearNode import LinearNode
+from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
 
+
 class MLPGraphForwardProcessing(Graph):
-    def __init__(self, numInputs, numOutputs, numHiddenLayers, 
-                 activationFunction=SigmoidNode, hiddenLayerSizes=None, 
-                 outputLayerType=LinearNode):
+    def __init__(
+        self,
+        numInputs,
+        numOutputs,
+        numHiddenLayers,
+        activationFunction=SigmoidNode,
+        hiddenLayerSizes=None,
+        outputLayerType=LinearNode,
+    ):
         """
         Initialize MLP for forward processing (no buffers).
-        
+
         Args:
             numInputs: Number of input features
             numOutputs: Number of output nodes
@@ -43,9 +51,11 @@ class MLPGraphForwardProcessing(Graph):
         self.numOutputs = numOutputs
         self.numHiddenLayers = numHiddenLayers
         self.activationFunction = activationFunction
-        self.hiddenLayerSizes = hiddenLayerSizes if hiddenLayerSizes else [numInputs] * numHiddenLayers
+        self.hiddenLayerSizes = (
+            hiddenLayerSizes if hiddenLayerSizes else [numInputs] * numHiddenLayers
+        )
         self.outputLayerFunction = outputLayerType
-        
+
         self.inputLayer = []
         self.outputLayer = []
         self.hiddenLayers = []
@@ -65,13 +75,13 @@ class MLPGraphForwardProcessing(Graph):
         self._CreateWeightLayers()
         self._CreateLabelLayer()
         self._CreateErrorLayer()
-        
+
         # Connect layers (stores first layer multiplication nodes)
         self._ConnectInputLayer()
         self._ConnectHiddenLayers()
         self._ConnectOutputLayer()
         self.UpdateAdjacencyMatrix()
-        
+
         # Set starting nodes for forward processing execution
         # The FIRST COMPUTATION in the network is multiplication of inputs and weights
         # These multiplication nodes should be the starting nodes, not inputs/weights themselves!
@@ -83,10 +93,10 @@ class MLPGraphForwardProcessing(Graph):
     def LoadData(self, X_data, y_data):
         """
         Load entire dataset into the network's DataStreamNodes.
-        
+
         The DataStreamNodes will automatically cycle through samples as their
         Operation() method is called during processing.
-        
+
         Args:
             X_data: List of input samples [[x1_1, x1_2, ...], [x2_1, x2_2, ...], ...]
                     Each inner list is one sample, shape: (num_samples, num_inputs)
@@ -95,18 +105,22 @@ class MLPGraphForwardProcessing(Graph):
         """
         if len(X_data) == 0 or len(y_data) == 0:
             raise ValueError("Data cannot be empty")
-        
+
         # Check if X_data[0] is iterable (list of samples) or single value
-        if not hasattr(X_data[0], '__iter__'):
+        if not hasattr(X_data[0], "__iter__"):
             # Single sample provided as [x1, x2, ...], wrap it
             X_data = [X_data]
             y_data = [y_data]
-        
+
         if len(X_data[0]) != self.numInputs:
-            raise ValueError(f"X_data feature count {len(X_data[0])} must match numInputs {self.numInputs}")
+            raise ValueError(
+                f"X_data feature count {len(X_data[0])} must match numInputs {self.numInputs}"
+            )
         if len(y_data[0]) != self.numOutputs:
-            raise ValueError(f"y_data feature count {len(y_data[0])} must match numOutputs {self.numOutputs}")
-        
+            raise ValueError(
+                f"y_data feature count {len(y_data[0])} must match numOutputs {self.numOutputs}"
+            )
+
         # Load data into DataStreamNodes - each feature node gets its column of data
         for i in range(self.numInputs):
             # Extract column i from all samples
@@ -116,7 +130,7 @@ class MLPGraphForwardProcessing(Graph):
             self.inputLayer[i].iteration = 0  # Reset iteration counter
             self.inputLayer[i].streamIndex = 0  # Reset stream position
             self.inputLayer[i].lastStream = 0  # Reset last stream time
-        
+
         for i in range(self.numOutputs):
             # Extract column i from all labels
             label_column = [sample[i] for sample in y_data]
@@ -125,38 +139,38 @@ class MLPGraphForwardProcessing(Graph):
             self.labelLayer[i].iteration = 0  # Reset iteration counter
             self.labelLayer[i].streamIndex = 0  # Reset stream position
             self.labelLayer[i].lastStream = 0  # Reset last stream time
-    
+
     def PrepareForForwardProcessing(self, processor):
         """
         Prepare the MLP graph for forward processing by marking source nodes as processed.
-        
+
         This solves the "branch processing issue" where starting nodes (first layer mult nodes)
         need to access source nodes (inputs, weights) that haven't been "processed" yet
         but already have values.
-        
+
         Marks as processed:
         - Input DataStreamNodes (have data loaded) - source nodes
         - Label DataStreamNodes (have data loaded) - source nodes
         - Weight ContainerNodes (have initialized values) - may have dW predecessors after backprop
-        
+
         Call this AFTER LoadData() and AFTER adding backprop (if training), BEFORE starting forward processing.
-        
+
         Args:
             processor: GraphProcessor instance that will execute this graph
-            
+
         Returns:
             tuple: (source_count, container_count) - number of nodes marked
-            
+
         Example usage:
             mlp = MLPGraphForwardProcessing(...)
             mlp.BuildMLP()
             mlp.LoadData(X, y)
             backprop = BackpropGraphForwardProcessing(mlp, ...)
             backprop.BuildBackprop()
-            
+
             processor = GraphProcessor(mlp)
             mlp.PrepareForForwardProcessing(processor)  # Mark sources and weights as processed
-            
+
             for epoch in range(epochs):
                 processor.ForwardProcessing(iterations=iterations_per_epoch)
         """
@@ -169,7 +183,7 @@ class MLPGraphForwardProcessing(Graph):
         # activation is suppressed via `stopping_nodes` to avoid loop reactivation.
         try:
             container_count = 0
-            if hasattr(processor, 'mark_container_nodes_as_processed'):
+            if hasattr(processor, "mark_container_nodes_as_processed"):
                 try:
                     container_count = processor.mark_container_nodes_as_processed()
                 except Exception:
@@ -181,10 +195,15 @@ class MLPGraphForwardProcessing(Graph):
             # so that successor-readiness checks treat weight ContainerNodes
             # differently (they will not call successors during newly-processed iteration).
             target_graph = processor.graph
-            if not hasattr(target_graph, 'stopping_nodes') or not target_graph.stopping_nodes:
+            if (
+                not hasattr(target_graph, "stopping_nodes")
+                or not target_graph.stopping_nodes
+            ):
                 target_graph.stopping_nodes = list(self.stopping_nodes)
                 if processor.verbose:
-                    print(f"Copied {len(self.stopping_nodes)} stopping_nodes into processor.graph")
+                    print(
+                        f"Copied {len(self.stopping_nodes)} stopping_nodes into processor.graph"
+                    )
         except Exception:
             # If processor.graph is unavailable for some reason, skip silently
             container_count = len(self.stopping_nodes)
@@ -194,10 +213,12 @@ class MLPGraphForwardProcessing(Graph):
     def _CreateInputLayer(self):
         """Create input layer with DataStreamNodes (streams through data automatically)."""
         from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
-        
+
         # initialDelay=0, streamDelay=0 for ForwardProcessing (no synchronization needed)
-        self.inputLayer = [DataStreamNode(name=f"x{i}", initialDelay=0, streamDelay=0) 
-                          for i in range(self.numInputs)]
+        self.inputLayer = [
+            DataStreamNode(name=f"x{i}", initialDelay=0, streamDelay=0)
+            for i in range(self.numInputs)
+        ]
         for inputNode in self.inputLayer:
             self.AddNode(inputNode)
 
@@ -209,15 +230,15 @@ class MLPGraphForwardProcessing(Graph):
                 # Addition node for weighted sum
                 additionNode = AdditionNode(name=f"Add_L{layerNum}N{i}")
                 additionNode.forcedBatchProcessing = True
-                
+
                 # Activation node
                 activationNode = self.activationFunction(name=f"Act_L{layerNum}N{i}")
                 activationNode.AddPreNode(additionNode)
-                
+
                 # NO BUFFER NODE - immediate propagation!
                 hiddenLayer.append((additionNode, activationNode))
                 self.AddNode(additionNode, activationNode)
-            
+
             self.hiddenLayers.append(hiddenLayer)
 
     def _CreateOutputLayer(self):
@@ -227,20 +248,25 @@ class MLPGraphForwardProcessing(Graph):
             additionNode.forcedBatchProcessing = True
             activationNode = self.outputLayerFunction(name=f"y{i}")
             activationNode.AddPreNode(additionNode)
-            
+
             self.outputLayer.append((additionNode, activationNode))
             self.AddNode(additionNode, activationNode)
 
     def _CreateWeightLayers(self):
         """Initialize weight layers with random weights between -1 and 1."""
+
         def random_weight():
             return random.uniform(-1, 1)
 
         # Input to first hidden layer
         firstHiddenLayerSize = self.hiddenLayerSizes[0]
-        weightLayer = [[ContainerNode(name=f"W_x{i}H0N{j}", value=random_weight())
-                        for j in range(firstHiddenLayerSize)]
-                       for i in range(self.numInputs)]
+        weightLayer = [
+            [
+                ContainerNode(name=f"W_x{i}H0N{j}", value=random_weight())
+                for j in range(firstHiddenLayerSize)
+            ]
+            for i in range(self.numInputs)
+        ]
         self.weightLayers.append(weightLayer)
         for row in weightLayer:
             for weightNode in row:
@@ -250,10 +276,16 @@ class MLPGraphForwardProcessing(Graph):
 
         # Between hidden layers
         for layerNum in range(self.numHiddenLayers - 1):
-            weightLayer = [[ContainerNode(name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}", 
-                                         value=random_weight())
-                            for j in range(self.hiddenLayerSizes[layerNum + 1])]
-                           for i in range(self.hiddenLayerSizes[layerNum])]
+            weightLayer = [
+                [
+                    ContainerNode(
+                        name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}",
+                        value=random_weight(),
+                    )
+                    for j in range(self.hiddenLayerSizes[layerNum + 1])
+                ]
+                for i in range(self.hiddenLayerSizes[layerNum])
+            ]
             self.weightLayers.append(weightLayer)
             for row in weightLayer:
                 for weightNode in row:
@@ -262,10 +294,15 @@ class MLPGraphForwardProcessing(Graph):
 
         # Last hidden layer to output
         lastHiddenLayerSize = self.hiddenLayerSizes[-1]
-        weightLayer = [[ContainerNode(name=f"W_H{self.numHiddenLayers - 1}N{i}y{j}", 
-                                     value=random_weight())
-                        for j in range(self.numOutputs)]
-                       for i in range(lastHiddenLayerSize)]
+        weightLayer = [
+            [
+                ContainerNode(
+                    name=f"W_H{self.numHiddenLayers - 1}N{i}y{j}", value=random_weight()
+                )
+                for j in range(self.numOutputs)
+            ]
+            for i in range(lastHiddenLayerSize)
+        ]
         self.weightLayers.append(weightLayer)
         for row in weightLayer:
             for weightNode in row:
@@ -275,10 +312,12 @@ class MLPGraphForwardProcessing(Graph):
     def _CreateLabelLayer(self):
         """Create label layer with DataStreamNodes (streams through labels automatically)."""
         from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
-        
+
         # initialDelay=0, streamDelay=0 for ForwardProcessing (no synchronization needed)
-        self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay=0, streamDelay=0) 
-                          for i in range(self.numOutputs)]
+        self.labelLayer = [
+            DataStreamNode(name=f"L_y{i}", initialDelay=0, streamDelay=0)
+            for i in range(self.numOutputs)
+        ]
         for labelNode in self.labelLayer:
             self.AddNode(labelNode)
 
@@ -287,7 +326,7 @@ class MLPGraphForwardProcessing(Graph):
         for i in range(self.numOutputs):
             errorNode = SubtractionNode(name=f"Error_y{i}")
             errorNode.AddPreNode(self.outputLayer[i][1])  # Output activation
-            errorNode.AddPreNode(self.labelLayer[i])      # Label
+            errorNode.AddPreNode(self.labelLayer[i])  # Label
             self.errorLayer.append(errorNode)
             self.AddNode(errorNode)
 
@@ -307,7 +346,9 @@ class MLPGraphForwardProcessing(Graph):
 
         self.errorBuffers = []
         for i, err_node in enumerate(self.errorLayer):
-            buf = BufferNode(name=f"errorBuffer{i}", size=bufferSize, allowNone=allowNone)
+            buf = BufferNode(
+                name=f"errorBuffer{i}", size=bufferSize, allowNone=allowNone
+            )
             buf.AddPreNode(err_node)
             self.errorBuffers.append(buf)
             self.AddNode(buf)
@@ -317,18 +358,18 @@ class MLPGraphForwardProcessing(Graph):
     def _ConnectInputLayer(self):
         """Connect input layer to first hidden layer through weights."""
         self.firstLayerMultNodes = []  # Store first layer multiplication nodes
-        
+
         for i, inputNode in enumerate(self.inputLayer):
             for j in range(self.hiddenLayerSizes[0]):
                 # Create multiplication node for input * weight
                 multiplicationNode = MultiplicationNode(name=f"Mul_x{i}H{j}")
                 multiplicationNode.AddPreNode(inputNode)
                 multiplicationNode.AddPreNode(self.weightLayers[0][i][j])
-                
+
                 # Connect to addition node of first hidden layer
                 self.hiddenLayers[0][j][0].AddPreNode(multiplicationNode)
                 self.AddNode(multiplicationNode)
-                
+
                 # Store as potential starting node
                 self.firstLayerMultNodes.append(multiplicationNode)
 
@@ -343,10 +384,11 @@ class MLPGraphForwardProcessing(Graph):
                 for j in range(len(nextLayer)):
                     # Create multiplication node
                     multiplicationNode = MultiplicationNode(
-                        name=f"Mul_H{layerNum}N{i}H{layerNum+1}N{j}")
+                        name=f"Mul_H{layerNum}N{i}H{layerNum+1}N{j}"
+                    )
                     multiplicationNode.AddPreNode(currentActivation)
                     multiplicationNode.AddPreNode(weightLayer[i][j])
-                    
+
                     # Connect to next layer's addition node
                     nextLayer[j][0].AddPreNode(multiplicationNode)
                     self.AddNode(multiplicationNode)
@@ -360,10 +402,11 @@ class MLPGraphForwardProcessing(Graph):
             for j in range(self.numOutputs):
                 # Create multiplication node
                 multiplicationNode = MultiplicationNode(
-                    name=f"Mul_H{self.numHiddenLayers-1}N{i}y{j}")
+                    name=f"Mul_H{self.numHiddenLayers-1}N{i}y{j}"
+                )
                 multiplicationNode.AddPreNode(hiddenActivation)
                 multiplicationNode.AddPreNode(weightLayer[i][j])
-                
+
                 # Connect to output layer's addition node
                 self.outputLayer[j][0].AddPreNode(multiplicationNode)
                 self.AddNode(multiplicationNode)
@@ -384,61 +427,61 @@ class MLPGraphForwardProcessing(Graph):
     def GetRequiredIterations(self):
         """
         Calculate the number of iterations required for one complete forward pass.
-        
+
         This is an estimate based on network depth:
         - Input layer: 1 iteration
         - Each hidden layer: 1 iteration
         - Output layer: 1 iteration
         - Total for forward pass: num_layers + 1
-        
+
         Returns:
             int: Estimated number of iterations for complete forward pass
         """
         # Forward pass depth
         forward_depth = len(self.hiddenLayers) + 2  # inputs + hidden layers + output
         return forward_depth
-    
+
     def GetRequiredIterationsWithBackprop(self):
         """
-        Calculate the number of iterations required for one complete 
+        Calculate the number of iterations required for one complete
         forward+backward pass (training iteration).
-        
+
         Includes:
         - Forward pass: ~(num_layers + 1) iterations
         - Error calculation: 1 iteration
         - Gradient computation: ~num_layers iterations (backward through network)
         - Weight updates: 1 iteration
-        
+
         Returns:
             int: Estimated number of iterations for complete forward+backward pass
         """
         # Forward pass
         forward_depth = len(self.hiddenLayers) + 2  # inputs + hidden layers + output
-        
+
         # Backward pass
         error_calc = 1
         gradient_depth = len(self.hiddenLayers) + 1  # gradients for each layer
         weight_update = 1
-        
+
         total = forward_depth + error_calc + gradient_depth + weight_update
-        
+
         return total
-    
+
     def GetPassLength(self):
         """
         Get the length of one complete training pass (alias for GetRequiredIterationsWithBackprop).
         This is the reactivation interval for input/label nodes in cyclic training.
-        
+
         Returns:
             int: Number of iterations per training pass (reactivation interval)
         """
         return self.GetRequiredIterationsWithBackprop()
-    
+
     def ResetNetwork(self):
         """Reset all node values except weights."""
         for node in self.nodes:
             # Skip weight nodes
-            if 'W_' not in node.name:
+            if "W_" not in node.name:
                 node.value = 0.0
                 node.inputs = []
                 node.midCalculation = False

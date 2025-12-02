@@ -1,8 +1,10 @@
 import sys
+
 from PyQt6.QtWidgets import QApplication
+
+from ComputationalGraphs.GUI.node_item import NodeItem
 from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
-from ComputationalGraphs.GUI.node_item import NodeItem
 
 
 def run_test():
@@ -19,7 +21,9 @@ def run_test():
     try:
         buf_item.update_value_display()
         sig_item.update_value_display()
-        print("NodeItem update_value_display executed without exception for buffer and normal nodes.")
+        print(
+            "NodeItem update_value_display executed without exception for buffer and normal nodes."
+        )
     except Exception as e:
         print("ERROR: update_value_display raised exception:", type(e), e)
 
@@ -27,5 +31,5 @@ def run_test():
     app.quit()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_test()

@@ -8,12 +8,12 @@ Active nodes (whose predecessors have completed) are processed in each iteration
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
+from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 
-print("="*70)
+print("=" * 70)
 print("TEST 1: Simple Linear Chain (a → b → c → d)")
-print("="*70)
+print("=" * 70)
 
 # Create nodes
 a = ContainerNode("a", value=1.0)
@@ -41,9 +41,9 @@ print("  Iteration 1: [b]")
 print("  Iteration 2: [c]")
 print("  Iteration 3: [d]")
 
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("TEST 2: Diamond Graph (a → b → d, a → c → d)")
-print("="*70)
+print("=" * 70)
 
 # Create nodes
 a2 = ContainerNode("a", value=2.0)
@@ -70,9 +70,9 @@ print("  Iteration 0: [a]")
 print("  Iteration 1: [b, c]")
 print("  Iteration 2: [d]")
 
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("TEST 3: Complex Multi-Branch")
-print("="*70)
+print("=" * 70)
 
 # Create nodes
 a3 = ContainerNode("a", value=1.0)
@@ -105,9 +105,9 @@ print("  Iteration 1: [c, d]")
 print("  Iteration 2: [e]")
 print("  Iteration 3: [f]")
 
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("TEST 4: Multiple Iterations (Simulating Training)")
-print("="*70)
+print("=" * 70)
 
 # Create simple network
 input_node = ContainerNode("input", value=1.0)
@@ -128,15 +128,15 @@ print("Running 3 passes with different input values:")
 for i in range(3):
     input_node.value = float(i + 1)
     print(f"\nPass {i+1}: input = {input_node.value}")
-    
+
     # Reset state and process complete pass
     processor4.reset_forward_state()
     iterations = processor4.ForwardProcessingComplete()
-    
+
     print(f"  Iterations: {iterations}")
     print(f"  hidden = {hidden_node.value}")
     print(f"  output = {output_node.value}")
 
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("All tests completed!")
-print("="*70)
+print("=" * 70)

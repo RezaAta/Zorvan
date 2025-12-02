@@ -4,6 +4,7 @@ NodeEditingController - Manages node editing and replacement operations.
 Extracted from MainWindow as part of Clean Code refactoring.
 Handles node editor dialog, node replacement, and related operations.
 """
+
 from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import QMessageBox
@@ -15,20 +16,20 @@ if TYPE_CHECKING:
 class NodeEditingController:
     """Controller for node editing and replacement operations."""
 
-    def __init__(self, main_window: 'MainWindow'):
+    def __init__(self, main_window: "MainWindow"):
         self.main_window = main_window
 
     def edit_node(self, node_item):
         """Open editor dialog for a specific node item.
-        
+
         Args:
             node_item: The NodeItem to edit
         """
         from ..node_editor_dialog import NodeEditorDialog
-        
+
         mw = self.main_window
         dialog = NodeEditorDialog(node_item.node, mw)
-        
+
         if dialog.exec():
             # Update visuals
             # Use NodeItem helper to reset text and re-center label
@@ -47,15 +48,15 @@ class NodeEditingController:
 
     def replace_node(self, node_item):
         """Prompt user to replace node type and perform swap.
-        
+
         Args:
             node_item: The NodeItem to replace
         """
         from ..replace_node_dialog import ReplaceNodeDialog
-        
+
         mw = self.main_window
         dlg = ReplaceNodeDialog(mw)
-        
+
         if dlg.exec():
             new_type = dlg.selected_type()
             if new_type:
@@ -76,15 +77,15 @@ class NodeEditingController:
     def edit_selected_node(self):
         """Open editor for the selected node on canvas."""
         from ..node_item import NodeItem
-        
+
         mw = self.main_window
         selected = mw.canvas.scene.selectedItems()
-        
+
         node_items = [item for item in selected if isinstance(item, NodeItem)]
-        
+
         if not node_items:
             QMessageBox.information(mw, "No Selection", "Please select a node to edit.")
             return
-        
+
         node_item = node_items[0]
         self.edit_node(node_item)

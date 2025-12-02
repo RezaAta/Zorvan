@@ -1,18 +1,19 @@
 import os
 import tempfile
+
 from ComputationalGraphs.Core.DrawioIO import DrawioIO
-from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
 from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
 
 
 def test_drawio_save_load():
     loader = ExamplesLoader()
     # Use a simple graph (fibonacci)
-    fib_graph = loader.categories['basic'].examples[0][2]()
+    fib_graph = loader.categories["basic"].examples[0][2]()
     assert isinstance(fib_graph, Graph)
 
     # Save to temporary file
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.xml')
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xml")
     tmpname = tmp.name
     tmp.close()
 

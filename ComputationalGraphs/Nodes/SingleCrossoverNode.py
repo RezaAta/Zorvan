@@ -1,8 +1,10 @@
-from ComputationalGraphs.Nodes.BasicNode import BasicNode
 import random
 
+from ComputationalGraphs.Nodes.BasicNode import BasicNode
+
+
 class SingleCrossoverNode(BasicNode):
-    def __init__(self, name: str = "", value = None):
+    def __init__(self, name: str = "", value=None):
         super().__init__(name, value)  # Call the parent BasicNode constructor
         self.batchSize = 2
         self.crossoverRate = 0.9
@@ -21,7 +23,6 @@ class SingleCrossoverNode(BasicNode):
             return p1[:point] + p2[point:]
         else:
             self.iterationCount += 1
-    
 
     def IsValidInput(self, inp):
         """

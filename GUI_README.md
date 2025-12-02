@@ -28,7 +28,7 @@ Interactive workspace for building your computational graph:
 
 - **Add Nodes**: Drag node types from the palette onto the canvas
 - **Move Nodes**: Click and drag nodes to reposition them
-- **Connect Nodes**: 
+- **Connect Nodes**:
   - Click on a node's output port (bottom white circle)
   - Drag to the input port (top white circle) of another node
   - Release to create the connection
@@ -205,6 +205,6 @@ Feel free to extend the GUI with additional features or node types by:
 
 ---
 
-**Version**: 1.0  
-**Author**: ComputationalGraphs Project  
+**Version**: 1.0
+**Author**: ComputationalGraphs Project
 **License**: [Your License]

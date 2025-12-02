@@ -1,15 +1,15 @@
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
 from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Core.MLPGraph import MLPGraph
 from ComputationalGraphs.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
 
 
 def test_replace_activation_updates_latest_not_value():
     mlp = MLPGraph(numInputs=2, numOutputs=1, numHiddenLayers=1, hiddenLayerSizes=[2])
     mlp.BuildMLP()
-    X = [[0,0,1,1],[0,1,0,1]]
-    y = [[0,1,1,0]]
+    X = [[0, 0, 1, 1], [0, 1, 0, 1]]
+    y = [[0, 1, 1, 0]]
     mlp.LoadData(X, y)
     backprop = BackpropGraph(mlp, learningRate=0.1)
     backprop.BuildBackprop()
@@ -18,7 +18,9 @@ def test_replace_activation_updates_latest_not_value():
         fullGraph.AddNode(node)
     for node in backprop.nodes:
         fullGraph.AddNode(node)
-    fullGraph.starting_nodes = [input_pair[0] for input_pair in mlp.inputLayer] + mlp.labelLayer
+    fullGraph.starting_nodes = [
+        input_pair[0] for input_pair in mlp.inputLayer
+    ] + mlp.labelLayer
     fullGraph.UpdateAdjacencyMatrix()
 
     proc = GraphProcessor(fullGraph, auto_threading=False)

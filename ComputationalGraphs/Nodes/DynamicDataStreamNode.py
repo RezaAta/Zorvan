@@ -1,7 +1,10 @@
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 
+
 class DynamicDataStreamNode(BasicNode):
-    def __init__(self, name: str = "", data = [], initialDelay: int = 0, streamDelay: int = 0):
+    def __init__(
+        self, name: str = "", data=[], initialDelay: int = 0, streamDelay: int = 0
+    ):
         super().__init__(name, 0)
         self.initialDelay = initialDelay
         self.streamDelay = streamDelay
@@ -33,5 +36,3 @@ class DynamicDataStreamNode(BasicNode):
 
     def IsValidInput(self, inp):
         pass
-
-

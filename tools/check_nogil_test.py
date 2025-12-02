@@ -1,4 +1,7 @@
-import sys, time, threading, os
+import os
+import sys
+import threading
+import time
 from multiprocessing import Process
 
 print("sys.version:", sys.version)
@@ -36,14 +39,15 @@ def run_processes(num_processes, iterations):
         p.join()
     return time.time() - start
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     iters = 10_000_000
-    print('\n-- Thread test (CPU-bound) --')
+    print("\n-- Thread test (CPU-bound) --")
     for n in (1, 2, 4):
         t = run_threads(n, iters // n)
-        print(f'threads={n}, time={t:.3f}s')
+        print(f"threads={n}, time={t:.3f}s")
 
-    print('\n-- Process test (CPU-bound) --')
+    print("\n-- Process test (CPU-bound) --")
     for n in (1, 2, 4):
         t = run_processes(n, iters // n)
-        print(f'processes={n}, time={t:.3f}s')
+        print(f"processes={n}, time={t:.3f}s")
