@@ -81,8 +81,26 @@ jobs:
             if [ -f requirements_dev.txt ]; then pip install -r requirements_dev.txt; fi
             if [ -f requirements_gui.txt ]; then pip install -r requirements_gui.txt; fi
             pip install -e .
-            # GUI tests may need system graphviz as well
-            sudo apt-get update && sudo apt-get install -y graphviz
+            # GUI tests need system graphviz and various Qt/OpenGL libraries
+            sudo apt-get update && sudo apt-get install -y \
+              graphviz \
+              libegl1 \
+              libgl1-mesa-glx \
+              libgbm1 \
+              libxkbcommon0 \
+              libxcb-xinerama0 \
+              libx11-xcb1 \
+              libxcb1 \
+              libxrender1 \
+              libxrandr2 \
+              libxcursor1 \
+              libxcomposite1 \
+              libxdamage1 \
+              libnss3 \
+              libasound2 \
+              libatk1.0-0 \
+              libatk-bridge2.0-0 \
+              libgtk-3-0
 
       - name: Install Xvfb
         run: sudo apt-get update && sudo apt-get install -y xvfb
