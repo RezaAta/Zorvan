@@ -86,6 +86,12 @@ jobs:
             sudo apt-get update && sudo apt-get install -y --no-install-recommends \
               graphviz \
               libegl1 \
+              libegl1-mesa \
+              libegl-mesa0 \
+              libwayland-egl1 \
+              libgl1-mesa-glx \
+              libgles2-mesa \
+              mesa-utils \
               libgl1-mesa-dri \
               libgl1 \
               libglvnd0 \
@@ -108,11 +114,33 @@ jobs:
               sudo apt-get update && sudo apt-get install -y --no-install-recommends \
               graphviz \
               libegl1-mesa \
+              libegl-mesa0 \
+              libwayland-egl1 \
               libgl1-mesa-dri \
+              mesa-utils \
               libasound2t64 \
               libatk1.0-0 \
               libatk-bridge2.0-0 \
               libgtk-3-0 || true )
+
+      - name: Debug installed EGL/GL libraries
+        run: |
+          echo "OS release:" && lsb_release -a || cat /etc/os-release || true
+          echo "## ldconfig -p | grep EGL"
+          sudo ldconfig -p | grep -E 'lib(EGL|GL)' || true
+          echo "## Check for files in /usr/lib*
+          ls -l /usr/lib*/libEGL* || true
+
+      - name: Find Qt shared libraries and show missing deps
+        run: |
+          echo "## Finding Qt libraries"
+          set -x
+          find /usr -name 'libQt6*.so*' -print 2>/dev/null | head -n 50 || true
+          echo "## ldd each Qt library (show 'not found' lines)"
+          for f in $(find /usr -name 'libQt6*.so*' -type f 2>/dev/null | head -n 50); do
+            echo "--- $f ---"
+            ldd "$f" | grep 'not found' || true
+          done
 
       - name: Install Xvfb
         run: sudo apt-get update && sudo apt-get install -y xvfb
