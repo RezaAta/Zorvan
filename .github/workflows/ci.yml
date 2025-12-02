@@ -81,7 +81,8 @@ jobs:
             if [ -f requirements_dev.txt ]; then pip install -r requirements_dev.txt; fi
             if [ -f requirements_gui.txt ]; then pip install -r requirements_gui.txt; fi
             pip install -e .
-            # GUI tests need system graphviz and various Qt/OpenGL libraries
+            # GUI tests need system graphviz and various Qt/OpenGL libraries.
+            # Try installing a primary package set; if that fails, try a secondary (fallback) set.
             sudo apt-get update && sudo apt-get install -y --no-install-recommends \
               graphviz \
               libegl1 \
@@ -100,15 +101,33 @@ jobs:
               libxcomposite1 \
               libxdamage1 \
               libnss3 \
-              libasound2 || sudo apt-get install -y libasound2t64 \
+              libasound2 \
               libatk1.0-0 \
               libatk-bridge2.0-0 \
-              libgtk-3-0
-            # Some runners use different package names; try fallback packages if needed.
-            sudo apt-get install -y libegl1-mesa libgl1-mesa-dri libasound2t64 || true
+              libgtk-3-0 || (
+              sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+              graphviz \
+              libegl1-mesa \
+              libgl1-mesa-dri \
+              libasound2t64 \
+              libatk1.0-0 \
+              libatk-bridge2.0-0 \
+              libgtk-3-0 || true )
 
       - name: Install Xvfb
         run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Validate GUI environment
+        run: |
+          python - <<PY
+          try:
+            import PyQt6
+            from PyQt6.QtWidgets import QApplication
+            print('PyQt6 import ok')
+          except Exception as e:
+            print('PyQt6 import failed', e)
+            raise
+          PY
 
       - name: Run GUI tests
         run: xvfb-run -a pytest -q --maxfail=1
