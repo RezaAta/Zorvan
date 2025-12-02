@@ -9,6 +9,11 @@ class Graph:
         self.nodes = []  # List to hold nodes
         self.adjacencyMatrix = []  # Adjacency matrix for node connections
         self.idToNodeDictionary = {}  # Map node ids to node objects
+        self.starting_nodes = []  # Entry points for graph execution (e.g., input nodes)
+        # Optional manual node processing sequence: list of iterables of Node identifiers
+        # Each item in the list represents the set of nodes to process at a single iteration.
+        # Accepts Node objects, node ids (strings), or node indices (ints).
+        self.manual_processing_sequence = None
         
         # Counters for the first naming convention
         self.abstract_counter = 1
@@ -80,6 +85,64 @@ class Graph:
             preNode_index = self.nodes.index(preNode)
             self.adjacencyMatrix[preNode_index][node_index] = 1  # Connection from predecessor to node
 
+    def DisconnectPreNode(self, node, *preNodes):
+        """Disconnect predecessor(s) from a node and update the adjacency matrix."""
+        if node not in self.nodes:
+            return
+        for preNode in preNodes:
+            # If the exact node object is present, remove directly
+            if preNode in node.predecessors:
+                try:
+                    node.predecessors.remove(preNode)
+                    # Debug output to help with synchronization issues
+                    try:
+                        print(f"Graph: removed predecessor {getattr(preNode, 'name', str(preNode))} from {getattr(node, 'name', str(node))}")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                continue
+
+            # If not identical object, try to match on id or name (common in GUI replacements)
+            # Accept string identifiers for convenience
+            candidates = list(node.predecessors)
+            matched = None
+            if isinstance(preNode, str):
+                for cand in candidates:
+                    if hasattr(cand, 'name') and cand.name == preNode:
+                        matched = cand
+                        break
+                    if hasattr(cand, 'id') and cand.id == preNode:
+                        matched = cand
+                        break
+            else:
+                # preNode is a Node (or similar) but a different object instance - try matching by id/name
+                try:
+                    pid = getattr(preNode, 'id', None)
+                    pname = getattr(preNode, 'name', None)
+                except Exception:
+                    pid = None
+                    pname = None
+                for cand in candidates:
+                    if pid is not None and getattr(cand, 'id', None) == pid:
+                        matched = cand
+                        break
+                    if pname is not None and getattr(cand, 'name', None) == pname:
+                        matched = cand
+                        break
+
+            if matched is not None and matched in node.predecessors:
+                try:
+                    node.predecessors.remove(matched)
+                    try:
+                        print(f"Graph: removed predecessor {getattr(matched, 'name', str(matched))} from {getattr(node, 'name', str(node))} (matched)")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+        # Rebuild the adjacency matrix to reflect changes
+        self.UpdateAdjacencyMatrix()
+
     def UpdateAdjacencyMatrix(self):
         """Rebuild the adjacency matrix by iterating over all nodes and their connections."""
         size = len(self.nodes)
@@ -126,8 +189,22 @@ class Graph:
         return abstract
 
     def ReplaceNode(self, newNode, *oldNode):
+        # Add new node; transfer attributes and connections from oldNode
         self.AddNode(newNode)
-        self.ReplicateConnections(newNode,*oldNode)
+        # Transfer attributes where applicable
+        try:
+            self.TransferNodeAttributes(oldNode[0], newNode)
+        except Exception:
+            # If there's an issue, we still proceed
+            pass
+        self.ReplicateConnections(newNode, *oldNode)
+        # If old node was in starting_nodes, replace it with newNode
+        for i, sn in enumerate(list(self.starting_nodes)):
+            if sn in oldNode:
+                try:
+                    self.starting_nodes[i] = newNode
+                except Exception:
+                    pass
         self.RemoveNode(*oldNode)
         self.UpdateAdjacencyMatrix()
 
@@ -138,11 +215,47 @@ class Graph:
         - oldNodes: One or more old nodes whose connections are transferred to the new node.
         """
         for oldNode in oldNodes:
-            oldNodeIndex = self.nodes.index(oldNode)
+            # Replicate predecessors (incoming connections)
+            for pred in list(oldNode.predecessors):
+                # add predecessor to newNode
+                try:
+                    if pred in self.nodes:
+                        newNode.AddPreNode(pred)
+                except Exception:
+                    pass
             # Replicate outgoing connections (connections from the old node to others)
-            for j in range(len(self.adjacencyMatrix[oldNodeIndex])):
-                if self.adjacencyMatrix[oldNodeIndex][j] == 1:  # If old node connects to another node
-                    self.nodes[j].AddPreNode(newNode)
+            if oldNode in self.nodes:
+                oldNodeIndex = self.nodes.index(oldNode)
+                for j in range(len(self.adjacencyMatrix[oldNodeIndex])):
+                    if self.adjacencyMatrix[oldNodeIndex][j] == 1:  # If old node connects to another node
+                        self.nodes[j].AddPreNode(newNode)
+
+        # Recompute adjacency matrix to reflect new connections
+        self.UpdateAdjacencyMatrix()
+
+    def TransferNodeAttributes(self, oldNode: Node, newNode: Node):
+        """Copy transferable attributes from oldNode to newNode.
+
+        This attempts to copy primitive and simple attributes (like value, data, buffer, size).
+        We avoid copying complex object references (predecessors, id) as those are handled separately.
+        """
+        if oldNode is None or newNode is None:
+            return
+        # Copy simple attributes if they exist on both nodes
+        simple_attrs = ['value', 'data', 'size', 'index', 'inputCount', 'batchSize', 'inclusive', 'forcedBatchProcessing']
+        for attr in simple_attrs:
+            try:
+                if hasattr(oldNode, attr) and hasattr(newNode, attr):
+                    setattr(newNode, attr, getattr(oldNode, attr))
+            except Exception:
+                pass
+        # Special-case ContainerNode initial value
+        try:
+            if getattr(oldNode, '__class__', None) is not None and getattr(newNode, '__class__', None) is not None:
+                if oldNode.__class__.__name__ == 'ContainerNode' and hasattr(oldNode, 'value') and hasattr(newNode, 'value'):
+                    newNode.value = oldNode.value
+        except Exception:
+            pass
             
 
     def CompressNodes(self, nodes):
@@ -193,6 +306,86 @@ class Graph:
         for node in self.nodes:
             node.ResetValue()
 
+    def BuildSuccessorMap(self):
+        """
+        Build a dictionary mapping each node to its list of successor nodes.
+        A successor is any node that has this node as a predecessor.
+        
+        Returns:
+            dict: {node: [list of successor nodes]}
+        """
+        successor_map = {node: [] for node in self.nodes}
+        
+        for node in self.nodes:
+            for predecessor in node.predecessors:
+                if predecessor in successor_map:
+                    successor_map[predecessor].append(node)
+        
+        return successor_map
+
+    def set_manual_processing_sequence(self, sequence, strict=True):
+        """
+        Set a manual processing sequence for the graph. The sequence should be a list of
+        iterables (sets, lists, tuples) each containing node identifiers (Node instance, id string, or index).
+        If strict is True, invalid identifiers raise ValueError; otherwise they are ignored.
+        """
+        if sequence is None:
+            self.manual_processing_sequence = None
+            return
+
+        resolved_sequence = []
+        for step in sequence:
+            if step is None:
+                continue
+            step_list = []
+            for entry in step:
+                # Accept Node objects, id strings, or indices
+                if isinstance(entry, Node):
+                    node_obj = entry
+                elif isinstance(entry, str):
+                    node_obj = self.idToNodeDictionary.get(entry)
+                    if node_obj is None:
+                        # Try matching by name
+                        matches = [n for n in self.nodes if getattr(n, 'name', None) == entry]
+                        if len(matches) == 1:
+                            node_obj = matches[0]
+                        elif len(matches) > 1:
+                            if strict:
+                                raise ValueError(f"Ambiguous node name '{entry}' matches multiple nodes.")
+                            else:
+                                node_obj = matches[0]
+                elif isinstance(entry, int):
+                    try:
+                        node_obj = self.nodes[entry]
+                    except IndexError:
+                        node_obj = None
+                else:
+                    node_obj = None
+
+                if node_obj is None:
+                    if strict:
+                        raise ValueError(f"Node identifier '{entry}' not found in graph.")
+                    else:
+                        continue
+
+                if node_obj not in self.nodes:
+                    if strict:
+                        raise ValueError(f"Node '{node_obj}' is not part of this graph.")
+                    else:
+                        continue
+
+                if node_obj not in step_list:
+                    step_list.append(node_obj)
+
+            # Only add non-empty steps
+            if step_list:
+                resolved_sequence.append(step_list)
+
+        self.manual_processing_sequence = resolved_sequence
+
+    def clear_manual_processing_sequence(self):
+        """Clear any previously set manual processing sequence."""
+        self.manual_processing_sequence = None
 
     # any node that old nodes are in its pred list
     # put the new abstract node in its pred list

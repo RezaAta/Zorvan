@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 from sklearn.preprocessing import StandardScaler
+import time
 
 # Load Diabetes Dataset
 data = load_diabetes()
@@ -50,7 +51,7 @@ mlpGraph = MLPGraph(
     numOutputs=1,
     numHiddenLayers=3,
     hiddenLayerSizes=[8, 4, 2],
-    activationFunction=SigmoidNode  # Use ReLU activation for hidden layers
+    activationFunction=SigmoidNode  
 )
 mlpGraph.BuildMLP()
 
@@ -89,7 +90,14 @@ mlpGraph.CreateErrorBuffers(totalIterations)
 errorBuffers = mlpGraph.errorBuffers
 fullMLPGraph.AddNode(*errorBuffers)
 
-fullGraphProcessor.ComputeGraphSingleThread(totalIterations + networkLength + 1)# +2 is for the error buffers
+print(f"\nTotal nodes: {len(fullMLPGraph.nodes)}")
+print(f"Training iterations: {totalIterations + networkLength + 1}")
+print("Starting training...\n")
+start_time = time.time()
+fullGraphProcessor.ComputeGraph(totalIterations + networkLength + 1)# +2 is for the error buffers
+training_time = time.time() - start_time
+print(f"Training completed in {training_time:.2f}s")
+print(f"Iterations per second: {(totalIterations + networkLength + 1) / training_time:.0f}")
 
 # Calculate the MSE over epochs
 for i in range(totalIterations):
@@ -117,7 +125,7 @@ mlpGraph.PrepareForTest(X_test, y_test)  # Inputs must be transposed
 predictionBuffers = mlpGraph.predictionBuffers
 
 testingEpochs = len(X_test[0]) + networkLength # Extra epochs to flush forward the network
-mlpProcessor.ComputeGraphSingleThread(testingEpochs)
+mlpProcessor.ComputeGraph(testingEpochs)
 
 # Collect predictions
 predictionValues = []

@@ -2,7 +2,7 @@ from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.Core.BufferNode import BufferNode
+from ComputationalGraphs.Nodes.BufferNode import BufferNode
 
 class BackpropGraph(Graph):
     def __init__(self, mlpGraph, learningRate=0.01):
@@ -78,7 +78,7 @@ class BackpropGraph(Graph):
 
                 # LR multiplier for hidden gradient
                 lrMultNode = MultiplicationNode(name=f"LRMult_H{layerNum}N{n}")
-                lrMultNode.AddPreNode(self.lrNode)
+                lrMultNode.AddPreNode(hiddenErrorGradNode, self.lrNode)  # FIXED: Connect EG -> LRMult
         
                 layerErrorGradients.append(hiddenErrorGradNode)
                 layerLrMultiplications.append(lrMultNode)

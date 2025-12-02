@@ -1,0 +1,44 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: https://github.com/psf/black
+    rev: 24.1.0
+    hooks:
+      - id: black
+        args: ["--line-length", "88"]
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/charliermarsh/ruff
+    rev: v0.0.300
+    hooks:
+      - id: ruff
+        args: ["--fix", "--select=E,F,W"]
+
+  # Optional: run tests locally via pre-commit (use cautiously)
+  - repo: local
+    hooks:
+      - id: run-tests
+        name: run pytest before commit
+        entry: pytest -q
+        language: system
+        always_run: false
+        pass_filenames: false
+        stages: [pre-commit]
+
+  - repo: local
+    hooks:
+      - id: commitizen-check
+        name: commitizen message check
+        entry: cz check
+        language: python
+        stages: [commit-msg]

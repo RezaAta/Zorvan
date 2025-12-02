@@ -1,0 +1,144 @@
+digraph {
+	rankdir=LR
+	x0 [label="x0
+(DataStreamNode)
+None"]
+	Buff_x0 [label="Buff_x0
+(BufferNode)
+None"]
+	x1 [label="x1
+(DataStreamNode)
+None"]
+	Buff_x1 [label="Buff_x1
+(BufferNode)
+None"]
+	c_x0_m0 [label="c_x0_m0
+(ContainerNode)
+0.0"]
+	s_x0_m0 [label="s_x0_m0
+(ContainerNode)
+0.5"]
+	G_x0_m0 [label="G_x0_m0
+(GaussianMembershipNode)
+0.0"]
+	c_x0_m1 [label="c_x0_m1
+(ContainerNode)
+1.0"]
+	s_x0_m1 [label="s_x0_m1
+(ContainerNode)
+0.5"]
+	G_x0_m1 [label="G_x0_m1
+(GaussianMembershipNode)
+0.0"]
+	c_x1_m0 [label="c_x1_m0
+(ContainerNode)
+0.0"]
+	s_x1_m0 [label="s_x1_m0
+(ContainerNode)
+0.5"]
+	G_x1_m0 [label="G_x1_m0
+(GaussianMembershipNode)
+0.0"]
+	c_x1_m1 [label="c_x1_m1
+(ContainerNode)
+1.0"]
+	s_x1_m1 [label="s_x1_m1
+(ContainerNode)
+0.5"]
+	G_x1_m1 [label="G_x1_m1
+(GaussianMembershipNode)
+0.0"]
+	R_00 [label="R_00
+(MinNode)
+0.0"]
+	R_01 [label="R_01
+(MinNode)
+0.0"]
+	R_10 [label="R_10
+(MinNode)
+0.0"]
+	R_11 [label="R_11
+(MinNode)
+0.0"]
+	q0 [label="q0
+(ContainerNode)
+0.0"]
+	q1 [label="q1
+(ContainerNode)
+0.0"]
+	q2 [label="q2
+(ContainerNode)
+0.0"]
+	q3 [label="q3
+(ContainerNode)
+0.0"]
+	P0 [label="P0
+(MultiplicationNode)
+0"]
+	P1 [label="P1
+(MultiplicationNode)
+0"]
+	P2 [label="P2
+(MultiplicationNode)
+0"]
+	P3 [label="P3
+(MultiplicationNode)
+0"]
+	Numerator [label="Numerator
+(AdditionNode)
+0.0"]
+	Denominator [label="Denominator
+(AdditionNode)
+0.0"]
+	y0 [label="y0
+(DivisionNode)
+0"]
+	L_y0 [label="L_y0
+(DataStreamNode)
+None"]
+	Error_y0 [label="Error_y0
+(SubtractionNode)
+0"]
+	x0 -> Buff_x0
+	x0 -> G_x0_m0
+	x0 -> G_x0_m1
+	x1 -> Buff_x1
+	x1 -> G_x1_m0
+	x1 -> G_x1_m1
+	c_x0_m0 -> G_x0_m0
+	s_x0_m0 -> G_x0_m0
+	G_x0_m0 -> R_00
+	G_x0_m0 -> R_01
+	c_x0_m1 -> G_x0_m1
+	s_x0_m1 -> G_x0_m1
+	G_x0_m1 -> R_10
+	G_x0_m1 -> R_11
+	c_x1_m0 -> G_x1_m0
+	s_x1_m0 -> G_x1_m0
+	G_x1_m0 -> R_00
+	G_x1_m0 -> R_10
+	c_x1_m1 -> G_x1_m1
+	s_x1_m1 -> G_x1_m1
+	G_x1_m1 -> R_01
+	G_x1_m1 -> R_11
+	R_00 -> P0
+	R_00 -> Denominator
+	R_01 -> P1
+	R_01 -> Denominator
+	R_10 -> P2
+	R_10 -> Denominator
+	R_11 -> P3
+	R_11 -> Denominator
+	q0 -> P0
+	q1 -> P1
+	q2 -> P2
+	q3 -> P3
+	P0 -> Numerator
+	P1 -> Numerator
+	P2 -> Numerator
+	P3 -> Numerator
+	Numerator -> y0
+	Denominator -> y0
+	y0 -> Error_y0
+	L_y0 -> Error_y0
+}

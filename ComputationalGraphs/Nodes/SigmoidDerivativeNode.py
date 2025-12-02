@@ -15,6 +15,7 @@ class SigmoidDerivativeNode(BasicNode):
 
     def IsValidInput(self, inp):
         """
-        Check if the input is valid for the operation (must be a number).
+        Check if the input is valid for the operation (must be a number, including numpy types).
         """
-        return isinstance(inp, (int, float))
+        import numpy as np
+        return isinstance(inp, (int, float, np.integer, np.floating))

@@ -1,0 +1,5 @@
+# GUI Requirements for ComputationalGraphs
+PyQt6>=6.4.0
+networkx>=2.8.0  # For automatic layout algorithms (fallback)
+pyqtgraph>=0.13.0
+grandalf>=0.8  # Sugiyama hierarchical layout algorithm for DAGs

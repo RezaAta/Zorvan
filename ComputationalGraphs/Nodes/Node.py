@@ -25,12 +25,12 @@ class Node(ABC):
 
     def UpdateInputs(self):
         """Update the inputs array with the valid values of predecessor nodes."""
-        self.inputs = []  # Clear previous inputs
-        # Fetch values from predecessors and only store valid inputs
-        for predecessor in self.predecessors:
-            value = predecessor.value
-            if self.IsValidInput(value):
-                self.inputs.append(value)
+        # Use list comprehension for better performance than loop with append
+        self.inputs = [
+            predecessor.value 
+            for predecessor in self.predecessors 
+            if self.IsValidInput(predecessor.value)
+        ]
 
     def ProcessBatch(self):
         """

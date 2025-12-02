@@ -15,5 +15,6 @@ class LinearNode(BasicNode):  # Inherits from both Node and ABC
         return input
 
     def IsValidInput(self, input):
-        return isinstance(input, (int, float))
+        import numpy as np
+        return isinstance(input, (int, float, np.integer, np.floating))
 

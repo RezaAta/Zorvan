@@ -19,6 +19,8 @@ NODE_TYPE_MAP = {
     'ReLU': ReLUNode,
     'Sigmoid': SigmoidNode,
     'SigmoidDerivative': SigmoidDerivativeNode,
+    'Tanh': TanhNode,
+    'TanhDerivative': TanhDerivativeNode,
     'Subtraction': SubtractionNode,
     'PiecewiseLinear': PiecewiseLinearNode,
     'Min': MinNode,
