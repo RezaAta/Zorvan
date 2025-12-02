@@ -365,4 +365,7 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 *.png
+*.egg-info/
+**/*.egg-info/
+ComputationalGraphs.egg-info/
 ComputationalGraph
