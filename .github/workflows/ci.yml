@@ -82,11 +82,13 @@ jobs:
             if [ -f requirements_gui.txt ]; then pip install -r requirements_gui.txt; fi
             pip install -e .
             # GUI tests need system graphviz and various Qt/OpenGL libraries
-            sudo apt-get update && sudo apt-get install -y \
+            sudo apt-get update && sudo apt-get install -y --no-install-recommends \
               graphviz \
               libegl1 \
               libgl1-mesa-dri \
               libgl1 \
+              libglvnd0 \
+              libglx0 \
               libgbm1 \
               libxkbcommon0 \
               libxcb-xinerama0 \
