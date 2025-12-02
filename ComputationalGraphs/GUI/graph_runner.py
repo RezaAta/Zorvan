@@ -256,6 +256,176 @@ class GraphRunner(QObject):
                 except Exception:
                     pass
 
+    def start_additional(self, additional_steps):
+        """Start execution for a specific number of additional iterations.
+
+        Unlike start(), this method runs exactly `additional_steps` more iterations
+        from the current step, properly updating max_steps to reflect the new total.
+
+        Args:
+            additional_steps: Number of additional iterations to run.
+        """
+        if not self.graph:
+            self.error_occurred.emit("No graph loaded")
+            return
+        # Prevent starting multiple concurrent workers
+        if self._exec_thread is not None and self._exec_thread.is_alive():
+            return
+
+        # Calculate new max_steps as current + additional
+        new_max_steps = self.current_step + additional_steps
+        self.max_steps = new_max_steps
+        self.is_running = True
+
+        # Update adjacency matrix
+        try:
+            self.graph.UpdateAdjacencyMatrix()
+        except Exception as e:
+            self.error_occurred.emit(f"Graph update failed: {str(e)}")
+            self.is_running = False
+            return
+
+        # Create execution controller
+        exec_opts = GraphProcessor.ExecutionOptions(
+            step_interval_ms=self.step_interval, allow_pause=True
+        )
+        controller = GraphProcessor.ExecutionController.from_options(exec_opts)
+        self._exec_controller = controller
+        self._exec_options = exec_opts
+
+        # Worker runs exactly additional_steps iterations
+        def worker():
+            try:
+                iterations_to_run = additional_steps
+
+                if self.processor_type == "forward":
+                    starting_nodes = None
+                    if (
+                        hasattr(self.graph, "starting_nodes")
+                        and self.graph.starting_nodes
+                    ):
+                        starting_nodes = self.graph.starting_nodes
+
+                    iterations_run = 0
+                    while (
+                        iterations_run < iterations_to_run
+                        and not controller.stop_event.is_set()
+                    ):
+                        while controller.pause_event.is_set():
+                            time.sleep(0.01)
+
+                        self.graph_processor.ForwardProcessing(
+                            iterations=1, starting_nodes=starting_nodes
+                        )
+                        iterations_run += 1
+                        self.current_step += 1
+
+                        if hasattr(self.graph_processor, "_currently_processing_nodes"):
+                            self.active_nodes = list(
+                                self.graph_processor._currently_processing_nodes
+                            )
+                        else:
+                            self.active_nodes = []
+
+                        self.step_completed.emit(self.current_step)
+
+                        interval_ms = (
+                            getattr(controller, "step_interval_ms", self.step_interval)
+                            or 0
+                        )
+                        if interval_ms:
+                            slept = 0
+                            while (
+                                slept < interval_ms
+                                and not controller.stop_event.is_set()
+                            ):
+                                if controller.pause_event.is_set():
+                                    while (
+                                        controller.pause_event.is_set()
+                                        and not controller.stop_event.is_set()
+                                    ):
+                                        time.sleep(0.01)
+                                    if controller.stop_event.is_set():
+                                        break
+                                sleep_chunk = min(50, interval_ms - slept) / 1000.0
+                                time.sleep(sleep_chunk)
+                                slept += sleep_chunk * 1000.0
+
+                elif self.processor_type == "manual":
+                    iterations_run = 0
+                    while (
+                        iterations_run < iterations_to_run
+                        and not controller.stop_event.is_set()
+                    ):
+                        while controller.pause_event.is_set():
+                            time.sleep(0.01)
+
+                        self.graph_processor.ManualProcessing(
+                            iterations=1,
+                            computation_sequence=getattr(
+                                self.graph, "manual_processing_sequence", None
+                            ),
+                        )
+                        iterations_run += 1
+                        self.current_step += 1
+
+                        if hasattr(self.graph_processor, "_currently_processing_nodes"):
+                            self.active_nodes = list(
+                                self.graph_processor._currently_processing_nodes
+                            )
+                        else:
+                            self.active_nodes = []
+
+                        self.step_completed.emit(self.current_step)
+
+                        interval_ms = (
+                            getattr(controller, "step_interval_ms", self.step_interval)
+                            or 0
+                        )
+                        if interval_ms:
+                            slept = 0
+                            while (
+                                slept < interval_ms
+                                and not controller.stop_event.is_set()
+                            ):
+                                if controller.pause_event.is_set():
+                                    while (
+                                        controller.pause_event.is_set()
+                                        and not controller.stop_event.is_set()
+                                    ):
+                                        time.sleep(0.01)
+                                    if controller.stop_event.is_set():
+                                        break
+                                sleep_chunk = min(50, interval_ms - slept) / 1000.0
+                                time.sleep(sleep_chunk)
+                                slept += sleep_chunk * 1000.0
+
+                else:
+                    # Concurrent mode
+                    if self.use_multithreading:
+                        self.graph_processor.ComputeGraph(
+                            iterations_to_run,
+                            exec_options=exec_opts,
+                            on_iteration_complete=lambda it: self._on_iter_complete(it),
+                            controller=controller,
+                        )
+                    else:
+                        self.graph_processor.ComputeGraphSingleThread(
+                            iterations_to_run,
+                            exec_options=exec_opts,
+                            on_iteration_complete=lambda it: self._on_iter_complete(it),
+                            controller=controller,
+                        )
+
+            except Exception as e:
+                self.error_occurred.emit(f"Execution error: {str(e)}")
+            finally:
+                self.is_running = False
+                self.execution_finished.emit()
+
+        self._exec_thread = threading.Thread(target=worker, daemon=True)
+        self._exec_thread.start()
+
     def start(self, max_steps=100, reset_step_counter=True):
         """Start continuous execution.
 

@@ -111,19 +111,19 @@ class ExecutionController:
 
         # Check if execution completed (not just paused)
         if self.graph_runner.current_step >= self.graph_runner.max_steps:
-            # Execution finished - start a new run continuing from current step
+            # Execution finished - run additional iterations from current step
             additional_steps = self.main_window.max_steps_spin.value()
-            new_max_steps = self.graph_runner.current_step + additional_steps
+            new_total = self.graph_runner.current_step + additional_steps
 
             # Check if skip visualization (batch mode) is enabled
             if self.main_window.skip_visualization:
                 self._run_batch_resume(additional_steps)
             else:
-                # Start with reset_step_counter=False to continue from current step
-                self.graph_runner.start(new_max_steps, reset_step_counter=False)
+                # Use start_additional to run exactly additional_steps more iterations
+                self.graph_runner.start_additional(additional_steps)
                 self._set_running_state()
                 self.status_bar.showMessage(
-                    f"Resumed: running {additional_steps} more iterations (total: {new_max_steps})"
+                    f"Resumed: running {additional_steps} more iterations (total: {new_total})"
                 )
         else:
             # Normal resume from pause
@@ -221,13 +221,16 @@ class ExecutionController:
         """Restore graph to iteration 0 state without changing iteration counter.
 
         This reverts all node values, buffer contents, and DataStream states to
-        the snapshot taken at iteration 0, but preserves the current step count.
+        the snapshot taken at iteration 0, but preserves the current step count
+        and keeps resume enabled.
         """
         current_step = self.graph_runner.current_step
+        current_max_steps = self.graph_runner.max_steps
 
         if self.graph_runner.restore_graph_snapshot():
-            # Keep the iteration counter unchanged
+            # Keep the iteration counter and max_steps unchanged
             self.graph_runner.current_step = current_step
+            self.graph_runner.max_steps = current_max_steps
 
             # Update visuals
             if self.main_window.colorize_enabled:
@@ -235,7 +238,18 @@ class ExecutionController:
             else:
                 self.canvas.update_node_visuals(False, 0, 1)
 
-            self._set_stopped_state()
+            # Don't call _set_stopped_state() - preserve resume button state
+            # Just ensure play is enabled and we're not running
+            self.main_window.play_btn.setEnabled(True)
+            self.main_window.pause_btn.setEnabled(False)
+            # Keep resume enabled if there was progress
+            self.main_window.resume_btn.setEnabled(current_step > 0)
+            self.main_window.threading_combo.setEnabled(True)
+            if hasattr(self.main_window, "rebuild_btn"):
+                self.main_window.rebuild_btn.setEnabled(True)
+            if hasattr(self.main_window, "rebuild_exec_btn"):
+                self.main_window.rebuild_exec_btn.setEnabled(True)
+
             self.status_bar.showMessage(
                 f"Graph restored to iteration 0 state (step counter: {current_step})"
             )
