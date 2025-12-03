@@ -53,6 +53,7 @@ Interactive workspace for building your computational graph:
 - **Colorize by Value**: Enable heat map coloring of nodes
   - Blue = low values (cold)
   - Red = high values (hot)
+ - **Colorize as ANN (toggle)**: Enable ANN-style color scheme for nodes (mutually exclusive with Colorize by Value)
 - **Min/Max Values**: Set the color scale range
 
 #### Layout Algorithms
