@@ -45,7 +45,7 @@ class ExecutionController:
 
     def play(self):
         """Start graph execution."""
-        # Avoid rebuilding if the canvas already contains the same nodes as the current graph.
+        # Always rebuild if the canvas/graph are out of sync
         try:
             canvas_nodes = (
                 set(self.canvas.node_items.keys())
@@ -59,22 +59,20 @@ class ExecutionController:
                 else set()
             )
 
-            if not canvas_nodes:
-                if not self.main_window.skip_visualization:
-                    self.main_window.rebuild_graph()
-            else:
-                if canvas_nodes != graph_nodes:
-                    self.main_window.rebuild_graph()
+            if not canvas_nodes or canvas_nodes != graph_nodes:
+                self.main_window.rebuild_graph()
         except Exception:
             self.main_window.rebuild_graph()
 
         max_steps = self.main_window.max_steps_spin.value()
 
-        # Check if skip visualization (batch mode) is enabled
-        if self.main_window.skip_visualization:
+        # Use batch mode only when BOTH skip visualization AND skip plotting are enabled
+        # This runs at max speed with no per-step callbacks
+        if self.main_window.skip_visualization and self.main_window.skip_plotting:
             self.run_batch_mode(max_steps)
         else:
-            # Normal mode with visualization
+            # Normal async mode - on_step_completed handles skip_visualization
+            # (skips graph visuals but can still update plots per-step)
             self.graph_runner.start(max_steps)
             self._set_running_state()
             self.status_bar.showMessage("Executing graph...")
@@ -115,8 +113,8 @@ class ExecutionController:
             additional_steps = self.main_window.max_steps_spin.value()
             new_total = self.graph_runner.current_step + additional_steps
 
-            # Check if skip visualization (batch mode) is enabled
-            if self.main_window.skip_visualization:
+            # Use batch mode only when BOTH skip visualization AND skip plotting are enabled
+            if self.main_window.skip_visualization and self.main_window.skip_plotting:
                 self._run_batch_resume(additional_steps)
             else:
                 # Use start_additional to run exactly additional_steps more iterations
@@ -203,9 +201,10 @@ class ExecutionController:
             else:
                 self.canvas.update_node_visuals(False, 0, 1)
 
-            # Update plot
+            # Update plot (unless skip_plotting is enabled)
             if (
-                self.main_window.plot_window
+                not self.main_window.skip_plotting
+                and self.main_window.plot_window
                 and self.main_window.plot_window.isVisible()
             ):
                 self.main_window.plot_window.update_plot(new_step)
@@ -339,6 +338,10 @@ class ExecutionController:
                 else:
                     processor.ComputeGraphSingleThread(max_steps)
 
+            # Update step counters so resume works
+            self.graph_runner.current_step = max_steps
+            self.graph_runner.max_steps = max_steps
+
             # Update visuals once at the end
             self.main_window.step_label.setText(f"Step: {max_steps}")
             if self.main_window.colorize_enabled:
@@ -346,9 +349,10 @@ class ExecutionController:
             else:
                 self.canvas.update_node_visuals(False, 0, 1)
 
-            # Update plot window if open
+            # Update plot window if open (unless skip_plotting is enabled)
             if (
-                self.main_window.plot_window
+                not self.main_window.skip_plotting
+                and self.main_window.plot_window
                 and self.main_window.plot_window.isVisible()
             ):
                 self.main_window.plot_window.update_plot(max_steps)

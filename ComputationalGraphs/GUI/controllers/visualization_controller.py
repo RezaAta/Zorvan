@@ -294,14 +294,33 @@ class VisualizationController:
         """Handle skip graph visualization checkbox change."""
         self.main_window.skip_visualization = state == Qt.CheckState.Checked.value
 
-        if self.main_window.skip_visualization:
-            # Disable speed controls when skipping graph updates
+        # Only disable speed controls when BOTH skip_viz AND skip_plotting are enabled
+        # (full batch mode - no per-step updates at all)
+        both_skipped = (
+            self.main_window.skip_visualization and self.main_window.skip_plotting
+        )
+
+        if both_skipped:
+            # Full batch mode - disable speed controls
             self.main_window.speed_slider.setEnabled(False)
             if hasattr(self.main_window, "speed_spin"):
                 self.main_window.speed_spin.setEnabled(False)
             self.main_window.max_speed_btn.setEnabled(False)
             self.status_bar.showMessage(
-                "Graph visualization skipped - will update at end"
+                "Full batch mode - running at max speed, updating at end"
+            )
+        elif self.main_window.skip_visualization:
+            # Skip graph viz only - plots still use speed slider
+            self.main_window.speed_slider.setEnabled(
+                not self.main_window.max_speed_btn.isChecked()
+            )
+            if hasattr(self.main_window, "speed_spin"):
+                self.main_window.speed_spin.setEnabled(
+                    not self.main_window.max_speed_btn.isChecked()
+                )
+            self.main_window.max_speed_btn.setEnabled(True)
+            self.status_bar.showMessage(
+                "Graph visualization skipped - plots still update per step"
             )
         else:
             # Re-enable speed controls
@@ -319,7 +338,34 @@ class VisualizationController:
         """Handle skip plot updates checkbox change."""
         self.main_window.skip_plotting = state == Qt.CheckState.Checked.value
 
-        if self.main_window.skip_plotting:
+        # Check if both skip options are now enabled (full batch mode)
+        both_skipped = (
+            self.main_window.skip_visualization and self.main_window.skip_plotting
+        )
+
+        if both_skipped:
+            # Full batch mode - disable speed controls
+            self.main_window.speed_slider.setEnabled(False)
+            if hasattr(self.main_window, "speed_spin"):
+                self.main_window.speed_spin.setEnabled(False)
+            self.main_window.max_speed_btn.setEnabled(False)
+            self.status_bar.showMessage(
+                "Full batch mode - running at max speed, updating at end"
+            )
+        elif self.main_window.skip_visualization:
+            # Skip graph viz only - re-enable speed controls for plotting
+            self.main_window.speed_slider.setEnabled(
+                not self.main_window.max_speed_btn.isChecked()
+            )
+            if hasattr(self.main_window, "speed_spin"):
+                self.main_window.speed_spin.setEnabled(
+                    not self.main_window.max_speed_btn.isChecked()
+                )
+            self.main_window.max_speed_btn.setEnabled(True)
+            self.status_bar.showMessage(
+                "Plot updates enabled - using speed slider delay"
+            )
+        elif self.main_window.skip_plotting:
             self.status_bar.showMessage("Plot updates skipped - will update at end")
         else:
             self.status_bar.showMessage("Plot updates enabled")
