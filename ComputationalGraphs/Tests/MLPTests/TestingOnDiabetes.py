@@ -92,9 +92,11 @@ epochs = 500
 numberOfIterationsInEpochs = len(X_train[0])
 totalIterations = epochs * numberOfIterationsInEpochs * fakeBatchSize
 MSEOverEpochs = []
-mlpGraph.CreateErrorBuffers(totalIterations)
+mlpGraph.CreateErrorBuffers(totalIterations, mse_buffer_size=numberOfIterationsInEpochs)
 errorBuffers = mlpGraph.errorBuffers
 fullMLPGraph.AddNode(*errorBuffers)
+if hasattr(mlpGraph, "mseNodes"):
+    fullMLPGraph.AddNode(*mlpGraph.mseNodes)
 
 print(f"\nTotal nodes: {len(fullMLPGraph.nodes)}")
 print(f"Training iterations: {totalIterations + networkLength + 1}")

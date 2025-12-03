@@ -117,6 +117,9 @@ class NodeEditorDialog(QDialog):
                 and not hasattr(self.node, "data")
             ):
                 current_value = self.node.buffer
+            # Special case: BufferNode-based nodes store 'size' in 'bufferSize'
+            elif param_name == "size" and hasattr(self.node, "bufferSize"):
+                current_value = self.node.bufferSize
             else:
                 current_value = getattr(self.node, param_name, param.default)
 

@@ -47,8 +47,10 @@ mlp.LoadData(X_train, y_train)
 
 # Create small error buffers
 total_iterations = mlp.GetPassLength() * len(X_train) * 5  # 5 epochs worth
-error_buffers = mlp.CreateErrorBuffers(total_iterations, allowNone=True)
+error_buffers = mlp.CreateErrorBuffers(total_iterations, allowNone=True, mse_buffer_size=len(X_train))
 fullGraph.AddNode(*error_buffers)
+if hasattr(mlp, "mseNodes"):
+    fullGraph.AddNode(*mlp.mseNodes)
 fullGraph.UpdateAdjacencyMatrix()
 
 # Reset processor forward state and prepare for forward processing AFTER adding buffers

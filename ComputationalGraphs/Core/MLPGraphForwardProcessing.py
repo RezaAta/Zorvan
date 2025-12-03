@@ -21,6 +21,8 @@ from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 from ComputationalGraphs.Nodes.LinearNode import LinearNode
 from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
+from ComputationalGraphs.Nodes.BufferNode import BufferNode
+from ComputationalGraphs.Nodes.MeanSquaredErrorNode import MeanSquaredErrorNode
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
 
@@ -63,6 +65,7 @@ class MLPGraphForwardProcessing(Graph):
         self.labelLayer = []
         self.errorLayer = []
         self.errorBuffers = []
+        self.mseNodes = []
         # Nodes for which successor candidation should be suppressed when processed
         # (used to prevent weights from initiating successor activation)
         self.stopping_nodes = []
@@ -330,7 +333,7 @@ class MLPGraphForwardProcessing(Graph):
             self.errorLayer.append(errorNode)
             self.AddNode(errorNode)
 
-    def CreateErrorBuffers(self, bufferSize, allowNone=True):
+    def CreateErrorBuffers(self, bufferSize, allowNone=True, mse_buffer_size=None):
         """
         Create BufferNode objects that record the error values over time for each
         error node in `self.errorLayer`.
@@ -345,6 +348,14 @@ class MLPGraphForwardProcessing(Graph):
         from ComputationalGraphs.Nodes.BufferNode import BufferNode
 
         self.errorBuffers = []
+        self.mseNodes = []
+        # Infer mse_buffer_size if not provided (forward mode stores data row-per-sample)
+        if mse_buffer_size is None:
+            try:
+                mse_buffer_size = len(self.labelLayer[0].data)
+            except Exception:
+                mse_buffer_size = bufferSize
+
         for i, err_node in enumerate(self.errorLayer):
             buf = BufferNode(
                 name=f"errorBuffer{i}", size=bufferSize, allowNone=allowNone
@@ -352,6 +363,14 @@ class MLPGraphForwardProcessing(Graph):
             buf.AddPreNode(err_node)
             self.errorBuffers.append(buf)
             self.AddNode(buf)
+            # Create an MSE node for this error (mean of squared errors over buffer)
+            # NOTE: We create MeanSquaredErrorNode nodes for visual/plotting use only
+            # Do NOT use these MSE nodes as inputs to Backprop/gradient computations.
+            # Backprop requires the raw instantaneous error (SubtractionNode).
+            mse_node = MeanSquaredErrorNode(name=f"MSE_y{i}", size=mse_buffer_size, mode="continuous")
+            mse_node.AddPreNode(err_node)
+            self.mseNodes.append(mse_node)
+            self.AddNode(mse_node)
 
         return self.errorBuffers
 

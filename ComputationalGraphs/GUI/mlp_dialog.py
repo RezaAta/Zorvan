@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSpinBox,
+    QCheckBox,
     QVBoxLayout,
     QWidget,
 )
@@ -99,6 +100,19 @@ class MLPGeneratorDialog(QDialog):
 
         layout.addLayout(button_layout)
 
+        # Additional options: Create MSE nodes for plotting
+        options_group = QGroupBox("Options")
+        options_layout = QFormLayout()
+        self.create_mse_checkbox = QCheckBox("Create MSE nodes for plotting")
+        self.create_mse_checkbox.setChecked(True)  # Default to enabled for plotting
+        self.mse_buffer_size = QSpinBox()
+        self.mse_buffer_size.setRange(1, 1000000)
+        self.mse_buffer_size.setValue(6)
+        options_layout.addRow(self.create_mse_checkbox)
+        options_layout.addRow("MSE buffer size:", self.mse_buffer_size)
+        options_group.setLayout(options_layout)
+        layout.addWidget(options_group)
+
     def _update_hidden_layer_sizes(self, num_layers: int):
         """Update the hidden layer size inputs based on number of layers."""
         # Clear existing spinboxes
@@ -144,6 +158,13 @@ class MLPGeneratorDialog(QDialog):
                 outputLayerType=output_act,
             )
             mlp_graph.BuildMLP()
+            # Optionally create error/MSE buffers for plotting in the GUI, if requested
+            try:
+                if self.create_mse_checkbox.isChecked():
+                    mlp_graph.CreateErrorBuffers(bufferSize=self.mse_buffer_size.value())
+            except Exception:
+                # Swallow errors here (CreateErrorBuffers may depend on loaded data shape)
+                pass
             mlp_graph.UpdateAdjacencyMatrix()
 
             self.generated_graph = mlp_graph
