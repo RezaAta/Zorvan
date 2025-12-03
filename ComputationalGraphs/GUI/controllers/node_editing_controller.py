@@ -53,6 +53,7 @@ class NodeEditingController:
             node_item: The NodeItem to replace
         """
         from ..replace_node_dialog import ReplaceNodeDialog
+        from ..node_item import NodeItem
 
         mw = self.main_window
         dlg = ReplaceNodeDialog(mw)
@@ -60,19 +61,38 @@ class NodeEditingController:
         if dlg.exec():
             new_type = dlg.selected_type()
             if new_type:
-                # Delegate orchestration to canvas
-                new_node = None
-                try:
-                    new_node = mw.canvas.replace_node_item(node_item, new_type)
-                except Exception:
+                # Determine current selection of node items on canvas
+                selected_items = [
+                    it for it in mw.canvas.scene.selectedItems() if isinstance(it, NodeItem)
+                ]
+                # If multiple nodes are selected and the clicked node is one of them,
+                # replace all selected nodes. Otherwise, replace only the clicked node.
+                multi_replace = len(selected_items) > 1 and node_item in selected_items
+                replaced_count = 0
+                if multi_replace:
+                    for it in selected_items:
+                        try:
+                            new_node = mw.canvas.replace_node_item(it, new_type)
+                            if new_node:
+                                replaced_count += 1
+                        except Exception:
+                            # continue replacing remaining nodes even if one fails
+                            continue
+                    mw.status_bar.showMessage(f"Replaced {replaced_count} node(s) with type '{new_type}'")
+                else:
+                    # Single node replacement - keep previous behavior (open editor)
                     new_node = None
-                if new_node:
-                    # Open editor to adjust node parameters right away
                     try:
-                        self.edit_node(node_item)
+                        new_node = mw.canvas.replace_node_item(node_item, new_type)
                     except Exception:
-                        pass
-                    mw.status_bar.showMessage(f"Replaced node with type '{new_type}'")
+                        new_node = None
+                    if new_node:
+                        # Open editor to adjust node parameters right away
+                        try:
+                            self.edit_node(node_item)
+                        except Exception:
+                            pass
+                        mw.status_bar.showMessage(f"Replaced node with type '{new_type}'")
 
     def edit_selected_node(self):
         """Open editor for the selected node on canvas."""
