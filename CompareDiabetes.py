@@ -140,11 +140,14 @@ print(f"Temporal delay: 3*(layers+1) = {3*(len(hidden_layers)+1)} timesteps")
 # Load data
 mlp_default.LoadData(X_train_transposed, y_train_transposed)
 
-# Create error buffers
-mlp_default.CreateErrorBuffers(total_iterations)
+# Create error buffers (mse buffer size = dataset size = number of training samples)
+mlp_default.CreateErrorBuffers(total_iterations, mse_buffer_size=len(X_train))
 errorBuffers = mlp_default.errorBuffers
 for errorBuffer in errorBuffers:
     graph_default.AddNode(errorBuffer)
+if hasattr(mlp_default, "mseNodes"):
+    for mse_node in mlp_default.mseNodes:
+        graph_default.AddNode(mse_node)
 
 # Network warmup
 networkLength = 3 * (mlp_default.numHiddenLayers + 1)

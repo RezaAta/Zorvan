@@ -206,12 +206,20 @@ class ExamplesLoader:
         backprop_graph = BackpropGraphForwardProcessing(mlpGraph, learningRate=0.5)
         backprop_graph.BuildBackprop()
 
+        # Create error buffers and MSE nodes for plotting
+        mlpGraph.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X_train))
+
         # Combine graphs
         fullGraph = Graph()
         for node in mlpGraph.nodes:
             fullGraph.AddNode(node)
         for node in backprop_graph.nodes:
             fullGraph.AddNode(node)
+        # Add error buffers and MSE nodes to the full graph
+        for eb in mlpGraph.errorBuffers:
+            fullGraph.AddNode(eb)
+        for mse in mlpGraph.mseNodes:
+            fullGraph.AddNode(mse)
 
         # Set starting nodes for forward processing (ONLY the first layer multiplication nodes)
         # Weight nodes will be marked as 'processed' by the GUI's graph_runner automatically
@@ -244,6 +252,9 @@ class ExamplesLoader:
         X_train = [[0.0], [0.25], [0.5], [0.75], [1.0]]
         y_train = [[0.0], [0.25], [0.5], [0.75], [1.0]]
         mlpGraph.LoadData(X_train, y_train)
+
+        # Create error buffers and MSE nodes for plotting
+        mlpGraph.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X_train))
 
         mlpGraph.UpdateAdjacencyMatrix()
 
@@ -285,11 +296,19 @@ class ExamplesLoader:
         backprop_graph = BackpropGraphForwardProcessing(mlpGraph, learningRate=0.01)
         backprop_graph.BuildBackprop()
 
+        # Create error buffers and MSE nodes for plotting
+        mlpGraph.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X_train))
+
         fullGraph = Graph()
         for node in mlpGraph.nodes:
             fullGraph.AddNode(node)
         for node in backprop_graph.nodes:
             fullGraph.AddNode(node)
+        # Add error buffers and MSE nodes to the full graph
+        for eb in mlpGraph.errorBuffers:
+            fullGraph.AddNode(eb)
+        for mse in mlpGraph.mseNodes:
+            fullGraph.AddNode(mse)
 
         # Set starting nodes (ONLY the first layer multiplication nodes)
         # Make a copy to avoid reference issues
@@ -337,11 +356,19 @@ class ExamplesLoader:
         backprop_graph = BackpropGraph(mlpGraph, learningRate=0.01)
         backprop_graph.BuildBackprop()
 
+        # Create error buffers and MSE nodes for plotting
+        mlpGraph.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X_train))
+
         fullGraph = Graph()
         for node in mlpGraph.nodes:
             fullGraph.AddNode(node)
         for node in backprop_graph.nodes:
             fullGraph.AddNode(node)
+        # Add error buffers and MSE nodes to the full graph
+        for eb in mlpGraph.errorBuffers:
+            fullGraph.AddNode(eb)
+        for mse in mlpGraph.mseNodes:
+            fullGraph.AddNode(mse)
 
         # Set starting nodes for concurrent processing: data streams + labels
         fullGraph.starting_nodes = [
@@ -462,12 +489,20 @@ class ExamplesLoader:
         y = [[0.0, 1.0, 1.0, 0.0]]
         mlpGraph.LoadData(X, y)
 
-        # Combine graphs (WITHOUT error buffers - they're added after warmup in TestingOnXOR.py)
+        # Create error buffers and MSE nodes for plotting
+        mlpGraph.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X[0]))
+
+        # Combine graphs (with error buffers and MSE nodes)
         fullGraph = Graph()
         for node in mlpGraph.nodes:
             fullGraph.AddNode(node)
         for node in backprop_graph.nodes:
             fullGraph.AddNode(node)
+        # Add error buffers and MSE nodes to the full graph
+        for eb in mlpGraph.errorBuffers:
+            fullGraph.AddNode(eb)
+        for mse in mlpGraph.mseNodes:
+            fullGraph.AddNode(mse)
 
         # Set starting nodes for concurrent processing (data stream nodes + labels)
         fullGraph.starting_nodes = [
@@ -529,12 +564,20 @@ class ExamplesLoader:
         backprop_graph = BackpropGraph(mlpGraph, learningRate=0.01)
         backprop_graph.BuildBackprop()
 
+        # Create error buffers and MSE nodes for plotting
+        mlpGraph.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X[0]))
+
         # Combine into a single Graph for the GUI
         fullGraph = Graph()
         for node in mlpGraph.nodes:
             fullGraph.AddNode(node)
         for node in backprop_graph.nodes:
             fullGraph.AddNode(node)
+        # Add error buffers and MSE nodes to the full graph
+        for eb in mlpGraph.errorBuffers:
+            fullGraph.AddNode(eb)
+        for mse in mlpGraph.mseNodes:
+            fullGraph.AddNode(mse)
 
         # Set starting nodes for concurrent processing: data streams + labels
         fullGraph.starting_nodes = [
@@ -595,11 +638,19 @@ class ExamplesLoader:
         backprop_graph = BackpropGraph(mlpGraph, learningRate=0.001)
         backprop_graph.BuildBackprop()
 
+        # Create error buffers and MSE nodes for plotting
+        mlpGraph.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X[0]))
+
         fullGraph = Graph()
         for node in mlpGraph.nodes:
             fullGraph.AddNode(node)
         for node in backprop_graph.nodes:
             fullGraph.AddNode(node)
+        # Add error buffers and MSE nodes to the full graph
+        for eb in mlpGraph.errorBuffers:
+            fullGraph.AddNode(eb)
+        for mse in mlpGraph.mseNodes:
+            fullGraph.AddNode(mse)
 
         fullGraph.starting_nodes = [
             input_pair[0] for input_pair in mlpGraph.inputLayer
@@ -968,12 +1019,20 @@ class ExamplesLoader:
         # Load dataset into the graph
         mlpGraph.LoadData(X, y)
 
+        # Create error buffers and MSE nodes for plotting
+        mlpGraph.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X[0]))
+
         # Combine graphs into a single Graph object for the GUI
         fullGraph = Graph()
         for node in mlpGraph.nodes:
             fullGraph.AddNode(node)
         for node in backprop_graph.nodes:
             fullGraph.AddNode(node)
+        # Add error buffers and MSE nodes to the full graph
+        for eb in mlpGraph.errorBuffers:
+            fullGraph.AddNode(eb)
+        for mse in mlpGraph.mseNodes:
+            fullGraph.AddNode(mse)
 
         # Starting nodes for concurrent processing: data streams + labels
         fullGraph.starting_nodes = [
@@ -1004,6 +1063,9 @@ class ExamplesLoader:
         X_train = [[0.0, 0.25, 0.5, 0.75, 1.0]]
         y_train = [[0.0, 0.25, 0.5, 0.75, 1.0]]
         mlpGraph.LoadData(X_train, y_train)
+
+        # Create error buffers and MSE nodes for plotting
+        mlpGraph.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X_train[0]))
 
         mlpGraph.UpdateAdjacencyMatrix()
 
@@ -1115,7 +1177,9 @@ class ExamplesLoader:
 
         # Create error buffers for concurrent training (align with output delay)
         try:
-            anfis.CreateErrorBuffers(bufferSize=6)
+            # Buffer size should match dataset size (samples per feature row)
+            dataset_size = len(X[0]) if X and hasattr(X, '__iter__') and len(X) > 0 else 6
+            anfis.CreateErrorBuffers(bufferSize=dataset_size)
         except Exception:
             # If CreateErrorBuffers missing or fails, ignore; GUI can create error buffers later
             pass

@@ -49,6 +49,7 @@ class MLPGraph(Graph):
         self.stopping_nodes = []
         self.labelLayer = []
         self.errorLayer = []
+        self.mseNodes = []
 
     def BuildMLP(self):
         """Build the MLP architecture by initializing and connecting layers."""
@@ -133,14 +134,32 @@ class MLPGraph(Graph):
         self.LoadData(xTest, yTest)
         self._MountPredictionBuffers(predictionSize=len(xTest[0]))
 
-    def CreateErrorBuffers(self, bufferSize):
+    def CreateErrorBuffers(self, bufferSize, mse_buffer_size=None):
         self.errorBuffers = []
+        # Initialize mseNodes list when creating buffers
+        self.mseNodes = []
+
+        # Determine infered mse_buffer_size if not provided
+        if mse_buffer_size is None:
+            # For concurrent MLP data is row-per-feature; dataset size is len of column (first input's data)
+            try:
+                mse_buffer_size = len(self.inputLayer[0][0].data)
+            except Exception:
+                mse_buffer_size = bufferSize
 
         for i in range(len(self.errorLayer)):
             errorBuffer = BufferNode(name=f"errorBuffer{i}", size=bufferSize)
             errorBuffer.AddPreNode(self.errorLayer[i])
             self.errorBuffers.append(errorBuffer)
             self.AddNode(errorBuffer)
+            # Also create an MSE node connected to this error node for plotting
+            # NOTE: We create MeanSquaredErrorNode nodes for visual/plotting use only
+            # Do NOT use these MSE nodes as inputs to Backprop/gradient computations.
+            # Backprop requires the raw instantaneous error (SubtractionNode).
+            mse_node = MeanSquaredErrorNode(name=f"MSE_y{i}", size=mse_buffer_size, mode="continuous")
+            mse_node.AddPreNode(self.errorLayer[i])
+            self.mseNodes.append(mse_node)
+            self.AddNode(mse_node)
 
     def _MountPredictionBuffers(self, predictionSize):
         self.predictionBuffers = []

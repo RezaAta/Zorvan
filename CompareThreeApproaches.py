@@ -121,11 +121,14 @@ X_transposed = (
 y_transposed = y.T.tolist()  # [[y_sample1, y_sample2, ...]]
 mlp_default.LoadData(X_transposed, y_transposed)
 
-# Create error buffers for tracking
-mlp_default.CreateErrorBuffers(total_iterations)
+# Create error buffers for tracking. We want MSE node buffer size = dataset size
+mlp_default.CreateErrorBuffers(total_iterations, mse_buffer_size=len(X_transposed[0]))
 errorBuffers = mlp_default.errorBuffers
 for errorBuffer in errorBuffers:
     graph_default.AddNode(errorBuffer)
+if hasattr(mlp_default, "mseNodes"):
+    for mse_node in mlp_default.mseNodes:
+        graph_default.AddNode(mse_node)
 
 # Network warmup - fill buffers with initial values
 networkLength = 3 * (mlp_default.numHiddenLayers + 1)
@@ -218,6 +221,13 @@ for node in mlp_forward.nodes:
     graph_forward.AddNode(node)
 for node in backprop_forward.nodes:
     graph_forward.AddNode(node)
+# Create MSE nodes for forward graph (use dataset size = len(X))
+try:
+    mlp_forward.CreateErrorBuffers(total_iterations, allowNone=True, mse_buffer_size=len(X))
+    for m in mlp_forward.mseNodes:
+        graph_forward.AddNode(m)
+except Exception:
+    pass
 
 processor_forward = GraphProcessor(graph_forward, verbose=False)
 

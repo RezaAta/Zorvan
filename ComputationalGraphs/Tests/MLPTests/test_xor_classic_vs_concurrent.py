@@ -194,9 +194,11 @@ epochs = 2000
 numberOfIterationsInEpochs = 4
 totalIterations = epochs * numberOfIterationsInEpochs * fakeBatchSize
 
-mlpGraph.CreateErrorBuffers(totalIterations)
+mlpGraph.CreateErrorBuffers(totalIterations, mse_buffer_size=numberOfIterationsInEpochs)
 errorBuffers = mlpGraph.errorBuffers
 fullMLPGraph.AddNode(*errorBuffers)
+if hasattr(mlpGraph, "mseNodes"):
+    fullMLPGraph.AddNode(*mlpGraph.mseNodes)
 
 start_time = time.time()
 fullGraphProcessor.ComputeGraph(totalIterations + 1)

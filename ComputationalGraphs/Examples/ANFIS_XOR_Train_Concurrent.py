@@ -43,7 +43,8 @@ def run_training(epochs=50, learning_rate=0.5):
     total_iterations = epochs * 4
 
     # Create error buffers to capture MSE across iterations (optional)
-    mlp.CreateErrorBuffers(total_iterations)
+    dataset_size = len(X[0]) if X and hasattr(X, '__iter__') and len(X) > 0 else 4
+    mlp.CreateErrorBuffers(total_iterations, mse_buffer_size=dataset_size)
     for eb in mlp.errorBuffers:
         combined.AddNode(eb)
 
