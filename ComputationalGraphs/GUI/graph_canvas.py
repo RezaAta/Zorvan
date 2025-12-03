@@ -1052,10 +1052,10 @@ class GraphCanvas(QGraphicsView):
     def cut_selected(self):
         """Copy selected nodes then remove them from the canvas."""
         self.copy_selected()
-        self.remove_selected_items()
+        self.delete_selected_with_undo()
 
     def paste_clipboard(self):
-        """Paste nodes and edges from the internal clipboard.
+        """Paste nodes and edges from the internal clipboard with undo support.
 
         Creates true duplicates of the copied nodes with all their attributes preserved.
         New nodes get unique names (with _copy suffix) and are placed at cursor position
@@ -1101,6 +1101,8 @@ class GraphCanvas(QGraphicsView):
             copy_center_y = 0
 
         new_nodes = []
+        node_positions = {}  # Track positions for undo command
+
         for idx, info in enumerate(nodes_info):
             class_name = info.get("class")
             attrs = info.get("attrs", {})
@@ -1161,13 +1163,16 @@ class GraphCanvas(QGraphicsView):
 
             self.add_node_item(new_node, pos_x, pos_y)
             new_nodes.append(new_node)
+            node_positions[new_node] = (pos_x, pos_y)
 
         # Recreate internal edges between pasted nodes
+        pasted_edges = []
         for s_idx, t_idx in edges:
             try:
                 s_node = new_nodes[s_idx]
                 t_node = new_nodes[t_idx]
                 self.add_edge_item(s_node, t_node)
+                pasted_edges.append((s_node, t_node))
             except Exception as e:
                 print(f"[Copy/Paste] Warning: Could not recreate edge: {e}")
 
@@ -1179,6 +1184,14 @@ class GraphCanvas(QGraphicsView):
             ni = self.node_items.get(n)
             if ni:
                 ni.setSelected(True)
+
+        # Push undo command for the paste operation
+        undo_stack = self._get_undo_stack()
+        graph = getattr(self, "graph", None)
+        if undo_stack is not None and graph is not None and new_nodes:
+            from .commands import PasteCommand
+            cmd = PasteCommand(self, graph, new_nodes, pasted_edges, node_positions)
+            undo_stack.push(cmd)
 
     def apply_layout(self, layout_type="spring"):
         """No-op layout plumbing: preserve method signature for compatibility.

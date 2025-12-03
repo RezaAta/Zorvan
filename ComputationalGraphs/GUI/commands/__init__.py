@@ -7,11 +7,13 @@ This module provides QUndoCommand subclasses for all undoable UI operations:
 - MoveNodesCommand: Moving nodes
 - AddEdgeCommand: Adding an edge between nodes
 - RemoveEdgeCommand: Removing an edge
+- PasteCommand: Pasting nodes and edges from clipboard
 """
 
 from .add_edge_command import AddEdgeCommand
 from .add_node_command import AddNodeCommand
 from .move_nodes_command import MoveNodesCommand
+from .paste_command import PasteCommand
 from .remove_edge_command import RemoveEdgeCommand
 from .remove_items_command import RemoveItemsCommand
 
@@ -21,4 +23,5 @@ __all__ = [
     "MoveNodesCommand",
     "AddEdgeCommand",
     "RemoveEdgeCommand",
+    "PasteCommand",
 ]

@@ -257,5 +257,57 @@ class TestMoveNodesCommand:
         assert abs(node_item.pos().y() - 50) < 1
 
 
+class TestPasteCommand:
+    """Tests for PasteCommand (via paste_clipboard)."""
+
+    def test_paste_undo(self, setup_canvas):
+        """Test that pasting nodes can be undone."""
+        canvas, graph, undo_stack = setup_canvas
+
+        # Create a node and copy it
+        node = AdditionNode(name="ToCopy")
+        graph.AddNode(node)
+        node_item = canvas.add_node_item(node, 100, 100)
+        node_item.setSelected(True)
+
+        initial_node_count = len(canvas.node_items)
+
+        # Copy and paste
+        canvas.copy_selected()
+        canvas.paste_clipboard()
+
+        # Verify a new node was created
+        assert len(canvas.node_items) == initial_node_count + 1
+
+        # Undo the paste
+        undo_stack.undo()
+
+        # Verify the pasted node was removed
+        assert len(canvas.node_items) == initial_node_count
+
+    def test_paste_redo(self, setup_canvas):
+        """Test that pasting nodes can be redone after undo."""
+        canvas, graph, undo_stack = setup_canvas
+
+        # Create a node and copy it
+        node = ContainerNode(name="ToCopy2")
+        graph.AddNode(node)
+        node_item = canvas.add_node_item(node, 100, 100)
+        node_item.setSelected(True)
+
+        initial_node_count = len(canvas.node_items)
+
+        # Copy and paste
+        canvas.copy_selected()
+        canvas.paste_clipboard()
+
+        # Undo and redo
+        undo_stack.undo()
+        undo_stack.redo()
+
+        # Verify the pasted node was restored
+        assert len(canvas.node_items) == initial_node_count + 1
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
