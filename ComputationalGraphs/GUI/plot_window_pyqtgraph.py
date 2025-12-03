@@ -194,7 +194,8 @@ class PlotWindowPG(QWidget):
         self.curves = {}
         for i, node in enumerate(self.nodes):
             pen = pg.mkPen(color=self.colors[i % len(self.colors)], width=2)
-            curve = self.plot_widget.plot([], [], pen=pen, name=node.name)
+            # Don't pass name= here; legend items are added manually below to avoid duplicates
+            curve = self.plot_widget.plot([], [], pen=pen)
             self.curves[node] = curve
 
         # Legend
@@ -322,7 +323,8 @@ class PlotWindowPG(QWidget):
         self.nodes.append(node)
         self.data[node] = []
         pen = pg.mkPen(color=self.colors[len(self.nodes) % len(self.colors)], width=2)
-        curve = self.plot_widget.plot([], [], pen=pen, name=node.name)
+        # Don't pass name= here; legend items are added manually below to avoid duplicates
+        curve = self.plot_widget.plot([], [], pen=pen)
         self.curves[node] = curve
         # Add legend entry only if name not present
         try:
