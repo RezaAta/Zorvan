@@ -3,7 +3,7 @@ Main window for the ComputationalGraphs visual editor.
 """
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtGui import QColor, QFont, QUndoStack
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -127,6 +127,9 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Computational Graphs Visual Editor")
         self.resize(1200, 800)
+
+        # Undo/Redo stack for UI actions
+        self.undo_stack = QUndoStack(self)
 
         # Core components
         # Create a new Graph object and use set_graph to keep everything in sync

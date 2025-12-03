@@ -41,10 +41,23 @@ class MenuToolbarController:
         mw.exit_action.setShortcut(QKeySequence.StandardKey.Quit)
         mw.exit_action.triggered.connect(mw.close)
 
+        # Undo / Redo actions
+        mw.undo_action = QAction("&Undo", mw)
+        mw.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
+        mw.undo_action.triggered.connect(mw.undo_stack.undo)
+        mw.undo_stack.canUndoChanged.connect(mw.undo_action.setEnabled)
+        mw.undo_action.setEnabled(mw.undo_stack.canUndo())
+
+        mw.redo_action = QAction("&Redo", mw)
+        mw.redo_action.setShortcut(QKeySequence.StandardKey.Redo)
+        mw.redo_action.triggered.connect(mw.undo_stack.redo)
+        mw.undo_stack.canRedoChanged.connect(mw.redo_action.setEnabled)
+        mw.redo_action.setEnabled(mw.undo_stack.canRedo())
+
         # Edit actions
         mw.delete_action = QAction("&Delete", mw)
         mw.delete_action.setShortcut(QKeySequence.StandardKey.Delete)
-        mw.delete_action.triggered.connect(mw.canvas.remove_selected_items)
+        mw.delete_action.triggered.connect(mw.canvas.delete_selected_with_undo)
 
         mw.edit_node_action = QAction("&Edit Node...", mw)
         mw.edit_node_action.setShortcut(QKeySequence("Ctrl+E"))
@@ -91,6 +104,9 @@ class MenuToolbarController:
 
         # Edit menu
         edit_menu = menubar.addMenu("&Edit")
+        edit_menu.addAction(mw.undo_action)
+        edit_menu.addAction(mw.redo_action)
+        edit_menu.addSeparator()
         edit_menu.addAction(mw.delete_action)
         edit_menu.addAction(mw.copy_action)
         edit_menu.addAction(mw.cut_action)

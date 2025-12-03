@@ -75,6 +75,7 @@ class NodeItem(QGraphicsEllipseItem):
         # Track move state to avoid unnecessary updates when clicking without movement
         self._moved = False
         self._pressed_pos = None
+        self._move_start_scene_pos = None  # Track scene position at start of move
 
     def set_label_text(self, text: str):
         """Set the node label text and re-center it above the node.
@@ -341,6 +342,8 @@ class NodeItem(QGraphicsEllipseItem):
         try:
             self._moved = False
             self._pressed_pos = event.pos()
+            # Store scene position at start of potential move for undo
+            self._move_start_scene_pos = self.pos()
         except Exception:
             pass
         if event.button() == Qt.MouseButton.LeftButton:
@@ -371,6 +374,11 @@ class NodeItem(QGraphicsEllipseItem):
             scene = self.scene()
             if scene and scene.views():
                 view = scene.views()[0]
+
+                # Push undo command if the item actually moved
+                if getattr(self, "_moved", False):
+                    self._push_move_command(view)
+
                 if hasattr(view, "_update_scene_rect") and getattr(
                     view, "auto_expand_to_nodes", False
                 ):
@@ -380,13 +388,59 @@ class NodeItem(QGraphicsEllipseItem):
                             view._update_scene_rect()
                     except Exception:
                         pass
-                    finally:
-                        # Reset move tracking
-                        try:
-                            self._moved = False
-                            self._pressed_pos = None
-                        except Exception:
-                            pass
+                # Reset move tracking
+                self._moved = False
+                self._pressed_pos = None
+                self._move_start_scene_pos = None
+        except Exception:
+            pass
+
+    def _push_move_command(self, view):
+        """Push a move command to the undo stack if available."""
+        try:
+            # Get the undo stack from the main window
+            main_window = view.window()
+            if not main_window or not hasattr(main_window, "undo_stack"):
+                return
+
+            undo_stack = main_window.undo_stack
+            old_pos = getattr(self, "_move_start_scene_pos", None)
+            if old_pos is None:
+                return
+
+            new_pos = self.pos()
+            # Only push if position actually changed
+            if abs(old_pos.x() - new_pos.x()) < 0.1 and abs(old_pos.y() - new_pos.y()) < 0.1:
+                return
+
+            # Collect all selected nodes that moved together
+            from .commands import MoveNodesCommand
+            node_positions = []
+
+            # Get all selected NodeItems from this item's scene
+            scene = self.scene()
+            if scene:
+                selected_items = [
+                    item for item in scene.selectedItems()
+                    if isinstance(item, NodeItem)
+                ]
+
+                # If this item is selected, include all selected items
+                if self in selected_items:
+                    for item in selected_items:
+                        item_old_pos = getattr(item, "_move_start_scene_pos", None)
+                        if item_old_pos is not None:
+                            node_positions.append((item.node, item_old_pos, item.pos()))
+                else:
+                    # Just this item
+                    node_positions.append((self.node, old_pos, new_pos))
+            else:
+                # No scene, just add this item
+                node_positions.append((self.node, old_pos, new_pos))
+
+            if node_positions:
+                cmd = MoveNodesCommand(view, node_positions)
+                undo_stack.push(cmd)
         except Exception:
             pass
 

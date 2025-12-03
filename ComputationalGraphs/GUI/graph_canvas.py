@@ -379,6 +379,79 @@ class GraphCanvas(QGraphicsView):
         if getattr(self, "auto_expand_to_nodes", False):
             self._update_scene_rect()
 
+    def delete_selected_with_undo(self):
+        """Remove selected nodes and edges with undo support.
+
+        Creates a RemoveItemsCommand and pushes it to the undo stack.
+        """
+        selected = self.scene.selectedItems()
+        if not selected:
+            return
+
+        # Separate nodes and edges
+        node_items = [item for item in selected if isinstance(item, NodeItem)]
+        edge_items = [item for item in selected if isinstance(item, EdgeItem)]
+
+        if not node_items and not edge_items:
+            return
+
+        # Get the undo stack from the main window
+        undo_stack = self._get_undo_stack()
+        if undo_stack is None:
+            # Fallback to direct removal if no undo stack available
+            self.remove_selected_items()
+            return
+
+        # Get the graph reference
+        graph = getattr(self, "graph", None)
+        if graph is None:
+            self.remove_selected_items()
+            return
+
+        # Create and push the command
+        from .commands import RemoveItemsCommand
+        cmd = RemoveItemsCommand(self, graph, node_items, edge_items)
+        undo_stack.push(cmd)
+
+    def _get_undo_stack(self):
+        """Get the undo stack from the main window if available."""
+        try:
+            # The parent of GraphCanvas should be the MainWindow
+            main_window = self.parent()
+            if main_window and hasattr(main_window, "undo_stack"):
+                return main_window.undo_stack
+        except Exception:
+            pass
+        return None
+
+    def add_edge_with_undo(self, source_node, target_node):
+        """Add an edge between two nodes with undo support."""
+        undo_stack = self._get_undo_stack()
+        graph = getattr(self, "graph", None)
+
+        if undo_stack is None or graph is None:
+            # Fallback to direct add
+            return self.add_edge_item(source_node, target_node)
+
+        from .commands import AddEdgeCommand
+        cmd = AddEdgeCommand(self, graph, source_node, target_node)
+        undo_stack.push(cmd)
+
+    def add_node_with_undo(self, node, x, y):
+        """Add a node to the canvas with undo support."""
+        undo_stack = self._get_undo_stack()
+        graph = getattr(self, "graph", None)
+
+        if undo_stack is None or graph is None:
+            # Fallback: add directly
+            if graph:
+                graph.AddNode(node)
+            return self.add_node_item(node, x, y)
+
+        from .commands import AddNodeCommand
+        cmd = AddNodeCommand(self, graph, node, x, y)
+        undo_stack.push(cmd)
+
     def mousePressEvent(self, event):
         """Handle mouse press for panning with middle button."""
         if event.button() == Qt.MouseButton.MiddleButton:
@@ -455,10 +528,10 @@ class GraphCanvas(QGraphicsView):
                     break
 
             if target_node:
-                # Create edges from all start nodes to this target
+                # Create edges from all start nodes to this target (with undo support)
                 for start in self.connection_start_nodes:
                     if start.node != target_node.node:
-                        self.add_edge_item(start.node, target_node.node)
+                        self.add_edge_with_undo(start.node, target_node.node)
             else:
                 # Released on empty space: emit a signal so controller can open
                 # a node-type search dialog and optionally create a new node
@@ -678,7 +751,8 @@ class GraphCanvas(QGraphicsView):
                 node = DisplayNode(name=f"Display_{node_id}")
 
             if node:
-                self.add_node_item(node, drop_pos.x(), drop_pos.y())
+                # Use undo-aware add if available
+                self.add_node_with_undo(node, drop_pos.x(), drop_pos.y())
                 event.acceptProposedAction()
 
     # Note: _create_node_by_type and the earlier replace_node_item implementation were removed
