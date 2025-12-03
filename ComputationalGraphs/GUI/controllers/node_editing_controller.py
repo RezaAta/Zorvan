@@ -146,29 +146,24 @@ class NodeEditingController:
                 pass
             return
 
-        # Add to authoritative graph if present
+        # Add node with undo support
         try:
-            if hasattr(mw, "graph") and mw.graph is not None:
-                mw.graph.AddNode(new_node)
+            canvas.add_node_with_undo(new_node, scene_pos.x(), scene_pos.y())
         except Exception:
-            pass
-
-        # Add visual node at drop position
-        try:
-            canvas.add_node_item(new_node, scene_pos.x(), scene_pos.y())
-        except Exception:
-            # fallback to 0,0 if add fails
+            # fallback to direct add if undo method fails
             try:
-                canvas.add_node_item(new_node, 0, 0)
+                if hasattr(mw, "graph") and mw.graph is not None:
+                    mw.graph.AddNode(new_node)
+                canvas.add_node_item(new_node, scene_pos.x(), scene_pos.y())
             except Exception:
                 pass
 
-        # Connect all start nodes to the new node
+        # Connect all start nodes to the new node with undo support
         try:
             for start_item in start_node_items:
                 try:
                     if start_item.node != new_node:
-                        canvas.add_edge_item(start_item.node, new_node)
+                        canvas.add_edge_with_undo(start_item.node, new_node)
                 except Exception:
                     pass
         except Exception:
