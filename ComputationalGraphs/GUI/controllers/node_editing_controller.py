@@ -127,13 +127,15 @@ class NodeEditingController:
             return
 
         canvas = mw.canvas
-        # Determine a unique name for new node
+        # Determine a unique name for new node using short name mapping
         try:
-            node_id = len(canvas.node_items)
-            base_name = f"{new_type}_{node_id}"
-            unique_name = canvas._generate_unique_name(base_name)
+            # Get short display name from the centralized mapping
+            short_name = canvas.get_short_name(new_type)
+            # Use incremental unique name helper which preserves the base
+            # name unless a collision occurs.
+            unique_name = canvas._ensure_unique_name(short_name)
         except Exception:
-            unique_name = f"{new_type}_0"
+            unique_name = new_type
 
         # Use canvas factory to create the node with a name attribute
         new_node = canvas._create_node_by_class_name(

@@ -50,6 +50,10 @@ def test_create_node_and_connect_on_drop(monkeypatch):
             created_node = node
             break
     assert found
+    # New nodes created via drop should use short names without '_copy' suffix
+    assert "_copy" not in created_node.name
+    # Should use short name 'Mul' not full class name 'MultiplicationNode'
+    assert created_node.name == "Mul"
 
     # And there should be an edge from add1 to the created multiplication node
     assert any(
@@ -138,6 +142,9 @@ def test_create_node_and_connect_from_selected_multiple_nodes(monkeypatch):
     assert len(mult_nodes) == 1
 
     created_node = mult_nodes[0]
+    # Should use short name 'Mul' not full class name or '_copy' suffix
+    assert "_copy" not in created_node.name
+    assert created_node.name == "Mul"
     # There should be edges from both add1 and add2 to the new node
     sources = {
         e.source_node.node

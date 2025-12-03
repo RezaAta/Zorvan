@@ -28,6 +28,9 @@ def test_copy_paste_nodes():
     assert len(canvas.node_items) == pre_node_count + 2
     # Ensure newly pasted nodes are selected (2 new nodes)
     assert len(canvas.scene.selectedItems()) == 2
+    # Pasted nodes should have names indicating they are copies (i.e. contain '_copy')
+    pasted_nodes = [item.node for item in canvas.scene.selectedItems()]
+    assert all("_copy" in n.name for n in pasted_nodes)
     assert len(canvas.edge_items) >= pre_edge_count + 1
     app.quit()
 

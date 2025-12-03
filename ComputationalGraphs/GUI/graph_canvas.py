@@ -13,6 +13,55 @@ from .node_item import NodeItem
 class GraphCanvas(QGraphicsView):
     """Interactive canvas for node graph editing."""
 
+    # Mapping from node class names to short display names for UI
+    NODE_SHORT_NAMES = {
+        # Data nodes
+        "DataStreamNode": "Data",
+        "DynamicDataStreamNode": "DynData",
+        "BufferNode": "Buffer",
+        "MovingAverageNode": "MovAvg",
+        "SequencerNode": "Seq",
+        "ListNode": "List",
+        "ExtractListElement": "Extract",
+        "ContainerNode": "Container",
+        # Arithmetic nodes
+        "AdditionNode": "Add",
+        "SubtractionNode": "Sub",
+        "MultiplicationNode": "Mul",
+        "DivisionNode": "Div",
+        # Statistical nodes
+        "MaxNode": "Max",
+        "MinNode": "Min",
+        "MeanSquaredErrorNode": "MSE",
+        # Activation functions
+        "SigmoidNode": "Sigmoid",
+        "SigmoidDerivativeNode": "Sigmoid'",
+        "ReLUNode": "ReLU",
+        "ReLUDerivativeNode": "ReLU'",
+        "LinearNode": "Linear",
+        "TanhNode": "Tanh",
+        "TanhDerivativeNode": "Tanh'",
+        "GaussianNode": "Gauss",
+        "PiecewiseLinearNode": "Piecewise",
+        # Evolutionary algorithm nodes
+        "TournamentSelectionNode": "Tournament",
+        "BulkTournamentNode": "BulkTour",
+        "CrossoverNode": "Crossover",
+        "SingleCrossoverNode": "SingleXO",
+        "MutationNode": "Mutation",
+        "DeJongSphereNode": "DeJong",
+        # Utility nodes
+        "DisplayNode": "Display",
+    }
+
+    @classmethod
+    def get_short_name(cls, class_name: str) -> str:
+        """Get the short display name for a node class name.
+
+        Returns the mapped short name if available, otherwise returns the class name.
+        """
+        return cls.NODE_SHORT_NAMES.get(class_name, class_name)
+
     node_selected = pyqtSignal(object)  # Emits the selected node
     edge_created = pyqtSignal(object, object)  # Emits (source_node, target_node)
     edge_removed = pyqtSignal(
@@ -410,6 +459,7 @@ class GraphCanvas(QGraphicsView):
 
         # Create and push the command
         from .commands import RemoveItemsCommand
+
         cmd = RemoveItemsCommand(self, graph, node_items, edge_items)
         undo_stack.push(cmd)
 
@@ -434,6 +484,7 @@ class GraphCanvas(QGraphicsView):
             return self.add_edge_item(source_node, target_node)
 
         from .commands import AddEdgeCommand
+
         cmd = AddEdgeCommand(self, graph, source_node, target_node)
         undo_stack.push(cmd)
 
@@ -449,6 +500,7 @@ class GraphCanvas(QGraphicsView):
             return self.add_node_item(node, x, y)
 
         from .commands import AddNodeCommand
+
         cmd = AddNodeCommand(self, graph, node, x, y)
         undo_stack.push(cmd)
 
@@ -667,88 +719,88 @@ class GraphCanvas(QGraphicsView):
             )
 
             node = None
-            node_id = len(self.node_items)
+            # Get short name and ensure uniqueness
+            short_name = self.get_short_name(node_type)
+            unique_name = self._ensure_unique_name(short_name)
 
             # Data nodes
             if node_type == "DataStreamNode":
-                node = DataStreamNode(name=f"Data_{node_id}", data=[1, 2, 3, 4, 5])
+                node = DataStreamNode(name=unique_name, data=[1, 2, 3, 4, 5])
             elif node_type == "DynamicDataStreamNode":
-                node = DynamicDataStreamNode(name=f"DynData_{node_id}")
+                node = DynamicDataStreamNode(name=unique_name)
             elif node_type == "BufferNode":
-                node = BufferNode(name=f"Buffer_{node_id}", size=3)
+                node = BufferNode(name=unique_name, size=3)
             elif node_type == "MovingAverageNode":
                 from ComputationalGraphs.Nodes.MovingAverageNode import (
                     MovingAverageNode,
                 )
 
-                node = MovingAverageNode(
-                    name=f"MovAvg_{node_id}", size=10, mode="continuous"
-                )
+                node = MovingAverageNode(name=unique_name, size=10, mode="continuous")
             elif node_type == "SequencerNode":
-                node = SequencerNode(name=f"Seq_{node_id}")
+                node = SequencerNode(name=unique_name)
             elif node_type == "ListNode":
-                node = ListNode(name=f"List_{node_id}")
+                node = ListNode(name=unique_name)
             elif node_type == "ExtractListElement":
                 # Default to extracting index 0; user can edit properties later
-                node = ExtractListElement(name=f"ExtractList_{node_id}", index=0)
+                node = ExtractListElement(name=unique_name, index=0)
             elif node_type == "ContainerNode":
-                node = ContainerNode(name=f"Container_{node_id}")
+                node = ContainerNode(name=unique_name)
 
             # Arithmetic nodes
             elif node_type == "AdditionNode":
-                node = AdditionNode(name=f"Add_{node_id}")
+                node = AdditionNode(name=unique_name)
             elif node_type == "SubtractionNode":
-                node = SubtractionNode(name=f"Sub_{node_id}")
+                node = SubtractionNode(name=unique_name)
             elif node_type == "MultiplicationNode":
-                node = MultiplicationNode(name=f"Mul_{node_id}")
+                node = MultiplicationNode(name=unique_name)
             elif node_type == "DivisionNode":
-                node = DivisionNode(name=f"Div_{node_id}")
+                node = DivisionNode(name=unique_name)
 
             # Statistical nodes
             elif node_type == "MaxNode":
-                node = MaxNode(name=f"Max_{node_id}")
+                node = MaxNode(name=unique_name)
             elif node_type == "MinNode":
-                node = MinNode(name=f"Min_{node_id}")
+                node = MinNode(name=unique_name)
             elif node_type == "MeanSquaredErrorNode":
-                node = MeanSquaredErrorNode(name=f"MSE_{node_id}")
+                node = MeanSquaredErrorNode(name=unique_name)
 
             # Activation functions
             elif node_type == "SigmoidNode":
-                node = SigmoidNode(name=f"Sigmoid_{node_id}")
+                node = SigmoidNode(name=unique_name)
             elif node_type == "SigmoidDerivativeNode":
-                node = SigmoidDerivativeNode(name=f"Sigmoid'_{node_id}")
+                node = SigmoidDerivativeNode(name=unique_name)
             elif node_type == "ReLUNode":
-                node = ReLUNode(name=f"ReLU_{node_id}")
+                node = ReLUNode(name=unique_name)
             elif node_type == "ReLUDerivativeNode":
-                node = ReLUDerivativeNode(name=f"ReLU'_{node_id}")
+                node = ReLUDerivativeNode(name=unique_name)
             elif node_type == "LinearNode":
-                node = LinearNode(name=f"Linear_{node_id}")
+                node = LinearNode(name=unique_name)
             elif node_type == "TanhNode":
-                node = TanhNode(name=f"Tanh_{node_id}")
+                node = TanhNode(name=unique_name)
             elif node_type == "TanhDerivativeNode":
-                node = TanhDerivativeNode(name=f"Tanh'_{node_id}")
+                node = TanhDerivativeNode(name=unique_name)
             elif node_type == "GaussianNode":
-                node = GaussianNode(name=f"Gauss_{node_id}")
+                node = GaussianNode(name=unique_name)
             elif node_type == "PiecewiseLinearNode":
-                node = PiecewiseLinearNode(name=f"Piecewise_{node_id}")
+                node = PiecewiseLinearNode(name=unique_name)
 
             # Evolutionary algorithm nodes
             elif node_type == "TournamentSelectionNode":
-                node = TournamentSelectionNode(name=f"Tournament_{node_id}")
+                node = TournamentSelectionNode(name=unique_name)
             elif node_type == "BulkTournamentNode":
-                node = BulkTournamentNode(name=f"BulkTour_{node_id}")
+                node = BulkTournamentNode(name=unique_name)
             elif node_type == "CrossoverNode":
-                node = CrossoverNode(name=f"Crossover_{node_id}")
+                node = CrossoverNode(name=unique_name)
             elif node_type == "SingleCrossoverNode":
-                node = SingleCrossoverNode(name=f"SingleXO_{node_id}")
+                node = SingleCrossoverNode(name=unique_name)
             elif node_type == "MutationNode":
-                node = MutaionNode(name=f"Mutation_{node_id}")
+                node = MutaionNode(name=unique_name)
             elif node_type == "DeJongSphereNode":
-                node = DeJongSphereNode(name=f"DeJong_{node_id}")
+                node = DeJongSphereNode(name=unique_name)
 
             # Utility nodes
             elif node_type == "DisplayNode":
-                node = DisplayNode(name=f"Display_{node_id}")
+                node = DisplayNode(name=unique_name)
 
             if node:
                 # Use undo-aware add if available
@@ -1007,6 +1059,48 @@ class GraphCanvas(QGraphicsView):
 
         return candidate
 
+    def _ensure_unique_name(self, base_name):
+        """Return a unique base_name by incrementing a numeric suffix if needed.
+
+        Unlike _generate_unique_name which appends _copy (used for copy/paste),
+        this method preserves the base_name as-is when unused and only adds
+        an incremental numeric suffix when necessary. Examples:
+            'Node' -> 'Node'
+            'Node' (exists) -> 'Node_1'
+            'Node_1' (exists) -> 'Node_2'
+        """
+        if not base_name:
+            base_name = "Node"
+
+        existing_names = {n.name for n in self.node_items.keys() if hasattr(n, "name")}
+
+        if base_name not in existing_names:
+            return base_name
+
+        # Find existing with numeric suffixes and choose next
+        import re
+
+        candidate_pattern = re.compile(rf"^{re.escape(base_name)}(?:_(\d+))?$")
+        max_num = 0
+        for name in existing_names:
+            m = candidate_pattern.match(name)
+            if m:
+                num_str = m.group(1)
+                if num_str:
+                    try:
+                        num = int(num_str)
+                        if num > max_num:
+                            max_num = num
+                    except Exception:
+                        pass
+                else:
+                    # base_name exists with no suffix, treat as 0
+                    if max_num == 0:
+                        max_num = 0
+
+        next_num = max_num + 1
+        return f"{base_name}_{next_num}"
+
     def copy_selected(self):
         """Copy selected nodes and internal edges to the internal clipboard.
 
@@ -1190,6 +1284,7 @@ class GraphCanvas(QGraphicsView):
         graph = getattr(self, "graph", None)
         if undo_stack is not None and graph is not None and new_nodes:
             from .commands import PasteCommand
+
             cmd = PasteCommand(self, graph, new_nodes, pasted_edges, node_positions)
             undo_stack.push(cmd)
 
