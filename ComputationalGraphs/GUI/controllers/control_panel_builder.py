@@ -390,10 +390,21 @@ class ControlPanelBuilder:
 
         layout.addWidget(QLabel("<b>Visualization</b>"))
 
-        # Colorize controls
+        # Colorize Graph subsection inside Visualization
+        colorize_group_label = QLabel("<b>Colorize Graph</b>")
+        layout.addWidget(colorize_group_label)
+
+        # Container for all colorize controls (value & ANN, plus clear)
+        mw.colorize_group_container = QWidget()
+        mw.colorize_group_layout = QVBoxLayout(mw.colorize_group_container)
+        mw.colorize_group_layout.setContentsMargins(0, 0, 0, 0)
+        mw.colorize_group_container.setLayout(mw.colorize_group_layout)
+        layout.addWidget(mw.colorize_group_container)
+
+        # Colorize by value checkbox and its settings
         mw.colorize_check = QCheckBox("Colorize by Value")
         mw.colorize_check.stateChanged.connect(mw.on_colorize_changed)
-        layout.addWidget(mw.colorize_check)
+        mw.colorize_group_layout.addWidget(mw.colorize_check)
 
         # Create a container for colorize-by-value settings so they can be shown/hidden
         # under the Colorize by Value checkbox like a drop-down section.
@@ -402,11 +413,7 @@ class ControlPanelBuilder:
         mw.colorize_settings_layout.setContentsMargins(10, 0, 0, 0)
         mw.colorize_settings_container.setLayout(mw.colorize_settings_layout)
         mw.colorize_settings_container.setVisible(False)
-        # Ensure toggling colorize checkbox directly toggles container visibility
-        mw.colorize_check.toggled.connect(
-            lambda checked, mw=mw: mw.colorize_settings_container.setVisible(bool(checked))
-        )
-        layout.addWidget(mw.colorize_settings_container)
+        mw.colorize_group_layout.addWidget(mw.colorize_settings_container)
 
         mw.auto_range_btn = QPushButton("Auto Detect Min/Max")
         mw.auto_range_btn.clicked.connect(mw.auto_detect_range)
@@ -445,7 +452,8 @@ class ControlPanelBuilder:
         mw.clear_ann_colors_btn.clicked.connect(mw.visualization_controller.clear_colors)
         ann_colors_row.addWidget(mw.clear_ann_colors_btn)
 
-        layout.addLayout(ann_colors_row)
+        # Add ANN and Clear to colorize group so they are inside 'Colorize Graph' and Clear appears last
+        mw.colorize_group_layout.addLayout(ann_colors_row)
 
         layout.addStretch()
         return container

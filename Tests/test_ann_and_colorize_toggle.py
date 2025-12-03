@@ -35,6 +35,25 @@ def test_ann_and_colorize_mutual_exclusion():
     assert not win.colorize_check.isChecked()
     assert not win.colorize_settings_container.isVisible()
 
+    # Clear should be present inside the colorize group container and appear as the last control
+    assert hasattr(win, "colorize_group_container")
+    # Find clear button in the colorize group layout children
+    cg_layout = win.colorize_group_layout
+    last_item = cg_layout.itemAt(cg_layout.count() - 1)
+    assert last_item is not None
+    # Last item should be a layout row containing the clear button
+    from PyQt6.QtWidgets import QPushButton
+    last_widget = None
+    if last_item.layout():
+        # inspect children of the row layout for a QPushButton named Clear
+        row_layout = last_item.layout()
+        for i in range(row_layout.count()):
+            w = row_layout.itemAt(i).widget()
+            if isinstance(w, QPushButton) and w.text() == "Clear":
+                last_widget = w
+                break
+    assert last_widget is not None
+
     # Clean up
     app.quit()
 
