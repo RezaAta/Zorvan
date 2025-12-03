@@ -347,8 +347,30 @@ class MLPGraphForwardProcessing(Graph):
         """
         from ComputationalGraphs.Nodes.BufferNode import BufferNode
 
-        self.errorBuffers = []
-        self.mseNodes = []
+        # Remove previously created error buffers and mse nodes if present
+        try:
+            if hasattr(self, "errorBuffers") and self.errorBuffers:
+                for old_buf in list(self.errorBuffers):
+                    try:
+                        if old_buf in self.nodes:
+                            self.RemoveNode(old_buf)
+                    except Exception:
+                        pass
+                self.errorBuffers = []
+        except Exception:
+            self.errorBuffers = []
+
+        try:
+            if hasattr(self, "mseNodes") and self.mseNodes:
+                for old_mse in list(self.mseNodes):
+                    try:
+                        if old_mse in self.nodes:
+                            self.RemoveNode(old_mse)
+                    except Exception:
+                        pass
+                self.mseNodes = []
+        except Exception:
+            self.mseNodes = []
         # Infer mse_buffer_size if not provided (forward mode stores data row-per-sample)
         if mse_buffer_size is None:
             try:
@@ -371,7 +393,8 @@ class MLPGraphForwardProcessing(Graph):
             mse_node.AddPreNode(err_node)
             self.mseNodes.append(mse_node)
             self.AddNode(mse_node)
-
+        # Update adjacency after (re-)creating buffers and mse nodes
+        self.UpdateAdjacencyMatrix()
         return self.errorBuffers
 
     def _ConnectInputLayer(self):

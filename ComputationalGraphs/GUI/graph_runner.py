@@ -43,6 +43,13 @@ class GraphRunner(QObject):
 
     def set_graph(self, graph):
         """Set the graph to execute."""
+        # If a background worker exists, stop it to ensure it does not continue
+        # processing the old Graph/GraphProcessor instance after we replace the graph.
+        try:
+            if self._exec_thread is not None and self._exec_thread.is_alive():
+                self.stop()
+        except Exception:
+            pass
         self.graph = graph
         # Create GraphProcessor and inherit verbose setting from the UI (if available)
         self.graph_processor = GraphProcessor(graph=self.graph, verbose=False)

@@ -127,7 +127,30 @@ class ExecutionController:
                 )
         else:
             # Normal resume from pause
-            self.graph_runner.resume()
+            # If there was a rebuild, GraphRunner.set_graph() will have stopped any
+            # existing background worker. In that case we need to start a fresh
+            # worker that will use the new GraphProcessor instance. Otherwise, if
+            # a worker thread still exists, simply resume it.
+            try:
+                if (
+                    not hasattr(self.graph_runner, "_exec_thread")
+                    or self.graph_runner._exec_thread is None
+                    or not self.graph_runner._exec_thread.is_alive()
+                ):
+                    # If current_step < max_steps, start a new worker to continue
+                    if self.graph_runner.current_step < self.graph_runner.max_steps:
+                        # Use start with reset_step_counter=False to preserve current_step
+                        self.graph_runner.start(
+                            max_steps=self.graph_runner.max_steps, reset_step_counter=False
+                        )
+                else:
+                    self.graph_runner.resume()
+            except Exception:
+                # Fall back to resume if anything unexpected happens
+                try:
+                    self.graph_runner.resume()
+                except Exception:
+                    pass
             self._set_running_state()
             self.status_bar.showMessage("Resumed execution")
 

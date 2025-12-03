@@ -116,9 +116,13 @@ print(f"Total iterations: {total_iterations}")
 
 # Create error buffers that store per-iteration error values
 error_buffers = mlp.CreateErrorBuffers(total_iterations, allowNone=True, mse_buffer_size=len(X_train))
-fullGraph.AddNode(*error_buffers)
+for eb in error_buffers:
+    if eb not in fullGraph.nodes:
+        fullGraph.AddNode(eb)
 if hasattr(mlp, "mseNodes"):
-    fullGraph.AddNode(*mlp.mseNodes)
+    for m in mlp.mseNodes:
+        if m not in fullGraph.nodes:
+            fullGraph.AddNode(m)
 
 # Rebuild adjacency maps to include new buffers
 fullGraph.UpdateAdjacencyMatrix()

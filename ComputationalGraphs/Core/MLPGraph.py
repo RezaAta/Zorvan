@@ -135,9 +135,32 @@ class MLPGraph(Graph):
         self._MountPredictionBuffers(predictionSize=len(xTest[0]))
 
     def CreateErrorBuffers(self, bufferSize, mse_buffer_size=None):
-        self.errorBuffers = []
-        # Initialize mseNodes list when creating buffers
-        self.mseNodes = []
+        # If CreateErrorBuffers has been called before, remove previously added
+        # error buffers and mse nodes from the graph to prevent duplicates
+        try:
+            if hasattr(self, "errorBuffers") and self.errorBuffers:
+                for old_buf in list(self.errorBuffers):
+                    try:
+                        if old_buf in self.nodes:
+                            self.RemoveNode(old_buf)
+                    except Exception:
+                        pass
+                self.errorBuffers = []
+        except Exception:
+            self.errorBuffers = []
+
+        # Initialize mseNodes list when creating buffers; remove any old nodes
+        try:
+            if hasattr(self, "mseNodes") and self.mseNodes:
+                for old_mse in list(self.mseNodes):
+                    try:
+                        if old_mse in self.nodes:
+                            self.RemoveNode(old_mse)
+                    except Exception:
+                        pass
+                self.mseNodes = []
+        except Exception:
+            self.mseNodes = []
 
         # Determine infered mse_buffer_size if not provided
         if mse_buffer_size is None:
@@ -160,6 +183,8 @@ class MLPGraph(Graph):
             mse_node.AddPreNode(self.errorLayer[i])
             self.mseNodes.append(mse_node)
             self.AddNode(mse_node)
+        # Ensure adjacency matrix is up-to-date after adding buffers/mse nodes
+        self.UpdateAdjacencyMatrix()
 
     def _MountPredictionBuffers(self, predictionSize):
         self.predictionBuffers = []

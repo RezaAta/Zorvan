@@ -217,9 +217,11 @@ class ExamplesLoader:
             fullGraph.AddNode(node)
         # Add error buffers and MSE nodes to the full graph
         for eb in mlpGraph.errorBuffers:
-            fullGraph.AddNode(eb)
+            if eb not in fullGraph.nodes:
+                fullGraph.AddNode(eb)
         for mse in mlpGraph.mseNodes:
-            fullGraph.AddNode(mse)
+            if mse not in fullGraph.nodes:
+                fullGraph.AddNode(mse)
 
         # Set starting nodes for forward processing (ONLY the first layer multiplication nodes)
         # Weight nodes will be marked as 'processed' by the GUI's graph_runner automatically
@@ -306,9 +308,11 @@ class ExamplesLoader:
             fullGraph.AddNode(node)
         # Add error buffers and MSE nodes to the full graph
         for eb in mlpGraph.errorBuffers:
-            fullGraph.AddNode(eb)
+            if eb not in fullGraph.nodes:
+                fullGraph.AddNode(eb)
         for mse in mlpGraph.mseNodes:
-            fullGraph.AddNode(mse)
+            if mse not in fullGraph.nodes:
+                fullGraph.AddNode(mse)
 
         # Set starting nodes (ONLY the first layer multiplication nodes)
         # Make a copy to avoid reference issues
@@ -366,9 +370,11 @@ class ExamplesLoader:
             fullGraph.AddNode(node)
         # Add error buffers and MSE nodes to the full graph
         for eb in mlpGraph.errorBuffers:
-            fullGraph.AddNode(eb)
+            if eb not in fullGraph.nodes:
+                fullGraph.AddNode(eb)
         for mse in mlpGraph.mseNodes:
-            fullGraph.AddNode(mse)
+            if mse not in fullGraph.nodes:
+                fullGraph.AddNode(mse)
 
         # Set starting nodes for concurrent processing: data streams + labels
         fullGraph.starting_nodes = [
@@ -500,9 +506,11 @@ class ExamplesLoader:
             fullGraph.AddNode(node)
         # Add error buffers and MSE nodes to the full graph
         for eb in mlpGraph.errorBuffers:
-            fullGraph.AddNode(eb)
+            if eb not in fullGraph.nodes:
+                fullGraph.AddNode(eb)
         for mse in mlpGraph.mseNodes:
-            fullGraph.AddNode(mse)
+            if mse not in fullGraph.nodes:
+                fullGraph.AddNode(mse)
 
         # Set starting nodes for concurrent processing (data stream nodes + labels)
         fullGraph.starting_nodes = [
@@ -575,9 +583,11 @@ class ExamplesLoader:
             fullGraph.AddNode(node)
         # Add error buffers and MSE nodes to the full graph
         for eb in mlpGraph.errorBuffers:
-            fullGraph.AddNode(eb)
+            if eb not in fullGraph.nodes:
+                fullGraph.AddNode(eb)
         for mse in mlpGraph.mseNodes:
-            fullGraph.AddNode(mse)
+            if mse not in fullGraph.nodes:
+                fullGraph.AddNode(mse)
 
         # Set starting nodes for concurrent processing: data streams + labels
         fullGraph.starting_nodes = [
@@ -648,9 +658,11 @@ class ExamplesLoader:
             fullGraph.AddNode(node)
         # Add error buffers and MSE nodes to the full graph
         for eb in mlpGraph.errorBuffers:
-            fullGraph.AddNode(eb)
+            if eb not in fullGraph.nodes:
+                fullGraph.AddNode(eb)
         for mse in mlpGraph.mseNodes:
-            fullGraph.AddNode(mse)
+            if mse not in fullGraph.nodes:
+                fullGraph.AddNode(mse)
 
         fullGraph.starting_nodes = [
             input_pair[0] for input_pair in mlpGraph.inputLayer
