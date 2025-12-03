@@ -467,6 +467,10 @@ class NodeItem(QGraphicsEllipseItem):
             view_pred_action = menu.addAction("View Predecessors")
             replace_action = menu.addAction("Replace Node...")
             menu.addSeparator()
+            swallow_action = menu.addAction("Swallow Node")
+            swallow_action.setToolTip(
+                "Remove node while connecting predecessors to successors"
+            )
             reset_node_action = menu.addAction("🔄 Reset Node")
 
             action = menu.exec(event.screenPos())
@@ -493,9 +497,24 @@ class NodeItem(QGraphicsEllipseItem):
                             main_window.replace_node(self)
                 except Exception:
                     pass
+            elif action == swallow_action:
+                self._swallow_node()
             elif action == reset_node_action:
                 self._reset_node()
 
+        except Exception:
+            pass
+
+    def _swallow_node(self):
+        """Swallow this node: remove it while connecting predecessors to successors."""
+        try:
+            canvas = getattr(self, "canvas", None)
+            if canvas and hasattr(canvas, "swallow_selected_with_undo"):
+                # Select this node if not already selected
+                if not self.isSelected():
+                    self.scene().clearSelection()
+                    self.setSelected(True)
+                canvas.swallow_selected_with_undo()
         except Exception:
             pass
 

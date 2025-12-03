@@ -59,6 +59,13 @@ class MenuToolbarController:
         mw.delete_action.setShortcut(QKeySequence.StandardKey.Delete)
         mw.delete_action.triggered.connect(mw.canvas.delete_selected_with_undo)
 
+        mw.swallow_action = QAction("&Swallow Node", mw)
+        mw.swallow_action.setShortcut(QKeySequence("Ctrl+Delete"))
+        mw.swallow_action.setStatusTip(
+            "Remove selected nodes while connecting predecessors to successors"
+        )
+        mw.swallow_action.triggered.connect(mw.canvas.swallow_selected_with_undo)
+
         mw.edit_node_action = QAction("&Edit Node...", mw)
         mw.edit_node_action.setShortcut(QKeySequence("Ctrl+E"))
         mw.edit_node_action.triggered.connect(mw.edit_selected_node)
@@ -108,6 +115,7 @@ class MenuToolbarController:
         edit_menu.addAction(mw.redo_action)
         edit_menu.addSeparator()
         edit_menu.addAction(mw.delete_action)
+        edit_menu.addAction(mw.swallow_action)
         edit_menu.addAction(mw.copy_action)
         edit_menu.addAction(mw.cut_action)
         edit_menu.addAction(mw.paste_action)

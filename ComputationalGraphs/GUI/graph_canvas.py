@@ -463,6 +463,39 @@ class GraphCanvas(QGraphicsView):
         cmd = RemoveItemsCommand(self, graph, node_items, edge_items)
         undo_stack.push(cmd)
 
+    def swallow_selected_with_undo(self):
+        """Swallow selected nodes with undo support.
+
+        Swallowing removes selected nodes while connecting their predecessors
+        to their successors, preserving data flow paths.
+
+        Example: a -> b -> c, swallow b => a -> c
+        """
+        selected = self.scene.selectedItems()
+        if not selected:
+            return
+
+        # Only nodes can be swallowed (not edges)
+        node_items = [item for item in selected if isinstance(item, NodeItem)]
+        if not node_items:
+            return
+
+        # Get the undo stack from the main window
+        undo_stack = self._get_undo_stack()
+        if undo_stack is None:
+            return
+
+        # Get the graph reference
+        graph = getattr(self, "graph", None)
+        if graph is None:
+            return
+
+        # Create and push the command
+        from .commands import SwallowNodeCommand
+
+        cmd = SwallowNodeCommand(self, graph, node_items)
+        undo_stack.push(cmd)
+
     def _get_undo_stack(self):
         """Get the undo stack from the main window if available."""
         try:
