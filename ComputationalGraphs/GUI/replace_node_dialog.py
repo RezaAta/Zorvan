@@ -27,16 +27,12 @@ class ReplaceNodeDialog(QDialog):
         self.tree_widget.setHeaderHidden(True)
         layout.addWidget(self.tree_widget)
 
-        # Buttons
+        # Buttons - keep just Cancel to allow aborting. Selecting a node will auto-accept
         btn_layout = QHBoxLayout()
-        self.ok_btn = QPushButton("OK")
         self.cancel_btn = QPushButton("Cancel")
         btn_layout.addStretch()
-        btn_layout.addWidget(self.ok_btn)
         btn_layout.addWidget(self.cancel_btn)
         layout.addLayout(btn_layout)
-
-        self.ok_btn.clicked.connect(self.accept)
         self.cancel_btn.clicked.connect(self.reject)
 
         # Populate node categories. Import NodePalette to copy categories.
@@ -72,6 +68,23 @@ class ReplaceNodeDialog(QDialog):
                 self.all_items.append((it, cat_item))
 
         self.search_bar.textChanged.connect(self._filter)
+        # Focus the search bar for immediate keyboard input
+        try:
+            self.search_bar.setFocus()
+            self.search_bar.selectAll()
+        except Exception:
+            pass
+        # Auto-accept when user clicks or activates a node type entry (leaf with UserRole)
+        self.tree_widget.itemClicked.connect(self._on_item_activated)
+        self.tree_widget.itemActivated.connect(self._on_item_activated)
+
+    def _on_item_activated(self, item, column=0):
+        # Only accept if this tree node has a 'UserRole' value (leaf node representing a type)
+        t = item.data(0, Qt.ItemDataRole.UserRole)
+        if t:
+            # Select the item and accept the dialog so exec() returns True
+            self.tree_widget.setCurrentItem(item)
+            self.accept()
 
     def _filter(self, text: str):
         t = text.lower()

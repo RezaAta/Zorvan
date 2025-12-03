@@ -166,14 +166,16 @@ class MenuToolbarController:
         mw.search_results = []
         mw.search_index = -1
 
-        # Add a small toolbar button for Rebuild Graph
-        mw.rebuild_btn = QPushButton("🔁 Rebuild")
-        mw.rebuild_btn.setToolTip(
-            "Rebuild the graph from the canvas without running it"
-        )
-        mw.rebuild_btn.clicked.connect(mw.rebuild_graph)
-        mw.rebuild_btn.setMaximumWidth(120)
-        toolbar.addWidget(mw.rebuild_btn)
+        # Rebuild Graph toolbar button removed from top toolbar — use Control Panel button
+        # Add a small toolbar button for Add Selected to Plot
+        # Keep this separate from the control panel's add_to_plot_btn to avoid overwriting it
+        mw.toolbar_add_to_plot_btn = QPushButton("add to plot")
+        mw.toolbar_add_to_plot_btn.setToolTip("Add currently selected nodes to the plot window")
+        mw.toolbar_add_to_plot_btn.clicked.connect(mw.add_selected_to_plot)
+        mw.toolbar_add_to_plot_btn.setMaximumWidth(140)
+        # Put the add-to-plot button in its own section
+        toolbar.addSeparator()
+        toolbar.addWidget(mw.toolbar_add_to_plot_btn)
 
     def create_status_bar(self):
         """Create status bar."""

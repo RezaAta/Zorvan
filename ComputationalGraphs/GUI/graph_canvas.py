@@ -18,6 +18,9 @@ class GraphCanvas(QGraphicsView):
     edge_removed = pyqtSignal(
         object, object
     )  # Emits (source_node, target_node) when an edge is removed
+    # Emitted when a connection drag operation is released on empty space.
+    # Args: scene position (QPointF), list of NodeItem objects that started the connection
+    connection_dropped_on_empty = pyqtSignal(object, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -456,6 +459,14 @@ class GraphCanvas(QGraphicsView):
                 for start in self.connection_start_nodes:
                     if start.node != target_node.node:
                         self.add_edge_item(start.node, target_node.node)
+            else:
+                # Released on empty space: emit a signal so controller can open
+                # a node-type search dialog and optionally create a new node
+                try:
+                    # Emit with the scene position and an explicit list copy
+                    self.connection_dropped_on_empty.emit(pos, list(self.connection_start_nodes))
+                except Exception:
+                    pass
 
             # Clean up
             if self.temp_connection_lines:

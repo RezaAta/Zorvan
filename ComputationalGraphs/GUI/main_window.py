@@ -231,6 +231,13 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
         self.canvas.edge_created.connect(self.on_edge_created)
+        # Handle connection released on empty canvas - create node and connect
+        try:
+            self.canvas.connection_dropped_on_empty.connect(
+                self.node_editing_controller.create_node_from_drop
+            )
+        except Exception:
+            pass
         self.canvas.edge_removed.connect(self.on_edge_removed)
         self.setCentralWidget(self.canvas)
 

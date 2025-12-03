@@ -94,6 +94,83 @@ class NodeEditingController:
                             pass
                         mw.status_bar.showMessage(f"Replaced node with type '{new_type}'")
 
+    def create_node_from_drop(self, scene_pos, start_node_items):
+        """Create a node at scene_pos after asking user for the node type.
+
+        Args:
+            scene_pos: QPointF scene position where node should be placed
+            start_node_items: list of NodeItem that initiated the connection
+        """
+        from ..replace_node_dialog import ReplaceNodeDialog
+
+        mw = self.main_window
+        dlg = ReplaceNodeDialog(mw)
+        if not dlg.exec():
+            try:
+                mw.status_bar.showMessage("Create node cancelled")
+            except Exception:
+                pass
+            return
+
+        new_type = dlg.selected_type()
+        if not new_type:
+            try:
+                mw.status_bar.showMessage("No node type selected")
+            except Exception:
+                pass
+            return
+
+        canvas = mw.canvas
+        # Determine a unique name for new node
+        try:
+            node_id = len(canvas.node_items)
+            base_name = f"{new_type}_{node_id}"
+            unique_name = canvas._generate_unique_name(base_name)
+        except Exception:
+            unique_name = f"{new_type}_0"
+
+        # Use canvas factory to create the node with a name attribute
+        new_node = canvas._create_node_by_class_name(new_type, attrs={"name": unique_name})
+        if new_node is None:
+            try:
+                mw.status_bar.showMessage(f"Failed to create node of type '{new_type}'")
+            except Exception:
+                pass
+            return
+
+        # Add to authoritative graph if present
+        try:
+            if hasattr(mw, "graph") and mw.graph is not None:
+                mw.graph.AddNode(new_node)
+        except Exception:
+            pass
+
+        # Add visual node at drop position
+        try:
+            canvas.add_node_item(new_node, scene_pos.x(), scene_pos.y())
+        except Exception:
+            # fallback to 0,0 if add fails
+            try:
+                canvas.add_node_item(new_node, 0, 0)
+            except Exception:
+                pass
+
+        # Connect all start nodes to the new node
+        try:
+            for start_item in start_node_items:
+                try:
+                    if start_item.node != new_node:
+                        canvas.add_edge_item(start_item.node, new_node)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        try:
+            mw.status_bar.showMessage(f"Created {unique_name} and connected")
+        except Exception:
+            pass
+
     def edit_selected_node(self):
         """Open editor for the selected node on canvas."""
         from ..node_item import NodeItem
