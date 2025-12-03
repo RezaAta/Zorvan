@@ -80,9 +80,16 @@ class GraphLayoutController:
             # Apply positions to nodes and update canvas
             self._apply_layout_positions(positions)
 
-            # Apply ANN colors for neural network layouts
+            # Enable ANN coloring for MLP layouts (use UI checkbox for mutual exclusivity)
             if layout_type in ("mlp_layered", "mlp_layout"):
-                mw.canvas.apply_ann_colors()
+                try:
+                    if hasattr(mw, "ann_colors_check"):
+                        mw.ann_colors_check.setChecked(True)
+                    else:
+                        mw.canvas.apply_ann_colors()
+                except Exception:
+                    # Fallback: directly apply ANN colors
+                    mw.canvas.apply_ann_colors()
 
             mw.status_bar.showMessage(
                 f"Applied {layout_type} layout to {len(positions)} nodes"

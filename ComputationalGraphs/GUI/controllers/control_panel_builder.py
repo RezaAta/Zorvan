@@ -414,20 +414,22 @@ class ControlPanelBuilder:
         # Grid & Snap controls
         self._build_grid_snap_controls(layout)
 
-        # ANN Colors buttons
+        # ANN Colors toggle and Clear button (mutually exclusive with Colorize by Value)
         ann_colors_row = QHBoxLayout()
-        mw.ann_colors_btn = QPushButton("Apply ANN Colors")
-        mw.ann_colors_btn.setToolTip(
-            "Apply color scheme based on node types (persists across updates)"
+        mw.ann_colors_check = QCheckBox("Colorize as ANN")
+        mw.ann_colors_check.setToolTip(
+            "Toggle ANN-style color scheme (mutually exclusive with Colorize by Value)"
         )
-        mw.ann_colors_btn.clicked.connect(mw.canvas.apply_ann_colors)
-        ann_colors_row.addWidget(mw.ann_colors_btn)
+        mw.ann_colors_check.stateChanged.connect(mw.on_ann_color_changed)
+        ann_colors_row.addWidget(mw.ann_colors_check)
+        mw.ann_colors_check.setChecked(getattr(mw, "ann_colors_enabled", False))
 
         mw.clear_ann_colors_btn = QPushButton("Clear")
         mw.clear_ann_colors_btn.setToolTip(
-            "Clear ANN colors and revert to default colors"
+            "Clear coloring (ANN or value) and revert to default colors"
         )
-        mw.clear_ann_colors_btn.clicked.connect(mw.canvas.clear_ann_colors)
+        # Connect to visualization controller 'clear_colors' to clear both modes
+        mw.clear_ann_colors_btn.clicked.connect(mw.visualization_controller.clear_colors)
         ann_colors_row.addWidget(mw.clear_ann_colors_btn)
 
         layout.addLayout(ann_colors_row)

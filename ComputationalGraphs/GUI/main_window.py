@@ -172,6 +172,8 @@ class MainWindow(QMainWindow):
         self.skip_visualization = False  # Skip graph canvas updates
         self.skip_plotting = False  # Skip plot window updates
         self.saved_speed = 500  # For max speed toggle
+        # ANN coloring state (checkbox)
+        self.ann_colors_enabled = False
 
         # Plot window
         self.plot_window = None
@@ -380,6 +382,10 @@ class MainWindow(QMainWindow):
     def on_colorize_changed(self, state):
         """Handle colorize checkbox change."""
         self.visualization_controller.on_colorize_changed(state)
+
+    def on_ann_color_changed(self, state):
+        """Handle ANN color mode checkbox changes. Delegates to visualization controller."""
+        self.visualization_controller.on_ann_color_changed(state)
 
     def auto_detect_range(self):
         """Automatically detect min and max values from current node values."""

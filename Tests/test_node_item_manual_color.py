@@ -21,6 +21,18 @@ def test_manual_color_init_and_ann_apply():
     assert hasattr(ni, "manual_color"), "manual_color not present on NodeItem"
     assert ni.manual_color is None
 
+    # Apply ANN colors on canvas via the visualization controller
+    mw = None
+    try:
+        # Create a MainWindow to access visualization controller for clear testing
+        from ComputationalGraphs.GUI.main_window import MainWindow
+
+        mw = MainWindow()
+        # Transfer node item to the main window canvas for full UI integration
+        mw.canvas = canvas
+    except Exception:
+        pass
+
     # Apply ANN colors on canvas and ensure this node receives manual color
     canvas.apply_ann_colors()
     assert ni.manual_color is not None, "ANN color not applied to node in apply_ann_colors"
@@ -32,7 +44,12 @@ def test_manual_color_init_and_ann_apply():
     assert ni2.manual_color is not None, "New node did not get ANN color when canvas had ANN color mode active"
 
     # Clear ANN colors and verify they are cleared
-    canvas.clear_ann_colors()
+    # Use UI clear handler to clear both ANN and value-based colors if available
+    if mw is not None:
+        mw.visualization_controller.clear_colors()
+    else:
+        # Fallback to direct canvas API
+        canvas.clear_ann_colors()
     assert ni.manual_color is None
     assert ni2.manual_color is None
 

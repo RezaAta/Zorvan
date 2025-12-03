@@ -682,12 +682,23 @@ class GraphCanvas(QGraphicsView):
         for node_item in self.node_items.values():
             node_item.update_value_display()
             if colorize:
+                # When colorizing by value, ensure any ANN/manual colors are cleared
+                try:
+                    node_item.manual_color = None
+                except Exception:
+                    pass
                 node_item.colorize_by_value(min_val, max_val, min_color, max_color)
             else:
-                # Reset value-based color to None so paint() will use manual_color or default
-                # Note: We do NOT clear manual_color here - it persists across updates
-                node_item.color = None
-                node_item.update()
+                # When not colorizing by value: if ANN colors are active, keep manual_color
+                if getattr(self, "ann_colors_active", False):
+                    # ANN colors are persistent, clear value-based color only
+                    node_item.color = None
+                    node_item.update()
+                else:
+                    # Reset value-based color to None so paint() will use manual_color or default
+                    # (manual_color will be None if not set)
+                    node_item.color = None
+                    node_item.update()
 
     def highlight_selected_nodes_for_connection(self, on: bool):
         """Highlight all currently selected nodes for connection preview."""

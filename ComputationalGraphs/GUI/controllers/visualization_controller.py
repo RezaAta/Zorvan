@@ -48,9 +48,65 @@ class VisualizationController:
         self.main_window.auto_range_btn.setEnabled(self.main_window.colorize_enabled)
 
         if self.main_window.colorize_enabled:
+            # Ensure ANN coloring toggle is turned off for mutual exclusivity
+            try:
+                if hasattr(self.main_window, "ann_colors_check"):
+                    self.main_window.ann_colors_check.setChecked(False)
+            except Exception:
+                pass
             self.auto_detect_range()
         else:
             self.canvas.update_node_visuals(False, 0, 1)
+
+    def on_ann_color_changed(self, state):
+        """Handle toggling of 'Colorize as ANN' mode.
+
+        When enabled, we clear any value-based colorization and apply ANN manual
+        colors to nodes. When disabled, ANN colors are cleared and the canvas
+        reverts to its previous visual state.
+        """
+        ann_enabled = state == Qt.CheckState.Checked.value
+        try:
+            self.main_window.ann_colors_enabled = ann_enabled
+        except Exception:
+            pass
+
+        if ann_enabled:
+            # Uncheck colorize-by-value to ensure mutual exclusivity and stop value coloring
+            try:
+                if hasattr(self.main_window, "colorize_check"):
+                    self.main_window.colorize_check.setChecked(False)
+            except Exception:
+                pass
+            # Apply ANN colors on canvas
+            self.canvas.apply_ann_colors()
+        else:
+            # Clear ANN colors from canvas
+            self.canvas.clear_ann_colors()
+
+    def clear_colors(self):
+        """Clear both ANN and value-based colors and reset to default node color."""
+        # Disable both coloring modes (uncheck checkboxes and clear canvas)
+        try:
+            if hasattr(self.main_window, "ann_colors_check"):
+                self.main_window.ann_colors_check.setChecked(False)
+        except Exception:
+            pass
+        try:
+            if hasattr(self.main_window, "colorize_check"):
+                self.main_window.colorize_check.setChecked(False)
+        except Exception:
+            pass
+
+        # Clear manual colors and value-based colorization
+        try:
+            self.canvas.clear_ann_colors()
+        except Exception:
+            pass
+        try:
+            self.canvas.update_node_visuals(False, 0, 1)
+        except Exception:
+            pass
 
     def auto_detect_range(self):
         """Automatically detect min and max values from current node values."""
@@ -167,8 +223,13 @@ class VisualizationController:
         for node_item in self.canvas.node_items.values():
             # Update node fill color
             node_item.default_color = self.main_window.default_node_color
-            # Clear any colorize-by-value color so paint() uses default_color
+            # Clear any colorize-by-value color and manual_color so paint() uses default_color
             node_item.color = None
+            # Clear manual_color so default_color is used
+            try:
+                node_item.manual_color = None
+            except Exception:
+                pass
             node_item.setBrush(QBrush(self.main_window.default_node_color))
 
             # Update text color
@@ -201,8 +262,12 @@ class VisualizationController:
 
         for node_item in node_items:
             node_item.default_color = self.main_window.default_node_color
-            # Clear any colorize-by-value color so paint() uses default_color
+            # Clear any colorize-by-value color and manual_color so paint() uses default_color
             node_item.color = None
+            try:
+                node_item.manual_color = None
+            except Exception:
+                pass
             node_item.setBrush(QBrush(self.main_window.default_node_color))
             node_item.label.setDefaultTextColor(self.main_window.default_text_color)
             if hasattr(node_item, "value_label") and node_item.value_label is not None:

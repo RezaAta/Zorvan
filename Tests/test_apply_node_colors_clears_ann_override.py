@@ -1,0 +1,34 @@
+import sys
+
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QColor
+
+from ComputationalGraphs.GUI.main_window import MainWindow
+from ComputationalGraphs.Nodes.BufferNode import BufferNode
+
+
+def test_apply_node_colors_clears_ann_override():
+    app = QApplication(sys.argv)
+    win = MainWindow()
+
+    # Create a buffer node and add to canvas
+    buf = BufferNode(name="Buff_T", size=2)
+    ni = win.canvas.add_node_item(buf, x=0, y=0)
+
+    # Apply ANN colors to ensure it sets manual_color
+    win.ann_colors_check.setChecked(True)
+    assert ni.manual_color is not None
+
+    # Change default node color and apply to all nodes
+    win.default_node_color = QColor(10, 20, 30)
+    win.visualization_controller.apply_node_colors()
+
+    # After applying base colors, manual_color should be cleared and default_color applied
+    assert ni.manual_color is None
+    assert ni.default_color == win.default_node_color
+
+    app.quit()
+
+
+if __name__ == "__main__":
+    test_apply_node_colors_clears_ann_override()
