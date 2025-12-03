@@ -57,6 +57,14 @@ class VisualizationController:
             self.auto_detect_range()
         else:
             self.canvas.update_node_visuals(False, 0, 1)
+        # Show/hide the colorize-by-value settings container if present
+        try:
+            if hasattr(self.main_window, "colorize_settings_container"):
+                self.main_window.colorize_settings_container.setVisible(
+                    self.main_window.colorize_enabled
+                )
+        except Exception:
+            pass
 
     def on_ann_color_changed(self, state):
         """Handle toggling of 'Colorize as ANN' mode.

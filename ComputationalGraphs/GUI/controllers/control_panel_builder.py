@@ -395,16 +395,29 @@ class ControlPanelBuilder:
         mw.colorize_check.stateChanged.connect(mw.on_colorize_changed)
         layout.addWidget(mw.colorize_check)
 
+        # Create a container for colorize-by-value settings so they can be shown/hidden
+        # under the Colorize by Value checkbox like a drop-down section.
+        mw.colorize_settings_container = QWidget()
+        mw.colorize_settings_layout = QVBoxLayout(mw.colorize_settings_container)
+        mw.colorize_settings_layout.setContentsMargins(10, 0, 0, 0)
+        mw.colorize_settings_container.setLayout(mw.colorize_settings_layout)
+        mw.colorize_settings_container.setVisible(False)
+        # Ensure toggling colorize checkbox directly toggles container visibility
+        mw.colorize_check.toggled.connect(
+            lambda checked, mw=mw: mw.colorize_settings_container.setVisible(bool(checked))
+        )
+        layout.addWidget(mw.colorize_settings_container)
+
         mw.auto_range_btn = QPushButton("Auto Detect Min/Max")
         mw.auto_range_btn.clicked.connect(mw.auto_detect_range)
         mw.auto_range_btn.setEnabled(False)
-        layout.addWidget(mw.auto_range_btn)
+        mw.colorize_settings_layout.addWidget(mw.auto_range_btn)
 
-        # Min/Max value labels
-        self._build_color_range_controls(layout)
+        # Min/Max value labels inside the settings container
+        self._build_color_range_controls(mw.colorize_settings_layout)
 
-        # Gradient color buttons
-        self._build_gradient_controls(layout)
+        # Gradient color buttons inside the settings container
+        self._build_gradient_controls(mw.colorize_settings_layout)
 
         layout.addWidget(QLabel(""))  # Spacer
 
