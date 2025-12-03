@@ -45,6 +45,9 @@ class NodeItem(QGraphicsEllipseItem):
         self.selected_color = QColor(50, 113, 239)  # Lighter blue for selection
         self.active_color = QColor(100, 180, 255)  # Bright light blue for active nodes
         self.color = None  # Custom color (set by layout/coloring functions)
+        # Manual color is used for ANN/explicit coloring which takes precedence
+        # over value-based coloring. Initialize to None for safety.
+        self.manual_color = None
         self.is_active = (
             False  # Track if node is currently active (for Forward Processing)
         )
@@ -460,15 +463,17 @@ class NodeItem(QGraphicsEllipseItem):
             self.setBrush(QBrush(self.active_color))
         elif self.isSelected():
             self.setBrush(QBrush(self.selected_color))
-        elif self.manual_color is not None:
-            # Manual color (from ANN colors or user) takes priority over value-based color
-            self.setBrush(QBrush(self.manual_color))
-        elif self.color is not None:
-            # Use value-based color if set (from colorization)
-            self.setBrush(QBrush(self.color))
         else:
-            # Restore default color when deselected
-            self.setBrush(QBrush(self.default_color))
+            manual_color = getattr(self, "manual_color", None)
+            if manual_color is not None:
+                # Manual color (from ANN colors or user) takes priority over value-based color
+                self.setBrush(QBrush(manual_color))
+            elif self.color is not None:
+                # Use value-based color if set (from colorization)
+                self.setBrush(QBrush(self.color))
+            else:
+                # Restore default color when deselected
+                self.setBrush(QBrush(self.default_color))
 
         # Call base paint but avoid drawing the default selected bounding box
         try:
@@ -503,6 +508,26 @@ class NodeItem(QGraphicsEllipseItem):
         """Set whether this node is currently active (for Forward Processing)."""
         self.is_active = active
         self.update()  # Trigger repaint
+
+    def set_manual_color(self, color):
+        """Set a manual color for this node and update the display.
+
+        Accepts QColor or None to clear the manual color. This centralizes
+        mutating the manual_color attribute and ensures a consistent update.
+        """
+        try:
+            self.manual_color = color
+            self.update()
+        except Exception:
+            pass
+
+    def clear_manual_color(self):
+        """Clear the manual color and refresh the node visual."""
+        try:
+            self.manual_color = None
+            self.update()
+        except Exception:
+            pass
 
     def set_connection_highlight(self, val: bool):
         """Highlight this node as part of a multi-connection preview."""

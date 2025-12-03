@@ -82,6 +82,8 @@ class GraphCanvas(QGraphicsView):
         self.edge_items = []
         # Internal clipboard for copy/paste
         self._clipboard = None
+        # Track whether ANN colors are currently applied on the canvas
+        self.ann_colors_active = False
 
     def add_node_item(self, node, x=0, y=0):
         """Add a visual representation of a node to the canvas."""
@@ -120,6 +122,25 @@ class GraphCanvas(QGraphicsView):
         try:
             node_item.update_value_display()
         except Exception:
+            pass
+        # If ANN colors are active, compute and apply color to the newly added node
+        try:
+            if getattr(self, "ann_colors_active", False):
+                color = self._ann_color_for_node(
+                    node.name if hasattr(node, "name") else str(node)
+                )
+                if color is not None:
+                    # Use set_manual_color helper to update node color
+                    try:
+                        node_item.set_manual_color(color)
+                    except Exception:
+                        try:
+                            node_item.manual_color = color
+                            node_item.update()
+                        except Exception:
+                            pass
+        except Exception:
+            # If we can't apply colors for some reason, ignore and continue
             pass
         # If requested, auto-expand the scene rect to include the new node
         try:
@@ -1517,16 +1538,81 @@ class GraphCanvas(QGraphicsView):
             else:
                 color = QColor(100, 100, 100)  # Dark gray (instead of white)
 
-            # Apply the color as manual_color so it persists across updates
+            # Apply the color using the node's helper
             if color:
-                node_item.manual_color = color
-                node_item.update()  # Force redraw
+                try:
+                    node_item.set_manual_color(color)
+                except Exception:
+                    try:
+                        node_item.manual_color = color
+                        node_item.update()
+                    except Exception:
+                        pass
+        # Mark that ANN colors are enabled on the canvas
+        self.ann_colors_active = True
 
     def clear_ann_colors(self):
         """Clear all manual colors (ANN colors) from nodes, reverting to default colors."""
         for node_item in self.node_items.values():
-            node_item.manual_color = None
-            node_item.update()
+            try:
+                node_item.clear_manual_color()
+            except Exception:
+                try:
+                    node_item.manual_color = None
+                    node_item.update()
+                except Exception:
+                    pass
+        # ANN colors are no longer active
+        self.ann_colors_active = False
+
+    def _ann_color_for_node(self, name: str):
+        """Return the ANN color for a node name or None if not applicable.
+
+        This function centralizes the color mapping logic used by apply_ann_colors and
+        add_node_item.
+        """
+        import typing
+
+        color = None
+        try:
+            # Red: Label streams and Error nodes
+            if (
+                name.startswith("Label_")
+                or name.startswith("yd")
+                or name.startswith("Error_")
+                or (name.startswith("e") and "E" in name)
+            ):
+                color = QColor(180, 60, 60)  # Dark red
+            elif (
+                name.startswith("W_")
+                or name.startswith("wn")
+                or name.startswith("wx")
+                or name == "LearningRate"
+                or name == "LR"
+                or name.startswith("dW_")
+            ):
+                color = QColor(60, 100, 180)  # Dark blue
+            elif "Buff" in name or "Buffer" in name or "buffer" in name:
+                color = QColor(200, 149, 62)  # Yellow/Gold #c8953e
+            elif (
+                name.startswith("D_")
+                or "derivative" in name.lower()
+                or "Derivative" in name
+            ):
+                color = QColor(60, 150, 60)  # Dark green
+            elif (
+                name.startswith("EG_")
+                or name.startswith("LRMult_")
+                or name.startswith("WGS_")
+                or name.startswith("WG_")
+                or name.startswith("Weighted")
+            ):
+                color = QColor(120, 80, 150)  # Dark purple
+            else:
+                color = QColor(100, 100, 100)  # Dark gray
+        except Exception:
+            color = None
+        return color
 
     def fit_all_nodes_in_view(self):
         """Fit all nodes into the current view, maintaining aspect ratio."""
