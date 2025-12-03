@@ -1,10 +1,10 @@
 import sys
 
-from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.node_item import NodeItem
 from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
+from ComputationalGraphs.GUI.node_item import NodeItem
 from ComputationalGraphs.Nodes.BufferNode import BufferNode
 
 
@@ -35,13 +35,17 @@ def test_manual_color_init_and_ann_apply():
 
     # Apply ANN colors on canvas and ensure this node receives manual color
     canvas.apply_ann_colors()
-    assert ni.manual_color is not None, "ANN color not applied to node in apply_ann_colors"
+    assert (
+        ni.manual_color is not None
+    ), "ANN color not applied to node in apply_ann_colors"
 
     # Add a new node while ANN colors are active; it should receive an ANN color immediately
     buf2 = BufferNode(name="Buff_G", size=2)
     ni2 = canvas.add_node_item(buf2, x=100, y=150)
     assert hasattr(ni2, "manual_color")
-    assert ni2.manual_color is not None, "New node did not get ANN color when canvas had ANN color mode active"
+    assert (
+        ni2.manual_color is not None
+    ), "New node did not get ANN color when canvas had ANN color mode active"
 
     # Clear ANN colors and verify they are cleared
     # Use UI clear handler to clear both ANN and value-based colors if available

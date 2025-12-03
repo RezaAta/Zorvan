@@ -18,11 +18,11 @@ import random
 
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
+from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
-from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.MeanSquaredErrorNode import MeanSquaredErrorNode
+from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
 
@@ -389,7 +389,9 @@ class MLPGraphForwardProcessing(Graph):
             # NOTE: We create MeanSquaredErrorNode nodes for visual/plotting use only
             # Do NOT use these MSE nodes as inputs to Backprop/gradient computations.
             # Backprop requires the raw instantaneous error (SubtractionNode).
-            mse_node = MeanSquaredErrorNode(name=f"MSE_y{i}", size=mse_buffer_size, mode="continuous")
+            mse_node = MeanSquaredErrorNode(
+                name=f"MSE_y{i}", size=mse_buffer_size, mode="continuous"
+            )
             mse_node.AddPreNode(err_node)
             self.mseNodes.append(mse_node)
             self.AddNode(mse_node)

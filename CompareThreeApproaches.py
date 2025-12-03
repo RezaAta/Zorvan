@@ -225,7 +225,9 @@ for node in backprop_forward.nodes:
     graph_forward.AddNode(node)
 # Create MSE nodes for forward graph (use dataset size = len(X))
 try:
-    mlp_forward.CreateErrorBuffers(total_iterations, allowNone=True, mse_buffer_size=len(X))
+    mlp_forward.CreateErrorBuffers(
+        total_iterations, allowNone=True, mse_buffer_size=len(X)
+    )
     for m in mlp_forward.mseNodes:
         if m not in graph_forward.nodes:
             graph_forward.AddNode(m)

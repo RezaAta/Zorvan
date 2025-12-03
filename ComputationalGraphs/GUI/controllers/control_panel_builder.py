@@ -449,7 +449,9 @@ class ControlPanelBuilder:
             "Clear coloring (ANN or value) and revert to default colors"
         )
         # Connect to visualization controller 'clear_colors' to clear both modes
-        mw.clear_ann_colors_btn.clicked.connect(mw.visualization_controller.clear_colors)
+        mw.clear_ann_colors_btn.clicked.connect(
+            mw.visualization_controller.clear_colors
+        )
         ann_colors_row.addWidget(mw.clear_ann_colors_btn)
 
         # Add ANN and Clear to colorize group so they are inside 'Colorize Graph' and Clear appears last

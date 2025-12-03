@@ -26,7 +26,10 @@ def test_ann_and_colorize_mutual_exclusion():
     # Some platforms don't report isVisible without event loop propagation; as a proxy
     # check the auto-range button is enabled and the container property is True.
     assert win.auto_range_btn.isEnabled()
-    assert win.colorize_settings_container.isVisible() or not win.colorize_settings_container.isHidden()
+    assert (
+        win.colorize_settings_container.isVisible()
+        or not win.colorize_settings_container.isHidden()
+    )
 
     # Check ann -> colorize_by_value should be unchecked; colorize container hidden
     win.ann_colors_check.setChecked(True)
@@ -43,6 +46,7 @@ def test_ann_and_colorize_mutual_exclusion():
     assert last_item is not None
     # Last item should be a layout row containing the clear button
     from PyQt6.QtWidgets import QPushButton
+
     last_widget = None
     if last_item.layout():
         # inspect children of the row layout for a QPushButton named Clear

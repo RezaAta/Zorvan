@@ -464,7 +464,9 @@ class GraphCanvas(QGraphicsView):
                 # a node-type search dialog and optionally create a new node
                 try:
                     # Emit with the scene position and an explicit list copy
-                    self.connection_dropped_on_empty.emit(pos, list(self.connection_start_nodes))
+                    self.connection_dropped_on_empty.emit(
+                        pos, list(self.connection_start_nodes)
+                    )
                 except Exception:
                     pass
 

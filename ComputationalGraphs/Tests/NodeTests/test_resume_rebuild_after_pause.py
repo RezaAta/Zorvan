@@ -4,9 +4,9 @@ import time
 from PyQt6.QtWidgets import QApplication
 
 from ComputationalGraphs.GUI.main_window import MainWindow
+from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.Nodes.BufferNode import BufferNode
 
 
 def test_resume_rebuild_after_pause():

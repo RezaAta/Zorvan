@@ -37,7 +37,8 @@ def test_replace_multiple_selected_nodes(monkeypatch):
             return "MultiplicationNode"
 
     monkeypatch.setattr(
-        "ComputationalGraphs.GUI.replace_node_dialog.ReplaceNodeDialog", StubReplaceDialog
+        "ComputationalGraphs.GUI.replace_node_dialog.ReplaceNodeDialog",
+        StubReplaceDialog,
     )
 
     # Invoke replace on one selected item - should replace both
@@ -46,7 +47,10 @@ def test_replace_multiple_selected_nodes(monkeypatch):
     # Assert both are replaced to MultiplicationNode
     assert isinstance(item1.node, MultiplicationNode)
     assert isinstance(item2.node, MultiplicationNode)
-    assert mw.status_bar.currentMessage() == "Replaced 2 node(s) with type 'MultiplicationNode'"
+    assert (
+        mw.status_bar.currentMessage()
+        == "Replaced 2 node(s) with type 'MultiplicationNode'"
+    )
 
     app.quit()
 
@@ -70,13 +74,16 @@ def test_replace_single_shows_node_editor(monkeypatch):
     class StubReplaceDialog:
         def __init__(self, parent=None):
             pass
+
         def exec(self):
             return True
+
         def selected_type(self):
             return "MultiplicationNode"
 
     monkeypatch.setattr(
-        "ComputationalGraphs.GUI.replace_node_dialog.ReplaceNodeDialog", StubReplaceDialog
+        "ComputationalGraphs.GUI.replace_node_dialog.ReplaceNodeDialog",
+        StubReplaceDialog,
     )
 
     # Patch NodeEditorDialog to capture exec calls
@@ -85,17 +92,21 @@ def test_replace_single_shows_node_editor(monkeypatch):
     class StubNodeEditorDialog:
         def __init__(self, node, parent=None):
             self.node = node
+
         def exec(self):
             called["exec"] = True
             return True
 
     monkeypatch.setattr(
-        "ComputationalGraphs.GUI.node_editor_dialog.NodeEditorDialog", StubNodeEditorDialog
+        "ComputationalGraphs.GUI.node_editor_dialog.NodeEditorDialog",
+        StubNodeEditorDialog,
     )
 
     mw.replace_node(item1)
 
     assert called["exec"] is True
-    assert mw.status_bar.currentMessage() == "Replaced node with type 'MultiplicationNode'"
+    assert (
+        mw.status_bar.currentMessage() == "Replaced node with type 'MultiplicationNode'"
+    )
 
     app.quit()

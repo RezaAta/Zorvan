@@ -1190,7 +1190,9 @@ class ExamplesLoader:
         # Create error buffers for concurrent training (align with output delay)
         try:
             # Buffer size should match dataset size (samples per feature row)
-            dataset_size = len(X[0]) if X and hasattr(X, '__iter__') and len(X) > 0 else 6
+            dataset_size = (
+                len(X[0]) if X and hasattr(X, "__iter__") and len(X) > 0 else 6
+            )
             anfis.CreateErrorBuffers(bufferSize=dataset_size)
         except Exception:
             # If CreateErrorBuffers missing or fails, ignore; GUI can create error buffers later

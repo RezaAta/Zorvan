@@ -179,7 +179,9 @@ class MLPGraph(Graph):
             # NOTE: We create MeanSquaredErrorNode nodes for visual/plotting use only
             # Do NOT use these MSE nodes as inputs to Backprop/gradient computations.
             # Backprop requires the raw instantaneous error (SubtractionNode).
-            mse_node = MeanSquaredErrorNode(name=f"MSE_y{i}", size=mse_buffer_size, mode="continuous")
+            mse_node = MeanSquaredErrorNode(
+                name=f"MSE_y{i}", size=mse_buffer_size, mode="continuous"
+            )
             mse_node.AddPreNode(self.errorLayer[i])
             self.mseNodes.append(mse_node)
             self.AddNode(mse_node)

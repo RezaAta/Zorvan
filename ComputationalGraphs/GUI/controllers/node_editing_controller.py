@@ -52,8 +52,8 @@ class NodeEditingController:
         Args:
             node_item: The NodeItem to replace
         """
-        from ..replace_node_dialog import ReplaceNodeDialog
         from ..node_item import NodeItem
+        from ..replace_node_dialog import ReplaceNodeDialog
 
         mw = self.main_window
         dlg = ReplaceNodeDialog(mw)
@@ -63,7 +63,9 @@ class NodeEditingController:
             if new_type:
                 # Determine current selection of node items on canvas
                 selected_items = [
-                    it for it in mw.canvas.scene.selectedItems() if isinstance(it, NodeItem)
+                    it
+                    for it in mw.canvas.scene.selectedItems()
+                    if isinstance(it, NodeItem)
                 ]
                 # If multiple nodes are selected and the clicked node is one of them,
                 # replace all selected nodes. Otherwise, replace only the clicked node.
@@ -78,7 +80,9 @@ class NodeEditingController:
                         except Exception:
                             # continue replacing remaining nodes even if one fails
                             continue
-                    mw.status_bar.showMessage(f"Replaced {replaced_count} node(s) with type '{new_type}'")
+                    mw.status_bar.showMessage(
+                        f"Replaced {replaced_count} node(s) with type '{new_type}'"
+                    )
                 else:
                     # Single node replacement - keep previous behavior (open editor)
                     new_node = None
@@ -92,7 +96,9 @@ class NodeEditingController:
                             self.edit_node(node_item)
                         except Exception:
                             pass
-                        mw.status_bar.showMessage(f"Replaced node with type '{new_type}'")
+                        mw.status_bar.showMessage(
+                            f"Replaced node with type '{new_type}'"
+                        )
 
     def create_node_from_drop(self, scene_pos, start_node_items):
         """Create a node at scene_pos after asking user for the node type.
@@ -130,7 +136,9 @@ class NodeEditingController:
             unique_name = f"{new_type}_0"
 
         # Use canvas factory to create the node with a name attribute
-        new_node = canvas._create_node_by_class_name(new_type, attrs={"name": unique_name})
+        new_node = canvas._create_node_by_class_name(
+            new_type, attrs={"name": unique_name}
+        )
         if new_node is None:
             try:
                 mw.status_bar.showMessage(f"Failed to create node of type '{new_type}'")

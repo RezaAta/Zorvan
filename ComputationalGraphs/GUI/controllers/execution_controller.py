@@ -141,7 +141,8 @@ class ExecutionController:
                     if self.graph_runner.current_step < self.graph_runner.max_steps:
                         # Use start with reset_step_counter=False to preserve current_step
                         self.graph_runner.start(
-                            max_steps=self.graph_runner.max_steps, reset_step_counter=False
+                            max_steps=self.graph_runner.max_steps,
+                            reset_step_counter=False,
                         )
                 else:
                     self.graph_runner.resume()

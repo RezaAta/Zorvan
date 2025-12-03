@@ -1,7 +1,7 @@
 import sys
 
-from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QPointF
+from PyQt6.QtWidgets import QApplication
 
 from ComputationalGraphs.GUI.main_window import MainWindow
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
@@ -35,7 +35,8 @@ def test_create_node_and_connect_on_drop(monkeypatch):
             return "MultiplicationNode"
 
     monkeypatch.setattr(
-        "ComputationalGraphs.GUI.replace_node_dialog.ReplaceNodeDialog", StubReplaceDialog
+        "ComputationalGraphs.GUI.replace_node_dialog.ReplaceNodeDialog",
+        StubReplaceDialog,
     )
 
     # Simulate release on empty space by emitting the signal
@@ -51,7 +52,10 @@ def test_create_node_and_connect_on_drop(monkeypatch):
     assert found
 
     # And there should be an edge from add1 to the created multiplication node
-    assert any(e.source_node.node == n1 and e.target_node.node == created_node for e in mw.canvas.edge_items)
+    assert any(
+        e.source_node.node == n1 and e.target_node.node == created_node
+        for e in mw.canvas.edge_items
+    )
 
     app.quit()
 
@@ -78,7 +82,8 @@ def test_drop_create_cancelled_does_not_create(monkeypatch):
             return None
 
     monkeypatch.setattr(
-        "ComputationalGraphs.GUI.replace_node_dialog.ReplaceNodeDialog", StubReplaceDialogCancel
+        "ComputationalGraphs.GUI.replace_node_dialog.ReplaceNodeDialog",
+        StubReplaceDialogCancel,
     )
 
     initial_node_count = len(mw.canvas.node_items)
@@ -120,18 +125,25 @@ def test_create_node_and_connect_from_selected_multiple_nodes(monkeypatch):
             return "MultiplicationNode"
 
     monkeypatch.setattr(
-        "ComputationalGraphs.GUI.replace_node_dialog.ReplaceNodeDialog", StubReplaceDialog
+        "ComputationalGraphs.GUI.replace_node_dialog.ReplaceNodeDialog",
+        StubReplaceDialog,
     )
 
     mw.canvas.connection_dropped_on_empty.emit(QPointF(200, 100), [item1, item2])
 
     # Confirm one new multiplication node exists
-    mult_nodes = [n for n in mw.canvas.node_items.keys() if isinstance(n, MultiplicationNode)]
+    mult_nodes = [
+        n for n in mw.canvas.node_items.keys() if isinstance(n, MultiplicationNode)
+    ]
     assert len(mult_nodes) == 1
 
     created_node = mult_nodes[0]
     # There should be edges from both add1 and add2 to the new node
-    sources = {e.source_node.node for e in mw.canvas.edge_items if e.target_node.node == created_node}
+    sources = {
+        e.source_node.node
+        for e in mw.canvas.edge_items
+        if e.target_node.node == created_node
+    }
     assert n1 in sources and n2 in sources
 
     app.quit()

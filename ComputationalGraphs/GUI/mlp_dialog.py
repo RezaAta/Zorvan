@@ -2,6 +2,7 @@
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QFormLayout,
@@ -11,7 +12,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSpinBox,
-    QCheckBox,
     QVBoxLayout,
     QWidget,
 )
@@ -161,7 +161,9 @@ class MLPGeneratorDialog(QDialog):
             # Optionally create error/MSE buffers for plotting in the GUI, if requested
             try:
                 if self.create_mse_checkbox.isChecked():
-                    mlp_graph.CreateErrorBuffers(bufferSize=self.mse_buffer_size.value())
+                    mlp_graph.CreateErrorBuffers(
+                        bufferSize=self.mse_buffer_size.value()
+                    )
             except Exception:
                 # Swallow errors here (CreateErrorBuffers may depend on loaded data shape)
                 pass

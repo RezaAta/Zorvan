@@ -8,7 +8,13 @@ from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 
 def test_mse_nodes_concurrent():
     # Build small concurrent MLP for XOR
-    mlp = MLPGraph(numInputs=2, numOutputs=1, numHiddenLayers=1, activationFunction=SigmoidNode, outputLayerType=LinearNode)
+    mlp = MLPGraph(
+        numInputs=2,
+        numOutputs=1,
+        numHiddenLayers=1,
+        activationFunction=SigmoidNode,
+        outputLayerType=LinearNode,
+    )
     mlp.BuildMLP()
 
     # Load XOR data (row-per-feature)
@@ -32,7 +38,13 @@ def test_mse_nodes_concurrent():
 
 def test_mse_nodes_forward():
     # Build forward-processing MLP for XOR
-    mlp = MLPGraphForwardProcessing(numInputs=2, numOutputs=1, numHiddenLayers=1, activationFunction=SigmoidNode, outputLayerType=LinearNode)
+    mlp = MLPGraphForwardProcessing(
+        numInputs=2,
+        numOutputs=1,
+        numHiddenLayers=1,
+        activationFunction=SigmoidNode,
+        outputLayerType=LinearNode,
+    )
     mlp.BuildMLP()
 
     # Load XOR data (row-per-sample)
@@ -55,7 +67,13 @@ def test_mse_nodes_forward():
 
 def test_mse_nodes_no_duplicates_concurrent():
     # Build small concurrent MLP and call CreateErrorBuffers twice
-    mlp = MLPGraph(numInputs=2, numOutputs=1, numHiddenLayers=1, activationFunction=SigmoidNode, outputLayerType=LinearNode)
+    mlp = MLPGraph(
+        numInputs=2,
+        numOutputs=1,
+        numHiddenLayers=1,
+        activationFunction=SigmoidNode,
+        outputLayerType=LinearNode,
+    )
     mlp.BuildMLP()
     X = [[0.0, 0.0, 1.0, 1.0], [0.0, 1.0, 0.0, 1.0]]
     y = [[0.0, 1.0, 1.0, 0.0]]
@@ -64,11 +82,15 @@ def test_mse_nodes_no_duplicates_concurrent():
 
     # First call
     mlp.CreateErrorBuffers(iterations)
-    first_count = len([n for n in mlp.nodes if n.__class__.__name__ == 'MeanSquaredErrorNode'])
+    first_count = len(
+        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredErrorNode"]
+    )
 
     # Second call - should not increase number of MSE nodes
     mlp.CreateErrorBuffers(iterations)
-    second_count = len([n for n in mlp.nodes if n.__class__.__name__ == 'MeanSquaredErrorNode'])
+    second_count = len(
+        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredErrorNode"]
+    )
 
     assert first_count == mlp.numOutputs
     assert second_count == first_count
@@ -76,7 +98,13 @@ def test_mse_nodes_no_duplicates_concurrent():
 
 def test_mse_nodes_no_duplicates_forward():
     # Build small forward MLP and call CreateErrorBuffers twice
-    mlp = MLPGraphForwardProcessing(numInputs=2, numOutputs=1, numHiddenLayers=1, activationFunction=SigmoidNode, outputLayerType=LinearNode)
+    mlp = MLPGraphForwardProcessing(
+        numInputs=2,
+        numOutputs=1,
+        numHiddenLayers=1,
+        activationFunction=SigmoidNode,
+        outputLayerType=LinearNode,
+    )
     mlp.BuildMLP()
     X = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]
     y = [[0.0], [1.0], [1.0], [0.0]]
@@ -84,10 +112,14 @@ def test_mse_nodes_no_duplicates_forward():
     iterations = 10
 
     mlp.CreateErrorBuffers(iterations, allowNone=True)
-    first_count = len([n for n in mlp.nodes if n.__class__.__name__ == 'MeanSquaredErrorNode'])
+    first_count = len(
+        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredErrorNode"]
+    )
 
     mlp.CreateErrorBuffers(iterations, allowNone=True)
-    second_count = len([n for n in mlp.nodes if n.__class__.__name__ == 'MeanSquaredErrorNode'])
+    second_count = len(
+        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredErrorNode"]
+    )
 
     assert first_count == mlp.numOutputs
     assert second_count == first_count
@@ -109,18 +141,27 @@ def test_mse_nodes_no_duplicates_forward():
             except Exception:
                 # If builder fails due to environment, skip it
                 continue
-            mse_nodes = [n.name for n in g.nodes if n.__class__.__name__ == 'MeanSquaredErrorNode']
+            mse_nodes = [
+                n.name
+                for n in g.nodes
+                if n.__class__.__name__ == "MeanSquaredErrorNode"
+            ]
             # No duplicate names
             assert len(mse_nodes) == len(set(mse_nodes))
 
-
     def test_add_mse_to_full_graph_no_duplicates():
         # Simulate the example builder pattern: add mlp nodes, then create error buffers, then add error buffers/mse nodes
-        from ComputationalGraphs.Core.Graph import Graph
         from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
+        from ComputationalGraphs.Core.Graph import Graph
 
         # Build mlp and backprop
-        mlp = MLPGraph(numInputs=3, numOutputs=2, numHiddenLayers=1, activationFunction=SigmoidNode, outputLayerType=LinearNode)
+        mlp = MLPGraph(
+            numInputs=3,
+            numOutputs=2,
+            numHiddenLayers=1,
+            activationFunction=SigmoidNode,
+            outputLayerType=LinearNode,
+        )
         mlp.BuildMLP()
         backprop = BackpropGraph(mlpGraph=mlp, learningRate=0.01)
         backprop.BuildBackprop()
@@ -142,5 +183,7 @@ def test_mse_nodes_no_duplicates_forward():
                 fullGraph.AddNode(mse)
 
         # Count MeanSquaredErrorNodes in full graph
-        mse_in_graph = [n for n in fullGraph.nodes if n.__class__.__name__ == 'MeanSquaredErrorNode']
+        mse_in_graph = [
+            n for n in fullGraph.nodes if n.__class__.__name__ == "MeanSquaredErrorNode"
+        ]
         assert len(mse_in_graph) == mlp.numOutputs

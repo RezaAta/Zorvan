@@ -170,7 +170,9 @@ class MenuToolbarController:
         # Add a small toolbar button for Add Selected to Plot
         # Keep this separate from the control panel's add_to_plot_btn to avoid overwriting it
         mw.toolbar_add_to_plot_btn = QPushButton("add to plot")
-        mw.toolbar_add_to_plot_btn.setToolTip("Add currently selected nodes to the plot window")
+        mw.toolbar_add_to_plot_btn.setToolTip(
+            "Add currently selected nodes to the plot window"
+        )
         mw.toolbar_add_to_plot_btn.clicked.connect(mw.add_selected_to_plot)
         mw.toolbar_add_to_plot_btn.setMaximumWidth(140)
         # Put the add-to-plot button in its own section
