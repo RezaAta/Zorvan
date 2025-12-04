@@ -12,7 +12,7 @@ class ClassicMLP:
         output_activation="linear",
         learning_rate=0.001,
         initial_weight=None,
-        use_bias=True,
+        use_bias=False,
     ):
         """
         Initialize Classic MLP with flexible hidden layer architecture.

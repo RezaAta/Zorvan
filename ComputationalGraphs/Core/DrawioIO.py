@@ -15,7 +15,7 @@ NODE_TYPE_MAP = {
     "Container": ContainerNode,
     "Linear": LinearNode,
     "LinearDerivative": LinearNodeDerivative,
-    "MeanSquaredError": MeanSquaredErrorNode,
+    "MeanSquared": MeanSquaredNode,
     "Multiplication": MultiplicationNode,
     "ReLU": ReLUNode,
     "Sigmoid": SigmoidNode,

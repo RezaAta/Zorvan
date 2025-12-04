@@ -6,9 +6,7 @@ from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.MeanSquaredErrorNode import (  # Import the node for calculating error
-    MeanSquaredErrorNode,
-)
+from ComputationalGraphs.Nodes.MeanSquaredNode import MeanSquaredNode
 from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 from ComputationalGraphs.Nodes.SubtractionNode import (  # Import the node for calculating error
@@ -175,12 +173,12 @@ class MLPGraph(Graph):
             errorBuffer.AddPreNode(self.errorLayer[i])
             self.errorBuffers.append(errorBuffer)
             self.AddNode(errorBuffer)
-            # Also create an MSE node connected to this error node for plotting
-            # NOTE: We create MeanSquaredErrorNode nodes for visual/plotting use only
-            # Do NOT use these MSE nodes as inputs to Backprop/gradient computations.
+            # Also create an MS node connected to this error node for plotting
+            # NOTE: We create MeanSquaredNode nodes for visual/plotting use only
+            # Do NOT use these MS nodes as inputs to Backprop/gradient computations.
             # Backprop requires the raw instantaneous error (SubtractionNode).
-            mse_node = MeanSquaredErrorNode(
-                name=f"MSE_y{i}", size=mse_buffer_size, mode="continuous"
+            mse_node = MeanSquaredNode(
+                name=f"MS_y{i}", size=mse_buffer_size, mode="continuous"
             )
             mse_node.AddPreNode(self.errorLayer[i])
             self.mseNodes.append(mse_node)
@@ -307,7 +305,7 @@ class MLPGraph(Graph):
             self.AddNode(node)
 
     def _CreateErrorLayer(self):
-        """Create the error layer using MeanSquaredErrorNodes for calculating errors."""
+        """Create the error layer using SubtractionNodes for calculating errors."""
         self.errorLayer = []
         for i, (outputAddNode, outputActNode) in enumerate(self.outputLayer):
             errorNode = SubtractionNode(name=f"Error_y{i}")

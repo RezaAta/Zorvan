@@ -80,11 +80,11 @@ _NODE_REGISTRY: Dict[str, tuple] = {
     ),
     "MaxNode": ("ComputationalGraphs.Nodes.MaxNode", "MaxNode", {}, "Max"),
     "MinNode": ("ComputationalGraphs.Nodes.MinNode", "MinNode", {}, "Min"),
-    "MeanSquaredErrorNode": (
-        "ComputationalGraphs.Nodes.MeanSquaredErrorNode",
-        "MeanSquaredErrorNode",
+    "MeanSquaredNode": (
+        "ComputationalGraphs.Nodes.MeanSquaredNode",
+        "MeanSquaredNode",
         {},
-        "MSE",
+        "MS",
     ),
     # Activation functions
     "SigmoidNode": (

@@ -83,13 +83,13 @@ def test_mse_nodes_no_duplicates_concurrent():
     # First call
     mlp.CreateErrorBuffers(iterations)
     first_count = len(
-        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredErrorNode"]
+        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredNode"]
     )
 
-    # Second call - should not increase number of MSE nodes
+    # Second call - should not increase number of MS nodes
     mlp.CreateErrorBuffers(iterations)
     second_count = len(
-        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredErrorNode"]
+        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredNode"]
     )
 
     assert first_count == mlp.numOutputs
@@ -113,19 +113,19 @@ def test_mse_nodes_no_duplicates_forward():
 
     mlp.CreateErrorBuffers(iterations, allowNone=True)
     first_count = len(
-        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredErrorNode"]
+        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredNode"]
     )
 
     mlp.CreateErrorBuffers(iterations, allowNone=True)
     second_count = len(
-        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredErrorNode"]
+        [n for n in mlp.nodes if n.__class__.__name__ == "MeanSquaredNode"]
     )
 
     assert first_count == mlp.numOutputs
     assert second_count == first_count
 
     def test_examples_loader_no_duplicate_mse_nodes():
-        # Ensure GUI loader's builders do not create duplicate MSE nodes in the combined graph
+        # Ensure GUI loader's builders do not create duplicate MS nodes in the combined graph
         from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
 
         loader = ExamplesLoader()
@@ -142,9 +142,7 @@ def test_mse_nodes_no_duplicates_forward():
                 # If builder fails due to environment, skip it
                 continue
             mse_nodes = [
-                n.name
-                for n in g.nodes
-                if n.__class__.__name__ == "MeanSquaredErrorNode"
+                n.name for n in g.nodes if n.__class__.__name__ == "MeanSquaredNode"
             ]
             # No duplicate names
             assert len(mse_nodes) == len(set(mse_nodes))
@@ -182,8 +180,8 @@ def test_mse_nodes_no_duplicates_forward():
             if mse not in fullGraph.nodes:
                 fullGraph.AddNode(mse)
 
-        # Count MeanSquaredErrorNodes in full graph
+        # Count MeanSquaredNodes in full graph
         mse_in_graph = [
-            n for n in fullGraph.nodes if n.__class__.__name__ == "MeanSquaredErrorNode"
+            n for n in fullGraph.nodes if n.__class__.__name__ == "MeanSquaredNode"
         ]
         assert len(mse_in_graph) == mlp.numOutputs

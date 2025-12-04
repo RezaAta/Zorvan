@@ -114,9 +114,9 @@ class NodePalette(QDockWidget):
                 "description": "Error and loss calculations (buffer-style)",
                 "nodes": [
                     (
-                        "MeanSquaredErrorNode",
-                        "MSE",
-                        "Buffer-based MSE (mean of squared buffered values). Single-input node; supports continuous or batch modes.",
+                        "MeanSquaredNode",
+                        "MS",
+                        "Buffer-based Mean Squared (mean of squared buffered values). Single-input node; supports continuous or batch modes.",
                     ),
                 ],
             },

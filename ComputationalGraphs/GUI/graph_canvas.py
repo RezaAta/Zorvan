@@ -32,7 +32,7 @@ class GraphCanvas(QGraphicsView):
         # Statistical nodes
         "MaxNode": "Max",
         "MinNode": "Min",
-        "MeanSquaredErrorNode": "MSE",
+        "MeanSquaredNode": "MS",
         # Activation functions
         "SigmoidNode": "Sigmoid",
         "SigmoidDerivativeNode": "Sigmoid'",
@@ -725,9 +725,7 @@ class GraphCanvas(QGraphicsView):
             from ComputationalGraphs.Nodes.LinearNode import LinearNode
             from ComputationalGraphs.Nodes.ListNode import ListNode
             from ComputationalGraphs.Nodes.MaxNode import MaxNode
-            from ComputationalGraphs.Nodes.MeanSquaredErrorNode import (
-                MeanSquaredErrorNode,
-            )
+            from ComputationalGraphs.Nodes.MeanSquaredNode import MeanSquaredNode
             from ComputationalGraphs.Nodes.MinNode import MinNode
             from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
             from ComputationalGraphs.Nodes.MutationNode import MutaionNode
@@ -794,8 +792,8 @@ class GraphCanvas(QGraphicsView):
                 node = MaxNode(name=unique_name)
             elif node_type == "MinNode":
                 node = MinNode(name=unique_name)
-            elif node_type == "MeanSquaredErrorNode":
-                node = MeanSquaredErrorNode(name=unique_name)
+            elif node_type == "MeanSquaredNode":
+                node = MeanSquaredNode(name=unique_name)
 
             # Activation functions
             elif node_type == "SigmoidNode":
