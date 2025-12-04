@@ -92,12 +92,20 @@ class ExamplesLoader:
         )
         nn_concurrent.add_example(
             "Piecewise Function MLP (Concurrent)",
-            "Regression on a simple hybrid piecewise function - 1-in 1-out MLP with a 3-neuron hidden layer (Sigmoid)",
+            (
+                "Regression on a hybrid piecewise function (x in [-3,3] with "
+                "equal samples per region) - 1-in 1-out MLP with a 3-neuron "
+                "hidden layer (Sigmoid)"
+            ),
             self._build_piecewise_mlp_concurrent,
         )
         nn_concurrent.add_example(
             "Piecewise Function 2 MLP (Concurrent)",
-            "Regression on piecewise quadratic / linear function - 1-in, 2-hidden layers (3 ReLU, 8 ReLU)",
+            (
+                "Regression on piecewise quadratic / linear function (x in [-3,3] "
+                "with equal samples per region) - 1-in, 2-hidden layers (3 ReLU, "
+                "8 ReLU)"
+            ),
             self._build_piecewise_mlp2_concurrent,
         )
         self.categories["neural_networks_concurrent"] = nn_concurrent
@@ -183,8 +191,12 @@ class ExamplesLoader:
 
     def _build_xor_mlp(self) -> Graph:
         """Build XOR MLP with backpropagation (Forward Processing version)."""
-        from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-        from ComputationalGraphs.Core.MLPGraph import MLPGraph
+        from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
+            BackpropGraphForwardProcessing,
+        )
+        from ComputationalGraphs.Core.MLPGraphForwardProcessing import (
+            MLPGraphForwardProcessing,
+        )
         from ComputationalGraphs.Nodes.LinearNode import LinearNode
 
         # Create MLP without buffers (for forward processing)
@@ -527,9 +539,9 @@ class ExamplesLoader:
         """Build a small 1-input concurrent MLP that learns a hybrid piecewise function.
 
         The function is defined as:
-            f(x) = sin(x) for x < 0
-            f(x) = 0 for 0 ≤ x < 1
-            f(x) = 2x + 1 for x ≥ 1
+            f(x) = x^2 for x <= -1
+            f(x) = 0 for -1 < x < 1
+            f(x) = 2x for x >= 1
 
         This builds a concurrent `MLPGraph` with 1 input, 1 hidden layer of 3 Sigmoid neurons,
         and 1 linear output node. It loads a synthetic dataset in row-per-feature format, attaches
@@ -544,10 +556,25 @@ class ExamplesLoader:
         from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 
         # Generate dataset for piecewise function
-        x_vals = np.linspace(-3.0, 4.0, 300)
-        # Piecewise function implementation
+        # Option B: region boundaries - region 1 includes x <= -1, region 2 is (-1, 1), region 3 includes x >= 1
+        n_total = 300
+        # distribute samples equally across three regions
+        n_regions = 3
+        base = n_total // n_regions
+        extra = n_total % n_regions
+        counts = [base + (1 if i < extra else 0) for i in range(n_regions)]
+        # region 1: [-3, -1] inclusive
+        x1 = np.linspace(-3.0, -1.0, counts[0], endpoint=True)
+        # region 2: (-1, 1) exclusive of -1 and 1 — build with extra point and drop boundaries
+        x2 = np.linspace(-1.0, 1.0, counts[1] + 1, endpoint=False)[1:]
+        # region 3: [1, 3] inclusive
+        x3 = np.linspace(1.0, 3.0, counts[2], endpoint=True)
+        x_vals = np.concatenate([x1, x2, x3])
+        # new piecewise function: f(x) = x^2 if x <= -1; 0 if -1 < x < 1; 2x if x >= 1
         y_vals = np.where(
-            x_vals < 0, np.sin(x_vals), np.where(x_vals < 1, 0.0, 2.0 * x_vals + 1.0)
+            x_vals <= -1.0,
+            x_vals**2,
+            np.where(x_vals < 1.0, 0.0, 2.0 * x_vals),
         )
 
         # Convert to row-per-feature format for concurrent MLPGraph (features, samples)
@@ -609,9 +636,9 @@ class ExamplesLoader:
     def _build_piecewise_mlp2_concurrent(self) -> Graph:
         """Build a concurrent MLP that learns the quadratic-linear piecewise function.
 
-        f(x) = x^2 for x < 0
-        f(x) = 0 for 0 <= x <= 1
-        f(x) = 2x + 1 for x > 1
+        f(x) = x^2 for x <= -1
+        f(x) = 0 for -1 < x < 1
+        f(x) = 2x for x >= 1
 
         Architecture: 1 input -> [3 ReLU] -> [8 ReLU] -> 1 Linear output; concurrent MLP with buffers.
         """
@@ -623,9 +650,20 @@ class ExamplesLoader:
         from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
 
         # Create dataset
-        x_vals = np.linspace(-3.0, 4.0, 300)
+        # Option B: region boundaries - region 1 includes x <= -1, region 2 is (-1, 1), region 3 includes x >= 1
+        n_total = 300
+        n_regions = 3
+        base = n_total // n_regions
+        extra = n_total % n_regions
+        counts = [base + (1 if i < extra else 0) for i in range(n_regions)]
+        x1 = np.linspace(-3.0, -1.0, counts[0], endpoint=True)
+        x2 = np.linspace(-1.0, 1.0, counts[1] + 1, endpoint=False)[1:]
+        x3 = np.linspace(1.0, 3.0, counts[2], endpoint=True)
+        x_vals = np.concatenate([x1, x2, x3])
         y_vals = np.where(
-            x_vals < 0, x_vals**2, np.where(x_vals <= 1, 0.0, 2.0 * x_vals + 1.0)
+            x_vals <= -1.0,
+            x_vals**2,
+            np.where(x_vals < 1.0, 0.0, 2.0 * x_vals),
         )
 
         # Convert to row-per-feature format for concurrent MLPGraph
@@ -693,8 +731,8 @@ class ExamplesLoader:
         from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
         from ComputationalGraphs.Nodes.LinearNode import LinearNode
 
-        # Build MLP (concurrent style)
-        mlpGraph = MLPGraph(
+        # Build MLP (forward-processing style)
+        mlpGraph = MLPGraphForwardProcessing(
             numInputs=2,
             numOutputs=1,
             numHiddenLayers=1,
@@ -708,8 +746,8 @@ class ExamplesLoader:
         y_train = [[0.0], [1.0], [1.0], [0.0]]
         mlpGraph.LoadData(X_train, y_train)
 
-        # Attach backprop (concurrent variant)
-        backprop_graph = BackpropGraph(mlpGraph, learningRate=0.5)
+        # Attach backprop (forward-processing variant)
+        backprop_graph = BackpropGraphForwardProcessing(mlpGraph, learningRate=0.5)
         backprop_graph.BuildBackprop()
 
         # Combine graphs into a single Graph for GUI

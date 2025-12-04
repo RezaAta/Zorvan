@@ -7,6 +7,12 @@ training via GraphProcessor.
 
 This is a convenience script for CLI testing and reproduces behavior used
 for the GUI example in `examples_loader.py`.
+
+The example now uses x in [-3, 3] with equal samples per region and the
+piecewise function:
+    f(x) = x^2 if x <= -1
+    f(x) = 0   if -1 < x < 1
+    f(x) = 2x if x >= 1
 """
 
 import numpy as np
@@ -21,15 +27,24 @@ from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 
 
 def piecewise_function(x):
-    # f(x) = sin(x) for x < 0
-    # f(x) = 0 for 0 <= x < 1
-    # f(x) = 2x + 1 for x >= 1
-    return np.where(x < 0, np.sin(x), np.where(x < 1, 0.0, 2.0 * x + 1.0))
+    # New piecewise function (Option B):
+    # f(x) = x^2 for x <= -1
+    # f(x) = 0 for -1 < x < 1
+    # f(x) = 2x for x >= 1
+    return np.where(x <= -1.0, x**2, np.where(x < 1.0, 0.0, 2.0 * x))
 
 
 def build_and_train(iterations=1000, verbose=True):
-    # Build dataset
-    x_vals = np.linspace(-3.0, 4.0, 300)
+    # Build dataset (x in [-3,3] with equal samples across three regions)
+    n_total = 300
+    n_regions = 3
+    base = n_total // n_regions
+    extra = n_total % n_regions
+    counts = [base + (1 if i < extra else 0) for i in range(n_regions)]
+    x1 = np.linspace(-3.0, -1.0, counts[0], endpoint=True)
+    x2 = np.linspace(-1.0, 1.0, counts[1] + 1, endpoint=False)[1:]
+    x3 = np.linspace(1.0, 3.0, counts[2], endpoint=True)
+    x_vals = np.concatenate([x1, x2, x3])
     y_vals = piecewise_function(x_vals)
 
     # Convert to row-per-feature (features, samples) for concurrent MLPGraph
