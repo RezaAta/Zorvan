@@ -1867,11 +1867,11 @@ class GraphCanvas(QGraphicsView):
             pass
 
     def replace_node_item(self, node_item, new_type: str):
-        """Replace the underlying graph node for a NodeItem with a new node instance of type new_type.
+        """Replace the underlying graph node for a NodeItem with a new node.
 
         Args:
             node_item: NodeItem instance to replace the underlying node for.
-            new_type: String type name of the new node class (e.g., 'MultiplicationNode').
+            new_type: String type name of the new node class.
 
         Returns:
             The new node object if replacement succeeded, else None.
@@ -1906,7 +1906,7 @@ class GraphCanvas(QGraphicsView):
                 except Exception:
                     return None
 
-            # If we have an authoritative graph, perform a Graph.ReplaceNode operation
+            # If we have an authoritative graph, perform a Graph.ReplaceNode
             g = getattr(self, "graph", None)
             old_node = getattr(node_item, "node", None)
             if (
@@ -1919,8 +1919,12 @@ class GraphCanvas(QGraphicsView):
                 except Exception:
                     # If graph replacement fails, abort
                     return None
+                # Update node_items mapping after successful graph replacement
+                if old_node in self.node_items:
+                    del self.node_items[old_node]
+                self.node_items[new_node] = node_item
             else:
-                # No authoritative graph: attempt the simple replacement in canvas and mapping
+                # No authoritative graph: simple replacement in canvas/mapping
                 try:
                     # Keep visual mapping
                     if node_item in self.node_items.values():
@@ -1952,7 +1956,26 @@ class GraphCanvas(QGraphicsView):
             except Exception:
                 pass
 
+            # Push undo command for the replacement
+            self._push_replace_command(node_item, old_node, new_node)
+
             # Return new node to caller
             return new_node
         except Exception:
             return None
+
+    def _push_replace_command(self, node_item, old_node, new_node):
+        """Push a ReplaceNodeCommand to the undo stack."""
+        undo_stack = self._get_undo_stack()
+        graph = getattr(self, "graph", None)
+        if undo_stack is None or graph is None:
+            return
+
+        from .commands import ReplaceNodeCommand
+
+        cmd = ReplaceNodeCommand(
+            self, graph, node_item, old_node, new_node, "Replace Node"
+        )
+        # Mark that replacement was already done by replace_node_item
+        cmd.mark_already_performed()
+        undo_stack.push(cmd)

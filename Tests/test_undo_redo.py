@@ -9,6 +9,7 @@ This test verifies that:
 """
 
 import sys
+
 import pytest
 
 # Skip if PyQt6 is not available
@@ -23,9 +24,11 @@ from ComputationalGraphs.GUI.commands import (
     AddNodeCommand,
     MoveNodesCommand,
     RemoveItemsCommand,
+    ReplaceNodeCommand,
 )
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
+from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 
 
 @pytest.fixture(scope="module")
@@ -40,8 +43,9 @@ def app():
 @pytest.fixture
 def setup_canvas(app):
     """Create a GraphCanvas with a Graph for testing."""
-    from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
     from PyQt6.QtGui import QUndoStack
+
+    from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
 
     canvas = GraphCanvas()
     graph = Graph()
@@ -307,6 +311,133 @@ class TestPasteCommand:
 
         # Verify the pasted node was restored
         assert len(canvas.node_items) == initial_node_count + 1
+
+
+class TestReplaceNodeCommand:
+    """Tests for ReplaceNodeCommand."""
+
+    def test_replace_node_redo(self, setup_canvas):
+        """Test that replacing a node works correctly."""
+        canvas, graph, undo_stack = setup_canvas
+
+        # Add initial node
+        old_node = AdditionNode(name="OldNode")
+        graph.AddNode(old_node)
+        node_item = canvas.add_node_item(old_node, 100, 200)
+
+        # Create new node and replace
+        new_node = MultiplicationNode(name="NewNode")
+        cmd = ReplaceNodeCommand(canvas, graph, node_item, old_node, new_node)
+        undo_stack.push(cmd)
+
+        # Verify replacement
+        assert old_node not in graph.nodes
+        assert new_node in graph.nodes
+        assert old_node not in canvas.node_items
+        assert new_node in canvas.node_items
+        assert node_item.node == new_node
+
+    def test_replace_node_undo(self, setup_canvas):
+        """Test that undoing replace node restores original."""
+        canvas, graph, undo_stack = setup_canvas
+
+        # Add initial node
+        old_node = AdditionNode(name="OldNode2")
+        graph.AddNode(old_node)
+        node_item = canvas.add_node_item(old_node, 100, 200)
+
+        # Create new node and replace
+        new_node = MultiplicationNode(name="NewNode2")
+        cmd = ReplaceNodeCommand(canvas, graph, node_item, old_node, new_node)
+        undo_stack.push(cmd)
+
+        # Undo the replacement
+        undo_stack.undo()
+
+        # Verify original node is restored
+        assert old_node in graph.nodes
+        assert new_node not in graph.nodes
+        assert old_node in canvas.node_items
+        assert new_node not in canvas.node_items
+        assert node_item.node == old_node
+
+    def test_replace_node_preserves_connections(self, setup_canvas):
+        """Test that replace preserves predecessor/successor connections."""
+        canvas, graph, undo_stack = setup_canvas
+
+        # Create a chain: pred -> target -> succ
+        pred = ContainerNode(name="Pred")
+        target = AdditionNode(name="Target")
+        succ = AdditionNode(name="Succ")
+
+        graph.AddNode(pred)
+        graph.AddNode(target)
+        graph.AddNode(succ)
+        graph.ConnectPreNode(target, pred)
+        graph.ConnectPreNode(succ, target)
+
+        # Add items to canvas
+        pred_item = canvas.add_node_item(pred, 0, 0)
+        target_item = canvas.add_node_item(target, 100, 0)
+        succ_item = canvas.add_node_item(succ, 200, 0)
+
+        # Replace target with new node
+        new_target = MultiplicationNode(name="NewTarget")
+        cmd = ReplaceNodeCommand(canvas, graph, target_item, target, new_target)
+        undo_stack.push(cmd)
+
+        # Undo and verify connections are restored
+        undo_stack.undo()
+
+        assert pred in target.predecessors or pred in getattr(
+            target, "predecessors", []
+        )
+
+    def test_replace_node_redo_after_undo(self, setup_canvas):
+        """Test that replace can be redone after undo."""
+        canvas, graph, undo_stack = setup_canvas
+
+        # Add initial node
+        old_node = AdditionNode(name="OldNode3")
+        graph.AddNode(old_node)
+        node_item = canvas.add_node_item(old_node, 100, 200)
+
+        # Create new node and replace
+        new_node = MultiplicationNode(name="NewNode3")
+        cmd = ReplaceNodeCommand(canvas, graph, node_item, old_node, new_node)
+        undo_stack.push(cmd)
+
+        # Undo then redo
+        undo_stack.undo()
+        undo_stack.redo()
+
+        # Verify replacement is restored
+        assert old_node not in graph.nodes
+        assert new_node in graph.nodes
+        assert new_node in canvas.node_items
+        assert node_item.node == new_node
+
+    def test_replaced_node_can_be_deleted(self, setup_canvas):
+        """Test that a replaced node can be deleted from canvas."""
+        canvas, graph, undo_stack = setup_canvas
+
+        # Add initial node
+        old_node = AdditionNode(name="OldNodeDel")
+        graph.AddNode(old_node)
+        node_item = canvas.add_node_item(old_node, 100, 200)
+
+        # Replace the node
+        new_node = MultiplicationNode(name="NewNodeDel")
+        cmd = ReplaceNodeCommand(canvas, graph, node_item, old_node, new_node)
+        undo_stack.push(cmd)
+
+        # Now delete the replaced node
+        delete_cmd = RemoveItemsCommand(canvas, graph, [node_item], [])
+        undo_stack.push(delete_cmd)
+
+        # Verify node was removed
+        assert new_node not in graph.nodes
+        assert new_node not in canvas.node_items
 
 
 if __name__ == "__main__":
