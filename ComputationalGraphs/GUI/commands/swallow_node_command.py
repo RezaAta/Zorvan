@@ -56,9 +56,7 @@ class SwallowNodeCommand(QUndoCommand):
         successors = successor_map.get(node, [])
 
         # Store node data with its original predecessors
-        self.swallowed_nodes.append(
-            (node, pos.x(), pos.y(), manual_color, preds[:])
-        )
+        self.swallowed_nodes.append((node, pos.x(), pos.y(), manual_color, preds[:]))
 
         # Store edges from predecessors to this node (to be removed)
         for pred in preds:
@@ -98,14 +96,14 @@ class SwallowNodeCommand(QUndoCommand):
 
     def _edge_exists(self, src, tgt):
         """Check if an edge already exists between src and tgt."""
-        return src in getattr(tgt, 'predecessors', [])
+        return src in getattr(tgt, "predecessors", [])
 
     def redo(self):
         """Swallow the nodes: create new edges, then remove nodes."""
         # First, create the new bypass edges
         for src, tgt in self.created_edges:
             self._add_edge(src, tgt)
-        
+
         # Then remove the swallowed nodes (this also removes their edges)
         for node, x, y, manual_color, predecessors in self.swallowed_nodes:
             self._remove_node(node)
@@ -115,11 +113,11 @@ class SwallowNodeCommand(QUndoCommand):
         # First, remove the bypass edges we created
         for src, tgt in self.created_edges:
             self._remove_edge(src, tgt)
-        
+
         # Restore the swallowed nodes
         for node, x, y, manual_color, predecessors in self.swallowed_nodes:
             self._restore_node(node, x, y, manual_color)
-        
+
         # Restore the original edges
         for src, tgt in self.removed_edges:
             self._restore_edge(src, tgt)
@@ -129,7 +127,7 @@ class SwallowNodeCommand(QUndoCommand):
         # Check both nodes exist in canvas
         if src not in self.canvas.node_items or tgt not in self.canvas.node_items:
             return
-        
+
         # Check edge doesn't already exist visually
         for edge in self.canvas.edge_items:
             try:
@@ -137,7 +135,7 @@ class SwallowNodeCommand(QUndoCommand):
                     return  # Already exists
             except Exception:
                 pass
-        
+
         # Add edge (this also connects in graph)
         self.canvas.add_edge_item(src, tgt)
 
@@ -153,7 +151,7 @@ class SwallowNodeCommand(QUndoCommand):
                     break
             except Exception:
                 pass
-        
+
         # Disconnect in graph
         try:
             self.graph.DisconnectPreNode(tgt, src)
@@ -173,14 +171,14 @@ class SwallowNodeCommand(QUndoCommand):
                         self.canvas.edge_items.remove(edge)
                 except Exception:
                     pass
-            
+
             # Remove the node item from scene
             try:
                 self.canvas.scene.removeItem(node_item)
             except Exception:
                 pass
             del self.canvas.node_items[node]
-        
+
         # Remove from graph
         if node in self.graph.nodes:
             try:
@@ -196,7 +194,7 @@ class SwallowNodeCommand(QUndoCommand):
         # Add back to graph
         if node not in self.graph.nodes:
             self.graph.AddNode(node)
-        
+
         # Add back to canvas
         if node not in self.canvas.node_items:
             node_item = self.canvas.add_node_item(node, x, y)
@@ -212,7 +210,7 @@ class SwallowNodeCommand(QUndoCommand):
         # Check both nodes exist in canvas
         if src not in self.canvas.node_items or tgt not in self.canvas.node_items:
             return
-        
+
         # Check edge doesn't already exist
         for edge in self.canvas.edge_items:
             try:
@@ -220,6 +218,6 @@ class SwallowNodeCommand(QUndoCommand):
                     return  # Already exists
             except Exception:
                 pass
-        
+
         # Add edge (this also connects in graph)
         self.canvas.add_edge_item(src, tgt)

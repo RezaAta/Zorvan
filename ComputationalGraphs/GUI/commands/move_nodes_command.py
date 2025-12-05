@@ -25,11 +25,9 @@ class MoveNodesCommand(QUndoCommand):
         # Store as list of (node, old_x, old_y, new_x, new_y) for reliable serialization
         self.positions = []
         for node, old_pos, new_pos in node_positions:
-            self.positions.append((
-                node,
-                old_pos.x(), old_pos.y(),
-                new_pos.x(), new_pos.y()
-            ))
+            self.positions.append(
+                (node, old_pos.x(), old_pos.y(), new_pos.x(), new_pos.y())
+            )
 
     def redo(self):
         """Move nodes to their new positions."""

@@ -12,8 +12,15 @@ class PasteCommand(QUndoCommand):
     and edges, and can undo by removing them all.
     """
 
-    def __init__(self, canvas, graph, pasted_nodes, pasted_edges, node_positions,
-                 description="Paste"):
+    def __init__(
+        self,
+        canvas,
+        graph,
+        pasted_nodes,
+        pasted_edges,
+        node_positions,
+        description="Paste",
+    ):
         """Initialize the paste command.
 
         Args:

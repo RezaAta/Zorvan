@@ -20,8 +20,10 @@ class AddEdgeCommand(QUndoCommand):
         # Check edge doesn't already exist
         for edge in self.canvas.edge_items:
             try:
-                if (edge.source_node.node == self.source_node and
-                        edge.target_node.node == self.target_node):
+                if (
+                    edge.source_node.node == self.source_node
+                    and edge.target_node.node == self.target_node
+                ):
                     return  # Already exists
             except Exception:
                 pass
@@ -34,8 +36,10 @@ class AddEdgeCommand(QUndoCommand):
         # Find and remove the visual edge
         for edge in list(self.canvas.edge_items):
             try:
-                if (edge.source_node.node == self.source_node and
-                        edge.target_node.node == self.target_node):
+                if (
+                    edge.source_node.node == self.source_node
+                    and edge.target_node.node == self.target_node
+                ):
                     edge.remove()
                     if edge in self.canvas.edge_items:
                         self.canvas.edge_items.remove(edge)

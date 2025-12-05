@@ -5,8 +5,9 @@ Tests the SwallowNodeCommand which removes nodes while reconnecting
 their predecessors to their successors.
 """
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from PyQt6.QtCore import QPointF
 
 # Skip if PyQt6 is not available
@@ -19,8 +20,8 @@ class TestSwallowNodeCommand:
     def test_swallow_single_node_in_chain(self):
         """Test swallowing a node in a simple chain: a -> b -> c becomes a -> c."""
         from ComputationalGraphs.Core.Graph import Graph
-        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
         from ComputationalGraphs.GUI.commands import SwallowNodeCommand
+        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 
         # Create a simple graph: a -> b -> c
         graph = Graph()
@@ -66,8 +67,8 @@ class TestSwallowNodeCommand:
     def test_swallow_preserves_multiple_predecessors(self):
         """Test swallowing a node with multiple predecessors."""
         from ComputationalGraphs.Core.Graph import Graph
-        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
         from ComputationalGraphs.GUI.commands import SwallowNodeCommand
+        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 
         # Create graph: a1 -> b <- a2, b -> c
         graph = Graph()
@@ -81,7 +82,7 @@ class TestSwallowNodeCommand:
         graph.AddNode(node_c)
         graph.ConnectPreNode(node_b, node_a1)  # a1 -> b
         graph.ConnectPreNode(node_b, node_a2)  # a2 -> b
-        graph.ConnectPreNode(node_c, node_b)   # b -> c
+        graph.ConnectPreNode(node_c, node_b)  # b -> c
 
         # Create mock canvas
         canvas = MagicMock()
@@ -109,8 +110,8 @@ class TestSwallowNodeCommand:
     def test_swallow_preserves_multiple_successors(self):
         """Test swallowing a node with multiple successors."""
         from ComputationalGraphs.Core.Graph import Graph
-        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
         from ComputationalGraphs.GUI.commands import SwallowNodeCommand
+        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 
         # Create graph: a -> b -> c1, b -> c2
         graph = Graph()
@@ -122,7 +123,7 @@ class TestSwallowNodeCommand:
         graph.AddNode(node_b)
         graph.AddNode(node_c1)
         graph.AddNode(node_c2)
-        graph.ConnectPreNode(node_b, node_a)   # a -> b
+        graph.ConnectPreNode(node_b, node_a)  # a -> b
         graph.ConnectPreNode(node_c1, node_b)  # b -> c1
         graph.ConnectPreNode(node_c2, node_b)  # b -> c2
 
@@ -152,8 +153,8 @@ class TestSwallowNodeCommand:
     def test_swallow_multiple_nodes(self):
         """Test swallowing multiple nodes at once: a -> b -> c -> d, swallow b,c => a -> d."""
         from ComputationalGraphs.Core.Graph import Graph
-        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
         from ComputationalGraphs.GUI.commands import SwallowNodeCommand
+        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 
         # Create a chain: a -> b -> c -> d
         graph = Graph()
@@ -205,8 +206,8 @@ class TestSwallowNodeCommand:
     def test_swallow_avoids_duplicate_edges(self):
         """Test that swallowing doesn't create duplicate edges."""
         from ComputationalGraphs.Core.Graph import Graph
-        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
         from ComputationalGraphs.GUI.commands import SwallowNodeCommand
+        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 
         # Create graph where a already connects to c: a -> b -> c, a -> c
         graph = Graph()

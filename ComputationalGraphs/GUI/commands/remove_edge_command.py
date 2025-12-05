@@ -8,7 +8,9 @@ from PyQt6.QtGui import QUndoCommand
 class RemoveEdgeCommand(QUndoCommand):
     """Command to remove an edge between two nodes."""
 
-    def __init__(self, canvas, graph, source_node, target_node, description="Remove Edge"):
+    def __init__(
+        self, canvas, graph, source_node, target_node, description="Remove Edge"
+    ):
         super().__init__(description)
         self.canvas = canvas
         self.graph = graph
@@ -20,8 +22,10 @@ class RemoveEdgeCommand(QUndoCommand):
         # Find and remove the visual edge
         for edge in list(self.canvas.edge_items):
             try:
-                if (edge.source_node.node == self.source_node and
-                        edge.target_node.node == self.target_node):
+                if (
+                    edge.source_node.node == self.source_node
+                    and edge.target_node.node == self.target_node
+                ):
                     edge.remove()
                     if edge in self.canvas.edge_items:
                         self.canvas.edge_items.remove(edge)
@@ -46,8 +50,10 @@ class RemoveEdgeCommand(QUndoCommand):
         # Check edge doesn't already exist
         for edge in self.canvas.edge_items:
             try:
-                if (edge.source_node.node == self.source_node and
-                        edge.target_node.node == self.target_node):
+                if (
+                    edge.source_node.node == self.source_node
+                    and edge.target_node.node == self.target_node
+                ):
                     return  # Already exists
             except Exception:
                 pass
