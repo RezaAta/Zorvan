@@ -1,5 +1,10 @@
 import sys
 
+import pytest
+
+# Skip GUI tests when PyQt6 isn't available in the environment
+pytest.importorskip("PyQt6")
+
 from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication

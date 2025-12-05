@@ -1,6 +1,11 @@
 import sys
 import unittest
 
+import pytest
+
+# Skip GUI tests when PyQt6 isn't available in the environment
+pytest.importorskip("PyQt6")
+
 from PyQt6.QtWidgets import QApplication
 
 from ComputationalGraphs.GUI.main_window import MainWindow
