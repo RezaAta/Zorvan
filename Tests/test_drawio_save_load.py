@@ -1,6 +1,11 @@
 import os
 import tempfile
 
+import pytest
+
+# Skip GUI-specific tests when PyQt6 is not installed in CI environments
+pytest.importorskip("PyQt6")
+
 from ComputationalGraphs.Core.DrawioIO import DrawioIO
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
