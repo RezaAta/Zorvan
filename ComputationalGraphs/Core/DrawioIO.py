@@ -87,9 +87,52 @@ class DrawioIO:
         return positions
 
     @staticmethod
-    def save(graph: Graph, filename: str, cell_size=(80, 80), padding=20):
-        # Graphviz layout
-        raw = DrawioIO.compute_layout(graph)
+    def save(
+        graph: Graph,
+        filename: str,
+        cell_size=(80, 80),
+        padding=20,
+        canvas=None,
+        preserve_visuals: bool = False,
+    ):
+        """Save a Graph to Draw.io XML format.
+
+        If preserve_visuals is True and a canvas is provided (or nodes expose gui_pos/gui_color
+        attributes), the node positions and colors will be embedded into the saved Draw.io file.
+        Otherwise, a Graphviz (dot) layout is used to compute positions.
+        """
+        # If preserve_visuals requested, try to obtain positions from canvas or node attributes
+        raw = None
+        if preserve_visuals:
+            # If we have a canvas with NodeItems, try to use those positions
+            try:
+                if canvas is not None and hasattr(canvas, "node_items"):
+                    raw = {}
+                    for node, item in canvas.node_items.items():
+                        try:
+                            pos = item.pos()
+                            raw[node.id] = (pos.x(), pos.y())
+                        except Exception:
+                            # If NodeItem has x/y attributes instead
+                            try:
+                                raw[node.id] = (item.x, item.y)
+                            except Exception:
+                                pass
+            except Exception:
+                raw = None
+            # If node objects carry gui_pos attributes (e.g. loaded from CGJson), use them
+            if raw is None or len(raw) == 0:
+                try:
+                    raw = {}
+                    for node in graph.nodes:
+                        pos = getattr(node, "gui_pos", None)
+                        if pos is not None:
+                            raw[node.id] = (float(pos[0]), float(pos[1]))
+                except Exception:
+                    raw = None
+        # Graphviz layout as fallback
+        if raw is None or len(raw) == 0:
+            raw = DrawioIO.compute_layout(graph)
         # Scale to draw.io
         positions = {
             nid: (x * cell_size[0], y * cell_size[1]) for nid, (x, y) in raw.items()
@@ -126,26 +169,144 @@ class DrawioIO:
                     "label": f"{node.name}\n{node.value}\n{type(node).__name__}",
                 }
             )
+            # If the graph or canvas carries visual information (gui_pos/gui_color), include it
+            if preserve_visuals:
+                # Prefer canvas node item color/position
+                gui_x, gui_y, gui_w, gui_h = None, None, None, None
+                gui_color = None
+                label_color = None
+                if (
+                    canvas is not None
+                    and hasattr(canvas, "node_items")
+                    and node in canvas.node_items
+                ):
+                    item = canvas.node_items[node]
+                    try:
+                        pos = item.pos()
+                        gui_x, gui_y = pos.x(), pos.y()
+                    except Exception:
+                        pass
+                    try:
+                        gui_color = (
+                            item.manual_color.name()
+                            if getattr(item, "manual_color", None) is not None
+                            else (
+                                item.color.name()
+                                if getattr(item, "color", None) is not None
+                                else None
+                            )
+                        )
+                    except Exception:
+                        gui_color = None
+                    # label color
+                    label_color = None
+                    try:
+                        if hasattr(item, "label") and item.label is not None:
+                            lc = item.label.defaultTextColor()
+                            if lc is not None:
+                                label_color = lc.name()
+                    except Exception:
+                        label_color = None
+                    try:
+                        gui_w = item.rect().width()
+                        gui_h = item.rect().height()
+                    except Exception:
+                        pass
+                # If not available on canvas, fallback to node attributes
+                if gui_x is None or gui_y is None:
+                    pos = getattr(node, "gui_pos", None)
+                    if pos is not None:
+                        try:
+                            gui_x = float(pos[0])
+                            gui_y = float(pos[1])
+                        except Exception:
+                            pass
+                    if gui_color is None:
+                        try:
+                            gui_color = getattr(node, "gui_color", None)
+                        except Exception:
+                            gui_color = None
+                # store GUI visuals attributes on the object for DrawioIO.load to restore
+                if gui_x is not None and gui_y is not None:
+                    attrs["gui_pos"] = f"{gui_x},{gui_y}"
+                if gui_color is not None:
+                    attrs["gui_color"] = str(gui_color)
+                if label_color is not None:
+                    attrs["gui_label_color"] = str(label_color)
+                if gui_w is not None and gui_h is not None:
+                    try:
+                        attrs["gui_radius"] = str(float(gui_w) / 2.0)
+                    except Exception:
+                        pass
+                # Gui label can be stored separately if present
+                gui_label = getattr(node, "gui_label", None)
+                if gui_label is not None:
+                    attrs["gui_label"] = str(gui_label)
             str_attrs = {k: str(v) for k, v in attrs.items()}
             obj = ET.SubElement(root_el, "object", str_attrs)
+            # build style string: base + optional color/shape + font color
+            style_str = "ellipse;whiteSpace=wrap;html=1;aspect=fixed;"
+            gui_col = attrs.get("gui_color") or getattr(node, "gui_color", None)
+            if gui_col:
+                style_str += f"fillColor={gui_col};"
+            # label font color
+            label_col = attrs.get("gui_label_color") or getattr(
+                node, "gui_label_color", None
+            )
+            if label_col:
+                style_str += f"fontColor={label_col};"
             ET.SubElement(
                 obj,
                 "mxCell",
                 {
-                    "style": "ellipse;whiteSpace=wrap;html=1;aspect=fixed;",
+                    "style": style_str,
                     "vertex": "1",
                     "parent": "1",
                 },
             )
-            x, y = positions.get(node.id, (0, 0))
+            # geometry: prefer explicit gui_pos when present, else use computed positions
+            g_x, g_y = None, None
+            if preserve_visuals:
+                pos_attr = None
+                try:
+                    pos_attr = obj.get("gui_pos")
+                except Exception:
+                    pos_attr = None
+                if pos_attr:
+                    try:
+                        g_x, g_y = [float(v) for v in pos_attr.split(",")]
+                    except Exception:
+                        g_x, g_y = None, None
+            if g_x is None or g_y is None:
+                x, y = positions.get(node.id, (0, 0))
+            else:
+                x, y = g_x, g_y
+            # Set geometry width/height based on cell_size or gui_radius if provided
+            w = cell_size[0]
+            h = cell_size[1]
+            try:
+                # prefer explicit gui_radius (node.gui_radius or attrs)
+                rad = None
+                if "gui_radius" in attrs:
+                    try:
+                        rad = float(attrs.get("gui_radius"))
+                    except Exception:
+                        rad = None
+                else:
+                    rad = getattr(node, "gui_radius", None)
+                if rad is not None:
+                    w = rad * 2
+                    h = rad * 2
+            except Exception:
+                pass
             ET.SubElement(
                 obj.find("mxCell"),
                 "mxGeometry",
                 {
                     "x": str(x),
                     "y": str(y),
-                    "width": str(cell_size[0]),
-                    "height": str(cell_size[1]),
+                    "width": str(w),
+                    "height": str(h),
                     "as": "geometry",
                 },
             )
@@ -197,7 +358,58 @@ class DrawioIO:
                                 val = float(v)
                             except:
                                 val = v
-                    setattr(node, k, val)
+                    # Special-case gui_pos - parse 'x,y' into a tuple
+                    if k == "gui_pos":
+                        try:
+                            parts = str(val).split(",")
+                            node.gui_pos = (float(parts[0]), float(parts[1]))
+                        except Exception:
+                            try:
+                                # fallback to list or single value
+                                node.gui_pos = tuple(val)
+                            except Exception:
+                                node.gui_pos = val
+                    else:
+                        setattr(node, k, val)
+            # Parse mxCell geometry/style into gui_pos/gui_color/gui_radius if present
+            try:
+                mx_cell = obj.find("mxCell")
+                if mx_cell is not None:
+                    geom = mx_cell.find("mxGeometry")
+                    if geom is not None:
+                        x = geom.get("x")
+                        y = geom.get("y")
+                        width = geom.get("width")
+                        height = geom.get("height")
+                        if x is not None and y is not None:
+                            try:
+                                node.gui_pos = (float(x), float(y))
+                            except Exception:
+                                pass
+                        if width is not None:
+                            try:
+                                node.gui_radius = float(width) / 2.0
+                            except Exception:
+                                pass
+                    style = mx_cell.get("style")
+                    if style:
+                        # parse style string like key=value;key2=value2
+                        try:
+                            items = [s for s in style.split(";") if "=" in s]
+                            for it in items:
+                                key, val = it.split("=", 1)
+                                if key == "fillColor":
+                                    node.gui_color = val
+                                if key == "strokeColor":
+                                    node.gui_stroke = val
+                                if key == "shape":
+                                    node.gui_shape = val
+                                if key == "fontColor":
+                                    node.gui_label_color = val
+                        except Exception:
+                            pass
+            except Exception:
+                pass
             graph.AddNode(node)
             id_map[nid] = node
         for cell in root.findall('mxCell[@edge="1"]'):

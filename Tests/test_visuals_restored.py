@@ -37,6 +37,9 @@ class VisualsRestoredTest(unittest.TestCase):
             self.assertIsNotNone(gp)
             self.assertTrue(isinstance(pos.x(), float))
             self.assertTrue(isinstance(pos.y(), float))
+            # Validate manual color applied
+            mc = getattr(item, "manual_color", None)
+            self.assertIsNotNone(mc)
 
 
 if __name__ == "__main__":

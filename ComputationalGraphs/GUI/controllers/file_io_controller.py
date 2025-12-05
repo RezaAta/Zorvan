@@ -113,7 +113,13 @@ class FileIOController:
                 self.status_bar.showMessage(f"Saving to {filename}...")
 
                 if filename.lower().endswith((".drawio", ".xml")):
-                    DrawioIO.save(self.graph, filename)
+                    # When saving from GUI, prefer to preserve canvas visuals (positions and colors)
+                    DrawioIO.save(
+                        self.graph,
+                        filename,
+                        canvas=self.canvas,
+                        preserve_visuals=True,
+                    )
                 elif filename.lower().endswith((".cgjson", ".json", ".cgz")):
                     CGJsonIO.save(
                         self.graph,

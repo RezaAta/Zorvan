@@ -36,6 +36,11 @@ class NodeItem(QGraphicsEllipseItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
         self.setAcceptHoverEvents(True)
+        # Ensure nodes are drawn above edges
+        try:
+            self.setZValue(2)
+        except Exception:
+            pass
 
         # Disable caching to avoid trail artifacts
         self.setCacheMode(QGraphicsItem.CacheMode.NoCache)
@@ -410,19 +415,22 @@ class NodeItem(QGraphicsEllipseItem):
 
             new_pos = self.pos()
             # Only push if position actually changed
-            if abs(old_pos.x() - new_pos.x()) < 0.1 and abs(old_pos.y() - new_pos.y()) < 0.1:
+            if (
+                abs(old_pos.x() - new_pos.x()) < 0.1
+                and abs(old_pos.y() - new_pos.y()) < 0.1
+            ):
                 return
 
             # Collect all selected nodes that moved together
             from .commands import MoveNodesCommand
+
             node_positions = []
 
             # Get all selected NodeItems from this item's scene
             scene = self.scene()
             if scene:
                 selected_items = [
-                    item for item in scene.selectedItems()
-                    if isinstance(item, NodeItem)
+                    item for item in scene.selectedItems() if isinstance(item, NodeItem)
                 ]
 
                 # If this item is selected, include all selected items

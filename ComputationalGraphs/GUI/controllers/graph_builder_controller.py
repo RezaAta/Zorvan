@@ -216,6 +216,51 @@ class GraphBuilderController:
                         node_item.setPos(adjusted_x, adjusted_y)
                     except Exception:
                         pass
+                # Apply saved GUI visuals if provided by the node (color, radius, label)
+                try:
+                    gui_col = getattr(node, "gui_color", None)
+                    if gui_col:
+                        from PyQt6.QtGui import QColor
+
+                        # Drawio style color is usually hex like #RRGGBB
+                        try:
+                            qcol = QColor(gui_col)
+                            node_item.manual_color = qcol
+                            node_item.color = qcol
+                            node_item.update()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                try:
+                    gui_radius = getattr(node, "gui_radius", None)
+                    if gui_radius:
+                        node_item.radius = gui_radius
+                        try:
+                            node_item.setRect(
+                                -gui_radius, -gui_radius, gui_radius * 2, gui_radius * 2
+                            )
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                try:
+                    gui_label = getattr(node, "gui_label", None)
+                    if gui_label:
+                        node_item.set_label_text(gui_label)
+                except Exception:
+                    pass
+                try:
+                    gui_label_color = getattr(node, "gui_label_color", None)
+                    if gui_label_color:
+                        from PyQt6.QtGui import QColor
+
+                        try:
+                            node_item.label.setDefaultTextColor(QColor(gui_label_color))
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
             except Exception:
                 print(
                     f"Failed to create NodeItem for node: {getattr(node, 'name', str(node))}"
