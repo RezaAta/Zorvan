@@ -1,4 +1,8 @@
 import pytest
+
+# Skip GUI tests when PyQt6 isn't available in CI environments
+pytest.importorskip("PyQt6")
+
 from PyQt6.QtWidgets import QApplication
 
 from ComputationalGraphs.GUI.plot_window_pyqtgraph import PlotWindowPG
