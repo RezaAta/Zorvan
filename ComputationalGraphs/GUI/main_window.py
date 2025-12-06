@@ -397,6 +397,10 @@ class MainWindow(QMainWindow):
         """Handle ANN color mode checkbox changes. Delegates to visualization controller."""
         self.visualization_controller.on_ann_color_changed(state)
 
+    def on_topology_labels_changed(self, state):
+        """Handle topology labels checkbox changes. Delegates to visualization controller."""
+        self.visualization_controller.on_topology_labels_changed(state)
+
     def auto_detect_range(self):
         """Automatically detect min and max values from current node values."""
         self.visualization_controller.auto_detect_range()

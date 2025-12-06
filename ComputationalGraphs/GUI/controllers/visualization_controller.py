@@ -92,6 +92,30 @@ class VisualizationController:
             # Clear ANN colors from canvas
             self.canvas.clear_ann_colors()
 
+    def on_topology_labels_changed(self, state):
+        """Handle toggling of 'Show Topology Labels' mode.
+
+        When enabled, analyze the graph topology and display topology type
+        labels below each node. When disabled, hide the labels.
+        """
+        show_labels = state == Qt.CheckState.Checked.value
+        try:
+            self.main_window.topology_labels_enabled = show_labels
+        except Exception:
+            pass
+
+        if show_labels:
+            # Analyze topology for the current graph
+            if self.graph is not None:
+                self.graph.analyze_topology()
+            # Update all node items to show topology labels
+            for node_item in self.canvas.node_items.values():
+                node_item.update_topology_label(show=True)
+        else:
+            # Hide topology labels on all node items
+            for node_item in self.canvas.node_items.values():
+                node_item.update_topology_label(show=False)
+
     def clear_colors(self):
         """Clear both ANN and value-based colors and reset to default node color."""
         # Disable both coloring modes (uncheck checkboxes and clear canvas)
