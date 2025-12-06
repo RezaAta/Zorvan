@@ -45,9 +45,17 @@ class NodeItem(QGraphicsEllipseItem):
         # Disable caching to avoid trail artifacts
         self.setCacheMode(QGraphicsItem.CacheMode.NoCache)
 
-        # Default colors
-        self.default_color = QColor(0, 63, 189)  # #003fbd
-        self.selected_color = QColor(50, 113, 239)  # Lighter blue for selection
+        # Default colors - check if this is a CompressedNode for distinct styling
+        from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
+
+        if isinstance(node, CompressedNode):
+            # Gold/amber color for compressed nodes
+            self.default_color = QColor(212, 160, 23)  # #D4A017 - gold
+            self.selected_color = QColor(255, 200, 50)  # Lighter gold for selection
+        else:
+            self.default_color = QColor(0, 63, 189)  # #003fbd
+            self.selected_color = QColor(50, 113, 239)  # Lighter blue for selection
+
         self.active_color = QColor(100, 180, 255)  # Bright light blue for active nodes
         self.color = None  # Custom color (set by layout/coloring functions)
         # Manual color is used for ANN/explicit coloring which takes precedence
@@ -59,8 +67,12 @@ class NodeItem(QGraphicsEllipseItem):
         self.setBrush(QBrush(self.default_color))
         self.setPen(QPen(Qt.GlobalColor.black, 2))
 
-        # Label
-        self.label = QGraphicsTextItem(self.node.name, self)
+        # Label - for CompressedNode, show node count
+        if isinstance(node, CompressedNode):
+            label_text = f"{node.name} [{len(node)}]"
+        else:
+            label_text = node.name
+        self.label = QGraphicsTextItem(label_text, self)
         self.label.setDefaultTextColor(Qt.GlobalColor.white)
         font = QFont("Arial", 10, QFont.Weight.Bold)
         self.label.setFont(font)
@@ -499,6 +511,8 @@ class NodeItem(QGraphicsEllipseItem):
 
     def contextMenuEvent(self, event):
         try:
+            from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
+
             menu = QMenu()
             # View predecessors menu item
             view_pred_action = menu.addAction("View Predecessors")
@@ -508,6 +522,32 @@ class NodeItem(QGraphicsEllipseItem):
             swallow_action.setToolTip(
                 "Remove node while connecting predecessors to successors"
             )
+
+            # Compression actions
+            compress_action = None
+            decompress_action = None
+
+            # Check if this is a CompressedNode (show decompress option)
+            if isinstance(self.node, CompressedNode):
+                decompress_action = menu.addAction("📦 Decompress Node")
+                decompress_action.setToolTip(
+                    "Expand compressed node back to original nodes"
+                )
+            else:
+                # Check if multiple nodes selected (show compress option)
+                scene = self.scene()
+                if scene:
+                    selected = scene.selectedItems()
+                    node_items = [
+                        item for item in selected if isinstance(item, NodeItem)
+                    ]
+                    if len(node_items) >= 2:
+                        compress_action = menu.addAction("📦 Compress Selection")
+                        compress_action.setToolTip(
+                            "Combine selected sequential nodes into one"
+                        )
+
+            menu.addSeparator()
             reset_node_action = menu.addAction("🔄 Reset Node")
 
             action = menu.exec(event.screenPos())
@@ -515,7 +555,7 @@ class NodeItem(QGraphicsEllipseItem):
             if action == view_pred_action:
                 try:
                     canvas = getattr(self, "canvas", None)
-                    if canvas and hasattr(canvas, "graph") and canvas.graph is not None:
+                    if canvas and hasattr(canvas, "graph") and canvas.graph:
                         from .predecessors_dialog import PredecessorsDialog
 
                         dlg = PredecessorsDialog(
@@ -538,6 +578,10 @@ class NodeItem(QGraphicsEllipseItem):
                 self._swallow_node()
             elif action == reset_node_action:
                 self._reset_node()
+            elif compress_action and action == compress_action:
+                self._compress_selection()
+            elif decompress_action and action == decompress_action:
+                self._decompress_node()
 
         except Exception:
             pass
@@ -552,6 +596,24 @@ class NodeItem(QGraphicsEllipseItem):
                     self.scene().clearSelection()
                     self.setSelected(True)
                 canvas.swallow_selected_with_undo()
+        except Exception:
+            pass
+
+    def _compress_selection(self):
+        """Compress selected nodes into a CompressedNode."""
+        try:
+            canvas = getattr(self, "canvas", None)
+            if canvas and hasattr(canvas, "compress_selected_with_undo"):
+                canvas.compress_selected_with_undo()
+        except Exception:
+            pass
+
+    def _decompress_node(self):
+        """Decompress this CompressedNode back to original nodes."""
+        try:
+            canvas = getattr(self, "canvas", None)
+            if canvas and hasattr(canvas, "decompress_node_with_undo"):
+                canvas.decompress_node_with_undo(self, mode="full")
         except Exception:
             pass
 

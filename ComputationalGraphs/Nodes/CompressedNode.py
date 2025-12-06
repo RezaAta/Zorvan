@@ -1,60 +1,208 @@
-from concurrent.futures import ThreadPoolExecutor
-
 from ComputationalGraphs.Nodes.Node import Node
 
 
-# CompressedNode: A Node with a list of nodes
 class CompressedNode(Node):
+    """
+    A CompressedNode combines sequentially connected nodes into a single node.
+
+    When processed, it executes its contained nodes in order (first to last).
+    The compressed node's value is the value of the last node in the chain.
+
+    Connection routing:
+    - Predecessors: same as the first contained node
+    - Successors: same as the last contained node
+
+    This enables graph simplification while preserving computational semantics.
+    """
+
     def __init__(self, name: str = "", nodes=None):
-        self.listOfNodes = nodes if nodes else []
+        """
+        Initialize a CompressedNode.
+
+        Args:
+            name: The name of the compressed node (auto-generated as C1, C2)
+            nodes: An ordered list of nodes to compress. Must be in chain order
+                   (first node's output feeds into second node, etc.)
+        """
+        self.listOfNodes = list(nodes) if nodes else []
+        # Set initial value from the last node if available
         self.value = self.listOfNodes[-1].value if self.listOfNodes else 0
         super().__init__(name)
         self.computationType = "complex"
 
+    @property
+    def first_node(self):
+        """Return the first node in the chain (entry point for inputs)."""
+        return self.listOfNodes[0] if self.listOfNodes else None
+
+    @property
+    def last_node(self):
+        """Return the last node in the chain (exit point for outputs)."""
+        return self.listOfNodes[-1] if self.listOfNodes else None
+
     def SetComputationStructure(self):
         """
-        Generate a string that represents the computation structure of the CompressedNode.
-        The structure is represented as the concatenation of all node names in the list.
+        Generate a string representing the computation structure.
+        Structure is the concatenation of all node ids in the list.
         """
         if self.listOfNodes:
-            self.computationStructure = "".join(node.id for node in self.listOfNodes)
+            self.computationStructure = "->".join(
+                getattr(node, "id", node.name) for node in self.listOfNodes
+            )
         else:
-            self.computationStructure = (
-                self.id
-            )  # If no nodes are present, return an empty string
+            self.computationStructure = self.id
 
     def UpdateComputationTime(self):
         """
-        Update the computation time of the AbstractNode.
-        The computation time is set to the sum computation time of all its nodes.
+        Update the computation time of the CompressedNode.
+        Sum of all contained nodes' times (sequential execution).
         """
         if self.listOfNodes:
             self.computationTime = sum(
-                node.computationTime for node in self.listOfNodes
+                getattr(node, "computationTime", 1) for node in self.listOfNodes
             )
         else:
             self.computationTime = 1
 
     def Operation(self, *inputs):
-        pass
+        """
+        Execute all contained nodes sequentially in chain order.
+
+        The first node receives inputs from the CompressedNode's predecessors.
+        Each subsequent node receives inputs from its internal predecessors.
+        The final value is taken from the last node.
+
+        Args:
+            *inputs: Inputs passed to the first node in the chain.
+
+        Returns:
+            The value of the last node after processing.
+        """
+        if not self.listOfNodes:
+            return 0
+
+        # Process each node in sequence
+        for i, node in enumerate(self.listOfNodes):
+            if i == 0:
+                # First node: use the inputs passed to the CompressedNode
+                # (which come from the CompressedNode's predecessors)
+                if hasattr(node, "UpdateInputs"):
+                    node.UpdateInputs()
+                if hasattr(node, "Operation"):
+                    if hasattr(node, "inputs"):
+                        node.value = node.Operation(*node.inputs)
+                    else:
+                        node.value = node.Operation(*inputs)
+            else:
+                # Subsequent nodes: gather inputs from their predecessors
+                # (which are inside the compressed node chain)
+                if hasattr(node, "UpdateInputs"):
+                    node.UpdateInputs()
+                if hasattr(node, "Operation"):
+                    if hasattr(node, "inputs"):
+                        result = node.Operation(*node.inputs)
+                    else:
+                        result = node.Operation()
+                    if result is not None:
+                        node.value = result
+
+        # The CompressedNode's value is the last node's value
+        self.value = self.listOfNodes[-1].value
+        return self.value
 
     def ProcessBatch(self, *inputs):
         """
-        Perform an operation on all nodes in parallel. In this example, we will assume
-        that each node performs its own operation independently.
+        Process all contained nodes sequentially (not in parallel).
+
+        Since nodes in a compressed chain depend on each other,
+        they must be processed in order. Each node's UpdateInputs is called
+        before its ProcessBatch to ensure proper input gathering.
         """
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(node.ProcessBatch) for node in self.listOfNodes]
-            # Wait for all nodes to complete their operations in parallel
-            for future in futures:
-                future.result()  # Retrieve the result of each operation (if needed)
+        if not self.listOfNodes:
+            return
+
+        for node in self.listOfNodes:
+            # UpdateInputs gathers values from predecessors
+            if hasattr(node, "UpdateInputs"):
+                node.UpdateInputs()
+            # ProcessBatch calls Operation with the gathered inputs
+            if hasattr(node, "ProcessBatch"):
+                node.ProcessBatch()
+
+        # Update the CompressedNode's value from the last node
+        self.value = self.listOfNodes[-1].value if self.listOfNodes else 0
 
     def UpdateInputs(self):
         """
-        Update the inputs array with the values from all nodes in the set.
+        Update inputs for the first node only.
+
+        The first node gathers inputs from the CompressedNode's predecessors.
+        Internal nodes will gather inputs from their internal predecessors
+        during the Operation phase.
         """
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(node.UpdateInputs) for node in self.listOfNodes]
-            # Wait for all nodes to complete their operations in parallel
-            for future in futures:
-                future.result()  # Retrieve the result of each operation (if needed)
+        if self.listOfNodes and hasattr(self.listOfNodes[0], "UpdateInputs"):
+            # First node uses CompressedNode's predecessors as input source
+            # Internal predecessor links are preserved, so just update it
+            self.listOfNodes[0].UpdateInputs()
+
+        # Also collect inputs at the CompressedNode level
+        self.inputs = [
+            pred.value for pred in self.predecessors if hasattr(pred, "value")
+        ]
+
+    def extend_front(self, node):
+        """
+        Add a node to the front of the chain (new entry point).
+
+        Args:
+            node: The node to add at the beginning.
+        """
+        self.listOfNodes.insert(0, node)
+
+    def extend_back(self, node):
+        """
+        Add a node to the back of the chain (new exit point).
+
+        Args:
+            node: The node to add at the end.
+        """
+        self.listOfNodes.append(node)
+
+    def pop_front(self):
+        """
+        Remove and return the first node from the chain.
+
+        Returns:
+            The removed node, or None if the chain is empty.
+        """
+        if self.listOfNodes:
+            return self.listOfNodes.pop(0)
+        return None
+
+    def pop_back(self):
+        """
+        Remove and return the last node from the chain.
+
+        Returns:
+            The removed node, or None if the chain is empty.
+        """
+        if self.listOfNodes:
+            return self.listOfNodes.pop()
+        return None
+
+    def get_internal_nodes(self):
+        """
+        Return a copy of the list of internal nodes.
+
+        Returns:
+            A new list containing all nodes in the chain.
+        """
+        return list(self.listOfNodes)
+
+    def __len__(self):
+        """Return the number of nodes in the compressed chain."""
+        return len(self.listOfNodes)
+
+    def __repr__(self):
+        node_names = [getattr(n, "name", str(n)) for n in self.listOfNodes]
+        return f"CompressedNode({self.name}, chain=[{' -> '.join(node_names)}])"

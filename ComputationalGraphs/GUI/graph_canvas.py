@@ -496,6 +496,78 @@ class GraphCanvas(QGraphicsView):
         cmd = SwallowNodeCommand(self, graph, node_items)
         undo_stack.push(cmd)
 
+    def compress_selected_with_undo(self):
+        """Compress selected nodes into a CompressedNode with undo support.
+
+        Compression combines sequential nodes (a -> b -> c) into a single
+        CompressedNode that processes them internally in order.
+        """
+        selected = self.scene.selectedItems()
+        if not selected:
+            return
+
+        # Only nodes can be compressed (not edges)
+        node_items = [item for item in selected if isinstance(item, NodeItem)]
+        if len(node_items) < 2:
+            return
+
+        # Get the undo stack and graph
+        undo_stack = self._get_undo_stack()
+        if undo_stack is None:
+            return
+
+        graph = getattr(self, "graph", None)
+        if graph is None:
+            return
+
+        # Validate that compression is possible
+        nodes = [item.node for item in node_items]
+        can_compress, reason = graph.can_compress_nodes(nodes)
+        if not can_compress:
+            # Show error message to user
+            try:
+                from PyQt6.QtWidgets import QMessageBox
+
+                QMessageBox.warning(
+                    self.parent(),
+                    "Cannot Compress",
+                    f"Cannot compress selected nodes:\n{reason}",
+                )
+            except Exception:
+                pass
+            return
+
+        # Create and push the command
+        from .commands import CompressNodeCommand
+
+        cmd = CompressNodeCommand(self, graph, node_items)
+        undo_stack.push(cmd)
+
+    def decompress_node_with_undo(self, node_item, mode="full"):
+        """Decompress a CompressedNode with undo support.
+
+        Args:
+            node_item: The NodeItem containing a CompressedNode
+            mode: 'full', 'pop_first', or 'pop_last'
+        """
+        from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
+
+        if not isinstance(node_item.node, CompressedNode):
+            return
+
+        undo_stack = self._get_undo_stack()
+        if undo_stack is None:
+            return
+
+        graph = getattr(self, "graph", None)
+        if graph is None:
+            return
+
+        from .commands import DecompressNodeCommand
+
+        cmd = DecompressNodeCommand(self, graph, node_item, mode=mode)
+        undo_stack.push(cmd)
+
     def _get_undo_stack(self):
         """Get the undo stack from the main window if available."""
         try:
