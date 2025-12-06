@@ -61,12 +61,34 @@ def _get_node_attributes(node):
     for name, val in vars(node).items():
         if name.startswith("_"):
             continue
-        if name in ("predecessors", "inputs"):
+        if name in ("predecessors", "inputs", "listOfNodes"):
             continue
         if inspect.isroutine(val):
             continue
         attrs[name] = val
     return attrs
+
+
+def _serialize_internal_node(node):
+    """Serialize a node that's internal to a CompressedNode."""
+    attrs = _get_node_attributes(node)
+    attrs_serialized = {}
+    for k, v in attrs.items():
+        try:
+            attrs_serialized[k] = _serialize_value(v)
+        except Exception:
+            continue
+
+    return {
+        "id": getattr(node, "id", None),
+        "type": type(node).__name__,
+        "name": getattr(node, "name", None),
+        "attrs": attrs_serialized,
+        # Store predecessor IDs for internal connections
+        "predecessor_ids": [
+            getattr(p, "id", None) for p in getattr(node, "predecessors", [])
+        ],
+    }
 
 
 def save(graph: Graph, filename: str, canvas=None, compress=True):
@@ -102,6 +124,13 @@ def save(graph: Graph, filename: str, canvas=None, compress=True):
             "name": getattr(node, "name", None),
             "attrs": attrs_serialized,
         }
+
+        # Special handling for CompressedNode - serialize internal nodes
+        if type(node).__name__ == "CompressedNode":
+            internal_nodes = getattr(node, "listOfNodes", [])
+            node_entry["internal_nodes"] = [
+                _serialize_internal_node(n) for n in internal_nodes
+            ]
 
         # Add visuals from canvas if provided
         if (
@@ -250,6 +279,60 @@ def load(filename: str) -> Graph:
             except Exception:
                 # skip non-settable attributes
                 continue
+
+        # Special handling for CompressedNode - reconstruct internal nodes
+        if ntype == "CompressedNode" and "internal_nodes" in n:
+            internal_node_data = n.get("internal_nodes", [])
+            internal_nodes = []
+            internal_id_map = {}
+
+            # First pass: create all internal nodes
+            for int_n in internal_node_data:
+                int_cls = _find_node_class(int_n.get("type", "DisplayNode"))
+                int_name = int_n.get("name", None)
+                try:
+                    if int_cls is not None:
+                        sig = inspect.signature(int_cls.__init__)
+                        int_node = (
+                            int_cls(name=int_name)
+                            if "name" in sig.parameters
+                            else int_cls()
+                        )
+                    else:
+                        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+
+                        int_node = DisplayNode(name=int_name)
+                except Exception:
+                    from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+
+                    int_node = DisplayNode(name=int_name)
+
+                # Set attributes
+                for ak, av in int_n.get("attrs", {}).items():
+                    try:
+                        setattr(int_node, ak, _deserialize_value(av))
+                    except Exception:
+                        continue
+
+                int_node.id = int_n.get("id", None)
+                internal_nodes.append(int_node)
+                internal_id_map[int_node.id] = int_node
+
+            # Second pass: connect internal predecessors
+            for i, int_n in enumerate(internal_node_data):
+                pred_ids = int_n.get("predecessor_ids", [])
+                for pid in pred_ids:
+                    pred = internal_id_map.get(pid) or id_map.get(pid)
+                    if pred is not None:
+                        internal_nodes[i].AddPreNode(pred)
+
+            # Set the internal nodes on the CompressedNode
+            node.listOfNodes = internal_nodes
+
+            # Also add internal nodes to id_map so edges can reference them
+            for int_node in internal_nodes:
+                if int_node.id:
+                    id_map[int_node.id] = int_node
 
         # Convert some typed attributes to preferred types (e.g., tuple for gui_pos)
         if hasattr(node, "gui_pos") and isinstance(getattr(node, "gui_pos"), list):

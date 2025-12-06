@@ -298,12 +298,365 @@ class Graph:
 
     def CompressNodes(self, nodes):
         """
-        Create a CompressedNode from a set of nodes.
+        Create a CompressedNode from a chain of sequentially connected nodes.
+
+        The nodes must form a valid compressible chain (use can_compress_nodes()
+        to validate first). The compressed node will:
+        - Have predecessors = first node's external predecessors
+        - Have successors = last node's external successors
+        - Process contained nodes sequentially when computed
+
+        Args:
+            nodes: List of nodes to compress (will be ordered into chain)
+
+        Returns:
+            The created CompressedNode, or None if compression failed
         """
-        compressed = CompressedNode("", nodes)
-        self.RemoveNode(*nodes)
+        if not nodes or len(nodes) < 2:
+            return None
+
+        # Update topology types before compression validation
+        self.analyze_topology()
+
+        # Order nodes into chain sequence
+        ordered = self._order_nodes_into_chain(nodes)
+        if ordered is None:
+            return None
+
+        first_node = ordered[0]
+        last_node = ordered[-1]
+
+        # Get external predecessors (predecessors of first node not in chain)
+        nodes_set = set(ordered)
+        external_preds = [p for p in first_node.predecessors if p not in nodes_set]
+
+        # Get external successors (successors of last node not in chain)
+        successor_map = self.BuildSuccessorMap()
+        external_succs = [
+            s for s in successor_map.get(last_node, []) if s not in nodes_set
+        ]
+
+        # Create the compressed node with ordered internal nodes
+        compressed = CompressedNode("", ordered)
+
+        # Add the compressed node to the graph (gets C1, C2, etc. ID)
         self.AddNode(compressed)
+
+        # Set the name to match the ID (C1, C2, etc.)
+        compressed.name = compressed.id
+
+        # Copy the last node's value to the compressed node
+        compressed.value = last_node.value
+
+        # Set up external connections:
+        # 1. External predecessors -> CompressedNode
+        for pred in external_preds:
+            compressed.AddPreNode(pred)
+
+        # 2. CompressedNode -> External successors
+        for succ in external_succs:
+            # Replace the last_node in succ's predecessors with compressed node
+            if last_node in succ.predecessors:
+                succ.predecessors.remove(last_node)
+            succ.AddPreNode(compressed)
+
+        # Handle starting_nodes: if any compressed node was a starting node,
+        # replace with the compressed node
+        for i, sn in enumerate(list(self.starting_nodes)):
+            if sn in nodes_set:
+                self.starting_nodes[i] = compressed
+        # Remove duplicates from starting_nodes
+        seen = set()
+        new_starting = []
+        for sn in self.starting_nodes:
+            if sn not in seen:
+                seen.add(sn)
+                new_starting.append(sn)
+        self.starting_nodes = new_starting
+
+        # Remove the original nodes from the graph
+        # (but they remain in the CompressedNode's listOfNodes)
+        for node in ordered:
+            if node in self.nodes:
+                index = self.nodes.index(node)
+                # Remove from adjacency matrix
+                self.__RemoveNodeFromAdjacencyMatrix(index)
+                # Remove from nodes list and dictionary
+                self.nodes.remove(node)
+                if node.id in self.idToNodeDictionary:
+                    del self.idToNodeDictionary[node.id]
+
+        # Rebuild adjacency matrix to reflect new structure
+        self.UpdateAdjacencyMatrix()
+
         return compressed
+
+    def _order_nodes_into_chain(self, nodes):
+        """
+        Order a set of nodes into a sequential chain based on connections.
+
+        Args:
+            nodes: Iterable of nodes to order
+
+        Returns:
+            Ordered list from first (entry) to last (exit), or None if invalid
+        """
+        nodes_set = set(nodes)
+        if len(nodes_set) < 2:
+            return list(nodes_set) if nodes_set else None
+
+        successor_map = self.BuildSuccessorMap()
+
+        # Find the entry point: node whose predecessors are all external
+        entry_node = None
+        for node in nodes_set:
+            internal_preds = [p for p in node.predecessors if p in nodes_set]
+            if len(internal_preds) == 0:
+                if entry_node is not None:
+                    # Multiple entry points - not a simple chain
+                    return None
+                entry_node = node
+
+        if entry_node is None:
+            # No entry point found (cycle within selection?)
+            return None
+
+        # Build chain by following successors
+        ordered = [entry_node]
+        current = entry_node
+        visited = {entry_node}
+
+        while len(ordered) < len(nodes_set):
+            # Find next node in chain (successor that's in our set)
+            succs_in_set = [
+                s
+                for s in successor_map.get(current, [])
+                if s in nodes_set and s not in visited
+            ]
+            if len(succs_in_set) != 1:
+                # No successor or multiple successors in selection
+                return None
+            next_node = succs_in_set[0]
+            ordered.append(next_node)
+            visited.add(next_node)
+            current = next_node
+
+        return ordered
+
+    def can_compress_nodes(self, nodes):
+        """
+        Check if a set of nodes can be compressed into a CompressedNode.
+
+        Valid compression requires:
+        1. At least 2 nodes
+        2. Nodes form a single connected chain (no branching within)
+        3. First node: entrypoint, link, or union topology
+        4. Last node: endpoint, link, or distribution topology
+        5. Middle nodes: link topology only (1 pred, 1 succ)
+        6. No external predecessors on internal (middle) nodes
+
+        Args:
+            nodes: Iterable of nodes to check
+
+        Returns:
+            tuple: (can_compress: bool, reason: str)
+        """
+        nodes_list = list(nodes)
+        if len(nodes_list) < 2:
+            return (False, "Need at least 2 nodes to compress")
+
+        # Ensure topology is analyzed
+        self.analyze_topology()
+
+        # Try to order into chain
+        ordered = self._order_nodes_into_chain(nodes_list)
+        if ordered is None:
+            return (False, "Nodes don't form a connected chain")
+
+        nodes_set = set(ordered)
+        successor_map = self.BuildSuccessorMap()
+
+        first_node = ordered[0]
+        last_node = ordered[-1]
+        middle_nodes = ordered[1:-1] if len(ordered) > 2 else []
+
+        # Check first node topology
+        valid_first = {"entrypoint", "link", "union"}
+        first_topo = getattr(first_node, "topology_type", None)
+        if first_topo not in valid_first:
+            return (
+                False,
+                f"First node '{first_node.name}' has invalid "
+                f"topology '{first_topo}' (need {valid_first})",
+            )
+
+        # Check last node topology
+        valid_last = {"endpoint", "link", "distribution"}
+        last_topo = getattr(last_node, "topology_type", None)
+        if last_topo not in valid_last:
+            return (
+                False,
+                f"Last node '{last_node.name}' has invalid "
+                f"topology '{last_topo}' (need {valid_last})",
+            )
+
+        # Check middle nodes: must be link type and no external predecessors
+        for node in middle_nodes:
+            node_topo = getattr(node, "topology_type", None)
+            if node_topo != "link":
+                return (
+                    False,
+                    f"Middle node '{node.name}' must be 'link' "
+                    f"topology, got '{node_topo}'",
+                )
+
+            # Check for external predecessors
+            external_preds = [p for p in node.predecessors if p not in nodes_set]
+            if external_preds:
+                ext_names = [p.name for p in external_preds]
+                return (
+                    False,
+                    f"Middle node '{node.name}' has external "
+                    f"predecessors: {ext_names}",
+                )
+
+        return (True, "Nodes can be compressed")
+
+    def DecompressNode(self, compressed_node, mode="full"):
+        """
+        Decompress a CompressedNode, restoring its internal nodes to the graph.
+
+        Modes:
+        - 'full': Restore all internal nodes, remove the CompressedNode
+        - 'pop_first': Extract only the first node, keep rest compressed
+        - 'pop_last': Extract only the last node, keep rest compressed
+
+        Args:
+            compressed_node: The CompressedNode to decompress
+            mode: One of 'full', 'pop_first', 'pop_last'
+
+        Returns:
+            List of restored nodes, or None if failed
+        """
+        if not isinstance(compressed_node, CompressedNode):
+            return None
+        if compressed_node not in self.nodes:
+            return None
+        if not compressed_node.listOfNodes:
+            return None
+
+        successor_map = self.BuildSuccessorMap()
+        external_preds = list(compressed_node.predecessors)
+        external_succs = successor_map.get(compressed_node, [])
+
+        if mode == "full":
+            return self._decompress_full(
+                compressed_node, external_preds, external_succs
+            )
+        elif mode == "pop_first":
+            return self._decompress_pop_first(compressed_node, external_preds)
+        elif mode == "pop_last":
+            return self._decompress_pop_last(compressed_node, external_succs)
+        else:
+            return None
+
+    def _decompress_full(self, compressed_node, external_preds, external_succs):
+        """Fully decompress: restore all internal nodes."""
+        internal_nodes = compressed_node.get_internal_nodes()
+        first_node = internal_nodes[0]
+        last_node = internal_nodes[-1]
+
+        # Add all internal nodes back to graph
+        for node in internal_nodes:
+            self.AddNode(node)
+
+        # Reconnect external predecessors to first node
+        for pred in external_preds:
+            first_node.AddPreNode(pred)
+
+        # Reconnect external successors from last node
+        for succ in external_succs:
+            if compressed_node in succ.predecessors:
+                succ.predecessors.remove(compressed_node)
+            succ.AddPreNode(last_node)
+
+        # Handle starting_nodes
+        if compressed_node in self.starting_nodes:
+            idx = self.starting_nodes.index(compressed_node)
+            self.starting_nodes[idx] = first_node
+
+        # Remove the compressed node from graph manually
+        # (can't use RemoveNode because successors already updated)
+        if compressed_node in self.nodes:
+            index = self.nodes.index(compressed_node)
+            # Remove from adjacency matrix
+            self.__RemoveNodeFromAdjacencyMatrix(index)
+            # Remove from nodes list and dictionary
+            self.nodes.remove(compressed_node)
+            if compressed_node.id in self.idToNodeDictionary:
+                del self.idToNodeDictionary[compressed_node.id]
+
+        self.UpdateAdjacencyMatrix()
+
+        return internal_nodes
+
+    def _decompress_pop_first(self, compressed_node, external_preds):
+        """Extract the first node, keep rest compressed."""
+        if len(compressed_node.listOfNodes) <= 1:
+            # Only one node left, do full decompress
+            return self._decompress_full(
+                compressed_node,
+                external_preds,
+                self.BuildSuccessorMap().get(compressed_node, []),
+            )
+
+        first_node = compressed_node.pop_front()
+        new_first = compressed_node.first_node
+
+        # Add extracted node to graph
+        self.AddNode(first_node)
+
+        # External predecessors now connect to extracted node
+        for pred in external_preds:
+            first_node.AddPreNode(pred)
+            # Remove from compressed node's predecessors
+            if pred in compressed_node.predecessors:
+                compressed_node.predecessors.remove(pred)
+
+        # Extracted node connects to compressed node
+        compressed_node.AddPreNode(first_node)
+
+        # Handle starting_nodes
+        if compressed_node in self.starting_nodes:
+            idx = self.starting_nodes.index(compressed_node)
+            self.starting_nodes.insert(idx, first_node)
+
+        self.UpdateAdjacencyMatrix()
+        return [first_node]
+
+    def _decompress_pop_last(self, compressed_node, external_succs):
+        """Extract the last node, keep rest compressed."""
+        if len(compressed_node.listOfNodes) <= 1:
+            return self._decompress_full(
+                compressed_node, list(compressed_node.predecessors), external_succs
+            )
+
+        last_node = compressed_node.pop_back()
+
+        # Add extracted node to graph
+        self.AddNode(last_node)
+
+        # Extracted node's predecessor is the compressed node
+        last_node.AddPreNode(compressed_node)
+
+        # External successors now connect from extracted node
+        for succ in external_succs:
+            if compressed_node in succ.predecessors:
+                succ.predecessors.remove(compressed_node)
+            succ.AddPreNode(last_node)
+
+        self.UpdateAdjacencyMatrix()
+        return [last_node]
 
     def DisplayGraph(self, fileName="ComputationalGraph"):
         """Visualize the MLP graph in a left-to-right layout using Graphviz."""

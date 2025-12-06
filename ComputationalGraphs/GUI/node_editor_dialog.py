@@ -136,6 +136,10 @@ class NodeEditorDialog(QDialog):
             param_group.setLayout(param_layout)
             layout.addWidget(param_group)
 
+        # Special section for CompressedNode to show internal nodes
+        if type(self.node).__name__ == "CompressedNode":
+            self.add_compressed_node_info(layout)
+
         # Special actions for PopulationNode
         if type(self.node).__name__ == "PopulationNode":
             self.add_population_actions(layout)
@@ -159,6 +163,41 @@ class NodeEditorDialog(QDialog):
 
         actions_group.setLayout(actions_layout)
         layout.addWidget(actions_group)
+
+    def add_compressed_node_info(self, layout):
+        """Add a readonly section showing internal nodes of a CompressedNode."""
+        from PyQt6.QtWidgets import QAbstractItemView, QListWidget
+
+        info_group = QGroupBox("Internal Nodes (Chain)")
+        info_layout = QVBoxLayout()
+
+        # Create a readonly list widget
+        list_widget = QListWidget()
+        list_widget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        list_widget.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+
+        # Populate with internal nodes
+        internal_nodes = getattr(self.node, "listOfNodes", [])
+        for i, node in enumerate(internal_nodes):
+            node_name = getattr(node, "name", str(node))
+            node_type = type(node).__name__
+            node_value = getattr(node, "value", "N/A")
+            # Format value for display
+            if isinstance(node_value, float):
+                value_str = f"{node_value:.4f}"
+            else:
+                value_str = str(node_value)[:20]
+            list_widget.addItem(f"{i+1}. {node_name} ({node_type}) = {value_str}")
+
+        list_widget.setMaximumHeight(150)
+        info_layout.addWidget(list_widget)
+
+        # Show count
+        count_label = QLabel(f"Total: {len(internal_nodes)} nodes in chain")
+        info_layout.addWidget(count_label)
+
+        info_group.setLayout(info_layout)
+        layout.addWidget(info_group)
 
     def on_regenerate_population(self):
         """Regenerate the population with current parameters."""
