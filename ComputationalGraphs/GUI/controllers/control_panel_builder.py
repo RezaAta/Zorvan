@@ -457,6 +457,18 @@ class ControlPanelBuilder:
         # Add ANN and Clear to colorize group so they are inside 'Colorize Graph' and Clear appears last
         mw.colorize_group_layout.addLayout(ann_colors_row)
 
+        # Topology Labels toggle
+        mw.topology_labels_check = QCheckBox("Show Topology Labels")
+        mw.topology_labels_check.setToolTip(
+            "Display node topology type (isolated, endpoint, entrypoint, link, "
+            "greedy, genesis, distribution, union, cross) below each node"
+        )
+        mw.topology_labels_check.stateChanged.connect(mw.on_topology_labels_changed)
+        mw.topology_labels_check.setChecked(
+            getattr(mw, "topology_labels_enabled", False)
+        )
+        mw.colorize_group_layout.addWidget(mw.topology_labels_check)
+
         layout.addStretch()
         return container
 

@@ -77,6 +77,13 @@ class NodeItem(QGraphicsEllipseItem):
         # Populate with initial value
         self.update_value_display()
 
+        # Topology type label (displayed below the node, hidden by default)
+        self.topology_label = QGraphicsTextItem("", self)
+        self.topology_label.setDefaultTextColor(Qt.GlobalColor.lightGray)
+        topology_font = QFont("Arial", 7, QFont.Weight.Normal)
+        self.topology_label.setFont(topology_font)
+        self.topology_label.setVisible(False)
+
         # Track move state to avoid unnecessary updates when clicking without movement
         self._moved = False
         self._pressed_pos = None
@@ -180,6 +187,28 @@ class NodeItem(QGraphicsEllipseItem):
         # Center the value label
         value_rect = self.value_label.boundingRect()
         self.value_label.setPos(-value_rect.width() / 2, value_rect.height() / 2)
+
+    def update_topology_label(self, show=True):
+        """Update and show/hide the topology type label.
+
+        Args:
+            show: If True, display the topology label; if False, hide it.
+        """
+        if not hasattr(self, "topology_label") or self.topology_label is None:
+            return
+
+        if show:
+            topo_type = getattr(self.node, "topology_type", None)
+            if topo_type:
+                self.topology_label.setPlainText(topo_type)
+                # Position below the node circle
+                rect = self.topology_label.boundingRect()
+                self.topology_label.setPos(-rect.width() / 2, self.radius + 5)
+                self.topology_label.setVisible(True)
+            else:
+                self.topology_label.setVisible(False)
+        else:
+            self.topology_label.setVisible(False)
 
     def colorize_by_value(self, min_val=0, max_val=1, min_color=None, max_color=None):
         """Color the node based on its value using a gradient between min_color and max_color.

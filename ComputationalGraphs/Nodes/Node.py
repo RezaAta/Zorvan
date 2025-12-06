@@ -12,6 +12,8 @@ class Node(ABC):
         self.batchSize = 2  # Set batch size to 2 for this example
         self.inclusive = inclusive  # Determines if node's result is added to next batch
         self.forcedBatchProcessing = forcedBatchProcessing  # Enable forced processing
+        # Topology type set by Graph.analyze_topology() - one of 9 topology types
+        self.topology_type = None
 
     @abstractmethod
     def Operation(self, *inputs):

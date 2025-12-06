@@ -362,6 +362,57 @@ class Graph:
 
         return successor_map
 
+    def analyze_topology(self):
+        """
+        Analyze the topology of the graph and classify each node into one of 9 types
+        based on predecessor and successor counts.
+
+        Topology types:
+        - isolated: no predecessors, no successors (0, 0)
+        - endpoint: 1 predecessor, no successors (1, 0)
+        - entrypoint: no predecessors, 1 successor (0, 1)
+        - link: 1 predecessor, 1 successor (1, 1)
+        - greedy: >1 predecessors, no successors (>1, 0)
+        - genesis: no predecessors, >1 successors (0, >1)
+        - distribution: 1 predecessor, >1 successors (1, >1)
+        - union: >1 predecessors, 1 successor (>1, 1)
+        - cross: >1 predecessors, >1 successors (>1, >1)
+
+        Returns:
+            dict: {node: topology_type_string} mapping each node to its type
+        """
+        successor_map = self.BuildSuccessorMap()
+        topology_map = {}
+
+        for node in self.nodes:
+            pred_count = len(node.predecessors)
+            succ_count = len(successor_map.get(node, []))
+
+            # Classify based on predecessor/successor counts
+            if pred_count == 0 and succ_count == 0:
+                topo_type = "isolated"
+            elif pred_count == 1 and succ_count == 0:
+                topo_type = "endpoint"
+            elif pred_count == 0 and succ_count == 1:
+                topo_type = "entrypoint"
+            elif pred_count == 1 and succ_count == 1:
+                topo_type = "link"
+            elif pred_count > 1 and succ_count == 0:
+                topo_type = "greedy"
+            elif pred_count == 0 and succ_count > 1:
+                topo_type = "genesis"
+            elif pred_count == 1 and succ_count > 1:
+                topo_type = "distribution"
+            elif pred_count > 1 and succ_count == 1:
+                topo_type = "union"
+            else:  # pred_count > 1 and succ_count > 1
+                topo_type = "cross"
+
+            node.topology_type = topo_type
+            topology_map[node] = topo_type
+
+        return topology_map
+
     def set_manual_processing_sequence(self, sequence, strict=True):
         """
         Set a manual processing sequence for the graph. The sequence should be a list of
