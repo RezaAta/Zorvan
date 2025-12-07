@@ -29,6 +29,8 @@ class CustomNodeDefinition:
         valid_input_types: List of valid input types ("numeric", "string", "array", "none")
         operation_code: Python code for the Operation body (uses input1, input2, etc.)
         description: Optional description for display in palette
+        custom_properties: List of custom property definitions,
+            each with name, type, default_value
     """
 
     type_name: str
@@ -39,6 +41,7 @@ class CustomNodeDefinition:
     valid_input_types: List[str] = field(default_factory=lambda: ["numeric"])
     operation_code: str = "return input1 + input2"
     description: str = ""
+    custom_properties: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -202,6 +205,15 @@ class CustomNodeManager:
         else:
             valid_check_code = "True"  # Accept anything if no types specified
 
+        # Build custom properties initialization code
+        custom_props_init = ""
+        for prop in definition.custom_properties:
+            prop_name = prop.get("name", "")
+            prop_default = prop.get("default_value", "None")
+            if prop_name:
+                # Safely quote strings, leave other values as-is
+                custom_props_init += f"        self.{prop_name} = {prop_default}\n"
+
         # Build the class code
         class_code = f'''
 class {definition.type_name}(BasicNode):
@@ -217,7 +229,7 @@ class {definition.type_name}(BasicNode):
         self.batchSize = {definition.batch_size}
         self.inclusive = {definition.inclusive}
         self.forcedBatchProcessing = {definition.forced_batch_processing}
-
+{custom_props_init}
     def Operation(self, {input_params}):
 {self._indent_code(definition.operation_code, 8)}
 
