@@ -484,6 +484,11 @@ class GraphRunner(QObject):
             self.is_running = False
             return
 
+        # Always take a snapshot at iteration 0 (before first processing)
+        # This ensures restore works correctly even if graph was modified after loading
+        if self.current_step == 0:
+            self.save_graph_snapshot()
+
         # Create execution controller from GraphProcessor options and keep a reference
         exec_opts = GraphProcessor.ExecutionOptions(
             step_interval_ms=self.step_interval, allow_pause=True
