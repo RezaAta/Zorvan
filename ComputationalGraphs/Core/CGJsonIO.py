@@ -98,13 +98,39 @@ def save(graph: Graph, filename: str, canvas=None, compress=True):
     - `.cgjson` (plain JSON)
     - `.cgz` (zip with graph.json)
     - `.json` (plain JSON)
+
+    Custom nodes are embedded in the file for portability.
     """
     doc = {
         "metadata": {"format": "CGJSON", "version": 1},
         "nodes": [],
         "edges": [],
         "graph": {},
+        "custom_nodes": [],  # For embedding custom node definitions
     }
+
+    # Collect custom node definitions used in this graph
+    custom_nodes_used = set()
+    for node in graph.nodes:
+        node_type = type(node).__name__
+        if hasattr(node, "_is_custom_node") and node._is_custom_node:
+            custom_nodes_used.add(node_type)
+
+    # If custom nodes are used, embed their definitions
+    if custom_nodes_used:
+        try:
+            from ComputationalGraphs.GUI.custom_node_manager import (
+                get_custom_node_manager,
+            )
+
+            manager = get_custom_node_manager()
+            for type_name in custom_nodes_used:
+                definition = manager.get_definition(type_name)
+                if definition:
+                    doc["custom_nodes"].append(definition.to_dict())
+        except Exception:
+            # If custom node manager unavailable, continue without embedding
+            pass
 
     # Node list
     for node in graph.nodes:
@@ -216,6 +242,17 @@ def save(graph: Graph, filename: str, canvas=None, compress=True):
 
 
 def _find_node_class(typename: str):
+    # First try custom nodes
+    try:
+        from ComputationalGraphs.GUI.custom_node_manager import get_custom_node_manager
+
+        manager = get_custom_node_manager()
+        custom_class = manager.get_node_class(typename)
+        if custom_class:
+            return custom_class
+    except Exception:
+        pass
+
     # Attempt to locate the node class by name in ComputationalGraphs.Nodes
     try:
         import ComputationalGraphs.Nodes as NodesPkg
@@ -250,6 +287,28 @@ def load(filename: str) -> Graph:
     doc = json.loads(data)
     graph = Graph()
     id_map = {}
+
+    # Handle embedded custom nodes - recreate them from definitions
+    custom_nodes_data = doc.get("custom_nodes", [])
+    if custom_nodes_data:
+        try:
+            from ComputationalGraphs.GUI.custom_node_manager import (
+                CustomNodeDefinition,
+                get_custom_node_manager,
+            )
+
+            manager = get_custom_node_manager()
+            for definition_dict in custom_nodes_data:
+                try:
+                    definition = CustomNodeDefinition.from_dict(definition_dict)
+                    # Add to manager (regenerate class if needed)
+                    manager.add_definition(definition)
+                except Exception as e:
+                    print(
+                        f"Warning: Failed to load custom node {definition_dict.get('type_name', 'unknown')}: {e}"
+                    )
+        except Exception as e:
+            print(f"Warning: Could not load custom node definitions: {e}")
 
     # Create nodes
     for n in doc.get("nodes", []):

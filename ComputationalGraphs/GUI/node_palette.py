@@ -3,7 +3,7 @@ Palette widget showing available node types for drag-and-drop.
 """
 
 from PyQt6.QtCore import QMimeData, Qt
-from PyQt6.QtGui import QDrag, QFont
+from PyQt6.QtGui import QBrush, QDrag, QFont
 from PyQt6.QtWidgets import QDockWidget, QTreeWidget, QTreeWidgetItem
 
 
@@ -14,17 +14,31 @@ class NodePalette(QDockWidget):
         super().__init__("Node Palette", parent)
 
         # Create main widget and layout
-        from PyQt6.QtWidgets import QLineEdit, QVBoxLayout, QWidget
+        from PyQt6.QtWidgets import (
+            QHBoxLayout,
+            QLineEdit,
+            QPushButton,
+            QVBoxLayout,
+            QWidget,
+        )
 
         main_widget = QWidget()
         layout = QVBoxLayout(main_widget)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        # Add search bar
+        # Add search and create custom button
+        search_layout = QHBoxLayout()
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("Search nodes...")
         self.search_bar.textChanged.connect(self.filter_nodes)
-        layout.addWidget(self.search_bar)
+        search_layout.addWidget(self.search_bar)
+
+        self.create_custom_button = QPushButton("➕ Custom")
+        self.create_custom_button.setMaximumWidth(80)
+        self.create_custom_button.clicked.connect(self.on_create_custom_node)
+        search_layout.addWidget(self.create_custom_button)
+
+        layout.addLayout(search_layout)
 
         # Add tree widget for grouped nodes
         self.tree_widget = QTreeWidget()
@@ -184,10 +198,16 @@ class NodePalette(QDockWidget):
                     ("DisplayNode", "Display", "Prints values to console output"),
                 ],
             },
+            "Custom Nodes": {
+                "description": "User-defined custom nodes",
+                "nodes": [],  # Populated dynamically
+            },
         }
 
         # Populate tree with categories and nodes
         self.all_items = []  # Keep track of all items for search
+        self.custom_node_items = []  # Track custom node items for refresh
+        self.refresh_custom_nodes()
         for category, category_data in self.node_categories.items():
             # Create category header
             category_item = QTreeWidgetItem([category])
@@ -294,3 +314,82 @@ class NodePalette(QDockWidget):
         drag.setMimeData(mime_data)
 
         drag.exec(Qt.DropAction.CopyAction)
+
+    def refresh_custom_nodes(self):
+        """Refresh custom nodes list from manager."""
+        from ComputationalGraphs.GUI.custom_node_manager import get_custom_node_manager
+
+        manager = get_custom_node_manager()
+        custom_types = manager.get_type_names()
+
+        # Clear and update custom nodes in category
+        self.node_categories["Custom Nodes"]["nodes"] = [
+            (type_name, type_name, manager.get_definition(type_name).description)
+            for type_name in custom_types
+        ]
+
+    def on_create_custom_node(self):
+        """Open dialog to create a new custom node."""
+        from ComputationalGraphs.GUI.custom_node_dialog import CustomNodeDialog
+        from ComputationalGraphs.GUI.custom_node_manager import get_custom_node_manager
+
+        dialog = CustomNodeDialog(parent=self)
+        if dialog.exec():
+            definition = dialog.definition
+            manager = get_custom_node_manager()
+
+            try:
+                manager.add_definition(definition)
+                manager.register_with_factory()
+                manager.save_library()
+                self.refresh_palette()
+            except Exception as e:
+                from PyQt6.QtWidgets import QMessageBox
+
+                QMessageBox.critical(
+                    self,
+                    "Error Saving Custom Node",
+                    f"Failed to save custom node: {e}",
+                )
+
+    def refresh_palette(self):
+        """Refresh the entire palette (used after adding custom nodes)."""
+        self.refresh_custom_nodes()
+
+        # Rebuild the tree widget
+        self.tree_widget.clear()
+        self.all_items = []
+        self.custom_node_items = []
+
+        for category, category_data in self.node_categories.items():
+            # Create category header
+            category_item = QTreeWidgetItem([category])
+            category_font = QFont()
+            category_font.setBold(True)
+            category_font.setPointSize(10)
+            category_item.setFont(0, category_font)
+            category_item.setExpanded(True)
+            self.tree_widget.addTopLevelItem(category_item)
+
+            # Add category description as a child (non-draggable)
+            desc_item = QTreeWidgetItem([f"  {category_data['description']}"])
+            desc_font = QFont()
+            desc_font.setItalic(True)
+            desc_font.setPointSize(8)
+            desc_item.setFont(0, desc_font)
+            desc_item.setForeground(0, QBrush(Qt.GlobalColor.gray))
+            desc_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            category_item.addChild(desc_item)
+
+            # Add nodes
+            for node_type, display_name, description in category_data["nodes"]:
+                node_item = QTreeWidgetItem([f"{display_name}\n    {description}"])
+                node_item.setData(0, Qt.ItemDataRole.UserRole, node_type)
+                node_item.setToolTip(
+                    0, f"{display_name}\n{description}\n\nNode Type: {node_type}"
+                )
+                category_item.addChild(node_item)
+                self.all_items.append((node_item, category_item))
+
+                if category == "Custom Nodes":
+                    self.custom_node_items.append(node_item)

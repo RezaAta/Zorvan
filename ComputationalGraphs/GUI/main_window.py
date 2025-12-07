@@ -131,6 +131,18 @@ class MainWindow(QMainWindow):
         # Undo/Redo stack for UI actions
         self.undo_stack = QUndoStack(self)
 
+        # Initialize custom node manager early (before UI setup)
+        try:
+            from ComputationalGraphs.GUI.custom_node_manager import (
+                get_custom_node_manager,
+            )
+
+            self.custom_node_manager = get_custom_node_manager()
+            self.custom_node_manager.register_with_factory()
+        except Exception as e:
+            print(f"Warning: Failed to initialize custom node manager: {e}")
+            self.custom_node_manager = None
+
         # Core components
         # Create a new Graph object and use set_graph to keep everything in sync
         new_graph = Graph()

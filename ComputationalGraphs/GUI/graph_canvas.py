@@ -977,6 +977,17 @@ class GraphCanvas(QGraphicsView):
             elif node_type == "DisplayNode":
                 node = DisplayNode(name=unique_name)
 
+            # If a known built-in node was created, add it. Otherwise, try factory
+            if not node:
+                try:
+                    from ComputationalGraphs.GUI.node_factory import (
+                        create_node as factory_create_node,
+                    )
+
+                    node = factory_create_node(node_type, name_hint=unique_name)
+                except Exception:
+                    node = None
+
             if node:
                 # Use undo-aware add if available
                 self.add_node_with_undo(node, drop_pos.x(), drop_pos.y())

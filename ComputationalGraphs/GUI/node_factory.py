@@ -193,6 +193,21 @@ def _import_node_class(node_type: str) -> Optional[Type]:
 
     module_path, class_name, _, _ = _NODE_REGISTRY[node_type]
 
+    # Special case: custom node marked with "__custom__" module path
+    if module_path == "__custom__":
+        try:
+            from ComputationalGraphs.GUI.custom_node_manager import (
+                get_custom_node_manager,
+            )
+
+            manager = get_custom_node_manager()
+            cls = manager.get_node_class(node_type)
+            if cls:
+                _CLASS_CACHE[node_type] = cls
+            return cls
+        except Exception:
+            return None
+
     try:
         import importlib
 
