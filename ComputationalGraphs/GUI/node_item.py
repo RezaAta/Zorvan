@@ -45,13 +45,18 @@ class NodeItem(QGraphicsEllipseItem):
         # Disable caching to avoid trail artifacts
         self.setCacheMode(QGraphicsItem.CacheMode.NoCache)
 
-        # Default colors - check if this is a CompressedNode for distinct styling
+        # Default colors - check if this is a CompressedNode or AbstractNode for distinct styling
+        from ComputationalGraphs.Nodes.AbstractNode import AbstractNode
         from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
 
         if isinstance(node, CompressedNode):
             # Gold/amber color for compressed nodes
             self.default_color = QColor(212, 160, 23)  # #D4A017 - gold
             self.selected_color = QColor(255, 200, 50)  # Lighter gold for selection
+        elif isinstance(node, AbstractNode):
+            # Purple color for abstract nodes
+            self.default_color = QColor(155, 89, 182)  # #9B59B6 - purple
+            self.selected_color = QColor(187, 143, 206)  # Lighter purple for selection
         else:
             self.default_color = QColor(0, 63, 189)  # #003fbd
             self.selected_color = QColor(50, 113, 239)  # Lighter blue for selection
@@ -67,8 +72,10 @@ class NodeItem(QGraphicsEllipseItem):
         self.setBrush(QBrush(self.default_color))
         self.setPen(QPen(Qt.GlobalColor.black, 2))
 
-        # Label - for CompressedNode, show node count
+        # Label - for CompressedNode or AbstractNode, show node count
         if isinstance(node, CompressedNode):
+            label_text = f"{node.name} [{len(node)}]"
+        elif isinstance(node, AbstractNode):
             label_text = f"{node.name} [{len(node)}]"
         else:
             label_text = node.name
@@ -511,6 +518,7 @@ class NodeItem(QGraphicsEllipseItem):
 
     def contextMenuEvent(self, event):
         try:
+            from ComputationalGraphs.Nodes.AbstractNode import AbstractNode
             from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
 
             menu = QMenu()
@@ -545,6 +553,30 @@ class NodeItem(QGraphicsEllipseItem):
                         compress_action = menu.addAction("📦 Compress Selection")
                         compress_action.setToolTip(
                             "Combine selected sequential nodes into one"
+                        )
+
+            # Abstraction actions
+            abstract_action = None
+            expand_abstract_action = None
+
+            # Check if this is an AbstractNode (show expand option)
+            if isinstance(self.node, AbstractNode):
+                expand_abstract_action = menu.addAction("🔷 Expand Abstract Node")
+                expand_abstract_action.setToolTip(
+                    "Expand abstract node back to original disjoint nodes"
+                )
+            else:
+                # Check if multiple nodes selected (show abstract option)
+                scene = self.scene()
+                if scene:
+                    selected = scene.selectedItems()
+                    node_items = [
+                        item for item in selected if isinstance(item, NodeItem)
+                    ]
+                    if len(node_items) >= 2:
+                        abstract_action = menu.addAction("🔷 Abstract Selection")
+                        abstract_action.setToolTip(
+                            "Group selected disjoint nodes with same predecessors/successors"
                         )
 
             menu.addSeparator()
@@ -582,6 +614,10 @@ class NodeItem(QGraphicsEllipseItem):
                 self._compress_selection()
             elif decompress_action and action == decompress_action:
                 self._decompress_node()
+            elif abstract_action and action == abstract_action:
+                self._abstract_selection()
+            elif expand_abstract_action and action == expand_abstract_action:
+                self._expand_abstract_node()
 
         except Exception:
             pass
@@ -614,6 +650,24 @@ class NodeItem(QGraphicsEllipseItem):
             canvas = getattr(self, "canvas", None)
             if canvas and hasattr(canvas, "decompress_node_with_undo"):
                 canvas.decompress_node_with_undo(self, mode="full")
+        except Exception:
+            pass
+
+    def _abstract_selection(self):
+        """Abstract selected nodes into an AbstractNode."""
+        try:
+            canvas = getattr(self, "canvas", None)
+            if canvas and hasattr(canvas, "abstract_selected_with_undo"):
+                canvas.abstract_selected_with_undo()
+        except Exception:
+            pass
+
+    def _expand_abstract_node(self):
+        """Expand this AbstractNode back to original disjoint nodes."""
+        try:
+            canvas = getattr(self, "canvas", None)
+            if canvas and hasattr(canvas, "expand_abstract_with_undo"):
+                canvas.expand_abstract_with_undo(self)
         except Exception:
             pass
 

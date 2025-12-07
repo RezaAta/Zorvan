@@ -4,65 +4,224 @@ from ComputationalGraphs.Nodes.Node import Node
 
 
 class AbstractNode(Node):
+    """
+    An AbstractNode groups multiple disjoint (unconnected) nodes into a single unit.
+
+    Unlike CompressedNode which chains sequential nodes, AbstractNode represents
+    a set of parallel nodes that share the same predecessors and successors.
+    All internal nodes execute in parallel and receive the same inputs.
+
+    Connection routing:
+    - Predecessors: External predecessors are shared by all internal nodes
+    - Successors: External successors connect from the AbstractNode (Cartesian product)
+
+    The value of an AbstractNode is a list of values from all contained nodes.
+    This enables graph topology simplification by treating parallel nodes as a set.
+    """
 
     def __init__(self, name: str = "", nodes=None):
-        if nodes:
-            self.nodes = nodes
-            self.predecessors = [node for node in nodes]
-        else:
-            self.nodes = set()  # Set of nodes
+        """
+        Initialize an AbstractNode.
 
+        Args:
+            name: The name of the abstract node (auto-generated as A1, A2, etc.)
+            nodes: A list of disjoint nodes to abstract. These nodes must share
+                   the same predecessors and successors, and not be connected to each other.
+        """
+        # Use list for stable ordering (serialization, display) while
+        # enforcing disjointness via validation at abstraction time
+        self.listOfNodes = list(nodes) if nodes else []
+
+        # Initialize before calling super().__init__ since it may access predecessors
         super().__init__(name)
-        self.computationalType = "complex"  # Computational type is complex
-        self.value = [node.value for node in self.nodes]
+
+        # External predecessors will be set by Graph.abstract_nodes()
+        # Do NOT set internal nodes as predecessors (that was a bug)
+        self.computationalType = "complex"
+
+        # Value is a list of all internal node values
+        self.value = [node.value for node in self.listOfNodes]
+
+    @property
+    def nodes(self):
+        """Alias for listOfNodes for compatibility."""
+        return self.listOfNodes
 
     def SetComputationStructure(self):
         """
-        Generate a string that represents the computation structure of the AbstractNode.
-        The structure is represented as (node1, node2, ...).
+        Generate a string representing the computation structure.
+        Structure is represented as (node1, node2, ...) - comma-separated.
+        This contrasts with CompressedNode which uses -> for sequential chains.
         """
-        if self.nodes:
-            node_ids = [node.id for node in self.nodes]
-            self.computationalStructure = f"({', '.join(node_ids)})"
+        if self.listOfNodes:
+            node_ids = [getattr(node, "id", node.name) for node in self.listOfNodes]
+            self.computationStructure = f"({', '.join(node_ids)})"
         else:
-            self.computationalStructure = self.id
+            self.computationStructure = getattr(self, "id", self.name)
 
     def UpdateValues(self):
-        for node in self.nodes:
+        """Update the AbstractNode's value list from all internal nodes."""
+        for node in self.listOfNodes:
             if isinstance(node, AbstractNode):
                 node.UpdateValues()
-            self.value = [node.value for node in self.nodes]
+        self.value = [node.value for node in self.listOfNodes]
 
     def UpdateComputationTime(self):
         """
         Update the computation time of the AbstractNode.
-        The computation time is set to the max computation time of all its nodes.
+        Since nodes execute in parallel, time is the MAX of all internal nodes.
         """
-        if self.nodes:
-            self.computationTime = max(node.computationTime for node in self.nodes)
+        if self.listOfNodes:
+            self.computationTime = max(
+                getattr(node, "computationTime", 1) for node in self.listOfNodes
+            )
         else:
             self.computationTime = 1
 
     def Operation(self, *inputs):
-        pass
+        """
+        Execute all contained nodes in parallel.
+
+        All internal nodes receive the same inputs (from the AbstractNode's predecessors).
+        The result is a list of values from all internal nodes.
+
+        Args:
+            *inputs: Inputs passed to ALL internal nodes.
+
+        Returns:
+            A list of values from all internal nodes.
+        """
+        if not self.listOfNodes:
+            return []
+
+        # Process each node in parallel
+        with ThreadPoolExecutor() as executor:
+
+            def process_node(node):
+                if hasattr(node, "UpdateInputs"):
+                    node.UpdateInputs()
+                if hasattr(node, "Operation"):
+                    if hasattr(node, "inputs") and node.inputs:
+                        result = node.Operation(*node.inputs)
+                    else:
+                        result = node.Operation(*inputs)
+                    if result is not None:
+                        node.value = result
+                return node.value
+
+            futures = [executor.submit(process_node, node) for node in self.listOfNodes]
+            results = [future.result() for future in futures]
+
+        self.value = results
+        return self.value
 
     def ProcessBatch(self, *inputs):
         """
-        Perform an operation on all nodes in parallel. In this example, we will assume
-        that each node performs its own operation independently.
+        Process all contained nodes in parallel.
+
+        Since nodes in an AbstractNode are disjoint (not connected to each other),
+        they can be processed simultaneously.
         """
+        if not self.listOfNodes:
+            return
+
         with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(node.ProcessBatch) for node in self.nodes]
-            # Wait for all nodes to complete their operations in parallel
-            for future in futures:
-                future.result()  # Retrieve the result of each operation (if needed)
+
+            def batch_process_node(node):
+                if hasattr(node, "UpdateInputs"):
+                    node.UpdateInputs()
+                if hasattr(node, "ProcessBatch"):
+                    node.ProcessBatch()
+                return node.value
+
+            futures = [
+                executor.submit(batch_process_node, node) for node in self.listOfNodes
+            ]
+            results = [future.result() for future in futures]
+
+        self.value = results
 
     def UpdateInputs(self):
         """
-        Update the inputs array with the values from all nodes in the set.
+        Update inputs for all internal nodes from the AbstractNode's predecessors.
+
+        Since all internal nodes share the same predecessors, we collect inputs
+        at the AbstractNode level and propagate to each internal node.
         """
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(node.UpdateInputs) for node in self.nodes]
-            # Wait for all nodes to complete their operations in parallel
-            for future in futures:
-                future.result()  # Retrieve the result of each operation (if needed)
+        # Collect inputs at the AbstractNode level
+        self.inputs = [
+            pred.value for pred in self.predecessors if hasattr(pred, "value")
+        ]
+
+        # Propagate inputs to all internal nodes in parallel
+        # Each internal node will gather from its own predecessors (which may be
+        # the original external predecessors before abstraction)
+        if self.listOfNodes:
+            with ThreadPoolExecutor() as executor:
+                futures = [
+                    executor.submit(node.UpdateInputs)
+                    for node in self.listOfNodes
+                    if hasattr(node, "UpdateInputs")
+                ]
+                for future in futures:
+                    future.result()
+
+    # --- Methods for managing internal nodes ---
+
+    def extend(self, node):
+        """
+        Add a node to the AbstractNode's internal list.
+
+        Args:
+            node: The node to add. Must be disjoint from existing nodes
+                  (validation should be done by caller/Graph).
+        """
+        if node not in self.listOfNodes:
+            self.listOfNodes.append(node)
+            self.UpdateValues()
+
+    def remove(self, node):
+        """
+        Remove a node from the AbstractNode's internal list.
+
+        Args:
+            node: The node to remove.
+
+        Returns:
+            The removed node, or None if not found.
+        """
+        if node in self.listOfNodes:
+            self.listOfNodes.remove(node)
+            self.UpdateValues()
+            return node
+        return None
+
+    def expand(self):
+        """
+        Return all internal nodes for expanding back into the graph.
+
+        Returns:
+            A list of all internal nodes.
+        """
+        return list(self.listOfNodes)
+
+    def get_internal_nodes(self):
+        """
+        Return a copy of the list of internal nodes.
+
+        Returns:
+            A new list containing all nodes in the abstraction.
+        """
+        return list(self.listOfNodes)
+
+    def __len__(self):
+        """Return the number of nodes in the abstraction."""
+        return len(self.listOfNodes)
+
+    def __repr__(self):
+        node_names = [getattr(n, "name", str(n)) for n in self.listOfNodes]
+        return f"AbstractNode({self.name}, nodes=[{', '.join(node_names)}])"
+
+    def __contains__(self, node):
+        """Check if a node is contained in this AbstractNode."""
+        return node in self.listOfNodes

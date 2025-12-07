@@ -12,8 +12,11 @@ This module provides QUndoCommand subclasses for all undoable UI operations:
 - ReplaceNodeCommand: Replacing a node with a different type
 - CompressNodeCommand: Compressing sequential nodes into a CompressedNode
 - DecompressNodeCommand: Decompressing a CompressedNode back to original nodes
+- AbstractNodeCommand: Abstracting disjoint nodes into an AbstractNode
+- ExpandAbstractNodeCommand: Expanding an AbstractNode back to original nodes
 """
 
+from .abstract_node_command import AbstractNodeCommand, ExpandAbstractNodeCommand
 from .add_edge_command import AddEdgeCommand
 from .add_node_command import AddNodeCommand
 from .compress_node_command import CompressNodeCommand, DecompressNodeCommand
@@ -35,4 +38,6 @@ __all__ = [
     "SwallowNodeCommand",
     "CompressNodeCommand",
     "DecompressNodeCommand",
+    "AbstractNodeCommand",
+    "ExpandAbstractNodeCommand",
 ]

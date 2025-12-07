@@ -71,6 +71,17 @@ class NodeEditorDialog(QDialog):
         )
         basic_layout.addRow("Current Value:", self.value_edit)
 
+        # Forced batch processing checkbox
+        self.forced_batch_checkbox = QCheckBox()
+        self.forced_batch_checkbox.setChecked(
+            getattr(self.node, "forcedBatchProcessing", False)
+        )
+        self.forced_batch_checkbox.setToolTip(
+            "When enabled, ProcessBatch will continue processing until all inputs "
+            "are consumed. Useful for nodes that need to aggregate multiple inputs."
+        )
+        basic_layout.addRow("Forced Batch Processing:", self.forced_batch_checkbox)
+
         basic_group.setLayout(basic_layout)
         layout.addWidget(basic_group)
 
@@ -140,6 +151,10 @@ class NodeEditorDialog(QDialog):
         if type(self.node).__name__ == "CompressedNode":
             self.add_compressed_node_info(layout)
 
+        # Special section for AbstractNode to show internal nodes
+        if type(self.node).__name__ == "AbstractNode":
+            self.add_abstract_node_info(layout)
+
         # Special actions for PopulationNode
         if type(self.node).__name__ == "PopulationNode":
             self.add_population_actions(layout)
@@ -194,6 +209,53 @@ class NodeEditorDialog(QDialog):
 
         # Show count
         count_label = QLabel(f"Total: {len(internal_nodes)} nodes in chain")
+        info_layout.addWidget(count_label)
+
+        info_group.setLayout(info_layout)
+        layout.addWidget(info_group)
+
+    def add_abstract_node_info(self, layout):
+        """Add a readonly section showing internal nodes of an AbstractNode."""
+        from PyQt6.QtWidgets import QAbstractItemView, QListWidget
+
+        info_group = QGroupBox("Internal Nodes (Disjoint Set)")
+        info_layout = QVBoxLayout()
+
+        # Create a readonly list widget
+        list_widget = QListWidget()
+        list_widget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        list_widget.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+
+        # Populate with internal nodes
+        internal_nodes = getattr(self.node, "listOfNodes", [])
+        for i, node in enumerate(internal_nodes):
+            node_name = getattr(node, "name", str(node))
+            node_type = type(node).__name__
+            node_value = getattr(node, "value", "N/A")
+            # Format value for display
+            if isinstance(node_value, float):
+                value_str = f"{node_value:.4f}"
+            elif isinstance(node_value, list):
+                # For lists (like nested abstract nodes), show summary
+                if len(node_value) <= 3:
+                    value_str = str(node_value)
+                else:
+                    value_str = f"[{len(node_value)} items]"
+            else:
+                value_str = str(node_value)[:20]
+            list_widget.addItem(f"• {node_name} ({node_type}) = {value_str}")
+
+        # Set height based on number of nodes, but cap at reasonable size
+        row_height = 20
+        max_rows = 8
+        visible_rows = min(len(internal_nodes), max_rows)
+        list_widget.setMaximumHeight(max(visible_rows * row_height + 10, 60))
+        info_layout.addWidget(list_widget)
+
+        # Show count and hint about parallel execution
+        count_label = QLabel(
+            f"Total: {len(internal_nodes)} nodes (processed in parallel)"
+        )
         info_layout.addWidget(count_label)
 
         info_group.setLayout(info_layout)
@@ -407,6 +469,9 @@ class NodeEditorDialog(QDialog):
             except (ValueError, SyntaxError):
                 # If parsing fails, treat as string
                 self.node.value = self.value_edit.toPlainText()
+
+            # Update forced batch processing
+            self.node.forcedBatchProcessing = self.forced_batch_checkbox.isChecked()
 
             # Update all dynamic parameters
             for param_name, widget in self.param_widgets.items():

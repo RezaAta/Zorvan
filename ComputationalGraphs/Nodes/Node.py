@@ -27,13 +27,29 @@ class Node(ABC):
                 self.predecessors.append(predecessor)
 
     def UpdateInputs(self):
-        """Update the inputs array with the valid values of predecessor nodes."""
-        # Use list comprehension for better performance than loop with append
-        self.inputs = [
-            predecessor.value
-            for predecessor in self.predecessors
-            if self.IsValidInput(predecessor.value)
-        ]
+        """Update the inputs array with the valid values of predecessor nodes.
+
+        Special handling for AbstractNode predecessors:
+        - AbstractNode.value is a list of values from its internal nodes
+        - These values are flattened into this node's inputs
+        - This preserves the Cartesian product connection semantics
+        """
+        self.inputs = []
+        for predecessor in self.predecessors:
+            # Check if predecessor is an AbstractNode (has listOfNodes and list value)
+            if (
+                hasattr(predecessor, "listOfNodes")
+                and isinstance(predecessor.value, list)
+                and type(predecessor).__name__ == "AbstractNode"
+            ):
+                # Flatten: add each value from the AbstractNode's internal nodes
+                for val in predecessor.value:
+                    if self.IsValidInput(val):
+                        self.inputs.append(val)
+            else:
+                # Normal node: add its single value
+                if self.IsValidInput(predecessor.value):
+                    self.inputs.append(predecessor.value)
 
     def ProcessBatch(self):
         """

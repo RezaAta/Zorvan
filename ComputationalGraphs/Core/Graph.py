@@ -838,5 +838,229 @@ class Graph:
         """Clear any previously set manual processing sequence."""
         self.manual_processing_sequence = None
 
+    # =========================================================================
+    # Abstraction methods - grouping disjoint nodes with same predecessors/successors
+    # =========================================================================
+
+    def can_abstract_nodes(self, nodes):
+        """
+        Check if a set of nodes can be abstracted into an AbstractNode.
+
+        Valid abstraction requires:
+        1. At least 2 nodes
+        2. Nodes are disjoint (no edges between them)
+        3. All nodes share the same predecessors
+        4. All nodes share the same successors
+
+        Args:
+            nodes: Iterable of nodes to check
+
+        Returns:
+            tuple: (can_abstract: bool, reason: str)
+        """
+        nodes_list = list(nodes)
+        if len(nodes_list) < 2:
+            return (False, "Need at least 2 nodes to abstract")
+
+        nodes_set = set(nodes_list)
+
+        # Build successor map for successor checking
+        successor_map = self.BuildSuccessorMap()
+
+        # Check that nodes are disjoint (no edges between them)
+        for node in nodes_list:
+            # Check predecessors - none should be in the selection
+            for pred in node.predecessors:
+                if pred in nodes_set:
+                    return (
+                        False,
+                        f"Node '{node.name}' has predecessor '{pred.name}' "
+                        f"in selection - nodes must be disjoint",
+                    )
+            # Check successors - none should be in the selection
+            for succ in successor_map.get(node, []):
+                if succ in nodes_set:
+                    return (
+                        False,
+                        f"Node '{node.name}' has successor '{succ.name}' "
+                        f"in selection - nodes must be disjoint",
+                    )
+
+        # Get reference predecessors and successors from first node
+        reference_node = nodes_list[0]
+        reference_preds = set(reference_node.predecessors)
+        reference_succs = set(successor_map.get(reference_node, []))
+
+        # Check all other nodes have the same predecessors and successors
+        for node in nodes_list[1:]:
+            node_preds = set(node.predecessors)
+            node_succs = set(successor_map.get(node, []))
+
+            if node_preds != reference_preds:
+                diff_preds = node_preds.symmetric_difference(reference_preds)
+                diff_names = [p.name for p in diff_preds]
+                return (
+                    False,
+                    f"Node '{node.name}' has different predecessors than "
+                    f"'{reference_node.name}': {diff_names}",
+                )
+
+            if node_succs != reference_succs:
+                diff_succs = node_succs.symmetric_difference(reference_succs)
+                diff_names = [s.name for s in diff_succs]
+                return (
+                    False,
+                    f"Node '{node.name}' has different successors than "
+                    f"'{reference_node.name}': {diff_names}",
+                )
+
+        return (True, "Nodes can be abstracted")
+
+    def AbstractNodes(self, nodes):
+        """
+        Create an AbstractNode from a set of disjoint nodes with same predecessors/successors.
+
+        The nodes must be valid for abstraction (use can_abstract_nodes() to validate first).
+        The abstract node will:
+        - Have predecessors = shared predecessors of all internal nodes
+        - Have successors = shared successors of all internal nodes
+        - Process contained nodes in parallel when computed
+
+        Args:
+            nodes: List of disjoint nodes to abstract
+
+        Returns:
+            The created AbstractNode, or None if abstraction failed
+        """
+        if not nodes or len(nodes) < 2:
+            return None
+
+        nodes_list = list(nodes)
+        nodes_set = set(nodes_list)
+
+        # Validate abstraction is possible
+        can_abstract, reason = self.can_abstract_nodes(nodes_list)
+        if not can_abstract:
+            return None
+
+        successor_map = self.BuildSuccessorMap()
+
+        # Get shared predecessors and successors (from any node, they're all the same)
+        shared_preds = list(nodes_list[0].predecessors)
+        shared_succs = list(successor_map.get(nodes_list[0], []))
+
+        # Create the abstract node with internal nodes
+        abstract = AbstractNode("", nodes_list)
+
+        # Add the abstract node to the graph (gets A1, A2, etc. ID)
+        self.AddNode(abstract)
+
+        # Set the name to match the ID (A1, A2, etc.)
+        abstract.name = abstract.id
+
+        # Set up external connections:
+        # 1. Shared predecessors -> AbstractNode
+        for pred in shared_preds:
+            abstract.AddPreNode(pred)
+
+        # 2. AbstractNode -> Shared successors
+        # Replace all internal nodes in successors' predecessors with abstract node
+        for succ in shared_succs:
+            # Remove all internal nodes from successor's predecessors
+            for node in nodes_list:
+                if node in succ.predecessors:
+                    succ.predecessors.remove(node)
+            # Add abstract node as predecessor
+            succ.AddPreNode(abstract)
+
+        # Handle starting_nodes: if any abstracted node was a starting node,
+        # replace with the abstract node
+        for i, sn in enumerate(list(self.starting_nodes)):
+            if sn in nodes_set:
+                self.starting_nodes[i] = abstract
+        # Remove duplicates from starting_nodes
+        seen = set()
+        new_starting = []
+        for sn in self.starting_nodes:
+            if sn not in seen:
+                seen.add(sn)
+                new_starting.append(sn)
+        self.starting_nodes = new_starting
+
+        # Remove the original nodes from the graph
+        # (but they remain in the AbstractNode's listOfNodes)
+        for node in nodes_list:
+            if node in self.nodes:
+                index = self.nodes.index(node)
+                # Remove from adjacency matrix
+                self.__RemoveNodeFromAdjacencyMatrix(index)
+                # Remove from nodes list and dictionary
+                self.nodes.remove(node)
+                if node.id in self.idToNodeDictionary:
+                    del self.idToNodeDictionary[node.id]
+
+        # Rebuild adjacency matrix to reflect new structure
+        self.UpdateAdjacencyMatrix()
+
+        return abstract
+
+    def ExpandAbstractNode(self, abstract_node):
+        """
+        Expand an AbstractNode, restoring its internal nodes to the graph.
+
+        The internal nodes are restored with their shared predecessors and successors.
+
+        Args:
+            abstract_node: The AbstractNode to expand
+
+        Returns:
+            List of restored nodes, or None if failed
+        """
+        if not isinstance(abstract_node, AbstractNode):
+            return None
+        if abstract_node not in self.nodes:
+            return None
+        if not abstract_node.listOfNodes:
+            return None
+
+        internal_nodes = abstract_node.get_internal_nodes()
+        successor_map = self.BuildSuccessorMap()
+        external_preds = list(abstract_node.predecessors)
+        external_succs = successor_map.get(abstract_node, [])
+
+        # Add all internal nodes back to graph
+        for node in internal_nodes:
+            self.AddNode(node)
+
+        # Reconnect external predecessors to all internal nodes
+        for node in internal_nodes:
+            for pred in external_preds:
+                node.AddPreNode(pred)
+
+        # Reconnect external successors from all internal nodes
+        for succ in external_succs:
+            if abstract_node in succ.predecessors:
+                succ.predecessors.remove(abstract_node)
+            for node in internal_nodes:
+                succ.AddPreNode(node)
+
+        # Handle starting_nodes: if abstract was a starting node, replace with
+        # first internal node (arbitrary choice, all have same predecessors)
+        if abstract_node in self.starting_nodes:
+            idx = self.starting_nodes.index(abstract_node)
+            self.starting_nodes[idx] = internal_nodes[0]
+
+        # Remove the abstract node from graph manually
+        if abstract_node in self.nodes:
+            index = self.nodes.index(abstract_node)
+            self.__RemoveNodeFromAdjacencyMatrix(index)
+            self.nodes.remove(abstract_node)
+            if abstract_node.id in self.idToNodeDictionary:
+                del self.idToNodeDictionary[abstract_node.id]
+
+        self.UpdateAdjacencyMatrix()
+
+        return internal_nodes
+
     # any node that old nodes are in its pred list
     # put the new abstract node in its pred list

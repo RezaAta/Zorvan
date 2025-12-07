@@ -117,6 +117,9 @@ class CompressedNode(Node):
         Since nodes in a compressed chain depend on each other,
         they must be processed in order. Each node's UpdateInputs is called
         before its ProcessBatch to ensure proper input gathering.
+
+        Note: Internal nodes are processed with forcedBatchProcessing=True
+        temporarily to ensure all inputs are consumed in one pass.
         """
         if not self.listOfNodes:
             return
@@ -126,8 +129,12 @@ class CompressedNode(Node):
             if hasattr(node, "UpdateInputs"):
                 node.UpdateInputs()
             # ProcessBatch calls Operation with the gathered inputs
+            # Temporarily enable forcedBatchProcessing to consume all inputs
             if hasattr(node, "ProcessBatch"):
+                original_forced = getattr(node, "forcedBatchProcessing", False)
+                node.forcedBatchProcessing = True
                 node.ProcessBatch()
+                node.forcedBatchProcessing = original_forced
 
         # Update the CompressedNode's value from the last node
         self.value = self.listOfNodes[-1].value if self.listOfNodes else 0

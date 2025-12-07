@@ -568,6 +568,78 @@ class GraphCanvas(QGraphicsView):
         cmd = DecompressNodeCommand(self, graph, node_item, mode=mode)
         undo_stack.push(cmd)
 
+    def abstract_selected_with_undo(self):
+        """Abstract selected nodes into an AbstractNode with undo support.
+
+        Abstraction groups disjoint nodes (a, b, c) that share the same
+        predecessors and successors into a single AbstractNode that processes
+        them internally in parallel.
+        """
+        selected = self.scene.selectedItems()
+        if not selected:
+            return
+
+        # Only nodes can be abstracted (not edges)
+        node_items = [item for item in selected if isinstance(item, NodeItem)]
+        if len(node_items) < 2:
+            return
+
+        # Get the undo stack and graph
+        undo_stack = self._get_undo_stack()
+        if undo_stack is None:
+            return
+
+        graph = getattr(self, "graph", None)
+        if graph is None:
+            return
+
+        # Validate that abstraction is possible
+        nodes = [item.node for item in node_items]
+        can_abstract, reason = graph.can_abstract_nodes(nodes)
+        if not can_abstract:
+            # Show error message to user
+            try:
+                from PyQt6.QtWidgets import QMessageBox
+
+                QMessageBox.warning(
+                    self.parent(),
+                    "Cannot Abstract",
+                    f"Cannot abstract selected nodes:\n{reason}",
+                )
+            except Exception:
+                pass
+            return
+
+        # Create and push the command
+        from .commands import AbstractNodeCommand
+
+        cmd = AbstractNodeCommand(self, graph, node_items)
+        undo_stack.push(cmd)
+
+    def expand_abstract_with_undo(self, node_item):
+        """Expand an AbstractNode with undo support.
+
+        Args:
+            node_item: The NodeItem containing an AbstractNode
+        """
+        from ComputationalGraphs.Nodes.AbstractNode import AbstractNode
+
+        if not isinstance(node_item.node, AbstractNode):
+            return
+
+        undo_stack = self._get_undo_stack()
+        if undo_stack is None:
+            return
+
+        graph = getattr(self, "graph", None)
+        if graph is None:
+            return
+
+        from .commands import ExpandAbstractNodeCommand
+
+        cmd = ExpandAbstractNodeCommand(self, graph, node_item)
+        undo_stack.push(cmd)
+
     def _get_undo_stack(self):
         """Get the undo stack from the main window if available."""
         try:
