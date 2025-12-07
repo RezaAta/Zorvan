@@ -14,6 +14,9 @@ This module provides QUndoCommand subclasses for all undoable UI operations:
 - DecompressNodeCommand: Decompressing a CompressedNode back to original nodes
 - AbstractNodeCommand: Abstracting disjoint nodes into an AbstractNode
 - ExpandAbstractNodeCommand: Expanding an AbstractNode back to original nodes
+- SimplifyStepCommand: Apply one simplification step
+- FullySimplifyCommand: Apply all possible simplifications
+- ExpandStepCommand: Reverse the last simplification
 """
 
 from .abstract_node_command import AbstractNodeCommand, ExpandAbstractNodeCommand
@@ -25,6 +28,11 @@ from .paste_command import PasteCommand
 from .remove_edge_command import RemoveEdgeCommand
 from .remove_items_command import RemoveItemsCommand
 from .replace_node_command import ReplaceNodeCommand
+from .simplify_command import (
+    ExpandStepCommand,
+    FullySimplifyCommand,
+    SimplifyStepCommand,
+)
 from .swallow_node_command import SwallowNodeCommand
 
 __all__ = [
@@ -40,4 +48,7 @@ __all__ = [
     "DecompressNodeCommand",
     "AbstractNodeCommand",
     "ExpandAbstractNodeCommand",
+    "SimplifyStepCommand",
+    "FullySimplifyCommand",
+    "ExpandStepCommand",
 ]

@@ -63,6 +63,11 @@ class GraphBuilderController:
             from ComputationalGraphs.GUI.edge_item import EdgeItem
             from ComputationalGraphs.GUI.node_item import NodeItem
 
+            # Clear existing canvas items first
+            self.canvas.scene.clear()
+            self.canvas.node_items.clear()
+            self.canvas.edge_items.clear()
+
             # Create a networkx graph for layout
             G = nx.DiGraph()
 

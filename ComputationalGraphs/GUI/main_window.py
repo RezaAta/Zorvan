@@ -613,3 +613,97 @@ class MainWindow(QMainWindow):
     def _apply_layout_positions(self, positions: dict):
         """Apply layout positions. Delegated to GraphLayoutController."""
         self.graph_layout_controller._apply_layout_positions(positions)
+
+    # --- Graph Simplification methods ---
+
+    def simplify_step(self):
+        """Apply one step of graph simplification."""
+        if not self.graph or not self.graph.nodes:
+            self.statusBar().showMessage("No graph to simplify", 3000)
+            return
+
+        # Import command for undo support
+        from .commands.simplify_command import SimplifyStepCommand
+
+        command = SimplifyStepCommand(self.canvas, self.graph)
+        self.undo_stack.push(command)
+
+        # Update status
+        result = command.result
+        if result and result.get("changed"):
+            ops = result.get("operations", [])
+            msg = (
+                f"Simplify Step: {', '.join(ops)}"
+                if ops
+                else "Simplify Step: 1 operation applied"
+            )
+            self.statusBar().showMessage(msg, 5000)
+        else:
+            self.statusBar().showMessage("Simplify Step: No changes possible", 3000)
+
+        self._update_simplification_status()
+
+    def simplify_fully(self):
+        """Fully simplify the graph structure."""
+        if not self.graph or not self.graph.nodes:
+            self.statusBar().showMessage("No graph to simplify", 3000)
+            return
+
+        # Import command for undo support
+        from .commands.simplify_command import FullySimplifyCommand
+
+        command = FullySimplifyCommand(self.canvas, self.graph)
+        self.undo_stack.push(command)
+
+        # Update status
+        result = command.result
+        if result:
+            total = result.get("total_operations", 0)
+            has_cycles = result.get("has_cycles", False)
+            is_fully = result.get("is_fully_compressed", False)
+
+            if total > 0:
+                status = "fully simplified" if is_fully else "partially simplified"
+                if has_cycles:
+                    status += " (cycles detected)"
+                msg = f"Fully Simplify: {total} operations, {status}"
+            else:
+                msg = "Fully Simplify: No changes possible"
+            self.statusBar().showMessage(msg, 5000)
+        else:
+            self.statusBar().showMessage("Fully Simplify: Complete", 3000)
+
+        self._update_simplification_status()
+
+    def expand_step(self):
+        """Expand the last simplified node (reverse simplification)."""
+        if not self.graph or not self.graph.nodes:
+            self.statusBar().showMessage("No graph to expand", 3000)
+            return
+
+        # Import command for undo support
+        from .commands.simplify_command import ExpandStepCommand
+
+        command = ExpandStepCommand(self.canvas, self.graph)
+        self.undo_stack.push(command)
+
+        # Update status
+        result = command.result
+        if result and result.get("expanded"):
+            op = result.get("operation", "Expanded node")
+            self.statusBar().showMessage(f"Expand Step: {op}", 5000)
+        else:
+            op = (
+                result.get("operation", "No simplification history")
+                if result
+                else "Failed"
+            )
+            self.statusBar().showMessage(f"Expand Step: {op}", 3000)
+
+        self._update_simplification_status()
+
+    def _update_simplification_status(self):
+        """Update the simplification status label."""
+        if hasattr(self, "simplification_status_label") and self.graph:
+            count = self.graph.get_simplification_history_count()
+            self.simplification_status_label.setText(f"History: {count} operations")

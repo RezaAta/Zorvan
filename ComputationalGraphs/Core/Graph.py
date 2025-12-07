@@ -1064,3 +1064,625 @@ class Graph:
 
     # any node that old nodes are in its pred list
     # put the new abstract node in its pred list
+
+    # ========================================================================
+    # GRAPH SIMPLIFICATION METHODS
+    # ========================================================================
+
+    def detect_cycles(self):
+        """
+        Detect all cycles in the graph using DFS-based algorithm.
+
+        Returns:
+            list: List of cycles, where each cycle is a list of nodes forming
+                  a cycle. Returns empty list if graph is acyclic.
+        """
+        cycles = []
+        visited = set()
+        rec_stack = set()  # Nodes in current recursion stack
+        path = []  # Current DFS path
+
+        successor_map = self.BuildSuccessorMap()
+
+        def dfs(node):
+            visited.add(node)
+            rec_stack.add(node)
+            path.append(node)
+
+            for successor in successor_map.get(node, []):
+                if successor not in visited:
+                    dfs(successor)
+                elif successor in rec_stack:
+                    # Found a cycle - extract it from path
+                    cycle_start_idx = path.index(successor)
+                    cycle = path[cycle_start_idx:] + [successor]
+                    cycles.append(cycle)
+
+            path.pop()
+            rec_stack.remove(node)
+
+        for node in self.nodes:
+            if node not in visited:
+                dfs(node)
+
+        return cycles
+
+    def has_cycles(self):
+        """
+        Check if the graph contains any cycles.
+
+        Returns:
+            bool: True if graph has cycles, False if acyclic.
+        """
+        return len(self.detect_cycles()) > 0
+
+    def _generate_duplicate_name(self, base_name):
+        """
+        Generate a unique name for a duplicated node.
+
+        Args:
+            base_name: Original node name
+
+        Returns:
+            str: Unique name in format "{base_name}_dup{N}"
+        """
+        existing_names = {n.name for n in self.nodes}
+        counter = 1
+        while True:
+            candidate = f"{base_name}_dup{counter}"
+            if candidate not in existing_names:
+                return candidate
+            counter += 1
+
+    def DuplicateNode(self, node, new_name=None):
+        """
+        Create a duplicate of a node with the same type and attributes,
+        but new identity (id, name) and no connections.
+
+        The duplicate outputs the same value as the original (atomicity preserved).
+
+        Args:
+            node: The node to duplicate
+            new_name: Optional name for duplicate (auto-generated if None)
+
+        Returns:
+            The new duplicated node (already added to graph)
+        """
+        from copy import deepcopy
+
+        # Get the node class
+        node_class = type(node)
+
+        # Extract copyable attributes
+        attrs = {}
+        for attr_name, val in vars(node).items():
+            if attr_name.startswith("_"):
+                continue
+            if attr_name in ("predecessors", "inputs", "id"):
+                continue
+            if callable(val):
+                continue
+            try:
+                attrs[attr_name] = deepcopy(val)
+            except Exception:
+                attrs[attr_name] = val
+
+        # Generate unique name if not provided
+        if new_name is None:
+            new_name = self._generate_duplicate_name(node.name)
+        attrs["name"] = new_name
+
+        # Create new node instance
+        try:
+            new_node = node_class(**attrs)
+        except Exception:
+            # Fallback: create with just name and set attributes
+            try:
+                new_node = node_class(name=new_name)
+            except Exception:
+                new_node = node_class(new_name)
+            for attr, val in attrs.items():
+                if attr != "name" and hasattr(new_node, attr):
+                    try:
+                        setattr(new_node, attr, val)
+                    except Exception:
+                        pass
+
+        # Add to graph (assigns new id automatically)
+        self.AddNode(new_node)
+
+        return new_node
+
+    # ========================================================================
+    # SIMPLIFICATION TRANSFORMATION HELPERS
+    # ========================================================================
+
+    def _split_node_by_successors(self, node):
+        """
+        Split a node with multiple successors into multiple nodes, each with one successor.
+
+        This transforms:
+        - genesis (0 preds, >1 succs) -> multiple entrypoints (0 preds, 1 succ each)
+        - distribution (1 pred, >1 succs) -> multiple links (1 pred, 1 succ each)
+        - cross (>1 preds, >1 succs) -> multiple unions (>1 preds, 1 succ each)
+
+        Args:
+            node: The node to split
+
+        Returns:
+            list: List of new nodes created, or None if split not applicable
+        """
+        successor_map = self.BuildSuccessorMap()
+        successors = successor_map.get(node, [])
+
+        if len(successors) <= 1:
+            return None  # Nothing to split
+
+        new_nodes = []
+        original_preds = list(node.predecessors)
+
+        # Create duplicate for each successor
+        for i, succ in enumerate(successors):
+            if i == 0:
+                # Keep original node for first successor, just remove other connections
+                for other_succ in successors[1:]:
+                    if node in other_succ.predecessors:
+                        other_succ.predecessors.remove(node)
+                new_nodes.append(node)
+            else:
+                # Create duplicate for this successor
+                dup = self.DuplicateNode(node)
+                # Connect duplicate to same predecessors
+                for pred in original_preds:
+                    dup.AddPreNode(pred)
+                # Connect this successor to duplicate instead of original
+                if node in succ.predecessors:
+                    succ.predecessors.remove(node)
+                succ.AddPreNode(dup)
+                new_nodes.append(dup)
+
+        self.UpdateAdjacencyMatrix()
+        return new_nodes
+
+    def _try_compress_predecessors(self, node, log=None):
+        """
+        Try to compress the predecessors of a node based on its topology type.
+
+        Transformation rules:
+        - Predecessors of Endpoint Nodes -> compress into greedy or isolated
+        - Predecessors of Distribution Nodes -> compress into Genesis or Cross
+        - Predecessors of Link Nodes -> compress into Entry or Union
+
+        Args:
+            node: The target node whose predecessors to compress
+            log: Optional list to append log messages
+
+        Returns:
+            CompressedNode if compression succeeded, None otherwise
+        """
+        if not node.predecessors:
+            return None
+
+        preds = list(node.predecessors)
+
+        # Case 1: Single predecessor - try to compress node WITH its predecessor
+        # This handles chains like: entrypoint -> endpoint (e.g., C1 -> e)
+        if len(preds) == 1:
+            pred = preds[0]
+            # Try compressing [pred, node] as a 2-node chain
+            chain = [pred, node]
+            can_compress, reason = self.can_compress_nodes(chain)
+            if can_compress:
+                compressed = self.CompressNodes(chain)
+                if log is not None:
+                    log.append(f"Compressed chain to {compressed.name}")
+                return compressed
+
+            # Also try extending backwards: if pred has single predecessor,
+            # try [pred_of_pred, pred] chain
+            if len(pred.predecessors) == 1:
+                pred_of_pred = list(pred.predecessors)[0]
+                chain = [pred_of_pred, pred]
+                can_compress, reason = self.can_compress_nodes(chain)
+                if can_compress:
+                    compressed = self.CompressNodes(chain)
+                    if log is not None:
+                        log.append(f"Compressed chain to {compressed.name}")
+                    return compressed
+            return None
+
+        # Case 2: Multiple predecessors - look for chains among them
+        for pred in preds:
+            for pred_of_pred in pred.predecessors:
+                if pred_of_pred in preds:
+                    # Found a chain: pred_of_pred -> pred
+                    chain = [pred_of_pred, pred]
+                    can_compress, reason = self.can_compress_nodes(chain)
+                    if can_compress:
+                        compressed = self.CompressNodes(chain)
+                        if log is not None:
+                            log.append(f"Compressed chain to {compressed.name}")
+                        return compressed
+
+        return None
+
+    def _try_abstract_predecessors(self, node, log=None):
+        """
+        Try to abstract the predecessors of a node based on its topology type.
+
+        Transformation rules:
+        - Predecessors of Union Nodes -> abstract to Link Nodes
+        - Predecessors of Cross Nodes -> abstract to Distribution Nodes
+        - Predecessors of Greedy Nodes -> abstract to Endpoint Nodes
+
+        Args:
+            node: The target node whose predecessors to abstract
+            log: Optional list to append log messages
+
+        Returns:
+            AbstractNode if abstraction succeeded, None otherwise
+        """
+        if len(node.predecessors) < 2:
+            return None
+
+        # Try to abstract predecessors that share the same predecessors and successors
+        preds = list(node.predecessors)
+
+        # Check if any subset of predecessors can be abstracted
+        can_abstract, reason = self.can_abstract_nodes(preds)
+        if can_abstract:
+            abstract = self.AbstractNodes(preds)
+            if log is not None:
+                log.append(f"Abstracted {len(preds)} nodes to {abstract.name}")
+            return abstract
+
+        # Try pairs of predecessors
+        for i in range(len(preds)):
+            for j in range(i + 1, len(preds)):
+                pair = [preds[i], preds[j]]
+                can_abstract, reason = self.can_abstract_nodes(pair)
+                if can_abstract:
+                    abstract = self.AbstractNodes(pair)
+                    if log is not None:
+                        log.append(f"Abstracted 2 nodes to {abstract.name}")
+                    return abstract
+
+        return None
+
+    def _merge_isolated_nodes(self, log=None):
+        """
+        Abstract multiple isolated nodes into a single isolated AbstractNode.
+
+        Args:
+            log: Optional list to append log messages
+
+        Returns:
+            AbstractNode if merge succeeded, None otherwise
+        """
+        self.analyze_topology()
+        isolated_nodes = [
+            n for n in self.nodes if getattr(n, "topology_type", None) == "isolated"
+        ]
+
+        if len(isolated_nodes) < 2:
+            return None
+
+        # Isolated nodes have no preds and no succs, so they can always be abstracted
+        can_abstract, reason = self.can_abstract_nodes(isolated_nodes)
+        if can_abstract:
+            abstract = self.AbstractNodes(isolated_nodes)
+            if log is not None:
+                log.append(
+                    f"Merged {len(isolated_nodes)} isolated nodes to {abstract.name}"
+                )
+            return abstract
+
+        return None
+
+    # ========================================================================
+    # CORE SIMPLIFICATION ALGORITHM
+    # ========================================================================
+
+    def _init_simplification_history(self):
+        """Initialize simplification history if not already present."""
+        if not hasattr(self, "_simplification_history"):
+            self._simplification_history = []
+
+    def simplify_step(self):
+        """
+        Execute one iteration of the graph simplification algorithm.
+
+        This applies transformations based on node topology types:
+        - Step 3a: Compress predecessors of Endpoint Nodes into greedy or isolated
+        - Step 3b: Compress predecessors of Distribution Nodes into Genesis or Cross
+        - Step 3c: Compress predecessors of Link Nodes to Entry or Union
+        - Step 3d: Abstract predecessors of Union Nodes to Link Nodes
+        - Step 3e: Abstract predecessors of Cross Nodes to Distribution Nodes
+        - Step 3f: Abstract predecessors of Greedy Nodes to Endpoint Nodes
+
+        Returns:
+            dict: Result with keys:
+                - 'changed': bool indicating if any changes were made
+                - 'operations': list of operation descriptions
+                - 'compressed_nodes': list of CompressedNodes created
+                - 'abstracted_nodes': list of AbstractNodes created
+        """
+        self._init_simplification_history()
+
+        result = {
+            "changed": False,
+            "operations": [],
+            "compressed_nodes": [],
+            "abstracted_nodes": [],
+        }
+
+        # Step 1: Label all nodes
+        topology_map = self.analyze_topology()
+
+        # Step 2: Find endpoint and greedy nodes
+        endpoints = [n for n, t in topology_map.items() if t == "endpoint"]
+        greedy_nodes = [n for n, t in topology_map.items() if t == "greedy"]
+
+        if not endpoints and not greedy_nodes:
+            result["operations"].append(
+                "No endpoint or greedy nodes found - graph may not be fully compressible"
+            )
+
+        # Get nodes by type for processing
+        distribution_nodes = [n for n, t in topology_map.items() if t == "distribution"]
+        link_nodes = [n for n, t in topology_map.items() if t == "link"]
+        union_nodes = [n for n, t in topology_map.items() if t == "union"]
+        cross_nodes = [n for n, t in topology_map.items() if t == "cross"]
+
+        # Track which nodes have been visited/processed this step
+        visited = set()
+
+        # Step 3: Apply transformations
+
+        # 3a: Compress predecessors of Endpoint Nodes
+        for node in endpoints:
+            if node not in self.nodes or node in visited:
+                continue
+            visited.add(node)
+            compressed = self._try_compress_predecessors(node, result["operations"])
+            if compressed:
+                result["changed"] = True
+                result["compressed_nodes"].append(compressed)
+                self._simplification_history.append(("compress", compressed))
+                break  # One operation per step for incremental mode
+
+        if result["changed"]:
+            return result
+
+        # 3b: Compress predecessors of Distribution Nodes
+        for node in distribution_nodes:
+            if node not in self.nodes or node in visited:
+                continue
+            visited.add(node)
+            compressed = self._try_compress_predecessors(node, result["operations"])
+            if compressed:
+                result["changed"] = True
+                result["compressed_nodes"].append(compressed)
+                self._simplification_history.append(("compress", compressed))
+                break
+
+        if result["changed"]:
+            return result
+
+        # 3c: Compress predecessors of Link Nodes
+        for node in link_nodes:
+            if node not in self.nodes or node in visited:
+                continue
+            visited.add(node)
+            compressed = self._try_compress_predecessors(node, result["operations"])
+            if compressed:
+                result["changed"] = True
+                result["compressed_nodes"].append(compressed)
+                self._simplification_history.append(("compress", compressed))
+                break
+
+        if result["changed"]:
+            return result
+
+        # 3d: Abstract predecessors of Union Nodes to Link Nodes
+        for node in union_nodes:
+            if node not in self.nodes or node in visited:
+                continue
+            visited.add(node)
+            abstract = self._try_abstract_predecessors(node, result["operations"])
+            if abstract:
+                result["changed"] = True
+                result["abstracted_nodes"].append(abstract)
+                self._simplification_history.append(("abstract", abstract))
+                break
+
+        if result["changed"]:
+            return result
+
+        # 3e: Abstract predecessors of Cross Nodes to Distribution Nodes
+        for node in cross_nodes:
+            if node not in self.nodes or node in visited:
+                continue
+            visited.add(node)
+            abstract = self._try_abstract_predecessors(node, result["operations"])
+            if abstract:
+                result["changed"] = True
+                result["abstracted_nodes"].append(abstract)
+                self._simplification_history.append(("abstract", abstract))
+                break
+
+        if result["changed"]:
+            return result
+
+        # 3f: Abstract predecessors of Greedy Nodes to Endpoint Nodes
+        for node in greedy_nodes:
+            if node not in self.nodes or node in visited:
+                continue
+            visited.add(node)
+            abstract = self._try_abstract_predecessors(node, result["operations"])
+            if abstract:
+                result["changed"] = True
+                result["abstracted_nodes"].append(abstract)
+                self._simplification_history.append(("abstract", abstract))
+                break
+
+        return result
+
+    def simplify_fully(self):
+        """
+        Fully simplify the graph by repeatedly applying simplify_step() until no
+        more changes can be made, then applying additional transformations.
+
+        Algorithm steps:
+        1-3. Repeatedly call simplify_step() until no changes
+        5. If no cycles:
+           a. Convert Distribution to multiple Link nodes
+           b. Convert Genesis to multiple Entry nodes
+           c. Convert Cross to multiple Union nodes
+           d. Re-run step 3 if any conversions made
+        6. Abstract multiple Isolated nodes to single Isolated
+
+        Returns:
+            dict: Result with keys:
+                - 'total_operations': int count of all operations
+                - 'operations': list of all operation descriptions
+                - 'is_fully_compressed': bool indicating if fully simplified
+                - 'has_cycles': bool indicating if cycles prevent full compression
+        """
+        self._init_simplification_history()
+
+        result = {
+            "total_operations": 0,
+            "operations": [],
+            "is_fully_compressed": False,
+            "has_cycles": False,
+        }
+
+        # Steps 1-4: Repeatedly apply simplify_step
+        max_iterations = len(self.nodes) * 10  # Safety limit
+        iteration = 0
+
+        while iteration < max_iterations:
+            step_result = self.simplify_step()
+            if not step_result["changed"]:
+                break
+            result["total_operations"] += 1
+            result["operations"].extend(step_result["operations"])
+            iteration += 1
+
+        # Step 5: Check for cycles
+        cycles = self.detect_cycles()
+        result["has_cycles"] = len(cycles) > 0
+
+        if not result["has_cycles"]:
+            # 5a-c: Split nodes to reduce successor count
+            conversion_made = True
+            while conversion_made:
+                conversion_made = False
+                self.analyze_topology()
+
+                # Find nodes to split
+                for node in list(self.nodes):
+                    topo = getattr(node, "topology_type", None)
+                    if topo in ("distribution", "genesis", "cross"):
+                        successor_map = self.BuildSuccessorMap()
+                        if len(successor_map.get(node, [])) > 1:
+                            new_nodes = self._split_node_by_successors(node)
+                            if new_nodes and len(new_nodes) > 1:
+                                result["operations"].append(
+                                    f"Split {topo} node {node.name} into {len(new_nodes)} nodes"
+                                )
+                                result["total_operations"] += 1
+                                self._simplification_history.append(
+                                    ("split", node, new_nodes)
+                                )
+                                conversion_made = True
+                                break
+
+                # If any conversions, re-run simplify steps
+                if conversion_made:
+                    while True:
+                        step_result = self.simplify_step()
+                        if not step_result["changed"]:
+                            break
+                        result["total_operations"] += 1
+                        result["operations"].extend(step_result["operations"])
+
+        # Step 6: Merge isolated nodes
+        abstract = self._merge_isolated_nodes(result["operations"])
+        if abstract:
+            result["total_operations"] += 1
+            self._simplification_history.append(("abstract", abstract))
+
+        # Check if fully compressed
+        self.analyze_topology()
+        topology_counts = {}
+        for node in self.nodes:
+            t = getattr(node, "topology_type", "unknown")
+            topology_counts[t] = topology_counts.get(t, 0) + 1
+
+        # Graph is fully simplified if only simple types remain
+        complex_types = {"distribution", "genesis", "cross", "union", "greedy"}
+        has_complex = any(topology_counts.get(t, 0) > 0 for t in complex_types)
+        result["is_fully_compressed"] = not has_complex or result["has_cycles"]
+
+        return result
+
+    def expand_step(self):
+        """
+        Reverse the last simplification operation (expand compressed/abstracted nodes).
+
+        Uses the internal _simplification_history stack to undo operations.
+
+        Returns:
+            dict: Result with keys:
+                - 'expanded': bool indicating if an expansion was performed
+                - 'operation': description of what was expanded
+                - 'nodes': list of nodes that were restored
+        """
+        self._init_simplification_history()
+
+        result = {
+            "expanded": False,
+            "operation": "",
+            "nodes": [],
+        }
+
+        if not self._simplification_history:
+            result["operation"] = "No simplification history to expand"
+            return result
+
+        last_op = self._simplification_history.pop()
+        op_type = last_op[0]
+
+        if op_type == "compress":
+            compressed_node = last_op[1]
+            if compressed_node in self.nodes:
+                restored = self.DecompressNode(compressed_node, mode="full")
+                if restored:
+                    result["expanded"] = True
+                    result["operation"] = f"Decompressed {compressed_node.name}"
+                    result["nodes"] = restored
+        elif op_type == "abstract":
+            abstract_node = last_op[1]
+            if abstract_node in self.nodes:
+                restored = self.ExpandAbstractNode(abstract_node)
+                if restored:
+                    result["expanded"] = True
+                    result["operation"] = f"Expanded {abstract_node.name}"
+                    result["nodes"] = restored
+        elif op_type == "split":
+            # Split is harder to reverse - would need to merge nodes back
+            # For now, just log that we can't reverse splits
+            result["operation"] = "Cannot reverse node split operation"
+
+        return result
+
+    def get_simplification_history_count(self):
+        """Get the number of operations in the simplification history."""
+        self._init_simplification_history()
+        return len(self._simplification_history)
+
+    def clear_simplification_history(self):
+        """Clear the simplification history."""
+        self._simplification_history = []

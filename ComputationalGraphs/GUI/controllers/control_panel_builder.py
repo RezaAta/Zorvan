@@ -53,6 +53,7 @@ class ControlPanelBuilder:
         viz_container = self._build_visualization_section()
         layout_container = self._build_layout_section()
         plot_container = self._build_plotting_section()
+        simplification_container = self._build_simplification_section()
 
         # Import CollapsibleSection from main_window
         from ..main_window import CollapsibleSection
@@ -64,6 +65,11 @@ class ControlPanelBuilder:
             CollapsibleSection("Visualization", viz_container, expanded=False)
         )
         layout.addWidget(CollapsibleSection("Plotting", plot_container, expanded=False))
+        layout.addWidget(
+            CollapsibleSection(
+                "Simplification", simplification_container, expanded=False
+            )
+        )
         layout.addStretch()
 
         scroll.setWidget(widget)
@@ -726,6 +732,55 @@ class ControlPanelBuilder:
         mw.plot_backend_combo.currentIndexChanged.connect(mw._on_plot_backend_changed)
         backend_layout.addWidget(mw.plot_backend_combo)
         layout.addLayout(backend_layout)
+
+        layout.addStretch()
+        return container
+
+    def _build_simplification_section(self) -> QWidget:
+        """Build the graph simplification controls section."""
+        mw = self.mw
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        layout.addWidget(QLabel("<b>Graph Simplification</b>"))
+
+        # Description label
+        desc_label = QLabel(
+            "Simplify graph structure using compression and abstraction."
+        )
+        desc_label.setWordWrap(True)
+        desc_label.setStyleSheet("color: #888; font-size: 10px;")
+        layout.addWidget(desc_label)
+
+        # Simplify Step button
+        mw.simplify_step_btn = QPushButton("⏩ Simplify Step")
+        mw.simplify_step_btn.setToolTip(
+            "Apply one simplification transformation (compression or abstraction)"
+        )
+        mw.simplify_step_btn.clicked.connect(mw.simplify_step)
+        layout.addWidget(mw.simplify_step_btn)
+
+        # Fully Simplify button
+        mw.simplify_fully_btn = QPushButton("⏭️ Fully Simplify")
+        mw.simplify_fully_btn.setToolTip(
+            "Apply all possible simplifications until graph is fully simplified"
+        )
+        mw.simplify_fully_btn.clicked.connect(mw.simplify_fully)
+        layout.addWidget(mw.simplify_fully_btn)
+
+        # Expand Step button
+        mw.expand_step_btn = QPushButton("⏪ Expand Step")
+        mw.expand_step_btn.setToolTip(
+            "Reverse the last simplification (decompress or expand abstracted nodes)"
+        )
+        mw.expand_step_btn.clicked.connect(mw.expand_step)
+        layout.addWidget(mw.expand_step_btn)
+
+        # Status label for simplification
+        mw.simplification_status_label = QLabel("History: 0 operations")
+        mw.simplification_status_label.setStyleSheet("color: #aaa; font-size: 10px;")
+        layout.addWidget(mw.simplification_status_label)
 
         layout.addStretch()
         return container
