@@ -116,8 +116,13 @@ class GraphRunner(QObject):
             return
 
         snapshot = {}
-        for node in self.graph.nodes:
+
+        def save_node_state(node):
+            """Save state for a single node (helper for recursion)."""
             node_id = id(node)
+            if node_id in snapshot:
+                return  # Already saved
+
             node_state = {"value": None}
 
             # Store the current value
@@ -151,6 +156,14 @@ class GraphRunner(QObject):
 
             snapshot[node_id] = node_state
 
+            # Recursively save internal nodes for AbstractNode/CompressedNode
+            if hasattr(node, "listOfNodes"):
+                for internal_node in node.listOfNodes:
+                    save_node_state(internal_node)
+
+        for node in self.graph.nodes:
+            save_node_state(node)
+
         self._graph_snapshot = snapshot
 
     def restore_graph_snapshot(self):
@@ -168,11 +181,12 @@ class GraphRunner(QObject):
         # Stop any running execution first
         self.stop()
 
-        for node in self.graph.nodes:
+        def restore_node_state(node):
+            """Restore state for a single node (helper for recursion)."""
             node_id = id(node)
             if node_id not in self._graph_snapshot:
                 # Node was added after snapshot - skip
-                continue
+                return
 
             node_state = self._graph_snapshot[node_id]
 
@@ -201,6 +215,14 @@ class GraphRunner(QObject):
                     node.data = data
             if "streamIndex" in node_state and hasattr(node, "streamIndex"):
                 node.streamIndex = node_state["streamIndex"]
+
+            # Recursively restore internal nodes for AbstractNode/CompressedNode
+            if hasattr(node, "listOfNodes"):
+                for internal_node in node.listOfNodes:
+                    restore_node_state(internal_node)
+
+        for node in self.graph.nodes:
+            restore_node_state(node)
 
         # Reset processor state but keep iteration counter
         self._reset_processor_state()
