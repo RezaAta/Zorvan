@@ -3,8 +3,21 @@ Palette widget showing available node types for drag-and-drop.
 """
 
 from PyQt6.QtCore import QMimeData, Qt
-from PyQt6.QtGui import QBrush, QDrag, QFont
-from PyQt6.QtWidgets import QDockWidget, QTreeWidget, QTreeWidgetItem
+from PyQt6.QtGui import QBrush, QCursor, QDrag, QFont
+from PyQt6.QtWidgets import (
+    QDockWidget,
+    QMenu,
+    QMessageBox,
+    QStyle,
+    QTreeWidget,
+    QTreeWidgetItem,
+)
+
+try:
+    from PyQt6.QtWidgets import QAction
+except Exception:
+    # Some PyQt6 builds provide QAction under QtGui
+    from PyQt6.QtGui import QAction
 
 
 class NodePalette(QDockWidget):
@@ -33,8 +46,9 @@ class NodePalette(QDockWidget):
         self.search_bar.textChanged.connect(self.filter_nodes)
         search_layout.addWidget(self.search_bar)
 
-        self.create_custom_button = QPushButton("➕ Custom")
-        self.create_custom_button.setMaximumWidth(80)
+        self.create_custom_button = QPushButton("➕ Create")
+        self.create_custom_button.setMinimumWidth(110)
+        self.create_custom_button.setMaximumWidth(180)
         self.create_custom_button.clicked.connect(self.on_create_custom_node)
         search_layout.addWidget(self.create_custom_button)
 
@@ -242,6 +256,10 @@ class NodePalette(QDockWidget):
         self.tree_widget.setDragEnabled(True)
         self.tree_widget.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
 
+        # Context menu for editing/deleting custom nodes
+        self.tree_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.tree_widget.customContextMenuRequested.connect(self.on_context_menu)
+
         # Custom drag handler
         self.tree_widget.startDrag = self.start_drag
 
@@ -393,3 +411,58 @@ class NodePalette(QDockWidget):
 
                 if category == "Custom Nodes":
                     self.custom_node_items.append(node_item)
+                    # Allow right-click context menu to edit/delete custom nodes
+                    node_item.setFlags(node_item.flags() | Qt.ItemFlag.ItemIsSelectable)
+
+    def on_context_menu(self, position):
+        """Show context menu for custom node items to edit/delete."""
+        item = self.tree_widget.itemAt(position)
+        if not item:
+            return
+        node_type = item.data(0, Qt.ItemDataRole.UserRole)
+        if not node_type:
+            return
+
+        # Only allow editing/deleting for custom nodes
+        from ComputationalGraphs.GUI.custom_node_manager import get_custom_node_manager
+
+        manager = get_custom_node_manager()
+        if node_type not in manager.get_type_names():
+            return
+
+        menu = QMenu(self)
+        edit_action = QAction("Edit Custom Node", self)
+        delete_action = QAction("Delete Custom Node", self)
+        menu.addAction(edit_action)
+        menu.addAction(delete_action)
+
+        def on_edit():
+            from ComputationalGraphs.GUI.custom_node_dialog import CustomNodeDialog
+
+            definition = manager.get_definition(node_type)
+            dialog = CustomNodeDialog(parent=self, existing_definition=definition)
+            if dialog.exec():
+                new_def = dialog.definition
+                # If the type name changed, remove the old definition
+                if new_def.type_name != node_type:
+                    manager.remove_definition(node_type)
+                manager.add_definition(new_def)
+                manager.register_with_factory()
+                manager.save_library()
+                self.refresh_palette()
+
+        def on_delete():
+            reply = QMessageBox.question(
+                self,
+                "Delete Custom Node",
+                f"Are you sure you want to delete custom node '{node_type}'?\nThis will NOT remove any existing nodes of this type from open graphs.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                manager.remove_definition(node_type)
+                manager.save_library()
+                self.refresh_palette()
+
+        edit_action.triggered.connect(on_edit)
+        delete_action.triggered.connect(on_delete)
+        menu.exec(QCursor.pos())

@@ -4,6 +4,8 @@ Dialog for creating custom nodes through the GUI.
 Users configure BasicNode properties and write the Operation body in Python.
 """
 
+from typing import Optional
+
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -266,5 +268,63 @@ class CustomNodeDialog(QDialog):
                 return
 
         # All good
+        # Prevent conflicts with built-in or other custom nodes
+        # Check for name conflicts with built-in or other custom nodes
+        err = self._check_name_conflict(definition.type_name)
+        if err:
+            QMessageBox.warning(self, "Name Conflict", err)
+            return
+
         self.definition = definition
         self.accept()
+
+    def _check_name_conflict(self, new_name: str) -> Optional[str]:
+        """Return an error message if new_name conflicts with existing types,
+        else None.
+        """
+        try:
+            from ComputationalGraphs.GUI.custom_node_manager import (
+                get_custom_node_manager,
+            )
+            from ComputationalGraphs.GUI.node_factory import is_builtin_node
+
+            manager = get_custom_node_manager()
+            # Create flow: no existing_definition -> creating new node
+            if self.existing_definition is None:
+                # Check built-ins
+                if is_builtin_node(new_name):
+                    return (
+                        "Name '"
+                        + new_name
+                        + "' conflicts with an existing built-in node type."
+                    )
+                # Check other custom definitions
+                if manager.get_definition(new_name) is not None:
+                    return (
+                        "Name '"
+                        + new_name
+                        + "' is already used by another custom node."
+                    )
+            else:
+                # Editing existing definition - if the name changed, check collisions
+                if new_name != self.existing_definition.type_name:
+                    # Built-in conflict
+                    if is_builtin_node(new_name):
+                        return (
+                            "Name '"
+                            + new_name
+                            + "' conflicts with an existing built-in node type."
+                        )
+                    existing_def = manager.get_definition(new_name)
+                    if existing_def is not None and (
+                        existing_def.type_name != self.existing_definition.type_name
+                    ):
+                        return (
+                            "Name '"
+                            + new_name
+                            + "' is already used by another custom node."
+                        )
+        except Exception:
+            # If manager or factory isn't available, be permissive
+            return None
+        return None

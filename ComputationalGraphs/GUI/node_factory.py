@@ -261,6 +261,23 @@ def get_available_node_types() -> list:
     return list(_NODE_REGISTRY.keys())
 
 
+def is_registered(node_type: str) -> bool:
+    """Return True if a node type is registered (built-in or custom)."""
+    return node_type in _NODE_REGISTRY
+
+
+def is_builtin_node(node_type: str) -> bool:
+    """Return True if a node type is a built-in (not custom).
+
+    A node is considered built-in if it's registered and its module path is not
+    the special "__custom__" marker used for dynamically-created custom nodes.
+    """
+    if node_type not in _NODE_REGISTRY:
+        return False
+    module_path = _NODE_REGISTRY[node_type][0]
+    return module_path != "__custom__"
+
+
 def register_node_type(
     node_type: str,
     module_path: str,
@@ -281,3 +298,15 @@ def register_node_type(
     """
     prefix = name_prefix or node_type.replace("Node", "")
     _NODE_REGISTRY[node_type] = (module_path, class_name, default_kwargs or {}, prefix)
+
+
+def unregister_node_type(node_type: str):
+    """Unregister a node type from the registry.
+
+    This removes the type from the internal registry and cache so it won't be
+    available for creation via the factory.
+    """
+    if node_type in _NODE_REGISTRY:
+        del _NODE_REGISTRY[node_type]
+    if node_type in _CLASS_CACHE:
+        del _CLASS_CACHE[node_type]

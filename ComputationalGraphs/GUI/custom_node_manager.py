@@ -116,6 +116,20 @@ class CustomNodeManager:
         if error:
             raise ValueError(f"Invalid operation code: {error}")
 
+        # Prevent overriding built-in node types
+        try:
+            from . import node_factory
+
+            if node_factory.is_builtin_node(definition.type_name):
+                raise ValueError(
+                    "Cannot create custom node using built-in name '"
+                    + definition.type_name
+                    + "'."
+                )
+        except Exception:
+            # If node_factory not available, be conservative and continue
+            pass
+
         self._definitions[definition.type_name] = definition
         # Regenerate class
         self._generate_class(definition)
@@ -134,6 +148,13 @@ class CustomNodeManager:
             del self._definitions[type_name]
             if type_name in self._generated_classes:
                 del self._generated_classes[type_name]
+            # Unregister from factory if available
+            try:
+                from . import node_factory
+
+                node_factory.unregister_node_type(type_name)
+            except Exception:
+                pass
             return True
         return False
 
@@ -280,7 +301,10 @@ class {definition.type_name}(BasicNode):
                     self._generate_class(definition)
                 except Exception as e:
                     print(
-                        f"Failed to load custom node {node_data.get('type_name', 'unknown')}: {e}"
+                        "Failed to load custom node "
+                        + str(node_data.get("type_name", "unknown"))
+                        + ": "
+                        + str(e)
                     )
 
             return True
@@ -325,6 +349,16 @@ class {definition.type_name}(BasicNode):
                 default_kwargs={},
                 name_prefix=type_name.replace("Node", "") or "Custom",
             )
+
+    def unregister_with_factory(self):
+        """Unregister all custom nodes from the node factory."""
+        try:
+            from . import node_factory
+
+            for type_name in list(self._definitions.keys()):
+                node_factory.unregister_node_type(type_name)
+        except Exception:
+            pass
 
 
 # Global instance for convenience
