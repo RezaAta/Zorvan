@@ -39,6 +39,7 @@ class MLPGraphForwardProcessing(Graph):
         activationFunction=SigmoidNode,
         hiddenLayerSizes=None,
         outputLayerType=LinearNode,
+        use_bias=True,
     ):
         """
         Initialize MLP for forward processing (no buffers).
@@ -50,6 +51,7 @@ class MLPGraphForwardProcessing(Graph):
             activationFunction: Activation function class (default: SigmoidNode)
             hiddenLayerSizes: List of neurons per hidden layer (default: all same as numInputs)
             outputLayerType: Output layer activation (default: LinearNode)
+            use_bias: Whether to include bias nodes (default: True)
         """
         super().__init__()
         self.numInputs = numInputs
@@ -60,11 +62,13 @@ class MLPGraphForwardProcessing(Graph):
             hiddenLayerSizes if hiddenLayerSizes else [numInputs] * numHiddenLayers
         )
         self.outputLayerFunction = outputLayerType
+        self.use_bias = use_bias
 
         self.inputLayer = []
         self.outputLayer = []
         self.hiddenLayers = []
         self.weightLayers = []
+        self.biasLayers = []  # Bias nodes for each layer (hidden + output)
         self.labelLayer = []
         self.errorLayer = []
         self.errorBuffers = []
@@ -232,10 +236,25 @@ class MLPGraphForwardProcessing(Graph):
         """Create hidden layers WITHOUT buffers."""
         for layerNum, numNeurons in enumerate(self.hiddenLayerSizes):
             hiddenLayer = []
+            biasLayer = []
             for i in range(numNeurons):
                 # Addition node for weighted sum
                 additionNode = AdditionNode(name=f"Add_L{layerNum}N{i}")
                 additionNode.forcedBatchProcessing = True
+
+                # Add bias node to the addition node (bias is part of weighted sum)
+                if self.use_bias:
+                    biasNode = InitializableContainerNode(
+                        name=f"B_L{layerNum}N{i}",
+                        value=0.0,
+                        init_low=0.0,
+                        init_high=0.0,
+                        init_method="uniform",
+                    )
+                    additionNode.AddPreNode(biasNode)
+                    biasLayer.append(biasNode)
+                    self.AddNode(biasNode)
+                    self.stopping_nodes.append(biasNode)
 
                 # Activation node
                 activationNode = self.activationFunction(name=f"Act_L{layerNum}N{i}")
@@ -246,17 +265,38 @@ class MLPGraphForwardProcessing(Graph):
                 self.AddNode(additionNode, activationNode)
 
             self.hiddenLayers.append(hiddenLayer)
+            if self.use_bias:
+                self.biasLayers.append(biasLayer)
 
     def _CreateOutputLayer(self):
         """Create output layer WITHOUT buffers."""
+        outputBiasLayer = []
         for i in range(self.numOutputs):
             additionNode = AdditionNode(name=f"Add_y{i}")
             additionNode.forcedBatchProcessing = True
+
+            # Add bias node to output layer
+            if self.use_bias:
+                biasNode = InitializableContainerNode(
+                    name=f"B_y{i}",
+                    value=0.0,
+                    init_low=0.0,
+                    init_high=0.0,
+                    init_method="uniform",
+                )
+                additionNode.AddPreNode(biasNode)
+                outputBiasLayer.append(biasNode)
+                self.AddNode(biasNode)
+                self.stopping_nodes.append(biasNode)
+
             activationNode = self.outputLayerFunction(name=f"y{i}")
             activationNode.AddPreNode(additionNode)
 
             self.outputLayer.append((additionNode, activationNode))
             self.AddNode(additionNode, activationNode)
+
+        if self.use_bias:
+            self.biasLayers.append(outputBiasLayer)
 
     def _CreateWeightLayers(self):
         """Initialize weight layers with random weights between -1 and 1."""

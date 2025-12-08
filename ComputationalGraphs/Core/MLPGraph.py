@@ -26,6 +26,7 @@ class MLPGraph(Graph):
         activationFunction=SigmoidNode,
         hiddenLayerSizes=None,
         outputLayerType=LinearNode,
+        use_bias=True,
     ):
         super().__init__()
         self.numInputs = numInputs
@@ -36,6 +37,7 @@ class MLPGraph(Graph):
             hiddenLayerSizes if hiddenLayerSizes else [numInputs] * numHiddenLayers
         )
         self.outputLayerFunction = outputLayerType
+        self.use_bias = use_bias
         self.predictionBuffers = []
         self.errorBuffers = []
 
@@ -45,6 +47,7 @@ class MLPGraph(Graph):
         self.weightLayers = (
             []
         )  # Separate layers for weights to facilitate weight management
+        self.biasLayers = []  # Bias nodes for each layer (hidden + output)
         # Graph-level stopping nodes: nodes that should not self-initiate cycles
         # (used by forward-processing scheduler). Populate with weight ContainerNodes.
         self.stopping_nodes = []
@@ -214,11 +217,28 @@ class MLPGraph(Graph):
         """Initialize hidden layers with addition and activation nodes."""
         for layerNum, numNeurons in enumerate(self.hiddenLayerSizes):
             hiddenLayer = []
+            biasLayer = []
             for i in range(numNeurons):
                 additionNode = AdditionNode(name=f"Add_L{layerNum}N{i}")
                 additionNode.forcedBatchProcessing = True
+
+                # Add bias node to the addition node (bias is part of weighted sum)
+                if self.use_bias:
+                    biasNode = InitializableContainerNode(
+                        name=f"B_L{layerNum}N{i}",
+                        value=0.0,
+                        init_low=0.0,
+                        init_high=0.0,
+                        init_method="uniform",
+                    )
+                    additionNode.AddPreNode(biasNode)
+                    biasLayer.append(biasNode)
+                    self.AddNode(biasNode)
+                    self.stopping_nodes.append(biasNode)
+
                 activationNode = self.activationFunction(name=f"Act_L{layerNum}N{i}")
                 activationNode.AddPreNode(additionNode)
+
                 layersAhead = (self.numHiddenLayers + 2) - (layerNum + 2)
                 bufferNode = BufferNode(
                     name=f"Buff_H{layerNum}N{i}", size=(layersAhead * 6)
@@ -229,16 +249,37 @@ class MLPGraph(Graph):
                 self.AddNode(additionNode, activationNode, bufferNode)
 
             self.hiddenLayers.append(hiddenLayer)
+            if self.use_bias:
+                self.biasLayers.append(biasLayer)
 
     def _CreateOutputLayer(self):
         """Initialize the output layer with addition and activation nodes."""
+        outputBiasLayer = []
         for i in range(self.numOutputs):
             additionNode = AdditionNode(name=f"Add_y{i}")
             additionNode.forcedBatchProcessing = True
+
+            # Add bias node to output layer
+            if self.use_bias:
+                biasNode = InitializableContainerNode(
+                    name=f"B_y{i}",
+                    value=0.0,
+                    init_low=0.0,
+                    init_high=0.0,
+                    init_method="uniform",
+                )
+                additionNode.AddPreNode(biasNode)
+                outputBiasLayer.append(biasNode)
+                self.AddNode(biasNode)
+                self.stopping_nodes.append(biasNode)
+
             activationNode = self.outputLayerFunction(name=f"y{i}")
             activationNode.AddPreNode(additionNode)
             self.outputLayer.append((additionNode, activationNode))
             self.AddNode(additionNode, activationNode)
+
+        if self.use_bias:
+            self.biasLayers.append(outputBiasLayer)
 
     def _CreateWeightLayers(self):
         """Initialize weight layers with random weights between -1 and 1."""

@@ -52,6 +52,7 @@ class BackpropGraphForwardProcessing(Graph):
         self._CreateLRNode()
         self._CreateGradientLayers()
         self._CreateWeightRecalculationLayers()
+        self._CreateBiasRecalculationLayers()
         self.UpdateAdjacencyMatrix()
 
     def _CreateLRNode(self):
@@ -256,3 +257,58 @@ class BackpropGraphForwardProcessing(Graph):
             weightRecalcLayer.append(weightRecalcRow)
 
         self.weightRecalcLayers.append(weightRecalcLayer)
+
+    def _CreateBiasRecalculationLayers(self):
+        """Create bias recalculation connections for forward processing.
+
+        Bias gradient is simpler than weight gradient:
+        dB = lr * error_gradient (no multiplication by input activation needed)
+
+        The ContainerNode will compute: b_new = b_old - dB
+
+        In forward processing, we directly connect the lrMultiplicationNode to the bias.
+        """
+        # Check if MLP has biases
+        if not hasattr(self.mlp_graph, "biasLayers") or not self.mlp_graph.biasLayers:
+            return
+
+        if not hasattr(self.mlp_graph, "use_bias") or not self.mlp_graph.use_bias:
+            return
+
+        self.biasRecalcLayers = []
+
+        # Output layer biases (index -1 in biasLayers, index 0 in lrMultiplicationNodes)
+        # Hidden layer biases use corresponding indices
+
+        # The biasLayers are stored in order: [hidden_layer_0, hidden_layer_1, ..., output_layer]
+        # The lrMultiplicationNodes are stored in order: [output_layer, hidden_layer_n-1, ..., hidden_layer_0]
+        # after _CreateOutputGradientLayer and _CreateHiddenGradientLayer
+
+        for layerNum, biasLayer in enumerate(self.mlp_graph.biasLayers):
+            biasRecalcLayer = []
+
+            # Map biasLayers index to lrMultiplicationNodes index
+            # biasLayers: [H0, H1, ..., Hn, Output]
+            # lrMultiplicationNodes after construction: [Output, Hn, ..., H1, H0]
+            # So for hidden layer i: lrMultiplicationNodes index is -(i+1) which is len - 1 - i
+            # For output layer (last in biasLayers): lrMultiplicationNodes index is 0
+
+            if layerNum == len(self.mlp_graph.biasLayers) - 1:
+                # Output layer biases
+                lrMultIndex = 0
+            else:
+                # Hidden layer biases
+                # lrMultiplicationNodes[-1] is first hidden layer (H0)
+                # lrMultiplicationNodes[-(n)] is hidden layer n-1
+                lrMultIndex = -(layerNum + 1)
+
+            for j, bias_node in enumerate(biasLayer):
+                # Bias gradient is just lr * error_gradient (no input activation multiplication)
+                lrMultNode = self.lrMultiplicationNodes[lrMultIndex][j]
+
+                # Connect directly to bias node - ContainerNode will subtract the gradient
+                bias_node.AddPreNode(lrMultNode)
+
+                biasRecalcLayer.append(lrMultNode)
+
+            self.biasRecalcLayers.append(biasRecalcLayer)

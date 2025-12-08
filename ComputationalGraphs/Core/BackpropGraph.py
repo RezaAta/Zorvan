@@ -32,6 +32,7 @@ class BackpropGraph(Graph):
         self._CreateLRNode()
         self._CreateGradientLayers()
         self._CreateWeightRecalculationLayers()
+        self._CreateBiasRecalculationLayers()
         self.UpdateAdjacencyMatrix()
 
     def _CreateLRNode(self):
@@ -169,3 +170,49 @@ class BackpropGraph(Graph):
                 weightRecalcLayer.append(weightUpdateRow)
 
             self.weightRecalcLayers.append(weightRecalcLayer)
+
+    def _CreateBiasRecalculationLayers(self):
+        """Create bias recalculation nodes to update biases based on the gradients.
+
+        Bias gradient is simpler than weight gradient:
+        dB = lr * error_gradient (no multiplication by input activation needed)
+
+        The ContainerNode will compute: b_new = b_old - dB
+
+        For concurrent mode timing synchronization, we create a pass-through
+        multiplication node (multiply by 1) that acts similarly to dW nodes.
+        """
+        # Check if MLP has biases
+        if not hasattr(self.mlp_graph, "biasLayers") or not self.mlp_graph.biasLayers:
+            return
+
+        if not hasattr(self.mlp_graph, "use_bias") or not self.mlp_graph.use_bias:
+            return
+
+        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+
+        # Create a constant 1.0 node for bias gradient pass-through
+        self.biasOneNode = DisplayNode(name="BiasOne", value=1.0)
+        self.AddNode(self.biasOneNode)
+
+        self.biasRecalcLayers = []
+
+        for layerNum, biasLayer in enumerate(self.mlp_graph.biasLayers):
+            biasRecalcLayer = []
+
+            for j, bias_node in enumerate(biasLayer):
+                # Bias gradient is just lr * error_gradient (no input activation multiplication)
+                # lrMultiplicationNodes[layerNum][j] already contains lr * error_gradient
+                lrMultNode = self.lrMultiplicationNodes[layerNum][j]
+
+                # Create a dB node similar to dW, multiplying by 1.0 for timing sync
+                dB = MultiplicationNode(name=f"dB_L{layerNum}N{j}")
+                dB.AddPreNode(self.biasOneNode, lrMultNode)
+
+                # Connect dB to bias node - ContainerNode will subtract the gradient
+                bias_node.AddPreNode(dB)
+
+                biasRecalcLayer.append(dB)
+                self.AddNode(dB)
+
+            self.biasRecalcLayers.append(biasRecalcLayer)
