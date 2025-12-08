@@ -581,6 +581,9 @@ class NodeItem(QGraphicsEllipseItem):
 
             menu.addSeparator()
             reset_node_action = menu.addAction("🔄 Reset Node")
+            reinit_action = None
+            if hasattr(self.node, "reinitialize"):
+                reinit_action = menu.addAction("🎲 Reinitialize Weight")
 
             action = menu.exec(event.screenPos())
 
@@ -610,6 +613,13 @@ class NodeItem(QGraphicsEllipseItem):
                 self._swallow_node()
             elif action == reset_node_action:
                 self._reset_node()
+            elif reinit_action and action == reinit_action:
+                try:
+                    self.node.reinitialize()
+                    self.update_value_display()
+                    self.update()
+                except Exception:
+                    pass
             elif compress_action and action == compress_action:
                 self._compress_selection()
             elif decompress_action and action == decompress_action:

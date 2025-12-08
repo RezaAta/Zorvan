@@ -101,6 +101,11 @@ class NodePalette(QDockWidget):
                     ("ListNode", "List", "Collects inputs into a list structure"),
                     ("ContainerNode", "Container", "General-purpose data container"),
                     (
+                        "InitializableContainerNode",
+                        "Container (Init)",
+                        "Container node with initializable/random value (weights)",
+                    ),
+                    (
                         "ExtractListElement",
                         "Extract List Element",
                         "Extracts element from list by index",
@@ -221,6 +226,11 @@ class NodePalette(QDockWidget):
         # Populate tree with categories and nodes
         self.all_items = []  # Keep track of all items for search
         self.custom_node_items = []  # Track custom node items for refresh
+        (
+            "InitializableContainerNode",
+            "Container (Init)",
+            "Container node with initializable/random value (weights)",
+        ),
         self.refresh_custom_nodes()
         for category, category_data in self.node_categories.items():
             # Create category header

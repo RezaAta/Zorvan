@@ -5,6 +5,9 @@ from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.BufferNode import BufferNode
 from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
+from ComputationalGraphs.Nodes.InitializableContainerNode import (
+    InitializableContainerNode,
+)
 from ComputationalGraphs.Nodes.LinearNode import LinearNode
 from ComputationalGraphs.Nodes.MeanSquaredNode import MeanSquaredNode
 from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
@@ -248,7 +251,12 @@ class MLPGraph(Graph):
         firstHiddenLayerSize = self.hiddenLayerSizes[0]
         weightLayer = [
             [
-                ContainerNode(name=f"W_x{i}H0N{j}", value=random_weight())
+                InitializableContainerNode(
+                    name=f"W_x{i}H0N{j}",
+                    value=random_weight(),
+                    init_low=-1.0,
+                    init_high=1.0,
+                )
                 for j in range(firstHiddenLayerSize)
             ]
             for i in range(self.numInputs)
@@ -263,9 +271,11 @@ class MLPGraph(Graph):
         for layerNum in range(self.numHiddenLayers - 1):
             weightLayer = [
                 [
-                    ContainerNode(
+                    InitializableContainerNode(
                         name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}",
                         value=random_weight(),
+                        init_low=-1.0,
+                        init_high=1.0,
                     )
                     for j in range(self.hiddenLayerSizes[layerNum + 1])
                 ]
@@ -281,8 +291,11 @@ class MLPGraph(Graph):
         lastHiddenLayerSize = self.hiddenLayerSizes[-1]
         weightLayer = [
             [
-                ContainerNode(
-                    name=f"W_H{self.numHiddenLayers - 1}N{i}y{j}", value=random_weight()
+                InitializableContainerNode(
+                    name=f"W_H{self.numHiddenLayers - 1}N{i}y{j}",
+                    value=random_weight(),
+                    init_low=-1.0,
+                    init_high=1.0,
                 )
                 for j in range(self.numOutputs)
             ]

@@ -14,9 +14,9 @@ from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 from ComputationalGraphs.Nodes import (
     AdditionNode,
-    ContainerNode,
     DisplayNode,
     DivisionNode,
+    InitializableContainerNode,
     MinNode,
     MultiplicationNode,
 )
@@ -38,16 +38,24 @@ def build_anfis_xor():
     centers = []
     sigmas = []
     for i in range(2):
-        c = ContainerNode(f"c_x1_m{i}", value=0.0 if i == 0 else 1.0)
-        s = ContainerNode(f"s_x1_m{i}", value=0.5)
+        c = InitializableContainerNode(
+            f"c_x1_m{i}", value=0.0 if i == 0 else 1.0, init_low=-1.0, init_high=1.0
+        )
+        s = InitializableContainerNode(
+            f"s_x1_m{i}", value=0.5, init_low=0.1, init_high=2.0
+        )
         centers.append(c)
         sigmas.append(s)
         params.extend([c, s])
         g.AddNode(c, s)
 
     for i in range(2):
-        c = ContainerNode(f"c_x2_m{i}", value=0.0 if i == 0 else 1.0)
-        s = ContainerNode(f"s_x2_m{i}", value=0.5)
+        c = InitializableContainerNode(
+            f"c_x2_m{i}", value=0.0 if i == 0 else 1.0, init_low=-1.0, init_high=1.0
+        )
+        s = InitializableContainerNode(
+            f"s_x2_m{i}", value=0.5, init_low=0.1, init_high=2.0
+        )
         centers.append(c)
         sigmas.append(s)
         params.extend([c, s])
@@ -80,7 +88,7 @@ def build_anfis_xor():
     # Consequents (zero-order Sugeno): constants as ContainerNodes
     consequents = []
     for k in range(4):
-        c = ContainerNode(f"q{k}", value=0.0)
+        c = InitializableContainerNode(f"q{k}", value=0.0, init_low=-1.0, init_high=1.0)
         consequents.append(c)
         params.append(c)
         g.AddNode(c)

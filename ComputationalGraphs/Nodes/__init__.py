@@ -6,6 +6,9 @@ from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 from ComputationalGraphs.Nodes.DivisionNode import DivisionNode
 from ComputationalGraphs.Nodes.GaussianNode import GaussianNode
+from ComputationalGraphs.Nodes.InitializableContainerNode import (
+    InitializableContainerNode,
+)
 from ComputationalGraphs.Nodes.LinearNode import LinearNode
 from ComputationalGraphs.Nodes.LinearNodeDerivative import LinearNodeDerivative
 from ComputationalGraphs.Nodes.MaxNode import MaxNode
@@ -45,6 +48,7 @@ __all__ = [
     "SigmoidNode",
     "TanhDerivativeNode",
     "TanhNode",
+    "InitializableContainerNode",
     "GaussianNode",
     "SubtractionNode",
 ]

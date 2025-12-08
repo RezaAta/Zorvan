@@ -159,6 +159,10 @@ class NodeEditorDialog(QDialog):
         if type(self.node).__name__ == "PopulationNode":
             self.add_population_actions(layout)
 
+        # Special actions for nodes that have a reinitialize method
+        if hasattr(self.node, "reinitialize"):
+            self.add_initializable_actions(layout)
+
     def add_population_actions(self, layout):
         """Add special action buttons for PopulationNode."""
         actions_group = QGroupBox("Population Actions")
@@ -175,6 +179,19 @@ class NodeEditorDialog(QDialog):
         stats_btn.setToolTip("Display current population statistics")
         stats_btn.clicked.connect(self.on_show_population_stats)
         actions_layout.addWidget(stats_btn)
+
+        actions_group.setLayout(actions_layout)
+        layout.addWidget(actions_group)
+
+    def add_initializable_actions(self, layout):
+        """Add reinitialize button for nodes that support reinitialization."""
+        actions_group = QGroupBox("Initialization Actions")
+        actions_layout = QVBoxLayout()
+
+        reinit_btn = QPushButton("🎲 Reinitialize")
+        reinit_btn.setToolTip("Randomize this node's value using configured init range")
+        reinit_btn.clicked.connect(self.on_reinitialize_weight)
+        actions_layout.addWidget(reinit_btn)
 
         actions_group.setLayout(actions_layout)
         layout.addWidget(actions_group)
@@ -337,6 +354,39 @@ class NodeEditorDialog(QDialog):
             )
             QMessageBox.information(self, "Population Statistics", stats_text)
 
+    def on_reinitialize_weight(self):
+        """Handle the reinitialize action for nodes with a reinitialize() method."""
+        if not hasattr(self.node, "reinitialize"):
+            return
+
+        # Update parameters on the node (so init_low/init_high changes are applied)
+        try:
+            self.update_node_parameters_from_widgets()
+        except Exception:
+            pass
+
+        try:
+            new_val = self.node.reinitialize()
+        except Exception as e:
+            from PyQt6.QtWidgets import QMessageBox
+
+            QMessageBox.critical(self, "Reinitialize Failed", f"Error: {e}")
+            return
+
+        # Update displayed value
+        try:
+            self.value_edit.setPlainText(
+                str(new_val) if new_val is not None else "None"
+            )
+        except Exception:
+            pass
+
+        from PyQt6.QtWidgets import QMessageBox
+
+        QMessageBox.information(
+            self, "Reinitialized", f"Node {self.node.name} value set to: {new_val}"
+        )
+
     def update_node_parameters_from_widgets(self):
         """Update node parameters from widget values without closing dialog."""
         for param_name, widget in self.param_widgets.items():
@@ -393,6 +443,18 @@ class NodeEditorDialog(QDialog):
             widget.addItems(["continuous", "batch"])
             current_mode = (
                 str(current_value) if current_value is not None else "continuous"
+            )
+            index = widget.findText(current_mode)
+            if index >= 0:
+                widget.setCurrentIndex(index)
+            return widget
+
+        # Special handling for 'init_method' parameter on InitializableContainerNode
+        if param_name == "init_method" and hasattr(self.node, "init_method"):
+            widget = QComboBox()
+            widget.addItems(["uniform", "normal"])
+            current_mode = (
+                str(current_value) if current_value is not None else "uniform"
             )
             index = widget.findText(current_mode)
             if index >= 0:

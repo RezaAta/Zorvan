@@ -2,10 +2,10 @@ from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.MLPGraph import MLPGraph
 from ComputationalGraphs.Nodes import (
     AdditionNode,
-    ContainerNode,
     DataStreamNode,
     DisplayNode,
     DivisionNode,
+    InitializableContainerNode,
     MinNode,
     MultiplicationNode,
 )
@@ -50,10 +50,12 @@ class MLPAnfisGraph(MLPGraph):
         for inp_idx in range(self.numInputs):
             mfs = []
             for mf_idx in range(self.mfs_per_input[inp_idx]):
-                c = ContainerNode(
+                c = InitializableContainerNode(
                     name=f"c_x{inp_idx}_m{mf_idx}", value=0.0 if mf_idx == 0 else 1.0
                 )
-                s = ContainerNode(name=f"s_x{inp_idx}_m{mf_idx}", value=0.5)
+                s = InitializableContainerNode(
+                    name=f"s_x{inp_idx}_m{mf_idx}", value=0.5
+                )
                 g = GaussianMembershipNode(name=f"G_x{inp_idx}_m{mf_idx}")
                 # connect: input data node is inputLayer[inp_idx][0]
                 g.AddPreNode(self.inputLayer[inp_idx][0], c, s)
@@ -87,7 +89,7 @@ class MLPAnfisGraph(MLPGraph):
         # Consequents: zero-order Sugeno constants per rule
         self.consequents = []
         for k in range(len(self.rule_nodes)):
-            q = ContainerNode(name=f"q{k}", value=0.0)
+            q = InitializableContainerNode(name=f"q{k}", value=0.0)
             self.consequents.append(q)
             self.AddNode(q)
 

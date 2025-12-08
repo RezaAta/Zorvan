@@ -53,6 +53,19 @@ _NODE_REGISTRY: Dict[str, tuple] = {
         {},
         "Container",
     ),
+    "InitializableContainerNode": (
+        "ComputationalGraphs.Nodes.InitializableContainerNode",
+        "InitializableContainerNode",
+        {
+            "init_low": -1.0,
+            "init_high": 1.0,
+            "init_method": "uniform",
+            "init_mean": 0.0,
+            "init_std": 0.01,
+            "value": 0.0,
+        },
+        "Winit",
+    ),
     # Arithmetic nodes
     "AdditionNode": (
         "ComputationalGraphs.Nodes.AdditionNode",

@@ -7,12 +7,16 @@ class ContainerNode(BasicNode):
         self.inputCount = 2  # Set how many inputs the addition node expects
         self.batchSize = 1
         self.inclusive = False
+        self.Incremental = False
 
     def Operation(self, i):
         """
         Perform Sum on the given inputs. Ensure inputs length matches inputCount.
         """
-        return self.value - i
+        if self.Incremental:
+            return self.value + i
+        else:
+            return self.value - i
 
     def IsValidInput(self, input):
         """
