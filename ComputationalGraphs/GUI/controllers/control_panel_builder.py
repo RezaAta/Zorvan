@@ -605,7 +605,8 @@ class ControlPanelBuilder:
         # Grid mode
         mw.grid_mode_combo = QComboBox()
         mw.grid_mode_combo.addItems(["Node cell (1×1)", "Node 4×4"])
-        mw.grid_mode_combo.setCurrentIndex(0)
+        # Default to Node 4x4 as requested
+        mw.grid_mode_combo.setCurrentIndex(1)
 
         def on_grid_mode_changed(idx):
             mode = "1x1" if idx == 0 else "4x4"
@@ -628,7 +629,8 @@ class ControlPanelBuilder:
         # Snap granularity
         mw.snap_gran_combo = QComboBox()
         mw.snap_gran_combo.addItems(["Snap to Grid Cell", "Snap to Node Block (4×)"])
-        mw.snap_gran_combo.setCurrentIndex(1)
+        # Default to 'Snap to Grid Cell' (snap granularity = 1)
+        mw.snap_gran_combo.setCurrentIndex(0)
 
         def on_snap_gran_changed(idx):
             mw.canvas.snap_step = 1 if idx == 0 else 4

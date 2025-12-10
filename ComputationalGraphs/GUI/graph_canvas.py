@@ -112,12 +112,9 @@ class GraphCanvas(QGraphicsView):
 
         # Grid / snap settings
         self.node_diameter = 80  # Default assumed diameter (2 * radius 40)
-        self.grid_mode = (
-            "1x1"  # '1x1' (grid cell) or '4x4' - default to 1x1 for MLP layouts
-        )
-        self.grid_size = (
-            self.node_diameter
-        )  # 80px for 1x1 mode (one grid cell = one node)
+        # Default to 4x4 mode (node is 4x4 cells) and snap granularity as single grid cell
+        self.grid_mode = "4x4"
+        self.grid_size = max(1, int(self.node_diameter / 4))
         self.grid_major_every = 4  # draw a major line every 4 cells (node size)
         self.grid_minor_color = QColor(45, 45, 45)
         self.grid_major_color = QColor(70, 70, 70)
@@ -127,7 +124,8 @@ class GraphCanvas(QGraphicsView):
         self.snap_while_dragging = (
             True  # default: snap while dragging so users see snap live
         )
-        self.snap_step = 1  # Snap in units of grid cells (1 for 1x1 mode)
+        # Snap granularity default: snap to grid cell (1 unit) for both modes
+        self.snap_step = 1  # Snap in units of grid cells
 
         # Node tracking
         self.node_items = {}  # Maps node objects to NodeItem widgets
@@ -228,7 +226,8 @@ class GraphCanvas(QGraphicsView):
             else:
                 # default to 4x4 grid
                 self.grid_size = max(1, int(node_diam / 4))
-                self.snap_step = 4
+                # Default snap granularity remains snap-to-grid-cell (1)
+                self.snap_step = 1
             self.grid_mode = mode
             try:
                 self.viewport().update()
@@ -1884,7 +1883,7 @@ class GraphCanvas(QGraphicsView):
             name = node.name if hasattr(node, "name") else str(node)
             color = None
 
-            # Red: Label streams and Error nodes
+            # Red: Label streams, Error nodes, and MSE/MS nodes
             if (
                 name.startswith("Label_")
                 or name.startswith("yd")
@@ -1892,6 +1891,11 @@ class GraphCanvas(QGraphicsView):
                 or (name.startswith("e") and "E" in name)
             ):
                 color = QColor(180, 60, 60)  # Dark red
+            elif name.startswith("MS_") or name.startswith("MSE_"):
+                color = QColor(180, 60, 60)
+            # Also consider Mean Squared / MSE nodes as red
+            elif name.startswith("MS_") or name.startswith("MSE_"):
+                color = QColor(180, 60, 60)
 
             # Blue: Weights, LR, dW nodes
             elif (
@@ -1900,9 +1904,15 @@ class GraphCanvas(QGraphicsView):
                 or name.startswith("wx")
                 or name == "LearningRate"
                 or name == "LR"
+                or name == "BiasOne"
                 or name.startswith("dW_")
             ):
                 color = QColor(60, 100, 180)  # Dark blue
+            elif name.startswith("B_"):
+                color = QColor(60, 100, 180)
+            # Also color biases 'B_' as blue, like weights
+            elif name.startswith("B_"):
+                color = QColor(60, 100, 180)
 
             # Yellow/Gold: Buffer nodes
             elif "Buff" in name or "Buffer" in name or "buffer" in name:
@@ -1981,6 +1991,7 @@ class GraphCanvas(QGraphicsView):
                 or name.startswith("wx")
                 or name == "LearningRate"
                 or name == "LR"
+                or name == "BiasOne"
                 or name.startswith("dW_")
             ):
                 color = QColor(60, 100, 180)  # Dark blue

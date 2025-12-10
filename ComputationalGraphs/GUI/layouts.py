@@ -415,7 +415,17 @@ def mlp_layered_layout(
             r"^Act",
         ],
         "output": [r"^y\d+$", r"output", r"Output", r"^out", r"^Out"],
-        "loss": [r"loss", r"Loss", r"error", r"Error", r"MSE", r"mse", r"CrossEntropy"],
+        "loss": [
+            r"loss",
+            r"Loss",
+            r"error",
+            r"Error",
+            r"MSE",
+            r"mse",
+            r"MS",
+            r"ms",
+            r"CrossEntropy",
+        ],
         "gradient": [
             r"^dW",
             r"^dw",
@@ -864,6 +874,9 @@ class MLPLayoutEngine:
             layer_adds = layers[layer_id]
             layer_adds.sort(key=lambda n: self.get_last_number(n))
             num_adds = len(layer_adds)
+            # Track previous bias node coordinates for (+1, +1) offsets
+            prev_bias_gx = None
+            prev_bias_gy = None
 
             for j, add_node in enumerate(layer_adds):
                 add_gx = add_base_x + layer_offset
@@ -871,6 +884,25 @@ class MLPLayoutEngine:
                 # Scale Y to span similar range as mult nodes
                 add_gy = base_y + (num_adds - 1 - j)
                 self.place_node(add_node, add_gx, add_gy)
+
+                # --- Bias placement: Place bias nodes associated with this add node
+                # 1) For the first bias in the layer, place it above its successor (the current add node)
+                # 2) For other bias nodes in the layer, place them at (+1, +1) from previous bias
+                bias_preds = self.get_predecessors_by_pattern(add_node, r"^B_")
+                # Sort biases by name for deterministic ordering
+                bias_preds.sort(key=lambda n: self.get_node_name(n))
+                for b_idx, bias_node in enumerate(bias_preds):
+                    if bias_node in self.placed:
+                        # Already placed by other logic
+                        continue
+                    if prev_bias_gx is None:
+                        # First bias: place above the add node
+                        self.place_node(bias_node, add_gx, add_gy + 1)
+                        prev_bias_gx, prev_bias_gy = self.get_grid_coords(bias_node)
+                    else:
+                        # Subsequent biases: place at (+1, +1) from previous bias
+                        self.place_node(bias_node, prev_bias_gx + 1, prev_bias_gy + 1)
+                        prev_bias_gx, prev_bias_gy = self.get_grid_coords(bias_node)
 
                 activations = self.get_successors_by_pattern(
                     add_node, r"^Act_|^Sigmoid|^ReLU|^Tanh"
@@ -998,6 +1030,21 @@ class MLPLayoutEngine:
                 # Add node 0 at top
                 add_gy = num_adds - 1 - j
                 self.place_node(add_node, add_base_x, add_gy)
+                # Place biases for output layer adds
+                bias_preds = self.get_predecessors_by_pattern(add_node, r"^B_")
+                bias_preds.sort(key=lambda n: self.get_node_name(n))
+                # If there's a bias, place the first (or only) bias above the add node
+                for b_idx, bias_node in enumerate(bias_preds):
+                    if bias_node in self.placed:
+                        continue
+                    # For output layer, place biases directly above the corresponding Add_y
+                    # For multiple biases (unlikely), stack them diagonally (+1, +1)
+                    if b_idx == 0:
+                        self.place_node(bias_node, add_base_x, add_gy + 1)
+                        prev_bias_gx, prev_bias_gy = self.get_grid_coords(bias_node)
+                    else:
+                        self.place_node(bias_node, prev_bias_gx + 1, prev_bias_gy + 1)
+                        prev_bias_gx, prev_bias_gy = self.get_grid_coords(bias_node)
 
         # Step 3: Find and place output activation/y nodes
         output_nodes = self.find_nodes_by_pattern(r"^y\d+$")
@@ -1046,7 +1093,7 @@ class MLPLayoutEngine:
 
                     # MSE at (+2, 0) from error
                     mse_nodes = self.get_successors_by_pattern(
-                        error, r"^MSE|^mse|Loss|loss"
+                        error, r"^MS_|^MSE_|^ms_|^mse_|Loss|loss"
                     )
                     for mse in mse_nodes:
                         self.place_node(mse, out_base_x + 4, out_gy)
@@ -1076,6 +1123,17 @@ class MLPLayoutEngine:
             for lr_mult in lr_mults:
                 # (+1, +1) = top-right of dW
                 self.place_node(lr_mult, dw_gx + 1, dw_gy + 1)
+
+        # Step 2.1: Place dB nodes (bias gradients) above bias nodes at (+0, +1)
+        bias_nodes = self.find_nodes_by_pattern(r"^B_")
+        for bias in bias_nodes:
+            if bias not in self.positions:
+                continue
+            b_gx, b_gy = self.get_grid_coords(bias)
+            db_nodes = self.get_predecessors_by_pattern(bias, r"^dB_")
+            for db in db_nodes:
+                # Place each dB directly above the bias: (+0, +1)
+                self.place_node(db, b_gx, b_gy + 1)
 
         # Step 3: Place EG nodes at (+3, +3) from error nodes
         error_nodes = self.find_nodes_by_pattern(r"^Error_y|^error")
@@ -1159,6 +1217,22 @@ class MLPLayoutEngine:
 
             for lr in lr_nodes:
                 self.place_node(lr, center_gx, top_gy)
+
+            # Place BiasOne node(s) next to LR node(s) at (+1, 0)
+            bias_one_nodes = self.find_nodes_by_pattern(r"^BiasOne$")
+            if bias_one_nodes:
+                # Prefer the first placed LR node as reference
+                placed_lr = None
+                for lr in lr_nodes:
+                    if lr in self.positions:
+                        placed_lr = lr
+                        break
+                if placed_lr is not None:
+                    lr_gx, lr_gy = self.get_grid_coords(placed_lr)
+                    for b1 in bias_one_nodes:
+                        if b1 not in self.positions:
+                            # Place BiasOne at (+1, 0) relative to LR
+                            self.place_node(b1, lr_gx + 1, lr_gy)
 
     def _layout_remaining_nodes(self):
         """Place any remaining unplaced nodes in a grid below the main layout."""
