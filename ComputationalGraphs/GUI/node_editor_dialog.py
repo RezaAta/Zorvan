@@ -82,6 +82,18 @@ class NodeEditorDialog(QDialog):
         )
         basic_layout.addRow("Forced Batch Processing:", self.forced_batch_checkbox)
 
+        # Incremental checkbox for ContainerNode and InitializableContainerNode
+        if hasattr(self.node, "Incremental"):
+            self.incremental_checkbox = QCheckBox()
+            self.incremental_checkbox.setChecked(
+                getattr(self.node, "Incremental", False)
+            )
+            self.incremental_checkbox.setToolTip(
+                "When enabled, the node adds predecessor values to its current value. "
+                "When disabled, it subtracts them. Used for weight updates in training."
+            )
+            basic_layout.addRow("Incremental:", self.incremental_checkbox)
+
         basic_group.setLayout(basic_layout)
         layout.addWidget(basic_group)
 
@@ -534,6 +546,12 @@ class NodeEditorDialog(QDialog):
 
             # Update forced batch processing
             self.node.forcedBatchProcessing = self.forced_batch_checkbox.isChecked()
+
+            # Update Incremental property for ContainerNode types
+            if hasattr(self, "incremental_checkbox") and hasattr(
+                self.node, "Incremental"
+            ):
+                self.node.Incremental = self.incremental_checkbox.isChecked()
 
             # Update all dynamic parameters
             for param_name, widget in self.param_widgets.items():

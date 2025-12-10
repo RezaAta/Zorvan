@@ -62,6 +62,7 @@ class BackpropGraphForwardProcessing(Graph):
         # to gradient multipliers without being treated as a mutable weight.
         self.lrNode = DisplayNode(name="LearningRate", value=self.learning_rate)
         self.AddNode(self.lrNode)
+        # No separate bias learning rate: forward processing uses the same LR for biases
 
     def _CreateGradientLayers(self):
         """Create gradient computation layers."""
@@ -305,8 +306,12 @@ class BackpropGraphForwardProcessing(Graph):
             for j, bias_node in enumerate(biasLayer):
                 # Bias gradient is just lr * error_gradient (no input activation multiplication)
                 lrMultNode = self.lrMultiplicationNodes[lrMultIndex][j]
+                # Apply bias scale multiplier to lrMultNode
+                from ComputationalGraphs.Nodes.MultiplicationNode import (
+                    MultiplicationNode,
+                )
 
-                # Connect directly to bias node - ContainerNode will subtract the gradient
+                # Connect lrMultNode directly to bias node (no scaling)
                 bias_node.AddPreNode(lrMultNode)
 
                 biasRecalcLayer.append(lrMultNode)

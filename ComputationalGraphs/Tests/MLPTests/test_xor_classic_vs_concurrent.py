@@ -58,7 +58,8 @@ classic_mlp = ClassicMLP(
     output_size=1,
     hidden_activation="sigmoid",
     output_activation="linear",
-    learning_rate=0.5,
+    learning_rate=0.1,
+    use_bias=True,
 )
 
 print("\nClassic MLP Initial Weights:")
@@ -76,7 +77,7 @@ start_time = time.time()
 
 # Train with batch_size=1 (SGD) to match the sample-by-sample processing
 # Classic MLP with batch_size=4 and lr=0.5 diverges, but SGD works well
-mse_history_classic = classic_mlp.train(X_classic, y_classic, epochs=2000, batch_size=1)
+mse_history_classic = classic_mlp.train(X_classic, y_classic, epochs=5000, batch_size=1)
 
 classic_time = time.time() - start_time
 
@@ -125,7 +126,7 @@ mlpGraph = MLPGraph(
 mlpGraph.BuildMLP()
 
 # Build Backprop Graph with FIXED connections
-backprop_graph = BackpropGraph(mlpGraph, learningRate=0.5)
+backprop_graph = BackpropGraph(mlpGraph, learningRate=0.1)
 backprop_graph.BuildBackprop()
 
 # Load data
@@ -190,7 +191,7 @@ mlpProcessor.ComputeGraph(networkLength)
 # Training - exact configuration from TestingOnXOR.py
 print("Training Concurrent Graph...")
 fakeBatchSize = 1
-epochs = 2000
+epochs = 5000
 numberOfIterationsInEpochs = 4
 totalIterations = epochs * numberOfIterationsInEpochs * fakeBatchSize
 

@@ -92,6 +92,18 @@ self.inputLayer = [(DataStreamNode(f"x{i}"),
 
 Buffer sizes calculated as `(layersAhead * 6)` - this timing is critical for synchronization. DO NOT change without understanding delay propagation.
 
+**Why BufferNodes are Essential (Not the Problem)**:
+
+BufferNodes solve a fundamental temporal coherence problem in concurrent processing:
+
+- **The Problem**: When backprop for sample t₀ is triggered, the input/activation values have already moved forward by tₙ iterations (where tₙ = distance from input node to the backprop node that needs that value). Using the current values would make backprop terribly inaccurate.
+
+- **The Solution**: BufferNodes store historical activation, input, and weight values so backpropagation can access the correct values from the relevant iteration. Similarly, weight buffers preserve the weight values used during the forward pass.
+
+- **The Effect**: The only theoretical difference between concurrent MLP and classic SGD is that weight updates are delayed by the buffer depth. This may make convergence slightly "lazier" but should NOT cause value explosion.
+
+- **Debugging Rule**: If values explode, the bug is in gradient computation or connection logic, NOT in the buffer mechanism itself. Check backprop connections, gradient flow, and learning rate handling before suspecting buffers.
+
 ### 2. Data Format Differences
 
 **MLPGraph (concurrent)**: Expects **row-per-feature** format
