@@ -4,11 +4,12 @@ Dialog for creating custom nodes through the GUI.
 Users configure BasicNode properties and write the Operation body in Python.
 """
 
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QGroupBox,
     QHBoxLayout,
@@ -139,7 +140,28 @@ class CustomNodeDialog(QDialog):
         types_group.setLayout(types_layout)
         content_layout.addWidget(types_group)
 
-        # ===== SECTION 3: OPERATION CODE =====
+        # ===== SECTION 3: CUSTOM PROPERTIES =====
+        custom_props_group = QGroupBox("Custom Properties (Optional)")
+        custom_props_layout = QVBoxLayout()
+
+        # Container widget for property rows
+        self.custom_props_widget = QWidget()
+        self.custom_props_container = QVBoxLayout(self.custom_props_widget)
+        self.custom_props_container.setContentsMargins(0, 0, 0, 0)
+        custom_props_layout.addWidget(self.custom_props_widget)
+
+        # List to track property widgets
+        self.custom_property_rows: List[Dict[str, QWidget]] = []
+
+        # Add property button
+        add_prop_btn = QPushButton("➕ Add Property")
+        add_prop_btn.clicked.connect(lambda: self.add_custom_property_row())
+        custom_props_layout.addWidget(add_prop_btn)
+
+        custom_props_group.setLayout(custom_props_layout)
+        content_layout.addWidget(custom_props_group)
+
+        # ===== SECTION 4: OPERATION CODE =====
         op_group = QGroupBox("Operation Body")
         op_layout = QVBoxLayout()
 
@@ -186,6 +208,88 @@ class CustomNodeDialog(QDialog):
         inputs = ", ".join(f"input{i+1}" for i in range(value))
         self.placeholder_label.setText(f"Use variables: {inputs}")
 
+    def add_custom_property_row(
+        self, name: str = "", prop_type: str = "any", default_value: str = "None"
+    ):
+        """Add a new custom property row to the UI.
+
+        Args:
+            name: Property name
+            prop_type: Property type ("any", "int", "float", "str", "bool", "node")
+            default_value: Default value as string
+        """
+        row_layout = QHBoxLayout()
+
+        # Property name
+        name_edit = QLineEdit()
+        name_edit.setPlaceholderText("Property name")
+        name_edit.setText(name)
+        name_edit.setMinimumWidth(120)
+        row_layout.addWidget(name_edit)
+
+        # Property type
+        type_combo = QComboBox()
+        type_combo.addItems(["any", "int", "float", "str", "bool", "node"])
+        type_combo.setCurrentText(prop_type)
+        type_combo.setMinimumWidth(80)
+        row_layout.addWidget(type_combo)
+
+        # Default value
+        default_edit = QLineEdit()
+        default_edit.setPlaceholderText("Default value (Python)")
+        default_edit.setText(default_value)
+        default_edit.setMinimumWidth(150)
+        row_layout.addWidget(default_edit)
+
+        # Remove button
+        remove_btn = QPushButton("✕")
+        remove_btn.setMaximumWidth(30)
+        row_layout.addWidget(remove_btn)
+
+        # Container widget for the row
+        row_widget = QWidget()
+        row_widget.setLayout(row_layout)
+
+        # Store references
+        row_data = {
+            "widget": row_widget,
+            "name_edit": name_edit,
+            "type_combo": type_combo,
+            "default_edit": default_edit,
+        }
+        self.custom_property_rows.append(row_data)
+
+        # Connect remove button
+        remove_btn.clicked.connect(lambda: self.remove_custom_property_row(row_data))
+
+        # Add to container
+        self.custom_props_container.addWidget(row_widget)
+
+    def remove_custom_property_row(self, row_data: Dict[str, QWidget]):
+        """Remove a custom property row from the UI."""
+        if row_data in self.custom_property_rows:
+            self.custom_property_rows.remove(row_data)
+            row_data["widget"].deleteLater()
+
+    def get_custom_properties(self) -> List[Dict[str, Any]]:
+        """Get all custom properties from the UI.
+
+        Returns:
+            List of property dictionaries with name, type, default_value
+        """
+        properties = []
+        for row in self.custom_property_rows:
+            name = row["name_edit"].text().strip()
+            if name:  # Only include properties with a name
+                properties.append(
+                    {
+                        "name": name,
+                        "type": row["type_combo"].currentText(),
+                        "default_value": row["default_edit"].text().strip() or "None",
+                    }
+                )
+        return properties
+
     def load_definition(self, definition: CustomNodeDefinition):
         """Load an existing definition for editing."""
         self.type_name_edit.setText(definition.type_name)
@@ -202,6 +306,14 @@ class CustomNodeDialog(QDialog):
         # Set operation code
         self.operation_edit.setPlainText(definition.operation_code)
 
+        # Load custom properties
+        for prop in definition.custom_properties:
+            self.add_custom_property_row(
+                name=prop.get("name", ""),
+                prop_type=prop.get("type", "any"),
+                default_value=prop.get("default_value", "None"),
+            )
+
     def get_definition(self) -> CustomNodeDefinition:
         """Build and return a CustomNodeDefinition from the dialog values."""
         valid_types = [
@@ -217,6 +329,7 @@ class CustomNodeDialog(QDialog):
             valid_input_types=valid_types or ["numeric"],  # Default to numeric
             operation_code=self.operation_edit.toPlainText().strip(),
             description=self.description_edit.text().strip(),
+            custom_properties=self.get_custom_properties(),
         )
 
     def accept_and_validate(self):
