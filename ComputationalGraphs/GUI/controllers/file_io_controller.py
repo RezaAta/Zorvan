@@ -407,7 +407,7 @@ class FileIOController:
                     source_item = self.canvas.node_items.get(new_pred)
                     target_item = self.canvas.node_items.get(new_node)
                     if source_item and target_item:
-                        self.canvas.add_edge(source_item, target_item)
+                        self.canvas.add_edge_item(source_item, target_item)
 
         # Update adjacency matrix
         self.graph.UpdateAdjacencyMatrix()
