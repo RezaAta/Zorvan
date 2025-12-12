@@ -193,6 +193,9 @@ class MainWindow(QMainWindow):
         # Plot window
         self.plot_window = None
 
+        # === Multi-Graph Support: Selected graph for processing ===
+        self.selected_processing_graph = None  # None = use mother graph (all nodes)
+
         self.init_ui()
         self.create_actions()
         self.create_menus()
@@ -206,6 +209,13 @@ class MainWindow(QMainWindow):
         object than the one used for processing.
         """
         self.graph = graph
+
+        # Mark as mother graph for multi-graph support
+        try:
+            graph.set_as_mother_graph()
+        except Exception:
+            pass
+
         try:
             self.canvas.graph = graph
         except Exception:
@@ -225,6 +235,11 @@ class MainWindow(QMainWindow):
             self.update_stopping_nodes_display()
         except Exception:
             pass
+        # Update graph selector dropdown
+        try:
+            self.update_graph_selector()
+        except Exception:
+            pass
 
     def init_ui(self):
         """Initialize the UI components."""
@@ -233,6 +248,11 @@ class MainWindow(QMainWindow):
         # Provide canvas with a pointer to the underlying computational Graph
         try:
             self.canvas.graph = self.graph
+        except Exception:
+            pass
+        # Provide canvas with a reference to main_window for subgraph control updates
+        try:
+            self.canvas.main_window = self
         except Exception:
             pass
         # Default grid & snap settings (recommended)
@@ -537,6 +557,70 @@ class MainWindow(QMainWindow):
     def on_threading_mode_changed(self, index):
         """Handle threading mode change. Delegated to ExecutionSettingsController."""
         self.execution_settings_controller.on_threading_mode_changed(index)
+
+    # === Multi-Graph Support Methods ===
+
+    def on_graph_selection_changed(self, index):
+        """Handle graph selection change in the control panel dropdown."""
+        if index == 0:
+            # Mother Graph selected - process all nodes
+            self.selected_processing_graph = None  # None means use mother graph
+        else:
+            # A sub-graph selected
+            sub_graphs = getattr(self.graph, "sub_graphs", [])
+            if index - 1 < len(sub_graphs):
+                self.selected_processing_graph = sub_graphs[index - 1]
+            else:
+                self.selected_processing_graph = None
+
+        # Update graph_runner to use the selected subgraph
+        if hasattr(self, "graph_runner"):
+            self.graph_runner.set_processing_subgraph(self.selected_processing_graph)
+
+        # Update canvas to highlight selected graph
+        if hasattr(self, "canvas"):
+            self.canvas.refresh_subgraph_visuals()
+
+    def update_graph_selector(self):
+        """Update the graph selector dropdown with current sub-graphs."""
+        if not hasattr(self, "graph_selector_combo"):
+            return
+
+        # Block signals to prevent spurious callbacks
+        self.graph_selector_combo.blockSignals(True)
+
+        # Clear and rebuild
+        self.graph_selector_combo.clear()
+        self.graph_selector_combo.addItem("Mother Graph (All)")
+
+        # Add all sub-graphs
+        if hasattr(self.graph, "sub_graphs"):
+            for subgraph in self.graph.sub_graphs:
+                name = getattr(subgraph, "graph_name", "Sub-Graph")
+                color = getattr(subgraph, "graph_color", "#4ECDC4")
+                # Add with colored icon indicator (using stylesheet)
+                self.graph_selector_combo.addItem(f"● {name}")
+                # Set item color to match the sub-graph color
+                idx = self.graph_selector_combo.count() - 1
+                self.graph_selector_combo.setItemData(
+                    idx, color, Qt.ItemDataRole.ForegroundRole
+                )
+
+        self.graph_selector_combo.blockSignals(False)
+
+    def on_subgraph_created(self, subgraph):
+        """Called when a new sub-graph is created."""
+        self.update_graph_selector()
+        # Log to console
+        if hasattr(self, "console_controller"):
+            self.console_controller.log(
+                f"Sub-graph '{subgraph.graph_name}' created with {len(subgraph.nodes)} nodes."
+            )
+
+    def select_subgraph_nodes(self, subgraph):
+        """Select all nodes belonging to a sub-graph on the canvas."""
+        if hasattr(self, "canvas"):
+            self.canvas.select_nodes_in_subgraph(subgraph)
 
     def choose_node_color(self):
         """Open color picker for node color."""

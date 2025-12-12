@@ -2,12 +2,124 @@
 QGraphicsView-based canvas for displaying and editing the computational graph.
 """
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QPainter, QPen
-from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene, QGraphicsView
+from PyQt6.QtCore import QRectF, Qt, pyqtSignal
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PyQt6.QtWidgets import (
+    QColorDialog,
+    QGraphicsItem,
+    QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsSimpleTextItem,
+    QGraphicsView,
+    QInputDialog,
+)
 
 from .edge_item import EdgeItem
 from .node_item import NodeItem
+
+
+class SubgraphControlButton(QGraphicsRectItem):
+    """
+    Clickable icon button for subgraph control (Remove, Select All, Color).
+
+    Uses emoji icons for compact display.
+    """
+
+    def __init__(self, icon, callback, tooltip="", parent=None):
+        super().__init__(parent)
+        self.callback = callback
+        self.icon = icon
+        self.tooltip_text = tooltip
+        self._hovered = False
+
+        # Icon button sizing (smaller, square)
+        self.button_size = 22
+        self.setRect(0, 0, self.button_size, self.button_size)
+
+        # Make it interactive
+        self.setAcceptHoverEvents(True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip(tooltip)
+
+        # Create icon label
+        self._text_item = QGraphicsSimpleTextItem(icon, self)
+        font = QFont()
+        font.setPointSize(12)
+        self._text_item.setFont(font)
+
+        # Center icon in button
+        text_rect = self._text_item.boundingRect()
+        text_x = (self.button_size - text_rect.width()) / 2
+        text_y = (self.button_size - text_rect.height()) / 2
+        self._text_item.setPos(text_x, text_y)
+
+        self._update_appearance()
+
+    def _update_appearance(self):
+        """Update button appearance based on hover state."""
+        if self._hovered:
+            self.setBrush(QBrush(QColor(220, 220, 220, 180)))
+            self.setPen(QPen(QColor(100, 100, 100), 1))
+        else:
+            self.setBrush(QBrush(QColor(255, 255, 255, 120)))
+            self.setPen(QPen(QColor(180, 180, 180), 1))
+        self._text_item.setBrush(QBrush(QColor(50, 50, 50)))
+
+    def hoverEnterEvent(self, event):
+        self._hovered = True
+        self._update_appearance()
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        self._hovered = False
+        self._update_appearance()
+        super().hoverLeaveEvent(event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.callback:
+                self.callback()
+            event.accept()  # Consume the event to prevent propagation
+            return
+        super().mousePressEvent(event)
+
+
+class SubgraphLabel(QGraphicsSimpleTextItem):
+    """
+    Clickable label for subgraph name.
+    Double-click to rename.
+    """
+
+    def __init__(self, text, subgraph, canvas, parent=None):
+        super().__init__(text, parent)
+        self.subgraph = subgraph
+        self.canvas = canvas
+        self.setAcceptHoverEvents(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        font = QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        self.setFont(font)
+
+    def mouseDoubleClickEvent(self, event):
+        """Double-click to rename subgraph."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            current_name = getattr(self.subgraph, "graph_name", "SubGraph")
+            new_name, ok = QInputDialog.getText(
+                self.canvas, "Rename Sub-Graph", "Enter new name:", text=current_name
+            )
+            if ok and new_name.strip():
+                if hasattr(self.canvas, "graph") and self.canvas.graph:
+                    self.canvas.graph.rename_subgraph(
+                        self.subgraph.graph_id, new_name.strip()
+                    )
+                    self.canvas.update_subgraph_controls()
+                    # Notify main window to update selector
+                    if hasattr(self.canvas, "main_window") and self.canvas.main_window:
+                        self.canvas.main_window.update_graph_selector()
+        super().mouseDoubleClickEvent(event)
 
 
 class GraphCanvas(QGraphicsView):
@@ -134,6 +246,16 @@ class GraphCanvas(QGraphicsView):
         self._clipboard = None
         # Track whether ANN colors are currently applied on the canvas
         self.ann_colors_active = False
+
+        # === Multi-Graph Visual Support ===
+        # Whether to show sub-graph visual groupings (colored outlines, labels)
+        self.show_subgraph_visuals = True
+        # Padding around nodes when computing sub-graph bounding boxes
+        self.subgraph_padding = 20
+        # Label offset from bounding box top-left
+        self.subgraph_label_offset = (5, -20)
+        # Track subgraph control widgets (buttons, labels)
+        self._subgraph_widgets = {}  # {subgraph_id: list of QGraphicsItems}
 
     def add_node_item(self, node, x=0, y=0):
         """Add a visual representation of a node to the canvas."""
@@ -295,6 +417,301 @@ class GraphCanvas(QGraphicsView):
             painter.setPen(pen)
             painter.drawLine(left, y, right, y)
             y += g
+
+    def drawForeground(self, painter, rect):
+        """Draw sub-graph visual groupings (colored outlines and labels) on top of nodes."""
+        super().drawForeground(painter, rect)
+
+        if not getattr(self, "show_subgraph_visuals", True):
+            return
+
+        # Check if we have a graph with sub-graphs
+        graph = getattr(self, "graph", None)
+        if graph is None:
+            return
+
+        sub_graphs = getattr(graph, "sub_graphs", [])
+        if not sub_graphs:
+            return
+
+        from PyQt6.QtCore import QRectF
+        from PyQt6.QtGui import QBrush, QFont, QPen
+
+        padding = getattr(self, "subgraph_padding", 20)
+        label_offset = getattr(self, "subgraph_label_offset", (5, -20))
+
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+
+        for subgraph in sub_graphs:
+            self._draw_subgraph_visual(painter, subgraph, padding, label_offset, rect)
+
+    def _draw_subgraph_visual(
+        self, painter, subgraph, padding, label_offset, visible_rect
+    ):
+        """Draw the visual representation of a single sub-graph (outline only, no label - label is interactive)."""
+        from PyQt6.QtCore import QRectF
+        from PyQt6.QtGui import QBrush, QPen
+
+        # Get all node items belonging to this sub-graph
+        node_items_in_subgraph = []
+        for node in getattr(subgraph, "nodes", []):
+            if node in self.node_items:
+                node_items_in_subgraph.append(self.node_items[node])
+
+        if not node_items_in_subgraph:
+            return
+
+        # Calculate bounding box
+        min_x = min(
+            item.scenePos().x() - item.radius for item in node_items_in_subgraph
+        )
+        max_x = max(
+            item.scenePos().x() + item.radius for item in node_items_in_subgraph
+        )
+        min_y = min(
+            item.scenePos().y() - item.radius for item in node_items_in_subgraph
+        )
+        max_y = max(
+            item.scenePos().y() + item.radius for item in node_items_in_subgraph
+        )
+
+        # Add padding
+        bounding_rect = QRectF(
+            min_x - padding,
+            min_y - padding,
+            (max_x - min_x) + 2 * padding,
+            (max_y - min_y) + 2 * padding,
+        )
+
+        # Skip if not visible
+        if not bounding_rect.intersects(visible_rect):
+            return
+
+        # Get sub-graph color
+        color_str = getattr(subgraph, "graph_color", "#4ECDC4")
+        color = QColor(color_str)
+
+        # Draw outline (dashed) - label is now handled by interactive SubgraphLabel
+        pen = QPen(color, 2, Qt.PenStyle.DashLine)
+        painter.setPen(pen)
+        painter.setBrush(QBrush(Qt.GlobalColor.transparent))
+        painter.drawRoundedRect(bounding_rect, 10, 10)
+
+        # Recursively draw nested sub-graphs
+        for nested_subgraph in getattr(subgraph, "sub_graphs", []):
+            self._draw_subgraph_visual(
+                painter, nested_subgraph, padding - 5, label_offset, visible_rect
+            )
+
+    def get_subgraph_at_position(self, scene_pos):
+        """
+        Get the sub-graph whose bounding box contains the given scene position.
+
+        Args:
+            scene_pos: QPointF in scene coordinates
+
+        Returns:
+            The sub-graph at that position, or None
+        """
+        graph = getattr(self, "graph", None)
+        if graph is None:
+            return None
+
+        padding = getattr(self, "subgraph_padding", 20)
+
+        # Check sub-graphs in reverse order (nested first)
+        all_subgraphs = getattr(graph, "sub_graphs", [])
+        for subgraph in reversed(all_subgraphs):
+            if self._point_in_subgraph(scene_pos, subgraph, padding):
+                # Check nested sub-graphs
+                for nested in reversed(getattr(subgraph, "sub_graphs", [])):
+                    if self._point_in_subgraph(scene_pos, nested, padding - 5):
+                        return nested
+                return subgraph
+        return None
+
+    def _point_in_subgraph(self, scene_pos, subgraph, padding):
+        """Check if a point is within a sub-graph's bounding box."""
+        node_items_in_subgraph = []
+        for node in getattr(subgraph, "nodes", []):
+            if node in self.node_items:
+                node_items_in_subgraph.append(self.node_items[node])
+
+        if not node_items_in_subgraph:
+            return False
+
+        min_x = (
+            min(item.scenePos().x() - item.radius for item in node_items_in_subgraph)
+            - padding
+        )
+        max_x = (
+            max(item.scenePos().x() + item.radius for item in node_items_in_subgraph)
+            + padding
+        )
+        min_y = (
+            min(item.scenePos().y() - item.radius for item in node_items_in_subgraph)
+            - padding
+        )
+        max_y = (
+            max(item.scenePos().y() + item.radius for item in node_items_in_subgraph)
+            + padding
+        )
+
+        return min_x <= scene_pos.x() <= max_x and min_y <= scene_pos.y() <= max_y
+
+    def select_nodes_in_subgraph(self, subgraph):
+        """
+        Select all nodes that belong to a sub-graph.
+
+        Args:
+            subgraph: The sub-graph whose nodes to select
+        """
+        # Clear current selection
+        self.scene.clearSelection()
+
+        # Select all node items in the sub-graph
+        for node in getattr(subgraph, "nodes", []):
+            if node in self.node_items:
+                self.node_items[node].setSelected(True)
+
+    def refresh_subgraph_visuals(self):
+        """Force a repaint of sub-graph visual groupings."""
+        self.viewport().update()
+        self.update_subgraph_controls()
+
+    def update_subgraph_controls(self):
+        """
+        Update the interactive subgraph control buttons.
+        Creates/updates buttons for Remove and Select All for each subgraph.
+        """
+        # Clear existing widgets
+        for subgraph_id, widgets in self._subgraph_widgets.items():
+            for widget in widgets:
+                if widget.scene():
+                    self.scene.removeItem(widget)
+        self._subgraph_widgets.clear()
+
+        if not self.show_subgraph_visuals:
+            return
+
+        graph = getattr(self, "graph", None)
+        if graph is None:
+            return
+
+        sub_graphs = getattr(graph, "sub_graphs", [])
+        if not sub_graphs:
+            return
+
+        padding = self.subgraph_padding
+
+        for subgraph in sub_graphs:
+            # Get nodes in this subgraph
+            subgraph_nodes = getattr(subgraph, "nodes", [])
+            if not subgraph_nodes:
+                continue
+
+            # Find node items for these nodes
+            node_items_in_subgraph = [
+                self.node_items[n] for n in subgraph_nodes if n in self.node_items
+            ]
+            if not node_items_in_subgraph:
+                continue
+
+            # Compute bounding box
+            min_x = (
+                min(
+                    item.scenePos().x() - item.radius for item in node_items_in_subgraph
+                )
+                - padding
+            )
+            max_x = (
+                max(
+                    item.scenePos().x() + item.radius for item in node_items_in_subgraph
+                )
+                + padding
+            )
+            min_y = (
+                min(
+                    item.scenePos().y() - item.radius for item in node_items_in_subgraph
+                )
+                - padding
+            )
+
+            # Get subgraph properties
+            subgraph_name = getattr(subgraph, "graph_name", "SubGraph")
+            subgraph_color = getattr(subgraph, "graph_color", "#3498db")
+            subgraph_id = getattr(subgraph, "graph_id", id(subgraph))
+
+            widgets = []
+
+            # Create label (clickable, double-click to rename)
+            label = SubgraphLabel(subgraph_name, subgraph, self)
+            label.setBrush(QBrush(QColor(subgraph_color)))
+            label.setPos(min_x + 5, min_y - 40)  # Above the bounding box
+            self.scene.addItem(label)
+            widgets.append(label)
+
+            # Calculate button positions (next to the label)
+            label_rect = label.boundingRect()
+            button_y = min_y - 40  # Same height as label
+            button_x = min_x + 5 + label_rect.width() + 10  # After the label
+
+            # Create "Select All" button (⭕ icon)
+            def make_select_callback(sg=subgraph):
+                return lambda: self.select_nodes_in_subgraph(sg)
+
+            select_btn = SubgraphControlButton(
+                "⭕", make_select_callback(), "Select All Nodes"
+            )
+            select_btn.setPos(button_x, button_y)
+            self.scene.addItem(select_btn)
+            widgets.append(select_btn)
+
+            # Create "Remove" button (❌ icon - removes subgraph grouping, not nodes)
+            def make_remove_callback(sg=subgraph, sg_id=subgraph_id):
+                def remove_subgraph():
+                    if hasattr(self, "graph") and self.graph:
+                        # Remove subgraph from parent
+                        if sg in self.graph.sub_graphs:
+                            self.graph.sub_graphs.remove(sg)
+                        self.update_subgraph_controls()
+                        self.viewport().update()
+                        # Notify main window to update selector
+                        if hasattr(self, "main_window") and self.main_window:
+                            self.main_window.update_graph_selector()
+
+                return remove_subgraph
+
+            remove_btn = SubgraphControlButton(
+                "❌", make_remove_callback(), "Remove Sub-Graph"
+            )
+            remove_btn.setPos(button_x + 26, button_y)  # Next to Select All
+            self.scene.addItem(remove_btn)
+            widgets.append(remove_btn)
+
+            # Create "Color" button (🎨 icon)
+            def make_color_callback(sg=subgraph, sg_id=subgraph_id):
+                def change_color():
+                    current_color = QColor(getattr(sg, "graph_color", "#3498db"))
+                    new_color = QColorDialog.getColor(
+                        current_color, self, "Choose Sub-Graph Color"
+                    )
+                    if new_color.isValid():
+                        if hasattr(self, "graph") and self.graph:
+                            self.graph.set_subgraph_color(sg_id, new_color.name())
+                            self.update_subgraph_controls()
+                            self.viewport().update()
+
+                return change_color
+
+            color_btn = SubgraphControlButton(
+                "🎨", make_color_callback(), "Change Color"
+            )
+            color_btn.setPos(button_x + 52, button_y)  # Next to Remove
+            self.scene.addItem(color_btn)
+            widgets.append(color_btn)
+
+            self._subgraph_widgets[subgraph_id] = widgets
 
     def add_edge_item(self, source_node, target_node):
         """Add a visual edge between two nodes."""

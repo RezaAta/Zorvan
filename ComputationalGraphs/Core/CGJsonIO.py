@@ -228,6 +228,24 @@ def save(graph: Graph, filename: str, canvas=None, compress=True):
     except Exception:
         doc["graph"]["manual_processing_sequence"] = None
 
+    # === Multi-Graph Support: Save graph identity and sub-graphs ===
+    try:
+        doc["graph"]["graph_id"] = getattr(graph, "graph_id", None)
+        doc["graph"]["graph_name"] = getattr(graph, "graph_name", "Default Graph")
+        doc["graph"]["graph_color"] = getattr(graph, "graph_color", "#4ECDC4")
+        doc["graph"]["is_mother_graph"] = getattr(graph, "is_mother_graph", True)
+
+        # Serialize sub-graphs
+        sub_graphs = getattr(graph, "sub_graphs", [])
+        if sub_graphs:
+            doc["graph"]["sub_graphs"] = [
+                sg.get_subgraph_metadata() for sg in sub_graphs
+            ]
+        else:
+            doc["graph"]["sub_graphs"] = []
+    except Exception:
+        doc["graph"]["sub_graphs"] = []
+
     # Dump to file
     fname = filename
     root, ext = os.path.splitext(fname)
@@ -511,6 +529,24 @@ def load(filename: str) -> Graph:
                 [id_map.get(i) for i in step if i in id_map] for step in manual_seq
             ]
     except Exception:
+        pass
+
+    # === Multi-Graph Support: Restore sub-graphs ===
+    try:
+        graph_meta = doc.get("graph", {})
+
+        # Restore graph identity
+        graph.graph_id = graph_meta.get("graph_id", graph.graph_id)
+        graph.graph_name = graph_meta.get("graph_name", graph.graph_name)
+        graph.graph_color = graph_meta.get("graph_color", graph.graph_color)
+        graph.is_mother_graph = graph_meta.get("is_mother_graph", True)
+
+        # Restore sub-graphs
+        sub_graphs_data = graph_meta.get("sub_graphs", [])
+        for sg_meta in sub_graphs_data:
+            graph.restore_subgraph_from_metadata(sg_meta, id_map)
+    except Exception:
+        # If sub-graph restoration fails, continue without them
         pass
 
     # Update adjacency matrix

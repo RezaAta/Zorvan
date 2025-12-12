@@ -108,6 +108,20 @@ class ControlPanelBuilder:
         thread_layout.addWidget(mw.threading_combo)
         layout.addLayout(thread_layout)
 
+        # === Multi-Graph Support: Graph Selector ===
+        graph_layout = QHBoxLayout()
+        graph_layout.addWidget(QLabel("Graph:"))
+        mw.graph_selector_combo = QComboBox()
+        mw.graph_selector_combo.setToolTip(
+            "Select which graph to process. 'Mother Graph' processes all nodes."
+        )
+        mw.graph_selector_combo.addItem("Mother Graph (All)")
+        mw.graph_selector_combo.currentIndexChanged.connect(
+            mw.on_graph_selection_changed
+        )
+        graph_layout.addWidget(mw.graph_selector_combo)
+        layout.addLayout(graph_layout)
+
         # Starting nodes widget
         self._build_starting_nodes_widget(layout)
 

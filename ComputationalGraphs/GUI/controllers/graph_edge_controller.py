@@ -124,6 +124,14 @@ class GraphEdgeController:
             else None
         )
 
+        # Preserve sub-graphs before rebuilding
+        old_sub_graphs = (
+            list(mw.graph.sub_graphs) if hasattr(mw.graph, "sub_graphs") else []
+        )
+        old_graph_id = getattr(mw.graph, "graph_id", None)
+        old_graph_name = getattr(mw.graph, "graph_name", "Default Graph")
+        old_graph_color = getattr(mw.graph, "graph_color", "#4ECDC4")
+
         new_graph = Graph()
 
         # Add all nodes
@@ -146,6 +154,23 @@ class GraphEdgeController:
         new_graph.starting_nodes = old_starting_nodes
         new_graph.stopping_nodes = old_stopping_nodes
         new_graph.manual_processing_sequence = old_manual_sequence
+
+        # Restore graph identity and sub-graphs
+        if old_graph_id:
+            new_graph.graph_id = old_graph_id
+        new_graph.graph_name = old_graph_name
+        new_graph.graph_color = old_graph_color
+
+        # Restore sub-graphs (they reference original node objects, which are preserved)
+        for sg in old_sub_graphs:
+            # Verify all nodes in subgraph are still in the new graph
+            valid_nodes = [n for n in sg.nodes if n in new_graph.nodes]
+            if valid_nodes:
+                sg.nodes = valid_nodes
+                sg.parent_graph = new_graph
+                new_graph.sub_graphs.append(sg)
+                # Rebuild subgraph adjacency matrix
+                sg.UpdateAdjacencyMatrix()
 
         # Set the graph via the helper to synchronize canvas and runner
         mw.set_graph(new_graph)

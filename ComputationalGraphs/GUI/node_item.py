@@ -338,6 +338,21 @@ class NodeItem(QGraphicsEllipseItem):
             # Trigger scene update for new position
             if self.scene():
                 self.scene().update()
+
+            # Update subgraph control positions
+            try:
+                canvas = getattr(self, "canvas", None)
+                if canvas is None and self.scene() and self.scene().views():
+                    try:
+                        view = self.scene().views()[0]
+                        canvas = view
+                    except Exception:
+                        pass
+                if canvas and hasattr(canvas, "update_subgraph_controls"):
+                    canvas.update_subgraph_controls()
+            except Exception:
+                pass
+
             # Snap on release if enabled
             try:
                 canvas = getattr(self, "canvas", None)
@@ -579,6 +594,64 @@ class NodeItem(QGraphicsEllipseItem):
                             "Group selected disjoint nodes with same predecessors/successors"
                         )
 
+            # === Multi-Graph Support: Sub-Graph Management ===
+            create_subgraph_action = None
+            add_to_subgraph_action = None
+            remove_from_subgraph_menu = None
+            rename_subgraph_action = None
+            change_subgraph_color_action = None
+
+            scene = self.scene()
+            canvas = getattr(self, "canvas", None)
+            graph = getattr(canvas, "graph", None) if canvas else None
+
+            if scene and graph:
+                selected = scene.selectedItems()
+                node_items = [item for item in selected if isinstance(item, NodeItem)]
+                if len(node_items) >= 1:
+                    menu.addSeparator()
+                    create_subgraph_action = menu.addAction(
+                        "📦 Create Sub-Graph from Selection"
+                    )
+                    create_subgraph_action.setToolTip(
+                        "Group selected nodes into a named sub-graph for separate processing"
+                    )
+
+                    # Add to existing sub-graph
+                    existing_subgraphs = getattr(graph, "sub_graphs", [])
+                    if existing_subgraphs:
+                        add_to_subgraph_menu = menu.addMenu("➕ Add to Sub-Graph")
+                        for sg in existing_subgraphs:
+                            add_to_subgraph_menu.addAction(sg.graph_name)
+
+                    # Remove from sub-graph (only if node is in any subgraph)
+                    nodes = [item.node for item in node_items]
+                    containing_subgraphs = []
+                    for sg in existing_subgraphs:
+                        if any(n in sg.nodes for n in nodes):
+                            containing_subgraphs.append(sg)
+
+                    if containing_subgraphs:
+                        remove_from_subgraph_menu = menu.addMenu(
+                            "➖ Remove from Sub-Graph"
+                        )
+                        for sg in containing_subgraphs:
+                            remove_from_subgraph_menu.addAction(sg.graph_name)
+
+                # Subgraph-specific options (rename, change color)
+                # Check if right-clicked node is in exactly one subgraph
+                if len(node_items) == 1:
+                    node_subgraphs = graph.get_node_subgraphs(self.node)
+                    if len(node_subgraphs) == 1:
+                        sg = node_subgraphs[0]
+                        menu.addSeparator()
+                        rename_subgraph_action = menu.addAction(
+                            f"✏️ Rename Sub-Graph '{sg.graph_name}'..."
+                        )
+                        change_subgraph_color_action = menu.addAction(
+                            f"🎨 Change Sub-Graph Color..."
+                        )
+
             menu.addSeparator()
             reset_node_action = menu.addAction("🔄 Reset Node")
             reinit_action = None
@@ -628,6 +701,28 @@ class NodeItem(QGraphicsEllipseItem):
                 self._abstract_selection()
             elif expand_abstract_action and action == expand_abstract_action:
                 self._expand_abstract_node()
+            elif create_subgraph_action and action == create_subgraph_action:
+                self._create_subgraph_from_selection()
+            # Handle Add to Sub-Graph submenu
+            elif (
+                add_to_subgraph_menu
+                and action
+                and action.parent() == add_to_subgraph_menu
+            ):
+                self._add_to_subgraph(action.text())
+            # Handle Remove from Sub-Graph submenu
+            elif (
+                remove_from_subgraph_menu
+                and action
+                and action.parent() == remove_from_subgraph_menu
+            ):
+                self._remove_from_subgraph(action.text())
+            elif rename_subgraph_action and action == rename_subgraph_action:
+                self._rename_subgraph()
+            elif (
+                change_subgraph_color_action and action == change_subgraph_color_action
+            ):
+                self._change_subgraph_color()
 
         except Exception:
             pass
@@ -688,6 +783,224 @@ class NodeItem(QGraphicsEllipseItem):
                 self.node.ResetValue()
                 self.update_value_display()
                 self.update()
+        except Exception:
+            pass
+
+    def _create_subgraph_from_selection(self):
+        """Create a sub-graph from the currently selected nodes."""
+        try:
+            from PyQt6.QtWidgets import QInputDialog, QMessageBox
+
+            canvas = getattr(self, "canvas", None)
+            if not canvas:
+                return
+
+            graph = getattr(canvas, "graph", None)
+            if not graph:
+                return
+
+            # Get all selected nodes
+            scene = self.scene()
+            if not scene:
+                return
+
+            selected = scene.selectedItems()
+            node_items = [item for item in selected if isinstance(item, NodeItem)]
+
+            if not node_items:
+                return
+
+            # Get the actual node objects
+            nodes = [item.node for item in node_items]
+
+            # Prompt for sub-graph name
+            name, ok = QInputDialog.getText(
+                scene.views()[0] if scene.views() else None,
+                "Create Sub-Graph",
+                "Enter a name for the sub-graph:",
+                text=f"Sub-Graph {len(getattr(graph, 'sub_graphs', [])) + 1}",
+            )
+
+            if not ok or not name.strip():
+                return
+
+            # Create the sub-graph
+            try:
+                subgraph = graph.create_subgraph_from_nodes(nodes, name.strip())
+                if subgraph:
+                    # Refresh the canvas to show the visual grouping
+                    canvas.refresh_subgraph_visuals()
+
+                    # Notify main window if available
+                    if scene.views():
+                        main_window = scene.views()[0].window()
+                        if main_window and hasattr(main_window, "on_subgraph_created"):
+                            main_window.on_subgraph_created(subgraph)
+
+                    QMessageBox.information(
+                        scene.views()[0] if scene.views() else None,
+                        "Sub-Graph Created",
+                        f"Sub-graph '{name}' created with {len(nodes)} nodes.",
+                    )
+            except ValueError as e:
+                QMessageBox.warning(
+                    scene.views()[0] if scene.views() else None,
+                    "Cannot Create Sub-Graph",
+                    str(e),
+                )
+        except Exception:
+            pass
+
+    def _add_to_subgraph(self, subgraph_name: str):
+        """Add selected nodes to an existing sub-graph."""
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+
+            canvas = getattr(self, "canvas", None)
+            if not canvas:
+                return
+
+            graph = getattr(canvas, "graph", None)
+            if not graph:
+                return
+
+            # Find the subgraph
+            subgraph = graph.find_subgraph_by_name(subgraph_name)
+            if not subgraph:
+                return
+
+            # Get selected nodes
+            scene = self.scene()
+            if not scene:
+                return
+
+            selected = scene.selectedItems()
+            nodes = [item.node for item in selected if isinstance(item, NodeItem)]
+
+            if nodes:
+                added = graph.add_nodes_to_subgraph(subgraph, nodes)
+                if added > 0:
+                    canvas.refresh_subgraph_visuals()
+                    # Update graph selector
+                    if scene.views():
+                        main_window = scene.views()[0].window()
+                        if main_window and hasattr(
+                            main_window, "update_graph_selector"
+                        ):
+                            main_window.update_graph_selector()
+        except Exception:
+            pass
+
+    def _remove_from_subgraph(self, subgraph_name: str):
+        """Remove selected nodes from a sub-graph."""
+        try:
+            canvas = getattr(self, "canvas", None)
+            if not canvas:
+                return
+
+            graph = getattr(canvas, "graph", None)
+            if not graph:
+                return
+
+            # Find the subgraph
+            subgraph = graph.find_subgraph_by_name(subgraph_name)
+            if not subgraph:
+                return
+
+            # Get selected nodes
+            scene = self.scene()
+            if not scene:
+                return
+
+            selected = scene.selectedItems()
+            nodes = [item.node for item in selected if isinstance(item, NodeItem)]
+
+            if nodes:
+                graph.remove_nodes_from_subgraph(subgraph, nodes)
+                canvas.refresh_subgraph_visuals()
+                # Update graph selector
+                if scene.views():
+                    main_window = scene.views()[0].window()
+                    if main_window and hasattr(main_window, "update_graph_selector"):
+                        main_window.update_graph_selector()
+        except Exception:
+            pass
+
+    def _rename_subgraph(self):
+        """Rename the sub-graph that this node belongs to."""
+        try:
+            from PyQt6.QtWidgets import QInputDialog
+
+            canvas = getattr(self, "canvas", None)
+            if not canvas:
+                return
+
+            graph = getattr(canvas, "graph", None)
+            if not graph:
+                return
+
+            # Find subgraph containing this node
+            subgraphs = graph.get_node_subgraphs(self.node)
+            if not subgraphs:
+                return
+
+            subgraph = subgraphs[0]
+
+            scene = self.scene()
+            name, ok = QInputDialog.getText(
+                scene.views()[0] if scene and scene.views() else None,
+                "Rename Sub-Graph",
+                "Enter new name:",
+                text=subgraph.graph_name,
+            )
+
+            if ok and name.strip():
+                graph.rename_subgraph(subgraph, name.strip())
+                canvas.refresh_subgraph_visuals()
+                # Update graph selector
+                if scene and scene.views():
+                    main_window = scene.views()[0].window()
+                    if main_window and hasattr(main_window, "update_graph_selector"):
+                        main_window.update_graph_selector()
+        except Exception:
+            pass
+
+    def _change_subgraph_color(self):
+        """Change the color of the sub-graph that this node belongs to."""
+        try:
+            from PyQt6.QtWidgets import QColorDialog
+
+            canvas = getattr(self, "canvas", None)
+            if not canvas:
+                return
+
+            graph = getattr(canvas, "graph", None)
+            if not graph:
+                return
+
+            # Find subgraph containing this node
+            subgraphs = graph.get_node_subgraphs(self.node)
+            if not subgraphs:
+                return
+
+            subgraph = subgraphs[0]
+
+            scene = self.scene()
+            current_color = QColor(subgraph.graph_color)
+            color = QColorDialog.getColor(
+                current_color,
+                scene.views()[0] if scene and scene.views() else None,
+                f"Choose color for '{subgraph.graph_name}'",
+            )
+
+            if color.isValid():
+                graph.set_subgraph_color(subgraph, color.name())
+                canvas.refresh_subgraph_visuals()
+                # Update graph selector
+                if scene and scene.views():
+                    main_window = scene.views()[0].window()
+                    if main_window and hasattr(main_window, "update_graph_selector"):
+                        main_window.update_graph_selector()
         except Exception:
             pass
 

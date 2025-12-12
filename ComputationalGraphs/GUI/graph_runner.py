@@ -931,6 +931,41 @@ class GraphRunner(QObject):
                 except Exception:
                     pass
 
+    def set_processing_subgraph(self, subgraph):
+        """Set a specific subgraph to process instead of the full graph.
+
+        Args:
+            subgraph: A Graph object representing the subgraph to process,
+                      or None to process the full mother graph.
+        """
+        self._processing_subgraph = subgraph
+
+        # If a subgraph is selected, create a new processor for it
+        if subgraph is not None and subgraph != self.graph:
+            self.graph_processor = GraphProcessor(graph=subgraph, verbose=False)
+            try:
+                parent = self.parent()
+                if parent is not None and hasattr(parent, "verbose_check"):
+                    self.graph_processor.verbose = parent.verbose_check.isChecked()
+            except Exception:
+                pass
+        elif self.graph is not None:
+            # Reset to mother graph
+            self.graph_processor = GraphProcessor(graph=self.graph, verbose=False)
+            try:
+                parent = self.parent()
+                if parent is not None and hasattr(parent, "verbose_check"):
+                    self.graph_processor.verbose = parent.verbose_check.isChecked()
+            except Exception:
+                pass
+
+    def get_processing_graph(self):
+        """Get the graph currently being processed (subgraph or mother graph)."""
+        subgraph = getattr(self, "_processing_subgraph", None)
+        if subgraph is not None:
+            return subgraph
+        return self.graph
+
     def single_step(self):
         """Execute a single step without timer."""
         if not self.is_running:

@@ -155,10 +155,28 @@ class FileIOController:
         self.canvas.scene.clear()
         self.canvas.node_items.clear()
         self.canvas.edge_items.clear()
+        # Clear subgraph control widgets
+        try:
+            self.canvas._subgraph_widgets.clear()
+        except Exception:
+            pass
 
         # Set and visualize graph
         self.main_window.set_graph(graph)
         self.main_window._visualize_graph_on_canvas(graph)
         self.main_window.update_starting_nodes_display()
         self.main_window.update_stopping_nodes_display()
+
+        # Update graph selector for multi-graph support
+        try:
+            self.main_window.update_graph_selector()
+        except Exception:
+            pass
+
+        # Update subgraph control widgets (labels and buttons)
+        try:
+            self.canvas.update_subgraph_controls()
+        except Exception:
+            pass
+
         self.status_bar.showMessage(f"Loaded {filename}")
