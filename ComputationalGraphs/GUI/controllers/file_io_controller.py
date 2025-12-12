@@ -382,6 +382,7 @@ class FileIOController:
         # Create visual edges for all connections in imported graph
         # The nodes already have predecessors set by CGJsonIO.load, we just need visual edges
         for node in imported_graph.nodes:
+            # Ensure this node has a visual item
             target_item = self.canvas.node_items.get(node)
             if not target_item:
                 continue
@@ -389,9 +390,14 @@ class FileIOController:
             for pred in getattr(node, "predecessors", []):
                 # Only create edge if predecessor is also in imported graph
                 if pred in old_to_new:
-                    source_item = self.canvas.node_items.get(pred)
-                    if source_item and target_item:
-                        self.canvas.add_edge_item(source_item, target_item)
+                    # Call add_edge_item with node objects (not NodeItem objects)
+                    try:
+                        self.canvas.add_edge_item(pred, node)
+                    except Exception:
+                        # Fallback to adding by using NodeItem objects if needed
+                        source_item = self.canvas.node_items.get(pred)
+                        if source_item and target_item:
+                            self.canvas.add_edge_item(source_item, target_item)
 
         # Update adjacency matrix
         self.graph.UpdateAdjacencyMatrix()
