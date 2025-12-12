@@ -376,7 +376,7 @@ class FileIOController:
             new_y = old_y - center_y + offset_y + 100
 
             # Create visual node item
-            node_item = self.canvas.add_node_to_canvas(new_node, new_x, new_y)
+            node_item = self.canvas.add_node_item(new_node, new_x, new_y)
 
             # Copy color if available
             old_color = getattr(node, "_visual_color", None)

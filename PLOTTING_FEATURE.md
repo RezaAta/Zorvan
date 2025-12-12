@@ -3,20 +3,24 @@
 ## Overview
 Added a real-time plotting feature to the Computational Graphs GUI that allows users to visualize node values over time during graph execution.
 
+**Primary Backend: PyQtGraph** - The preferred plotting backend for better performance and interactivity. Matplotlib is available as a fallback.
+
 ## Features Implemented
 
 ### 1. Plot Configuration Dialog (`PlotConfigDialog`)
 - **Location**: `ComputationalGraphs/GUI/plot_window.py`
 - **Functionality**:
   - Displays list of all nodes in the graph
+  - **Phase 2: Graph/Subgraph Filter** - Filter nodes by "All Nodes", "Mother Graph Only", or specific subgraphs
   - Checkboxes for multi-node selection
   - Max iterations spinner (10-100,000 range, default: 100)
   - OK/Cancel buttons
 
-### 2. Plot Window (`PlotWindow`)
-- **Location**: `ComputationalGraphs/GUI/plot_window.py`
+### 2. Plot Window (`PlotWindow` / `PlotWindowPG`)
+- **Location**: `ComputationalGraphs/GUI/plot_window.py` (matplotlib), `plot_window_pyqtgraph.py` (pyqtgraph)
 - **Functionality**:
-  - Matplotlib-based embedded canvas in PyQt6
+  - **PyQtGraph (primary)**: Hardware-accelerated, real-time plotting with OpenGL support
+  - **Matplotlib (fallback)**: Traditional plotting with mplcursors hover support
   - Real-time line plots for multiple nodes
   - Auto-scaling Y-axis (toggleable)
   - Iteration counter display
@@ -27,7 +31,13 @@ Added a real-time plotting feature to the Computational Graphs GUI that allows u
     - Lists/arrays: averaged (for numeric) or counted (for non-numeric)
     - None values: treated as 0
 
-### 3. Main Window Integration
+### 3. Phase 3: Active Subgraph Tracking
+- **"Track active subgraph only" checkbox** (both backends)
+- When enabled, only updates values for nodes belonging to the currently processing subgraph
+- Prevents flat lines during queue runs where different subgraphs run sequentially
+- Useful for multi-graph processing scenarios
+
+### 4. Main Window Integration
 - **Button Added**: "📊 Open Plot Window" in Controls panel (under Layout section)
 - **Method**: `open_plot_window()` in `main_window.py`
 - **Auto-update**: Connected to `step_completed` signal

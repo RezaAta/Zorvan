@@ -42,6 +42,10 @@ class PlotWindowPG(QWidget):
         self.current_iteration = 0
         self.backend = "pyqtgraph"
 
+        # Phase 3: Active subgraph tracking for plot optimization
+        self._active_subgraph = None  # Currently processing subgraph
+        self._track_active_only = False  # When True, skip nodes not in active subgraph
+
         # Data storage: {node: [values]}
         self.data = {node: [] for node in nodes}
 
@@ -111,6 +115,15 @@ class PlotWindowPG(QWidget):
         )
         self.antialias_check.stateChanged.connect(self._on_antialias_changed)
         control_layout.addWidget(self.antialias_check)
+
+        # Phase 3: Track only active subgraph checkbox
+        self.track_active_check = QCheckBox("Track active subgraph only")
+        self.track_active_check.setToolTip(
+            "When enabled, only update values for nodes in the currently "
+            "processing subgraph (prevents flat lines during queue runs)"
+        )
+        self.track_active_check.stateChanged.connect(self._on_track_active_changed)
+        control_layout.addWidget(self.track_active_check)
 
         # Use OpenGL rendering option (PyQtGraph / hardware accel)
         self.use_opengl_check = QCheckBox("Use OpenGL")
@@ -380,13 +393,35 @@ class PlotWindowPG(QWidget):
             except Exception:
                 pass
 
-    def update_plot(self, iteration):
+    def _on_track_active_changed(self, state):
+        """Handle track active subgraph checkbox state change."""
+        self._track_active_only = self.track_active_check.isChecked()
+
+    def update_plot(self, iteration, active_subgraph=None):
+        """Update the plot with current node values.
+
+        Args:
+            iteration: Current iteration number
+            active_subgraph: Optional subgraph being processed (for filtering)
+        """
         if self.pause_plot_check.isChecked():
             return
+
+        # Store active subgraph reference
+        self._active_subgraph = active_subgraph
+
         self.current_iteration = iteration
         self.iteration_label.setText(f"Iteration: {iteration} / {self.max_iterations}")
         # Append iteration to data and update curves
         for node in self.nodes:
+            # Phase 3: Skip nodes not in active subgraph when tracking is enabled
+            if self._track_active_only and active_subgraph is not None:
+                node_subgraph_id = getattr(node, "sub_graph_id", None)
+                active_id = getattr(active_subgraph, "graph_id", None)
+                if node_subgraph_id != active_id:
+                    # Skip this node - don't update its value
+                    continue
+
             value = node.value
             if isinstance(value, (list, tuple)):
                 if len(value) > 0 and isinstance(value[0], (int, float)):

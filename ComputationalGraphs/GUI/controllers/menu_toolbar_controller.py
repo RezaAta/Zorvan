@@ -96,10 +96,10 @@ class MenuToolbarController:
         mw.save_selection_action.setStatusTip("Save selected nodes as a new graph file")
         mw.save_selection_action.triggered.connect(mw.save_selection_as_graph)
 
-        mw.import_graph_action = QAction("&Import Graph...", mw)
+        mw.import_graph_action = QAction("Import &Into Current Canvas...", mw)
         mw.import_graph_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
         mw.import_graph_action.setStatusTip(
-            "Import a graph file and add it to the current canvas"
+            "Import a graph file and merge it into the current canvas"
         )
         mw.import_graph_action.triggered.connect(mw.import_graph_to_canvas)
 
