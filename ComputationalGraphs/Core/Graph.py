@@ -112,6 +112,8 @@ class Graph:
         for node in nodes:
             new_subgraph.nodes.append(node)
             new_subgraph.idToNodeDictionary[node.id] = node
+            # Mark node as belonging to this sub-graph (Phase 2)
+            node.sub_graph_id = new_subgraph.graph_id
 
         # Build adjacency matrix for the sub-graph
         new_subgraph.UpdateAdjacencyMatrix()

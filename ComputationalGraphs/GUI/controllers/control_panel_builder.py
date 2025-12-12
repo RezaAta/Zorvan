@@ -50,6 +50,7 @@ class ControlPanelBuilder:
 
         # Build section containers
         exec_container = self._build_execution_section()
+        queue_container = self._build_queue_section()
         viz_container = self._build_visualization_section()
         layout_container = self._build_layout_section()
         plot_container = self._build_plotting_section()
@@ -60,6 +61,9 @@ class ControlPanelBuilder:
 
         # Add collapsible sections
         layout.addWidget(CollapsibleSection("Execution", exec_container, expanded=True))
+        layout.addWidget(
+            CollapsibleSection("Processing Queue", queue_container, expanded=False)
+        )
         layout.addWidget(CollapsibleSection("Layout", layout_container, expanded=True))
         layout.addWidget(
             CollapsibleSection("Visualization", viz_container, expanded=False)
@@ -400,6 +404,96 @@ class ControlPanelBuilder:
         speed_layout.addLayout(spin_layout)
 
         parent_layout.addLayout(speed_layout)
+
+    def _build_queue_section(self) -> QWidget:
+        """Build the processing queue section (Phase 2)."""
+        mw = self.mw
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        layout.addWidget(QLabel("<b>Processing Queue</b>"))
+        layout.addWidget(
+            QLabel("Run graphs/subgraphs sequentially with specified iterations.")
+        )
+
+        # Queue list
+        mw.queue_list = QListWidget()
+        mw.queue_list.setMaximumHeight(150)
+        mw.queue_list.setStyleSheet(
+            "QListWidget { background-color: #2a2a2a; border: 1px solid #555; }"
+        )
+        mw.queue_list.setToolTip(
+            "Processing queue: each item runs for its specified iterations"
+        )
+        layout.addWidget(mw.queue_list)
+
+        # Add to queue row
+        add_row = QHBoxLayout()
+        add_row.addWidget(QLabel("Iterations:"))
+        mw.queue_iterations_spin = QSpinBox()
+        mw.queue_iterations_spin.setRange(1, 100000)
+        mw.queue_iterations_spin.setValue(100)
+        add_row.addWidget(mw.queue_iterations_spin)
+
+        mw.add_to_queue_btn = QPushButton("Add Selected Graph")
+        mw.add_to_queue_btn.setToolTip(
+            "Add the currently selected graph/subgraph to the queue"
+        )
+        mw.add_to_queue_btn.clicked.connect(mw.add_selected_graph_to_queue)
+        add_row.addWidget(mw.add_to_queue_btn)
+        layout.addLayout(add_row)
+
+        # Queue control buttons
+        btn_row1 = QHBoxLayout()
+        mw.start_queue_btn = QPushButton("▶ Run Queue")
+        mw.start_queue_btn.setToolTip("Start processing the queue sequentially")
+        mw.start_queue_btn.clicked.connect(mw.start_processing_queue)
+        btn_row1.addWidget(mw.start_queue_btn)
+
+        mw.stop_queue_btn = QPushButton("⏹ Stop Queue")
+        mw.stop_queue_btn.setToolTip("Stop queue processing")
+        mw.stop_queue_btn.clicked.connect(mw.stop_processing_queue)
+        mw.stop_queue_btn.setEnabled(False)
+        btn_row1.addWidget(mw.stop_queue_btn)
+        layout.addLayout(btn_row1)
+
+        btn_row2 = QHBoxLayout()
+        mw.remove_from_queue_btn = QPushButton("Remove Selected")
+        mw.remove_from_queue_btn.setToolTip("Remove selected item from queue")
+        mw.remove_from_queue_btn.clicked.connect(mw.remove_selected_from_queue)
+        btn_row2.addWidget(mw.remove_from_queue_btn)
+
+        mw.clear_queue_btn = QPushButton("Clear Queue")
+        mw.clear_queue_btn.clicked.connect(mw.clear_processing_queue)
+        btn_row2.addWidget(mw.clear_queue_btn)
+        layout.addLayout(btn_row2)
+
+        # Per-graph reset
+        layout.addWidget(QLabel(""))  # Spacer
+        layout.addWidget(QLabel("<b>Per-Graph Reset</b>"))
+
+        reset_row = QHBoxLayout()
+        mw.save_graph_snapshot_btn = QPushButton("📸 Save Snapshot")
+        mw.save_graph_snapshot_btn.setToolTip(
+            "Save snapshot of selected graph/subgraph"
+        )
+        mw.save_graph_snapshot_btn.clicked.connect(mw.save_selected_graph_snapshot)
+        reset_row.addWidget(mw.save_graph_snapshot_btn)
+
+        mw.reset_selected_graph_btn = QPushButton("🔄 Reset Graph")
+        mw.reset_selected_graph_btn.setToolTip(
+            "Reset selected graph/subgraph to its snapshot"
+        )
+        mw.reset_selected_graph_btn.clicked.connect(mw.reset_selected_graph)
+        reset_row.addWidget(mw.reset_selected_graph_btn)
+        layout.addLayout(reset_row)
+
+        # Queue status
+        mw.queue_status_label = QLabel("Queue: Empty")
+        layout.addWidget(mw.queue_status_label)
+
+        return container
 
     def _build_visualization_section(self) -> QWidget:
         """Build the visualization controls section."""

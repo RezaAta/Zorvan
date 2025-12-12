@@ -347,5 +347,163 @@ class TestCGJsonIOMultiGraph:
             os.unlink(temp_path)
 
 
+class TestProcessingQueue:
+    """Test processing queue functionality (Phase 2)."""
+
+    def test_add_to_queue(self):
+        """Can add graph+iterations to queue."""
+        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+
+        g = Graph(name="Test Graph")
+        runner = GraphRunner()
+        runner.set_graph(g)
+
+        runner.add_to_queue(g, 100)
+
+        queue = runner.get_queue()
+        assert len(queue) == 1
+        assert queue[0] == (g, 100)
+
+    def test_add_multiple_to_queue(self):
+        """Can add multiple items to queue."""
+        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+
+        g1 = Graph(name="Graph A")
+        g2 = Graph(name="Graph B")
+        runner = GraphRunner()
+
+        runner.add_to_queue(g1, 100)
+        runner.add_to_queue(g2, 50)
+        runner.add_to_queue(g1, 25)
+
+        queue = runner.get_queue()
+        assert len(queue) == 3
+        assert queue[0] == (g1, 100)
+        assert queue[1] == (g2, 50)
+        assert queue[2] == (g1, 25)
+
+    def test_clear_queue(self):
+        """Can clear the processing queue."""
+        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+
+        g = Graph(name="Test Graph")
+        runner = GraphRunner()
+
+        runner.add_to_queue(g, 100)
+        runner.add_to_queue(g, 50)
+        assert len(runner.get_queue()) == 2
+
+        runner.clear_queue()
+        assert len(runner.get_queue()) == 0
+
+
+class TestPerGraphSnapshots:
+    """Test per-graph snapshot functionality (Phase 2)."""
+
+    def test_save_snapshot_for_graph(self):
+        """Can save snapshot for specific graph."""
+        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+
+        g = Graph(name="Test Graph")
+        a = ContainerNode("a", value=5)
+        b = ContainerNode("b", value=10)
+        g.AddNode(a, b)
+
+        runner = GraphRunner()
+        runner.set_graph(g)
+        runner.save_graph_snapshot_for(g)
+
+        # Modify values
+        a.value = 99
+        b.value = 99
+
+        # Restore snapshot
+        runner.restore_graph_snapshot_for(g)
+        assert a.value == 5
+        assert b.value == 10
+
+    def test_separate_snapshots_per_graph(self):
+        """Snapshots are kept separate per graph."""
+        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+
+        g1 = Graph(name="Graph A")
+        a1 = ContainerNode("a1", value=1)
+        g1.AddNode(a1)
+
+        g2 = Graph(name="Graph B")
+        a2 = ContainerNode("a2", value=100)
+        g2.AddNode(a2)
+
+        runner = GraphRunner()
+
+        # Save snapshots for both
+        runner.save_graph_snapshot_for(g1)
+        runner.save_graph_snapshot_for(g2)
+
+        # Modify both
+        a1.value = 999
+        a2.value = 999
+
+        # Restore only g1
+        runner.restore_graph_snapshot_for(g1)
+        assert a1.value == 1
+        assert a2.value == 999  # Still modified
+
+        # Restore g2
+        runner.restore_graph_snapshot_for(g2)
+        assert a2.value == 100
+
+
+class TestSubGraphFiltering:
+    """Test sub-graph filtering for plot selection (Phase 2)."""
+
+    def test_nodes_assigned_to_subgraph(self):
+        """Nodes know which subgraph they belong to."""
+        g = Graph(name="Main")
+
+        # Create nodes
+        a = ContainerNode("a", value=1)
+        b = ContainerNode("b", value=2)
+        c = AdditionNode("c")
+        c.AddPreNode(a, b)
+
+        g.AddNode(a, b, c)
+
+        # Create subgraph from a, b
+        sub = g.create_subgraph_from_nodes([a, b], "Inputs")
+
+        # Check subgraph assignment
+        assert a.sub_graph_id == sub.graph_id
+        assert b.sub_graph_id == sub.graph_id
+        assert c.sub_graph_id is None  # Not in any subgraph
+
+    def test_filter_nodes_by_subgraph(self):
+        """Can filter nodes by subgraph membership."""
+        g = Graph(name="Main")
+
+        a = ContainerNode("a", value=1)
+        b = ContainerNode("b", value=2)
+        c = AdditionNode("c")
+        c.AddPreNode(a, b)
+        d = ContainerNode("d", value=5)
+
+        g.AddNode(a, b, c, d)
+
+        # Create subgraph from a, b
+        sub = g.create_subgraph_from_nodes([a, b], "Inputs")
+
+        # Filter nodes in subgraph
+        sub_nodes = [n for n in g.nodes if n.sub_graph_id == sub.graph_id]
+        assert len(sub_nodes) == 2
+        assert a in sub_nodes
+        assert b in sub_nodes
+
+        # Filter nodes NOT in any subgraph
+        main_only = [n for n in g.nodes if n.sub_graph_id is None]
+        assert len(main_only) == 2
+        assert c in main_only
+        assert d in main_only
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

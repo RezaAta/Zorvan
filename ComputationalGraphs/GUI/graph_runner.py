@@ -17,6 +17,13 @@ class GraphRunner(QObject):
     step_completed = pyqtSignal(int)  # Emits current step number
     execution_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
+    queue_item_started = pyqtSignal(
+        object, int
+    )  # Emits (graph, iterations) when queue item starts
+    queue_item_finished = pyqtSignal(
+        object, int
+    )  # Emits (graph, iterations) when queue item finishes
+    queue_finished = pyqtSignal()  # Emits when entire queue is done
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -40,6 +47,14 @@ class GraphRunner(QObject):
 
         # Snapshot of initial graph state (iteration 0) for restore functionality
         self._graph_snapshot = None
+
+        # === Phase 2: Processing Queue ===
+        # Queue of (graph/subgraph, iterations) tuples to execute sequentially
+        self._processing_queue = []
+        self._queue_running = False
+        self._current_queue_index = 0
+        # Per-graph snapshots: {graph_id: snapshot_dict}
+        self._per_graph_snapshots = {}
 
     def set_graph(self, graph):
         """Set the graph to execute."""
@@ -930,6 +945,249 @@ class GraphRunner(QObject):
                     self.graph_processor.reset_manual_state()
                 except Exception:
                     pass
+
+    # === Phase 2: Processing Queue Methods ===
+
+    def add_to_queue(self, graph, iterations):
+        """Add a graph/subgraph to the processing queue.
+
+        Args:
+            graph: The Graph or sub-graph to process
+            iterations: Number of iterations to run for this graph
+        """
+        self._processing_queue.append((graph, iterations))
+
+    def clear_queue(self):
+        """Clear the processing queue."""
+        self._processing_queue = []
+        self._current_queue_index = 0
+
+    def get_queue(self):
+        """Get the current processing queue.
+
+        Returns:
+            List of (graph, iterations) tuples
+        """
+        return list(self._processing_queue)
+
+    def remove_from_queue(self, index):
+        """Remove an item from the queue by index.
+
+        Args:
+            index: The index of the item to remove
+        """
+        if 0 <= index < len(self._processing_queue):
+            self._processing_queue.pop(index)
+
+    def start_queue(self):
+        """Start processing the queue sequentially.
+
+        Each queue item runs for its specified iterations, then the next item starts.
+        """
+        if not self._processing_queue:
+            self.error_occurred.emit("Processing queue is empty")
+            return
+
+        if self._queue_running:
+            return  # Already running
+
+        self._queue_running = True
+        self._current_queue_index = 0
+        self._run_next_queue_item()
+
+    def _run_next_queue_item(self):
+        """Internal: Run the next item in the queue."""
+        if self._current_queue_index >= len(self._processing_queue):
+            # Queue finished
+            self._queue_running = False
+            self.queue_finished.emit()
+            return
+
+        graph, iterations = self._processing_queue[self._current_queue_index]
+
+        # Set up for this graph
+        self.set_processing_subgraph(graph if graph != self.graph else None)
+
+        # Emit signal that we're starting this queue item
+        self.queue_item_started.emit(graph, iterations)
+
+        # Connect to execution_finished to chain to next item
+        # Disconnect any previous connection first
+        try:
+            self.execution_finished.disconnect(self._on_queue_item_finished)
+        except Exception:
+            pass
+        self.execution_finished.connect(self._on_queue_item_finished)
+
+        # Start execution for this graph
+        self.start(max_steps=iterations, reset_step_counter=True)
+
+    def _on_queue_item_finished(self):
+        """Internal: Called when a queue item finishes."""
+        if not self._queue_running:
+            return
+
+        # Disconnect to avoid multiple calls
+        try:
+            self.execution_finished.disconnect(self._on_queue_item_finished)
+        except Exception:
+            pass
+
+        # Emit signal that this item finished
+        if self._current_queue_index < len(self._processing_queue):
+            graph, iterations = self._processing_queue[self._current_queue_index]
+            self.queue_item_finished.emit(graph, iterations)
+
+        # Move to next item
+        self._current_queue_index += 1
+        self._run_next_queue_item()
+
+    def stop_queue(self):
+        """Stop the queue processing."""
+        self._queue_running = False
+        try:
+            self.execution_finished.disconnect(self._on_queue_item_finished)
+        except Exception:
+            pass
+        self.stop()
+
+    def is_queue_running(self):
+        """Check if queue is currently running."""
+        return self._queue_running
+
+    # === Phase 2: Per-Graph Reset/Restore ===
+
+    def save_graph_snapshot_for(self, graph):
+        """Save a snapshot for a specific graph/subgraph.
+
+        Args:
+            graph: The graph to snapshot
+        """
+        if not graph:
+            return
+
+        graph_id = getattr(graph, "graph_id", id(graph))
+        snapshot = {}
+
+        def save_node_state(node):
+            node_id = id(node)
+            if node_id in snapshot:
+                return
+
+            node_state = {"value": None}
+
+            if hasattr(node, "value"):
+                val = node.value
+                if isinstance(val, list):
+                    node_state["value"] = list(val)
+                else:
+                    node_state["value"] = val
+
+            if hasattr(node, "buffer"):
+                buf = node.buffer
+                if isinstance(buf, list):
+                    node_state["buffer"] = list(buf)
+                else:
+                    node_state["buffer"] = buf
+
+            if hasattr(node, "data"):
+                data = node.data
+                if isinstance(data, list):
+                    node_state["data"] = list(data)
+                else:
+                    node_state["data"] = data
+
+            if hasattr(node, "streamIndex"):
+                node_state["streamIndex"] = node.streamIndex
+
+            snapshot[node_id] = node_state
+
+            if hasattr(node, "listOfNodes"):
+                for internal_node in node.listOfNodes:
+                    save_node_state(internal_node)
+
+        for node in graph.nodes:
+            save_node_state(node)
+
+        self._per_graph_snapshots[graph_id] = snapshot
+
+    def restore_graph_snapshot_for(self, graph):
+        """Restore a specific graph/subgraph to its snapshot state.
+
+        Args:
+            graph: The graph to restore
+
+        Returns:
+            True if restored, False if no snapshot found
+        """
+        if not graph:
+            return False
+
+        graph_id = getattr(graph, "graph_id", id(graph))
+        snapshot = self._per_graph_snapshots.get(graph_id)
+
+        if not snapshot:
+            return False
+
+        def restore_node_state(node):
+            node_id = id(node)
+            if node_id not in snapshot:
+                return
+
+            node_state = snapshot[node_id]
+
+            if "value" in node_state and hasattr(node, "value"):
+                val = node_state["value"]
+                if isinstance(val, list):
+                    node.value = list(val)
+                else:
+                    node.value = val
+
+            if "buffer" in node_state and hasattr(node, "buffer"):
+                buf = node_state["buffer"]
+                if isinstance(buf, list):
+                    node.buffer = list(buf)
+                else:
+                    node.buffer = buf
+
+            if "data" in node_state and hasattr(node, "data"):
+                data = node_state["data"]
+                if isinstance(data, list):
+                    node.data = list(data)
+                else:
+                    node.data = data
+
+            if "streamIndex" in node_state and hasattr(node, "streamIndex"):
+                node.streamIndex = node_state["streamIndex"]
+
+            if hasattr(node, "listOfNodes"):
+                for internal_node in node.listOfNodes:
+                    restore_node_state(internal_node)
+
+        for node in graph.nodes:
+            restore_node_state(node)
+
+        return True
+
+    def reset_graph(self, graph):
+        """Reset a specific graph/subgraph - restore values and reset processor state.
+
+        Args:
+            graph: The graph to reset
+        """
+        if not graph:
+            return
+
+        # Try to restore from snapshot first
+        if not self.restore_graph_snapshot_for(graph):
+            # Fallback: Reset nodes individually
+            for node in graph.nodes:
+                if hasattr(node, "ResetValue"):
+                    node.ResetValue()
+
+        # If this is the currently processing graph, reset processor state too
+        if graph == self.get_processing_graph():
+            self._reset_processor_state()
 
     def set_processing_subgraph(self, subgraph):
         """Set a specific subgraph to process instead of the full graph.

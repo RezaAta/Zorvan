@@ -44,6 +44,24 @@ class PlotConfigDialog(QDialog):
 
         layout = QVBoxLayout()
 
+        # === Phase 2: Graph/Subgraph Filter ===
+        filter_layout = QHBoxLayout()
+        filter_layout.addWidget(QLabel("Filter by:"))
+        self.graph_filter_combo = QComboBox()
+        self.graph_filter_combo.addItem("All Nodes")
+        self.graph_filter_combo.addItem("Mother Graph Only")
+
+        # Add subgraphs
+        sub_graphs = getattr(graph, "sub_graphs", [])
+        for sg in sub_graphs:
+            sg_name = getattr(sg, "graph_name", "SubGraph")
+            self.graph_filter_combo.addItem(f"SubGraph: {sg_name}")
+
+        self.graph_filter_combo.currentIndexChanged.connect(self._apply_filter)
+        filter_layout.addWidget(self.graph_filter_combo)
+        filter_layout.addStretch()
+        layout.addLayout(filter_layout)
+
         # Instructions
         instructions = QLabel("Select nodes to plot:")
         layout.addWidget(instructions)
@@ -55,13 +73,12 @@ class PlotConfigDialog(QDialog):
         # Set spacing between items to prevent cramping
         self.node_list.setSpacing(2)
 
+        # Store all nodes for filtering
+        self._all_nodes = sorted(graph.nodes, key=lambda n: n.name)
+        self._sub_graphs = sub_graphs
+
         # Add all nodes as checkable items
-        for node in sorted(graph.nodes, key=lambda n: n.name):
-            item = QListWidgetItem(node.name)
-            item.setData(Qt.ItemDataRole.UserRole, node)  # Store node reference
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            item.setCheckState(Qt.CheckState.Unchecked)
-            self.node_list.addItem(item)
+        self._populate_node_list(self._all_nodes)
 
         layout.addWidget(self.node_list)
 
@@ -86,6 +103,50 @@ class PlotConfigDialog(QDialog):
         layout.addWidget(button_box)
 
         self.setLayout(layout)
+
+    def _populate_node_list(self, nodes):
+        """Populate the node list with given nodes."""
+        # Remember checked states
+        checked_nodes = set()
+        for i in range(self.node_list.count()):
+            item = self.node_list.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                node = item.data(Qt.ItemDataRole.UserRole)
+                checked_nodes.add(node)
+
+        self.node_list.clear()
+
+        for node in sorted(nodes, key=lambda n: n.name):
+            item = QListWidgetItem(node.name)
+            item.setData(Qt.ItemDataRole.UserRole, node)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            # Restore check state if node was previously checked
+            if node in checked_nodes:
+                item.setCheckState(Qt.CheckState.Checked)
+            else:
+                item.setCheckState(Qt.CheckState.Unchecked)
+            self.node_list.addItem(item)
+
+    def _apply_filter(self, index):
+        """Apply the graph/subgraph filter."""
+        if index == 0:
+            # "All Nodes"
+            self._populate_node_list(self._all_nodes)
+        elif index == 1:
+            # "Mother Graph Only" - nodes not in any subgraph
+            nodes_in_subgraphs = set()
+            for sg in self._sub_graphs:
+                for node in getattr(sg, "nodes", []):
+                    nodes_in_subgraphs.add(node)
+            mother_only = [n for n in self._all_nodes if n not in nodes_in_subgraphs]
+            self._populate_node_list(mother_only if mother_only else self._all_nodes)
+        else:
+            # Subgraph filter (index - 2 because of "All Nodes" and "Mother Graph Only")
+            sg_index = index - 2
+            if 0 <= sg_index < len(self._sub_graphs):
+                sg = self._sub_graphs[sg_index]
+                sg_nodes = getattr(sg, "nodes", [])
+                self._populate_node_list(sg_nodes)
 
     def get_selected_nodes(self):
         """Get list of selected nodes."""

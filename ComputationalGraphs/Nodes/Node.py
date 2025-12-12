@@ -14,6 +14,8 @@ class Node(ABC):
         self.forcedBatchProcessing = forcedBatchProcessing  # Enable forced processing
         # Topology type set by Graph.analyze_topology() - one of 9 topology types
         self.topology_type = None
+        # Sub-graph membership (Phase 2 multi-graph support)
+        self.sub_graph_id = None  # ID of the sub-graph this node belongs to
 
     @abstractmethod
     def Operation(self, *inputs):

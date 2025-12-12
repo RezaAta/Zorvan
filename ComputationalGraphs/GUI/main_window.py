@@ -373,6 +373,154 @@ class MainWindow(QMainWindow):
         """Reset only the processor and iteration counter, preserving node values."""
         self.execution_controller.reset_processor()
 
+    # === Phase 2: Processing Queue Methods ===
+
+    def add_selected_graph_to_queue(self):
+        """Add the currently selected graph/subgraph to the processing queue."""
+        # Get the currently selected graph from the dropdown
+        selected_graph = self.get_selected_processing_graph()
+        iterations = self.queue_iterations_spin.value()
+
+        if selected_graph is None:
+            selected_graph = self.graph  # Default to mother graph
+
+        self.graph_runner.add_to_queue(selected_graph, iterations)
+        self._update_queue_display()
+        self.status_bar.showMessage(
+            f"Added '{self._get_graph_display_name(selected_graph)}' "
+            f"({iterations} iterations) to queue"
+        )
+
+    def get_selected_processing_graph(self):
+        """Get the graph/subgraph currently selected in the dropdown."""
+        if not hasattr(self, "graph_selector_combo"):
+            return self.graph
+
+        index = self.graph_selector_combo.currentIndex()
+        if index <= 0:  # "Mother Graph (All)" or nothing
+            return self.graph
+
+        # Get subgraphs
+        sub_graphs = getattr(self.graph, "sub_graphs", [])
+        if index - 1 < len(sub_graphs):
+            return sub_graphs[index - 1]
+        return self.graph
+
+    def _get_graph_display_name(self, graph):
+        """Get a display name for a graph."""
+        if graph == self.graph:
+            return "Mother Graph"
+        return getattr(graph, "graph_name", "SubGraph")
+
+    def start_processing_queue(self):
+        """Start processing the queue."""
+        if not self.graph_runner.get_queue():
+            self.status_bar.showMessage("Queue is empty")
+            return
+
+        # Connect to queue signals
+        try:
+            self.graph_runner.queue_item_started.disconnect()
+            self.graph_runner.queue_item_finished.disconnect()
+            self.graph_runner.queue_finished.disconnect()
+        except Exception:
+            pass
+
+        self.graph_runner.queue_item_started.connect(self._on_queue_item_started)
+        self.graph_runner.queue_item_finished.connect(self._on_queue_item_finished)
+        self.graph_runner.queue_finished.connect(self._on_queue_finished)
+
+        # Update UI state
+        self.start_queue_btn.setEnabled(False)
+        self.stop_queue_btn.setEnabled(True)
+
+        self.graph_runner.start_queue()
+
+    def stop_processing_queue(self):
+        """Stop the processing queue."""
+        self.graph_runner.stop_queue()
+        self.start_queue_btn.setEnabled(True)
+        self.stop_queue_btn.setEnabled(False)
+        self.queue_status_label.setText("Queue: Stopped")
+
+    def _on_queue_item_started(self, graph, iterations):
+        """Handle queue item starting."""
+        name = self._get_graph_display_name(graph)
+        self.queue_status_label.setText(f"Running: {name} ({iterations} iters)")
+        self._update_queue_display()
+
+    def _on_queue_item_finished(self, graph, iterations):
+        """Handle queue item finishing."""
+        name = self._get_graph_display_name(graph)
+        self.status_bar.showMessage(f"Completed: {name} ({iterations} iterations)")
+
+    def _on_queue_finished(self):
+        """Handle entire queue finishing."""
+        self.start_queue_btn.setEnabled(True)
+        self.stop_queue_btn.setEnabled(False)
+        self.queue_status_label.setText("Queue: Complete")
+        self.status_bar.showMessage("Processing queue completed")
+
+    def remove_selected_from_queue(self):
+        """Remove the selected item from the queue."""
+        if not hasattr(self, "queue_list"):
+            return
+        row = self.queue_list.currentRow()
+        if row >= 0:
+            self.graph_runner.remove_from_queue(row)
+            self._update_queue_display()
+
+    def clear_processing_queue(self):
+        """Clear the processing queue."""
+        self.graph_runner.clear_queue()
+        self._update_queue_display()
+        self.queue_status_label.setText("Queue: Empty")
+
+    def _update_queue_display(self):
+        """Update the queue list widget."""
+        if not hasattr(self, "queue_list"):
+            return
+
+        self.queue_list.clear()
+        queue = self.graph_runner.get_queue()
+
+        for i, (graph, iterations) in enumerate(queue):
+            name = self._get_graph_display_name(graph)
+            self.queue_list.addItem(f"{i + 1}. {name} - {iterations} iterations")
+
+        if queue:
+            self.queue_status_label.setText(f"Queue: {len(queue)} item(s)")
+        else:
+            self.queue_status_label.setText("Queue: Empty")
+
+    # === Phase 2: Per-Graph Reset Methods ===
+
+    def save_selected_graph_snapshot(self):
+        """Save a snapshot of the selected graph/subgraph."""
+        selected_graph = self.get_selected_processing_graph()
+        if selected_graph is None:
+            selected_graph = self.graph
+
+        self.graph_runner.save_graph_snapshot_for(selected_graph)
+        name = self._get_graph_display_name(selected_graph)
+        self.status_bar.showMessage(f"Saved snapshot for '{name}'")
+
+    def reset_selected_graph(self):
+        """Reset the selected graph/subgraph to its snapshot."""
+        selected_graph = self.get_selected_processing_graph()
+        if selected_graph is None:
+            selected_graph = self.graph
+
+        self.graph_runner.reset_graph(selected_graph)
+        name = self._get_graph_display_name(selected_graph)
+        self.status_bar.showMessage(f"Reset '{name}' to snapshot")
+
+        # Update canvas visuals
+        try:
+            self.canvas.viewport().update()
+        except Exception:
+            pass
+
     def rebuild_graph(self):
         """Rebuild the graph from canvas nodes and edges. Delegated to GraphEdgeController."""
         self.graph_edge_controller.rebuild_graph()
