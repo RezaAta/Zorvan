@@ -327,6 +327,64 @@ class MainWindow(QMainWindow):
         """Save the current graph to file."""
         self.file_io_controller.save_graph()
 
+    def save_selection_as_graph(self):
+        """Save selected nodes as a new graph file (Phase 3)."""
+        self.file_io_controller.save_selection_as_graph()
+
+    def import_graph_to_canvas(self):
+        """Import a graph file and merge it into current canvas (Phase 3)."""
+        self.file_io_controller.import_graph_to_canvas()
+
+    def create_subgraph_from_selection(self):
+        """Create a sub-graph from the currently selected nodes (Phase 3)."""
+        from PyQt6.QtWidgets import QInputDialog, QMessageBox
+
+        selected_items = [
+            item for item in self.canvas.scene.selectedItems() if hasattr(item, "node")
+        ]
+
+        if not selected_items:
+            QMessageBox.warning(
+                self, "No Selection", "Please select nodes to group into a sub-graph."
+            )
+            return
+
+        # Get the actual node objects
+        nodes = [item.node for item in selected_items]
+
+        # Prompt for sub-graph name
+        name, ok = QInputDialog.getText(
+            self,
+            "Create Sub-Graph",
+            "Enter a name for the sub-graph:",
+            text=f"Sub-Graph {len(getattr(self.graph, 'sub_graphs', [])) + 1}",
+        )
+
+        if not ok or not name.strip():
+            return
+
+        # Create the sub-graph
+        try:
+            subgraph = self.graph.create_subgraph_from_nodes(nodes, name.strip())
+            if subgraph:
+                # Refresh the canvas to show the visual grouping
+                self.canvas.refresh_subgraph_visuals()
+
+                # Update the graph selector dropdown
+                self.update_graph_selector()
+
+                # Notify via on_subgraph_created if available
+                if hasattr(self, "on_subgraph_created"):
+                    self.on_subgraph_created(subgraph)
+
+                QMessageBox.information(
+                    self,
+                    "Sub-Graph Created",
+                    f"Sub-graph '{name}' created with {len(nodes)} nodes.",
+                )
+        except ValueError as e:
+            QMessageBox.warning(self, "Cannot Create Sub-Graph", str(e))
+
     def edit_node(self, node_item):
         """Open editor dialog for a specific node item. Delegated to NodeEditingController."""
         self.node_editing_controller.edit_node(node_item)

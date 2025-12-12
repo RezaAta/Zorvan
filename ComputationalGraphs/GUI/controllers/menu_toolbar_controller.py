@@ -90,6 +90,24 @@ class MenuToolbarController:
         )
         mw.rebuild_action.triggered.connect(mw.rebuild_graph)
 
+        # === Phase 3: Save Selection, Import Graph, Create Subgraph ===
+        mw.save_selection_action = QAction("Save &Selection As...", mw)
+        mw.save_selection_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+        mw.save_selection_action.setStatusTip("Save selected nodes as a new graph file")
+        mw.save_selection_action.triggered.connect(mw.save_selection_as_graph)
+
+        mw.import_graph_action = QAction("&Import Graph...", mw)
+        mw.import_graph_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
+        mw.import_graph_action.setStatusTip(
+            "Import a graph file and add it to the current canvas"
+        )
+        mw.import_graph_action.triggered.connect(mw.import_graph_to_canvas)
+
+        mw.create_subgraph_action = QAction("Create Sub-&Graph from Selection", mw)
+        mw.create_subgraph_action.setShortcut(QKeySequence("Ctrl+G"))
+        mw.create_subgraph_action.setStatusTip("Group selected nodes into a sub-graph")
+        mw.create_subgraph_action.triggered.connect(mw.create_subgraph_from_selection)
+
     def create_menus(self):
         """Create menu bar."""
         mw = self.main_window
@@ -99,7 +117,10 @@ class MenuToolbarController:
         file_menu = menubar.addMenu("&File")
         file_menu.addAction(mw.new_action)
         file_menu.addAction(mw.open_action)
+        file_menu.addAction(mw.import_graph_action)  # Phase 3: Import
+        file_menu.addSeparator()
         file_menu.addAction(mw.save_action)
+        file_menu.addAction(mw.save_selection_action)  # Phase 3: Save Selection
         file_menu.addSeparator()
 
         # Examples submenu
@@ -120,6 +141,8 @@ class MenuToolbarController:
         edit_menu.addAction(mw.cut_action)
         edit_menu.addAction(mw.paste_action)
         edit_menu.addAction(mw.edit_node_action)
+        edit_menu.addSeparator()
+        edit_menu.addAction(mw.create_subgraph_action)  # Phase 3: Ctrl+G
 
         # Tools menu
         tools_menu = menubar.addMenu("&Tools")

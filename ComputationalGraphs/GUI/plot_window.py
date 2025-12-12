@@ -178,6 +178,10 @@ class PlotWindow(QWidget):
         self.data = {node: [] for node in nodes}
         self.iterations = []
 
+        # Phase 3: Active subgraph tracking for plot optimization
+        self._active_subgraph = None  # Currently processing subgraph
+        self._track_active_only = False  # When True, skip nodes not in active subgraph
+
         # Colors for different nodes
         self.colors = [
             "#1f77b4",
@@ -232,6 +236,15 @@ class PlotWindow(QWidget):
         self.autoscale_check = QCheckBox("Auto-scale Y")
         self.autoscale_check.setChecked(True)
         control_layout.addWidget(self.autoscale_check)
+
+        # Phase 3: Track only active subgraph checkbox
+        self.track_active_check = QCheckBox("Track active subgraph only")
+        self.track_active_check.setToolTip(
+            "When enabled, only update values for nodes in the currently "
+            "processing subgraph (prevents flat lines during queue runs)"
+        )
+        self.track_active_check.stateChanged.connect(self._on_track_active_changed)
+        control_layout.addWidget(self.track_active_check)
 
         control_layout.addStretch()
 
@@ -402,16 +415,43 @@ class PlotWindow(QWidget):
                     pass
         self.canvas.draw()
 
-    def update_plot(self, iteration):
-        """Update plot with current node values."""
+    def update_plot(self, iteration, active_subgraph=None):
+        """Update plot with current node values.
+
+        Args:
+            iteration: Current iteration number
+            active_subgraph: Optional Graph object representing the currently
+                           processing subgraph. Used for optimization.
+        """
         self.current_iteration = iteration
         self.iteration_label.setText(
             "Iteration: {} / {}".format(iteration, self.max_iterations)
         )
 
+        # Update active subgraph reference
+        if active_subgraph is not None:
+            self._active_subgraph = active_subgraph
+
+        # Determine which nodes to update based on tracking mode
+        if self._track_active_only and self._active_subgraph is not None:
+            # Get nodes in the active subgraph
+            active_nodes = set(getattr(self._active_subgraph, "nodes", []))
+            nodes_to_update = [n for n in self.nodes if n in active_nodes]
+        else:
+            nodes_to_update = self.nodes
+
         # Collect current values
         self.iterations.append(iteration)
         for node in self.nodes:
+            # Skip nodes not in active subgraph when tracking is enabled
+            if node not in nodes_to_update:
+                # Append the previous value (or 0) to keep arrays aligned
+                if self.data[node]:
+                    self.data[node].append(self.data[node][-1])
+                else:
+                    self.data[node].append(0)
+                continue
+
             value = node.value
             # Handle list/array values (take first element or compute mean)
             if isinstance(value, (list, tuple)):
@@ -464,6 +504,21 @@ class PlotWindow(QWidget):
         self.ax.set_xlim(0, self.max_iterations)
         self.iteration_label.setText("Iteration: 0 / {}".format(self.max_iterations))
         self.canvas.draw()
+
+    # === Phase 3: Active subgraph tracking ===
+
+    def _on_track_active_changed(self, state):
+        """Handle track active subgraph checkbox state change."""
+        self._track_active_only = state == 2  # Qt.CheckState.Checked
+
+    def set_active_subgraph(self, subgraph):
+        """Set the currently active subgraph for tracking.
+
+        Args:
+            subgraph: Graph object representing the active subgraph,
+                     or None for the mother graph
+        """
+        self._active_subgraph = subgraph
 
     def closeEvent(self, event):
         """Handle window close event."""

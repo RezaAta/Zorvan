@@ -207,7 +207,8 @@ class ExecutionController:
                 and self.main_window.plot_window
                 and self.main_window.plot_window.isVisible()
             ):
-                self.main_window.plot_window.update_plot(new_step)
+                active_sg = self.graph_runner.get_processing_graph()
+                self.main_window.plot_window.update_plot(new_step, active_sg)
 
             self.status_bar.showMessage(
                 f"Batch resume complete: {additional_steps} steps (total: {new_step})"
@@ -355,7 +356,8 @@ class ExecutionController:
                 and self.main_window.plot_window
                 and self.main_window.plot_window.isVisible()
             ):
-                self.main_window.plot_window.update_plot(max_steps)
+                active_sg = self.graph_runner.get_processing_graph()
+                self.main_window.plot_window.update_plot(max_steps, active_sg)
 
             self.status_bar.showMessage(
                 f"Batch mode complete: {max_steps} steps executed"
@@ -381,7 +383,8 @@ class ExecutionController:
                 and self.main_window.plot_window.isVisible()
             ):
                 try:
-                    self.main_window.plot_window.update_plot(step)
+                    active_sg = self.graph_runner.get_processing_graph()
+                    self.main_window.plot_window.update_plot(step, active_sg)
                 except Exception:
                     pass
             return
@@ -410,7 +413,8 @@ class ExecutionController:
             and self.main_window.plot_window
             and self.main_window.plot_window.isVisible()
         ):
-            self.main_window.plot_window.update_plot(step)
+            active_sg = self.graph_runner.get_processing_graph()
+            self.main_window.plot_window.update_plot(step, active_sg)
 
     def on_execution_finished(self):
         """Handle execution completion callback."""

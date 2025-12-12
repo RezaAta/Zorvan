@@ -121,8 +121,9 @@ class PlottingController:
 
             # Update plot with current iteration (if graph is running)
             if hasattr(self.main_window.graph_runner, "_iteration_counter"):
+                active_sg = self.main_window.graph_runner.get_processing_graph()
                 self.plot_window.update_plot(
-                    self.main_window.graph_runner._iteration_counter
+                    self.main_window.graph_runner._iteration_counter, active_sg
                 )
 
             self.status_bar.showMessage(f"Plotting {len(selected_nodes)} nodes")

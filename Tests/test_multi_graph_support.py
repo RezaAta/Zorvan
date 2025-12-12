@@ -529,5 +529,213 @@ class TestSubGraphFiltering:
         assert d in main_only
 
 
+# =============================================================================
+# Phase 3 Tests: Advanced Features (Core Logic - No GUI Required)
+# =============================================================================
+
+
+class TestSaveSelectionLogic:
+    """Tests for save_selection logic (core functionality, no GUI)."""
+
+    def test_temp_graph_from_selected_nodes(self, tmp_path):
+        """Creating a temp graph from selected nodes only includes those nodes."""
+        import json
+
+        # Create a graph with 3 nodes, we'll "select" a and b
+        main_graph = Graph(name="Main")
+        a = ContainerNode("a", value=10)
+        b = ContainerNode("b", value=20)
+        c = AdditionNode("c")
+        c.AddPreNode(a, b)
+        main_graph.AddNode(a, b, c)
+        main_graph.UpdateAdjacencyMatrix()
+
+        # Simulate "selection" - create temp graph with only a and b
+        selected_nodes = [a, b]
+        temp_graph = Graph(name="Selection")
+        for node in selected_nodes:
+            temp_graph.AddNode(node)
+        temp_graph.UpdateAdjacencyMatrix()
+
+        # Save without positions (canvas=None)
+        file_path = tmp_path / "selection.cgjson"
+        CGJsonIO.save(temp_graph, str(file_path), canvas=None)
+
+        # Verify
+        with open(file_path, "r") as f:
+            data = json.load(f)
+        assert len(data["nodes"]) == 2
+        node_names = [n["name"] for n in data["nodes"]]
+        assert "a" in node_names
+        assert "b" in node_names
+        assert "c" not in node_names
+
+    def test_external_edges_not_saved(self, tmp_path):
+        """Edges to nodes outside selection are not saved."""
+        import json
+
+        # a -> b -> c (only save b)
+        a = ContainerNode("a", value=1)
+        b = ContainerNode("b", value=2)
+        c = AdditionNode("c")
+        b.AddPreNode(a)
+        c.AddPreNode(b)
+
+        main_graph = Graph(name="Main")
+        main_graph.AddNode(a, b, c)
+        main_graph.UpdateAdjacencyMatrix()
+
+        # Create temp graph with only b
+        temp_graph = Graph(name="Selection")
+        # Clone b without its external connections
+        temp_b = ContainerNode("b", value=2)  # Fresh node, no predecessors
+        temp_graph.AddNode(temp_b)
+        temp_graph.UpdateAdjacencyMatrix()
+
+        file_path = tmp_path / "single_node.cgjson"
+        CGJsonIO.save(temp_graph, str(file_path), canvas=None)
+
+        with open(file_path, "r") as f:
+            data = json.load(f)
+        assert len(data["nodes"]) == 1
+        assert data["nodes"][0]["name"] == "b"
+        assert len(data.get("edges", [])) == 0
+
+
+class TestImportGraphLogic:
+    """Tests for import_graph logic (core functionality, no GUI)."""
+
+    def test_node_renaming_on_conflict(self):
+        """Importing renames nodes that conflict with existing names."""
+        # Existing graph has node "a"
+        existing_names = {"a", "b"}
+
+        # Imported graph has node "a" which conflicts
+        import_name = "a"
+
+        # Rename logic: find unique name
+        new_name = import_name
+        counter = 1
+        while new_name in existing_names:
+            new_name = f"{import_name}_{counter}"
+            counter += 1
+
+        assert new_name == "a_1"
+        existing_names.add(new_name)
+
+        # Another conflict
+        import_name2 = "a"
+        new_name2 = import_name2
+        counter = 1
+        while new_name2 in existing_names:
+            new_name2 = f"{import_name2}_{counter}"
+            counter += 1
+
+        assert new_name2 == "a_2"
+
+    def test_merge_adds_nodes_to_graph(self, tmp_path):
+        """Merging a loaded graph adds its nodes to the existing graph."""
+        # Create existing graph
+        existing = Graph(name="Existing")
+        e1 = ContainerNode("e1", value=1)
+        existing.AddNode(e1)
+        existing.UpdateAdjacencyMatrix()
+
+        # Create graph to import
+        import_graph = Graph(name="Import")
+        i1 = ContainerNode("i1", value=100)
+        i2 = ContainerNode("i2", value=200)
+        import_graph.AddNode(i1, i2)
+        import_graph.UpdateAdjacencyMatrix()
+
+        # Save to file (canvas=None for no positions)
+        file_path = tmp_path / "import.cgjson"
+        CGJsonIO.save(import_graph, str(file_path), canvas=None)
+
+        # Load and merge (load returns just a Graph)
+        loaded_graph = CGJsonIO.load(str(file_path))
+
+        # Merge nodes into existing (simulating what file_io_controller does)
+        for node in loaded_graph.nodes:
+            existing.AddNode(node)
+        existing.UpdateAdjacencyMatrix()
+
+        # Should have 3 nodes total
+        assert len(existing.nodes) == 3
+        names = [n.name for n in existing.nodes]
+        assert "e1" in names
+        assert "i1" in names
+        assert "i2" in names
+
+
+class TestPlotSubgraphTrackingLogic:
+    """Tests for plot subgraph tracking logic (no GUI required)."""
+
+    def test_filter_nodes_by_active_subgraph(self):
+        """Nodes can be filtered by active subgraph membership."""
+        # Create main graph and subgraph
+        main = Graph(name="Main")
+        a = ContainerNode("a", value=10)
+        b = ContainerNode("b", value=20)
+        c = ContainerNode("c", value=30)
+        main.AddNode(a, b, c)
+        main.UpdateAdjacencyMatrix()
+
+        # Create subgraph and assign a, b to it
+        sub = main.create_subgraph_from_nodes([a, b], "Active")
+        # c is not in subgraph
+
+        all_nodes = [a, b, c]
+
+        # Filter nodes in active subgraph
+        active_nodes = [n for n in all_nodes if n.sub_graph_id == sub.graph_id]
+        assert len(active_nodes) == 2
+        assert a in active_nodes
+        assert b in active_nodes
+        assert c not in active_nodes
+
+    def test_skip_update_for_non_subgraph_nodes(self):
+        """Simulates plot update logic that skips non-subgraph nodes."""
+        # Create main graph with subgraph
+        main = Graph(name="Main")
+        a = ContainerNode("a", value=10)
+        b = ContainerNode("b", value=20)
+        main.AddNode(a, b)
+        main.UpdateAdjacencyMatrix()
+
+        # a is in subgraph, b is not
+        sub = main.create_subgraph_from_nodes([a], "Active")
+
+        # Simulate plot data storage
+        plot_data = {}
+
+        # Initial update (no filter)
+        plot_data[a] = [(0, a.value)]
+        plot_data[b] = [(0, b.value)]
+
+        # Change values
+        a.value = 15
+        b.value = 25
+
+        # Update with filter (track active only)
+        track_active_only = True
+        active_subgraph = sub
+
+        for node in [a, b]:
+            if track_active_only and active_subgraph:
+                if node.sub_graph_id != active_subgraph.graph_id:
+                    # Skip this node - don't update
+                    continue
+            plot_data[node].append((1, node.value))
+
+        # a should have 2 entries (updated)
+        assert len(plot_data[a]) == 2
+        assert plot_data[a][-1][1] == 15
+
+        # b should only have 1 entry (skipped)
+        assert len(plot_data[b]) == 1
+        assert plot_data[b][-1][1] == 20  # Original value
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
