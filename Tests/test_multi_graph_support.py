@@ -397,17 +397,24 @@ class TestProcessingQueue:
         assert len(runner.get_queue()) == 0
 
     def test_queue_repeat_mode(self):
-        """Can set and check queue repeat mode."""
+        """Can set and check queue repeat mode with count."""
         from ComputationalGraphs.GUI.graph_runner import GraphRunner
 
         runner = GraphRunner()
 
         # Default is no repeat
         assert runner.is_queue_repeat() is False
+        assert runner.get_queue_repeat_count() == 0
 
-        # Enable repeat
-        runner.set_queue_repeat(True)
+        # Enable repeat with infinite (0)
+        runner.set_queue_repeat(True, 0)
         assert runner.is_queue_repeat() is True
+        assert runner.get_queue_repeat_count() == 0
+
+        # Enable repeat with specific count
+        runner.set_queue_repeat(True, 10)
+        assert runner.is_queue_repeat() is True
+        assert runner.get_queue_repeat_count() == 10
 
         # Disable repeat
         runner.set_queue_repeat(False)

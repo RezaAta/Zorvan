@@ -57,6 +57,8 @@ class GraphRunner(QObject):
         self._per_graph_snapshots = {}
         # Repeat mode: restart queue from beginning after completion
         self._queue_repeat = False
+        self._queue_repeat_count = 0  # 0 = infinite, N = repeat N times
+        self._queue_repeat_current = 0  # Current repeat iteration
 
     def set_graph(self, graph):
         """Set the graph to execute."""
@@ -972,17 +974,24 @@ class GraphRunner(QObject):
         """
         return list(self._processing_queue)
 
-    def set_queue_repeat(self, repeat: bool):
+    def set_queue_repeat(self, repeat: bool, count: int = 0):
         """Set whether the queue should repeat after completion.
 
         Args:
-            repeat: True to repeat the queue indefinitely
+            repeat: True to enable repeat mode
+            count: Number of times to repeat (0 = infinite)
         """
         self._queue_repeat = repeat
+        self._queue_repeat_count = count
+        self._queue_repeat_current = 0
 
     def is_queue_repeat(self) -> bool:
         """Check if queue repeat mode is enabled."""
         return self._queue_repeat
+
+    def get_queue_repeat_count(self) -> int:
+        """Get the queue repeat count (0 = infinite)."""
+        return self._queue_repeat_count
 
     def remove_from_queue(self, index):
         """Remove an item from the queue by index.
@@ -1006,6 +1015,7 @@ class GraphRunner(QObject):
             return  # Already running
 
         self._queue_running = True
+        self._queue_repeat_current = 0  # Reset repeat counter
         self._current_queue_index = 0
         self._run_next_queue_item()
 
@@ -1014,9 +1024,15 @@ class GraphRunner(QObject):
         if self._current_queue_index >= len(self._processing_queue):
             # Queue finished - check if we should repeat
             if self._queue_repeat and self._processing_queue:
-                self._current_queue_index = 0
-                self._run_next_queue_item()
-                return
+                self._queue_repeat_current += 1
+                # Check if we've reached the repeat limit (0 = infinite)
+                if (
+                    self._queue_repeat_count == 0
+                    or self._queue_repeat_current < self._queue_repeat_count
+                ):
+                    self._current_queue_index = 0
+                    self._run_next_queue_item()
+                    return
             self._queue_running = False
             self.queue_finished.emit()
             return

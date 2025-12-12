@@ -430,10 +430,15 @@ class MainWindow(QMainWindow):
         self.graph_runner.queue_item_finished.connect(self._on_queue_item_finished)
         self.graph_runner.queue_finished.connect(self._on_queue_finished)
 
-        # Set repeat mode from checkbox
-        repeat = getattr(self, "queue_repeat_check", None)
-        if repeat is not None:
-            self.graph_runner.set_queue_repeat(repeat.isChecked())
+        # Set repeat mode from checkbox and spinbox
+        repeat_check = getattr(self, "queue_repeat_check", None)
+        repeat_spin = getattr(self, "queue_repeat_spin", None)
+        if repeat_check is not None and repeat_spin is not None:
+            if repeat_check.isChecked():
+                # 0 = infinite, N = repeat N times
+                self.graph_runner.set_queue_repeat(True, repeat_spin.value())
+            else:
+                self.graph_runner.set_queue_repeat(False, 0)
 
         # Update UI state
         self.start_queue_btn.setEnabled(False)
@@ -447,6 +452,12 @@ class MainWindow(QMainWindow):
         self.start_queue_btn.setEnabled(True)
         self.stop_queue_btn.setEnabled(False)
         self.queue_status_label.setText("Queue: Stopped")
+
+    def on_queue_repeat_changed(self, state):
+        """Handle repeat checkbox state change."""
+        enabled = state == 2  # Qt.CheckState.Checked
+        if hasattr(self, "queue_repeat_spin"):
+            self.queue_repeat_spin.setEnabled(enabled)
 
     def _on_queue_item_started(self, graph, iterations):
         """Handle queue item starting."""

@@ -447,12 +447,24 @@ class ControlPanelBuilder:
         add_row.addWidget(mw.add_to_queue_btn)
         layout.addLayout(add_row)
 
-        # Repeat checkbox
-        mw.queue_repeat_check = QCheckBox("🔁 Repeat Queue")
+        # Repeat controls
+        repeat_row = QHBoxLayout()
+        mw.queue_repeat_check = QCheckBox("🔁 Repeat")
         mw.queue_repeat_check.setToolTip(
             "When checked, queue will restart from beginning after completing"
         )
-        layout.addWidget(mw.queue_repeat_check)
+        mw.queue_repeat_check.stateChanged.connect(mw.on_queue_repeat_changed)
+        repeat_row.addWidget(mw.queue_repeat_check)
+
+        mw.queue_repeat_spin = QSpinBox()
+        mw.queue_repeat_spin.setRange(0, 10000)
+        mw.queue_repeat_spin.setValue(0)
+        mw.queue_repeat_spin.setToolTip("Repeat count: 0 = forever, N = repeat N times")
+        mw.queue_repeat_spin.setEnabled(False)  # Disabled until repeat is checked
+        repeat_row.addWidget(mw.queue_repeat_spin)
+        repeat_row.addWidget(QLabel("times (0=∞)"))
+        repeat_row.addStretch()
+        layout.addLayout(repeat_row)
 
         # Queue control buttons
         btn_row1 = QHBoxLayout()
