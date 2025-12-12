@@ -303,7 +303,7 @@ class FileIOController:
         """Merge an imported graph into the current canvas.
 
         Args:
-            imported_graph: The Graph object to merge
+            imported_graph: The Graph object to merge (already has nodes connected)
         """
         from ComputationalGraphs.GUI.node_item import NodeItem
 
@@ -317,13 +317,16 @@ class FileIOController:
         # Add padding below existing nodes
         offset_y = existing_bottom + 100 if existing_bottom > 0 else 0
 
-        # Calculate centroid of imported nodes to center them
+        # Collect positions from imported nodes (using gui_pos attribute set by CGJsonIO.load)
         imported_positions = []
         for node in imported_graph.nodes:
-            x = getattr(node, "_visual_x", 0) or 0
-            y = getattr(node, "_visual_y", 0) or 0
-            imported_positions.append((x, y))
+            pos = getattr(node, "gui_pos", None)
+            if pos and isinstance(pos, (list, tuple)) and len(pos) >= 2:
+                imported_positions.append((float(pos[0]), float(pos[1])))
+            else:
+                imported_positions.append((0.0, 0.0))
 
+        # Calculate centroid of imported nodes
         if imported_positions:
             center_x = sum(p[0] for p in imported_positions) / len(imported_positions)
             center_y = sum(p[1] for p in imported_positions) / len(imported_positions)
@@ -333,53 +336,38 @@ class FileIOController:
         # Get canvas center for horizontal positioning
         canvas_center_x = self.canvas.viewport().width() / 2
 
-        # Map old nodes to new nodes for edge reconstruction
+        # Get existing node names for conflict detection
+        existing_names = {n.name for n in self.graph.nodes}
+
+        # Map old nodes to new nodes (for name conflict handling)
         old_to_new = {}
 
-        # Import each node
+        # Import each node - use the actual loaded node (preserves connections)
         for i, node in enumerate(imported_graph.nodes):
-            # Generate unique name
             original_name = getattr(node, "name", f"Imported_{i}")
-            unique_name = self.canvas._generate_unique_name(original_name)
 
-            # Get node class and create new instance
-            node_class = type(node)
-            try:
-                new_node = node_class(unique_name)
-            except TypeError:
-                # Some nodes require additional constructor args
-                try:
-                    new_node = node_class(name=unique_name)
-                except Exception:
-                    # Last resort: create with just name
-                    from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
+            # Check for name conflicts and rename if needed
+            if original_name in existing_names:
+                unique_name = self._generate_unique_name(original_name, existing_names)
+                node.name = unique_name
 
-                    new_node = ContainerNode(unique_name)
+            existing_names.add(node.name)
 
-            # Copy attributes
-            for attr in ["value", "data", "size", "batchSize"]:
-                if hasattr(node, attr):
-                    try:
-                        setattr(new_node, attr, getattr(node, attr))
-                    except Exception:
-                        pass
+            # Add to current graph (the node already has its connections from CGJsonIO.load)
+            self.graph.AddNode(node)
 
-            # Add to current graph
-            self.graph.AddNode(new_node)
+            # Calculate position with offset (preserve relative layout)
+            old_x, old_y = imported_positions[i]
 
-            # Calculate position with offset
-            old_x = getattr(node, "_visual_x", 0) or imported_positions[i][0]
-            old_y = getattr(node, "_visual_y", 0) or imported_positions[i][1]
-
-            # Shift to canvas center and below existing nodes
+            # Shift: center horizontally, offset vertically below existing nodes
             new_x = old_x - center_x + canvas_center_x
             new_y = old_y - center_y + offset_y + 100
 
-            # Create visual node item
-            node_item = self.canvas.add_node_item(new_node, new_x, new_y)
+            # Create visual node item at the computed position
+            node_item = self.canvas.add_node_item(node, new_x, new_y)
 
-            # Copy color if available
-            old_color = getattr(node, "_visual_color", None)
+            # Copy color if available (from gui_color attribute)
+            old_color = getattr(node, "gui_color", None)
             if old_color and node_item:
                 try:
                     from PyQt6.QtGui import QColor
@@ -389,23 +377,19 @@ class FileIOController:
                 except Exception:
                     pass
 
-            old_to_new[node] = new_node
+            old_to_new[node] = node
 
-        # Reconstruct edges (only internal to imported graph)
-        for old_node in imported_graph.nodes:
-            new_node = old_to_new.get(old_node)
-            if not new_node:
+        # Create visual edges for all connections in imported graph
+        # The nodes already have predecessors set by CGJsonIO.load, we just need visual edges
+        for node in imported_graph.nodes:
+            target_item = self.canvas.node_items.get(node)
+            if not target_item:
                 continue
 
-            for pred in getattr(old_node, "predecessors", []):
-                new_pred = old_to_new.get(pred)
-                if new_pred:
-                    # Connect in graph
-                    new_node.AddPreNode(new_pred)
-
-                    # Create visual edge
-                    source_item = self.canvas.node_items.get(new_pred)
-                    target_item = self.canvas.node_items.get(new_node)
+            for pred in getattr(node, "predecessors", []):
+                # Only create edge if predecessor is also in imported graph
+                if pred in old_to_new:
+                    source_item = self.canvas.node_items.get(pred)
                     if source_item and target_item:
                         self.canvas.add_edge_item(source_item, target_item)
 
@@ -423,3 +407,12 @@ class FileIOController:
         except Exception:
             # If subgraph creation fails, nodes are still imported
             pass
+
+    def _generate_unique_name(self, base_name, existing_names):
+        """Generate a unique name by appending _N suffix."""
+        if base_name not in existing_names:
+            return base_name
+        counter = 1
+        while f"{base_name}_{counter}" in existing_names:
+            counter += 1
+        return f"{base_name}_{counter}"
