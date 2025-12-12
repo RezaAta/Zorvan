@@ -430,6 +430,11 @@ class MainWindow(QMainWindow):
         self.graph_runner.queue_item_finished.connect(self._on_queue_item_finished)
         self.graph_runner.queue_finished.connect(self._on_queue_finished)
 
+        # Set repeat mode from checkbox
+        repeat = getattr(self, "queue_repeat_check", None)
+        if repeat is not None:
+            self.graph_runner.set_queue_repeat(repeat.isChecked())
+
         # Update UI state
         self.start_queue_btn.setEnabled(False)
         self.stop_queue_btn.setEnabled(True)

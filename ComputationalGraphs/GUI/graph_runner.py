@@ -55,6 +55,8 @@ class GraphRunner(QObject):
         self._current_queue_index = 0
         # Per-graph snapshots: {graph_id: snapshot_dict}
         self._per_graph_snapshots = {}
+        # Repeat mode: restart queue from beginning after completion
+        self._queue_repeat = False
 
     def set_graph(self, graph):
         """Set the graph to execute."""
@@ -970,6 +972,18 @@ class GraphRunner(QObject):
         """
         return list(self._processing_queue)
 
+    def set_queue_repeat(self, repeat: bool):
+        """Set whether the queue should repeat after completion.
+
+        Args:
+            repeat: True to repeat the queue indefinitely
+        """
+        self._queue_repeat = repeat
+
+    def is_queue_repeat(self) -> bool:
+        """Check if queue repeat mode is enabled."""
+        return self._queue_repeat
+
     def remove_from_queue(self, index):
         """Remove an item from the queue by index.
 
@@ -998,7 +1012,11 @@ class GraphRunner(QObject):
     def _run_next_queue_item(self):
         """Internal: Run the next item in the queue."""
         if self._current_queue_index >= len(self._processing_queue):
-            # Queue finished
+            # Queue finished - check if we should repeat
+            if self._queue_repeat and self._processing_queue:
+                self._current_queue_index = 0
+                self._run_next_queue_item()
+                return
             self._queue_running = False
             self.queue_finished.emit()
             return

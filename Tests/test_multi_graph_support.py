@@ -396,6 +396,23 @@ class TestProcessingQueue:
         runner.clear_queue()
         assert len(runner.get_queue()) == 0
 
+    def test_queue_repeat_mode(self):
+        """Can set and check queue repeat mode."""
+        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+
+        runner = GraphRunner()
+
+        # Default is no repeat
+        assert runner.is_queue_repeat() is False
+
+        # Enable repeat
+        runner.set_queue_repeat(True)
+        assert runner.is_queue_repeat() is True
+
+        # Disable repeat
+        runner.set_queue_repeat(False)
+        assert runner.is_queue_repeat() is False
+
 
 class TestPerGraphSnapshots:
     """Test per-graph snapshot functionality (Phase 2)."""

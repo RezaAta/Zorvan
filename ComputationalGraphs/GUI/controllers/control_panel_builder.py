@@ -50,7 +50,6 @@ class ControlPanelBuilder:
 
         # Build section containers
         exec_container = self._build_execution_section()
-        queue_container = self._build_queue_section()
         viz_container = self._build_visualization_section()
         layout_container = self._build_layout_section()
         plot_container = self._build_plotting_section()
@@ -59,11 +58,8 @@ class ControlPanelBuilder:
         # Import CollapsibleSection from main_window
         from ..main_window import CollapsibleSection
 
-        # Add collapsible sections
+        # Add collapsible sections (queue is now inside execution)
         layout.addWidget(CollapsibleSection("Execution", exec_container, expanded=True))
-        layout.addWidget(
-            CollapsibleSection("Processing Queue", queue_container, expanded=False)
-        )
         layout.addWidget(CollapsibleSection("Layout", layout_container, expanded=True))
         layout.addWidget(
             CollapsibleSection("Visualization", viz_container, expanded=False)
@@ -155,6 +151,14 @@ class ControlPanelBuilder:
         mw.step_label = QLabel("Step: 0")
         layout.addWidget(mw.step_label)
         layout.addWidget(QLabel(""))  # Spacer
+
+        # Add processing queue as collapsible sub-section inside execution
+        from ..main_window import CollapsibleSection
+
+        queue_container = self._build_queue_section()
+        layout.addWidget(
+            CollapsibleSection("📋 Processing Queue", queue_container, expanded=False)
+        )
 
         return container
 
@@ -412,7 +416,6 @@ class ControlPanelBuilder:
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel("<b>Processing Queue</b>"))
         layout.addWidget(
             QLabel("Run graphs/subgraphs sequentially with specified iterations.")
         )
@@ -436,13 +439,20 @@ class ControlPanelBuilder:
         mw.queue_iterations_spin.setValue(100)
         add_row.addWidget(mw.queue_iterations_spin)
 
-        mw.add_to_queue_btn = QPushButton("Add Selected Graph")
+        mw.add_to_queue_btn = QPushButton("+ Add")
         mw.add_to_queue_btn.setToolTip(
             "Add the currently selected graph/subgraph to the queue"
         )
         mw.add_to_queue_btn.clicked.connect(mw.add_selected_graph_to_queue)
         add_row.addWidget(mw.add_to_queue_btn)
         layout.addLayout(add_row)
+
+        # Repeat checkbox
+        mw.queue_repeat_check = QCheckBox("🔁 Repeat Queue")
+        mw.queue_repeat_check.setToolTip(
+            "When checked, queue will restart from beginning after completing"
+        )
+        layout.addWidget(mw.queue_repeat_check)
 
         # Queue control buttons
         btn_row1 = QHBoxLayout()
