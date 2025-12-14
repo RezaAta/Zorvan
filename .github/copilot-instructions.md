@@ -1,39 +1,43 @@
-# ComputationalGraphs - AI Coding Agent Instructions
+# Copilot Instructions (Concise)
 
-## Agent Guidance for Copilot
+These concise rules help AI coding agents make productive, correct edits in this repo.
 
-These quick, actionable rules are intended for AI coding assistants (Copilot/agents) working on this repository.
+- Quick Commands:
+  - Create virtualenv & bootstrap (Windows PowerShell):
+    ```powershell
+    python -m venv .venv
+    .\.venv\Scripts\Activate.ps1
+    .\scripts\bootstrap.ps1
+    ```
+  - Run GUI: `python run_gui.py`
+  - Quick tests: `python ClassicMLPTestOnXOR.py`, `python CompareThreeApproaches.py`
+  - Full test suite: `pytest -q`
 
-- **Respect Node-Centric Design:** Prefer fixes that preserve the node-as-actor philosophy. Avoid refactoring that converts node logic into large centralized operations.
-- **Small, Focused Edits:** Make minimal, surgical changes. Fix root causes where practical, but avoid unrelated refactors.
-- **Don't change buffer timing lightly:** Buffer sizing and timing (e.g., `(layersAhead * 6)`) are delicate — do not modify buffer formulas without understanding timing and testing consequences.
-- **Forward processing is preferred for training:** If making changes that affect training stability, consider the forward-processing implementation first (see `MLPGraphForwardProcessing.py`).
-- **Mark ContainerNodes and source nodes carefully:** Forward-processing setup requires marking source nodes and `ContainerNode`s as processed for the initial forward pass. Preserve or follow `PrepareForForwardProcessing` behavior.
-- **Follow repository editing rules:** Use `apply_patch` for edits, run tests when possible, and keep changes minimal and well-documented.
-- **Testing:** When modifying core graph or backprop code, run the small example tests (e.g., `ClassicMLPTestOnXOR.py`, `CompareThreeApproaches.py`) to validate behavior.
-- **Naming conventions matter:** When programmatically accessing weights, use the `W_x...` / `W_H...` patterns in node names.
-- **Ask before major design changes:** If a change impacts core execution model (concurrent vs forward processing), propose the design and get confirmation before implementing.
+- Big picture: Node-centric computational graphs. Nodes are active actors; Graphs orchestrate nodes.
+- Processing modes: `concurrent` (buffers) vs `forward` (active node propagation). They are distinct — don’t mix models without a design change.
+- Key files: `ComputationalGraphs/Core/Graph.py`, `GraphProcessor.py`, `MLPGraph.py`, `MLPGraphForwardProcessing.py`, `BackpropGraph.py`, `BackpropGraphForwardProcessing.py`.
+- Important nodes: `ContainerNode` (weights), `BufferNode` (timing), `DataStreamNode` (inputs), `MultiplicationNode`, activations.
+- Conventions & gotchas:
+  - Weight node naming: `W_x{input}H{layer}N{neuron}` and `W_H{layer}N{node}y{output}`.
+  - Data shapes differ: `MLPGraph`=features x samples; forward MLP=samples x features.
+  - Buffer size formula: `(layersAhead * 6)`—don’t change lightly.
+  - Call `graph.UpdateAdjacencyMatrix()` after modifying connections.
+  - Forward-processing: call `mlp.PrepareForForwardProcessing(processor)` to mark sources & `ContainerNode`s processed.
 
-## Research Context & Thesis
+- When editing:
+  - Prefer small, focused edits. Use `apply_patch` for file edits; add tests for behavioral changes.
+  - For backprop/MLP edits add tests (e.g., XOR) and run quick sanity checks.
+  - Avoid moving node-local logic into a central controller—nodes are actors.
 
-This framework proves that **all computational models can be implemented as computational graphs** - a unified framework spanning from simple automata to complex neural networks. The thesis enables:
-- **Architecture comparison** across traditionally disparate model families
-- **Hybrid models** without reimplementation (combining ANN, fuzzy logic, evolutionary algorithms)
-- **Universal architecture search** approaches applicable across model types (potential path to AGI)
+- Integration & testing:
+  - GUI: `run_gui.py` and `ComputationalGraphs/GUI/` for visual debugging.
+  - Examples: `Examples/` and the `Compare*` scripts provide representative workflows.
+  - Run `pytest -q`; GUI tests require `requirements_gui.txt` and Xvfb on CI for headless runs.
 
-The framework currently implements 3 model families (MLP, Fuzzy Systems, Evolutionary Algorithms) and is moving toward hybridization.
+- Contribution notes: follow `AGENT_POLICY.md` and `DEVELOPER_GUIDE.md` (TDD, small commits, `git cz`, pre-commit hooks).
 
-## Core Architecture: Two Processing Paradigms
+If a change touches the core execution model or timing (concurrent vs forward), open an issue and get design approval before implementing.
 
-### Philosophical Foundation: Node-Centric Design
-
-**This is NOT a data representation graph** - it's a computational model where:
-- **Nodes are actors**: Each node performs computation on received data (not just displays it)
-- **Nodes are central**: Unlike traditional graph frameworks that transform to adjacency matrices, nodes remain the primary abstraction
-- **Graph is housing**: The Graph structure manages nodes and connections, but nodes drive behavior
-- **Nodes are atomic**: Each outputs exactly 1 instance (prefer single values over arrays, though arrays count as 1 instance)
-
-This design enables emergent behavior in complex systems - the intelligence comes from node interactions, not centralized graph operations.
 
 ### 1. Concurrent Processing (`ComputeGraph`)
 **Inspiration**: Complex systems and emergent behavior in parallel networks
