@@ -23,7 +23,7 @@ class ClassicMLP:
             hidden_layers: List specifying neurons per hidden layer (e.g., [10, 5, 3])
                           If None, will create num_hidden_layers with input_size neurons each
             num_hidden_layers: Number of hidden layers (only used if hidden_layers=None)
-            hidden_activation: Activation function for hidden layers ("sigmoid", "relu", "linear")
+            hidden_activation: Activation function for hidden layers ("sigmoid", "relu", "linear", "tanh") - may be a string or a list per-hidden-layer (for mixed activations)
             output_activation: Activation function for output layer
             learning_rate: Learning rate for gradient descent
             initial_weight: If specified, initialize all weights to this value (for testing)
@@ -76,6 +76,8 @@ class ClassicMLP:
             return np.maximum(0, x)
         if activation_type == "linear":
             return x
+        if activation_type == "tanh":
+            return np.tanh(x)
         raise ValueError("Unsupported activation function.")
 
     def _activation_derivative(self, x, activation_type):
@@ -85,6 +87,9 @@ class ClassicMLP:
             return np.where(x > 0, 1, 0)
         if activation_type == "linear":
             return np.ones_like(x)
+        if activation_type == "tanh":
+            # x is tanh(x) (activation output), derivative = 1 - tanh(x)^2
+            return 1 - (x**2)
         raise ValueError("Unsupported activation function.")
 
     def forward_pass(self, X):
@@ -93,11 +98,14 @@ class ClassicMLP:
             z = np.dot(activations[-1], w)
             if self.use_bias:
                 z += b
-            activation_type = (
-                self.hidden_activation
-                if i < len(self.hidden_layers)
-                else self.output_activation
-            )
+            if i < len(self.hidden_layers):
+                activation_type = (
+                    self.hidden_activation[i]
+                    if isinstance(self.hidden_activation, (list, tuple))
+                    else self.hidden_activation
+                )
+            else:
+                activation_type = self.output_activation
             a = self._activation(z, activation_type)
             activations.append(a)
         return activations
@@ -111,8 +119,14 @@ class ClassicMLP:
 
         for i in range(len(self.weights) - 2, -1, -1):
             error = np.dot(deltas[-1], self.weights[i + 1].T)
+            # Determine activation type for this hidden layer (support list of activations)
+            activation_type = (
+                self.hidden_activation[i]
+                if isinstance(self.hidden_activation, (list, tuple))
+                else self.hidden_activation
+            )
             delta = error * self._activation_derivative(
-                activations[i + 1], self.hidden_activation
+                activations[i + 1], activation_type
             )
             deltas.append(delta)
 

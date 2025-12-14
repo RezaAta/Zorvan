@@ -273,7 +273,11 @@ class BackpropGraphForwardProcessing(Graph):
         if not hasattr(self.mlp_graph, "biasLayers") or not self.mlp_graph.biasLayers:
             return
 
-        if not hasattr(self.mlp_graph, "use_bias") or not self.mlp_graph.use_bias:
+        # Accept either 'use_bias' (older name) or 'add_bias' (current flag)
+        if not (
+            getattr(self.mlp_graph, "use_bias", False)
+            or getattr(self.mlp_graph, "add_bias", False)
+        ):
             return
 
         self.biasRecalcLayers = []
@@ -317,3 +321,35 @@ class BackpropGraphForwardProcessing(Graph):
                 biasRecalcLayer.append(lrMultNode)
 
             self.biasRecalcLayers.append(biasRecalcLayer)
+
+    @staticmethod
+    def RemoveBackpropFromGraph(graph):
+        """Remove typical backpropagation nodes from a graph by name patterns (forward processing)."""
+        import re
+
+        patterns = [
+            r"^EG_",
+            r"^LRMult_",
+            r"^WG_",
+            r"^dW_",
+            r"^dB_",
+            r"^WGS_",
+            r"^D_y",
+            r"^D_H",
+            r"^BiasOne$",
+            r"^LearningRate$",
+        ]
+
+        to_remove = []
+        for node in list(graph.nodes):
+            name = getattr(node, "name", "")
+            if any(re.search(p, name) for p in patterns):
+                to_remove.append(node)
+
+        for node in to_remove:
+            try:
+                graph.RemoveNode(node)
+            except Exception:
+                pass
+
+        graph.UpdateAdjacencyMatrix()

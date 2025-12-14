@@ -3,7 +3,6 @@ import random
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.BufferNode import BufferNode
-from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from ComputationalGraphs.Nodes.InitializableContainerNode import (
     InitializableContainerNode,
@@ -24,20 +23,35 @@ class MLPGraph(Graph):
         numOutputs,
         numHiddenLayers,
         activationFunction=SigmoidNode,
+        hiddenActivationFunctions=None,
         hiddenLayerSizes=None,
         outputLayerType=LinearNode,
-        use_bias=True,
+        initializer=None,
+        add_bias=True,
     ):
         super().__init__()
         self.numInputs = numInputs
         self.numOutputs = numOutputs
         self.numHiddenLayers = numHiddenLayers
         self.activationFunction = activationFunction
+        # Hidden activation functions may be provided as a single class or a list
+        if hiddenActivationFunctions is None:
+            self.hiddenActivationFunctions = [activationFunction] * numHiddenLayers
+        else:
+            if isinstance(hiddenActivationFunctions, (list, tuple)):
+                if len(hiddenActivationFunctions) != numHiddenLayers:
+                    raise ValueError(
+                        "Length of hiddenActivationFunctions must equal numHiddenLayers"
+                    )
+                self.hiddenActivationFunctions = list(hiddenActivationFunctions)
+            else:
+                self.hiddenActivationFunctions = [
+                    hiddenActivationFunctions
+                ] * numHiddenLayers
         self.hiddenLayerSizes = (
             hiddenLayerSizes if hiddenLayerSizes else [numInputs] * numHiddenLayers
         )
         self.outputLayerFunction = outputLayerType
-        self.use_bias = use_bias
         self.predictionBuffers = []
         self.errorBuffers = []
 
@@ -47,13 +61,17 @@ class MLPGraph(Graph):
         self.weightLayers = (
             []
         )  # Separate layers for weights to facilitate weight management
-        self.biasLayers = []  # Bias nodes for each layer (hidden + output)
         # Graph-level stopping nodes: nodes that should not self-initiate cycles
         # (used by forward-processing scheduler). Populate with weight ContainerNodes.
         self.stopping_nodes = []
         self.labelLayer = []
         self.errorLayer = []
         self.mseNodes = []
+        # Graph-level initializer for weights/biases (Optional)
+        self.initializer = initializer
+        # Bias support
+        self.add_bias = add_bias
+        self.biasLayers = []
 
     def BuildMLP(self):
         """Build the MLP architecture by initializing and connecting layers."""
@@ -217,28 +235,13 @@ class MLPGraph(Graph):
         """Initialize hidden layers with addition and activation nodes."""
         for layerNum, numNeurons in enumerate(self.hiddenLayerSizes):
             hiddenLayer = []
-            biasLayer = []
             for i in range(numNeurons):
                 additionNode = AdditionNode(name=f"Add_L{layerNum}N{i}")
                 additionNode.forcedBatchProcessing = True
-
-                # Add bias node to the addition node (bias is part of weighted sum)
-                if self.use_bias:
-                    biasNode = InitializableContainerNode(
-                        name=f"B_L{layerNum}N{i}",
-                        value=0.0,
-                        init_low=0.0,
-                        init_high=0.0,
-                        init_method="uniform",
-                    )
-                    additionNode.AddPreNode(biasNode)
-                    biasLayer.append(biasNode)
-                    self.AddNode(biasNode)
-                    self.stopping_nodes.append(biasNode)
-
-                activationNode = self.activationFunction(name=f"Act_L{layerNum}N{i}")
+                # Select activation class for this layer (support mixed layers)
+                act_cls = self.hiddenActivationFunctions[layerNum]
+                activationNode = act_cls(name=f"Act_L{layerNum}N{i}")
                 activationNode.AddPreNode(additionNode)
-
                 layersAhead = (self.numHiddenLayers + 2) - (layerNum + 2)
                 bufferNode = BufferNode(
                     name=f"Buff_H{layerNum}N{i}", size=(layersAhead * 6)
@@ -249,37 +252,16 @@ class MLPGraph(Graph):
                 self.AddNode(additionNode, activationNode, bufferNode)
 
             self.hiddenLayers.append(hiddenLayer)
-            if self.use_bias:
-                self.biasLayers.append(biasLayer)
 
     def _CreateOutputLayer(self):
         """Initialize the output layer with addition and activation nodes."""
-        outputBiasLayer = []
         for i in range(self.numOutputs):
             additionNode = AdditionNode(name=f"Add_y{i}")
             additionNode.forcedBatchProcessing = True
-
-            # Add bias node to output layer
-            if self.use_bias:
-                biasNode = InitializableContainerNode(
-                    name=f"B_y{i}",
-                    value=0.0,
-                    init_low=0.0,
-                    init_high=0.0,
-                    init_method="uniform",
-                )
-                additionNode.AddPreNode(biasNode)
-                outputBiasLayer.append(biasNode)
-                self.AddNode(biasNode)
-                self.stopping_nodes.append(biasNode)
-
             activationNode = self.outputLayerFunction(name=f"y{i}")
             activationNode.AddPreNode(additionNode)
             self.outputLayer.append((additionNode, activationNode))
             self.AddNode(additionNode, activationNode)
-
-        if self.use_bias:
-            self.biasLayers.append(outputBiasLayer)
 
     def _CreateWeightLayers(self):
         """Initialize weight layers with random weights between -1 and 1."""
@@ -294,7 +276,7 @@ class MLPGraph(Graph):
             [
                 InitializableContainerNode(
                     name=f"W_x{i}H0N{j}",
-                    value=random_weight(),
+                    value=random_weight() if self.initializer is None else 0.0,
                     init_low=-1.0,
                     init_high=1.0,
                 )
@@ -307,6 +289,11 @@ class MLPGraph(Graph):
             for weightNode in row:
                 self.AddNode(weightNode)
                 self.stopping_nodes.append(weightNode)
+                if getattr(weightNode, "initializer", None) is not None:
+                    try:
+                        weightNode.reinitialize()
+                    except Exception:
+                        pass
 
         # Weight layers between hidden layers
         for layerNum in range(self.numHiddenLayers - 1):
@@ -314,7 +301,7 @@ class MLPGraph(Graph):
                 [
                     InitializableContainerNode(
                         name=f"W_H{layerNum}N{i}H{layerNum+1}N{j}",
-                        value=random_weight(),
+                        value=random_weight() if self.initializer is None else 0.0,
                         init_low=-1.0,
                         init_high=1.0,
                     )
@@ -327,6 +314,11 @@ class MLPGraph(Graph):
                 for weightNode in row:
                     self.AddNode(weightNode)
                     self.stopping_nodes.append(weightNode)
+                    if getattr(weightNode, "initializer", None) is not None:
+                        try:
+                            weightNode.reinitialize()
+                        except Exception:
+                            pass
 
         # Last weight layer connects the last hidden layer to the output layer
         lastHiddenLayerSize = self.hiddenLayerSizes[-1]
@@ -334,7 +326,7 @@ class MLPGraph(Graph):
             [
                 InitializableContainerNode(
                     name=f"W_H{self.numHiddenLayers - 1}N{i}y{j}",
-                    value=random_weight(),
+                    value=random_weight() if self.initializer is None else 0.0,
                     init_low=-1.0,
                     init_high=1.0,
                 )
@@ -347,6 +339,53 @@ class MLPGraph(Graph):
             for weightNode in row:
                 self.AddNode(weightNode)
                 self.stopping_nodes.append(weightNode)
+                if getattr(weightNode, "initializer", None) is not None:
+                    try:
+                        weightNode.reinitialize()
+                    except Exception:
+                        pass
+
+        # Biases: one per hidden neuron and one per output neuron
+        if self.add_bias:
+            self.biasLayers = []
+            # Hidden layer biases
+            for layerNum, numNeurons in enumerate(self.hiddenLayerSizes):
+                biasRow = []
+                for n in range(numNeurons):
+                    b = InitializableContainerNode(
+                        name=f"B_H{layerNum}N{n}",
+                        value=0.0,
+                        init_low=-1.0,
+                        init_high=1.0,
+                    )
+                    self.AddNode(b)
+                    self.stopping_nodes.append(b)
+                    if getattr(b, "initializer", None) is not None:
+                        try:
+                            b.reinitialize()
+                        except Exception:
+                            pass
+                    biasRow.append(b)
+                self.biasLayers.append(biasRow)
+
+            # Output biases
+            outBiasRow = []
+            for j in range(self.numOutputs):
+                b = InitializableContainerNode(
+                    name=f"B_y{j}",
+                    value=0.0,
+                    init_low=-1.0,
+                    init_high=1.0,
+                )
+                self.AddNode(b)
+                self.stopping_nodes.append(b)
+                if getattr(b, "initializer", None) is not None:
+                    try:
+                        b.reinitialize()
+                    except Exception:
+                        pass
+                outBiasRow.append(b)
+            self.biasLayers.append(outBiasRow)
 
     def _CreateLabelLayer(self):
         """Create the label layer with DataStreamNodes for expected output values."""
@@ -386,6 +425,15 @@ class MLPGraph(Graph):
                 nextAddNode.AddPreNode(multNode)
                 self.AddNode(multNode)
 
+        # Attach bias nodes to first hidden layer additions (once per neuron)
+        if self.add_bias and len(self.biasLayers) > 0:
+            for j, (nextAddNode, _, _) in enumerate(firstHiddenLayer):
+                try:
+                    biasNode = self.biasLayers[0][j]
+                    nextAddNode.AddPreNode(biasNode)
+                except Exception:
+                    pass
+
     def _ConnectHiddenLayers(self):
         """Connect each hidden layer to the next hidden layer using weight nodes."""
         for layerNum in range(self.numHiddenLayers - 1):
@@ -404,6 +452,15 @@ class MLPGraph(Graph):
                     nextAddNode.AddPreNode(multNode)
                     self.AddNode(multNode)
 
+            # Attach biases for the dest layer (layerNum + 1)
+            if self.add_bias and len(self.biasLayers) > (layerNum + 1):
+                for j, (nextAddNode, _, _) in enumerate(nextLayer):
+                    try:
+                        biasNode = self.biasLayers[layerNum + 1][j]
+                        nextAddNode.AddPreNode(biasNode)
+                    except Exception:
+                        pass
+
     def _ConnectOutputLayer(self):
         """Connect the last hidden layer to the output layer with weight nodes."""
         lastHiddenLayer = self.hiddenLayers[-1]
@@ -419,3 +476,12 @@ class MLPGraph(Graph):
                 multNode.AddPreNode(weightNode)
                 outputAddNode.AddPreNode(multNode)
                 self.AddNode(multNode)
+
+        # Attach output biases
+        if self.add_bias and len(self.biasLayers) > 0:
+            for j, (outputAddNode, _) in enumerate(self.outputLayer):
+                try:
+                    biasNode = self.biasLayers[-1][j]
+                    outputAddNode.AddPreNode(biasNode)
+                except Exception:
+                    pass

@@ -186,7 +186,11 @@ class BackpropGraph(Graph):
         if not hasattr(self.mlp_graph, "biasLayers") or not self.mlp_graph.biasLayers:
             return
 
-        if not hasattr(self.mlp_graph, "use_bias") or not self.mlp_graph.use_bias:
+        # Accept either 'use_bias' (older name) or 'add_bias' (current flag)
+        if not (
+            getattr(self.mlp_graph, "use_bias", False)
+            or getattr(self.mlp_graph, "add_bias", False)
+        ):
             return
 
         from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
@@ -216,3 +220,41 @@ class BackpropGraph(Graph):
                 self.AddNode(dB)
 
             self.biasRecalcLayers.append(biasRecalcLayer)
+
+    @staticmethod
+    def RemoveBackpropFromGraph(graph):
+        """Remove typical backpropagation nodes from a graph by name patterns.
+
+        This is intentionally conservative: it removes nodes whose names match
+        common backprop prefixes (e.g., EG_, LRMult_, D_y, D_H, WG_, WNBuff_, dw_, dB_, WGS_, BiasOne, LearningRate).
+        After removal, the graph adjacency matrix is updated.
+        """
+        import re
+
+        patterns = [
+            r"^EG_",
+            r"^LRMult_",
+            r"^WG_",
+            r"^WNBuff_",
+            r"^dB_",
+            r"^dw_",
+            r"^WGS_",
+            r"^D_y",
+            r"^D_H",
+            r"^BiasOne$",
+            r"^LearningRate$",
+        ]
+
+        to_remove = []
+        for node in list(graph.nodes):
+            name = getattr(node, "name", "")
+            if any(re.search(p, name) for p in patterns):
+                to_remove.append(node)
+
+        for node in to_remove:
+            try:
+                graph.RemoveNode(node)
+            except Exception:
+                pass
+
+        graph.UpdateAdjacencyMatrix()

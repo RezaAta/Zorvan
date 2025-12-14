@@ -73,6 +73,10 @@ class BackpropDialog(QDialog):
         add_btn.clicked.connect(self._add_backprop)
         button_layout.addWidget(add_btn)
 
+        remove_btn = QPushButton("Remove Backpropagation")
+        remove_btn.clicked.connect(self._remove_backprop)
+        button_layout.addWidget(remove_btn)
+
         cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
@@ -115,6 +119,31 @@ class BackpropDialog(QDialog):
                 self,
                 "Error Adding Backpropagation",
                 f"Failed to add backpropagation:\n{str(e)}",
+            )
+
+    def _remove_backprop(self):
+        """Remove backpropagation nodes from the current graph after confirmation."""
+        reply = QMessageBox.question(
+            self,
+            "Remove Backpropagation",
+            "Remove backpropagation nodes from the current graph?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.No:
+            return
+
+        try:
+            # Operate on a copy of the graph or the current graph directly
+            BackpropGraph.RemoveBackpropFromGraph(self.current_graph)
+            QMessageBox.information(self, "Removed", "Backpropagation nodes removed.")
+            # Update generated_graph to reflect removal
+            self.generated_graph = self.current_graph
+            self.accept()
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error Removing Backpropagation",
+                f"Failed to remove backpropagation:\n{str(e)}",
             )
 
     def get_graph(self) -> Graph:
