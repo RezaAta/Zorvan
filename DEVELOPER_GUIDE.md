@@ -65,6 +65,11 @@ pre-commit run --all-files
 5. Use `git cz` to create structured commits; split logical changes into separate commits.
 6. Push the branch and open a PR with a short TL;DR message and the checklist completed.
 
+### Experiments vs Tests
+
+- **Tests:** short, deterministic, and automated assertions that verify program behavior. Place tests under `Tests/` or `ComputationalGraphs/Tests/` and run them with `pytest`.
+- **Experiments:** long-running or exploratory scripts used for scientific comparisons, plotting, or benchmarking. Place experiments under `Experiments/` (or `Examples/` when tightly coupled to an example). Experiments are not part of the automated `pytest` run by default; see `EXPERIMENTS.md` for conventions.
+
 ## Test Templates
 
 See `Tests/templates/` for test template skeletons.

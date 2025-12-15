@@ -46,6 +46,10 @@ pytest -q
 
 - Use the test templates in `Tests/templates/` to scaffold new tests.
 
+### Experiments
+
+If you are running experiments (comparisons, benchmarks, or exploratory scientific runs), place them under `Experiments/` or `Examples/` and follow the guidance in `EXPERIMENTS.md`. Avoid naming experiment files with `test_` prefixes to prevent accidental collection by `pytest`.
+
 ## Pre-commit and Local Checks
 
 This repo supports `pre-commit` hooks to run formatters and linters. Run the following to get them:
