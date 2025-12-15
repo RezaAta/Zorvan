@@ -137,6 +137,22 @@ class ExamplesLoader:
         )
         self.categories["fuzzy_systems"] = fuzzy
 
+        # Hybrid Models Examples
+        hybrid = ExampleCategory(
+            "Hybrid Models", "Hybrid model examples combining MLP and FIS"
+        )
+        hybrid.add_example(
+            "Temperature Prediction Using MLP",
+            "Concurrent MLP that predicts temperature change (delta_T)",
+            self._build_temperature_prediction_mlp_concurrent,
+        )
+        hybrid.add_example(
+            "Hybrid Temperature Prediction Using MLP+FIS",
+            "MLP predicts delta_T and a FIS maps (error, delta_T_pred) -> heater power",
+            self._build_hybrid_temperature_mlp_fis_concurrent,
+        )
+        self.categories["hybrid_models"] = hybrid
+
         # Evolutionary Algorithm Examples
         ea = ExampleCategory(
             "Evolutionary Algorithms", "Optimization using evolutionary computation"
@@ -243,6 +259,250 @@ class ExamplesLoader:
         if hasattr(mlpGraph, "stopping_nodes"):
             fullGraph.stopping_nodes = list(mlpGraph.stopping_nodes)
         fullGraph.UpdateAdjacencyMatrix()
+
+        return fullGraph
+
+    def _build_temperature_prediction_mlp_concurrent(self) -> Graph:
+        """Build a concurrent MLP that predicts delta_T from (current_temp, previous_power)."""
+        import numpy as np
+
+        from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
+        from ComputationalGraphs.Core.MLPGraph import MLPGraph
+        from ComputationalGraphs.Nodes.LinearNode import LinearNode
+        from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
+
+        # Dataset generation using simple thermal model
+        # T_next = T + dt * (k_heater * power - k_loss * (T - T_outside))
+        n_samples = 600
+        dt = 1.0
+        rng = np.random.RandomState(42)
+        current_temps = rng.uniform(0.0, 40.0, size=n_samples)
+        prev_powers = rng.uniform(0.0, 1.0, size=n_samples)
+        outside = rng.uniform(-10.0, 35.0, size=n_samples)
+        k_loss = rng.uniform(0.01, 0.12, size=n_samples)
+        k_heater = rng.uniform(0.05, 0.5, size=n_samples)
+
+        delta_T = dt * (k_heater * prev_powers - k_loss * (current_temps - outside))
+
+        # Row-per-feature format (features x samples)
+        X = [current_temps.tolist(), prev_powers.tolist()]
+        y = [delta_T.tolist()]
+
+        # Build MLP: 2 inputs -> [8,8] -> 1 linear output (ReLU activations)
+        mlpGraph = MLPGraph(
+            numInputs=2,
+            numOutputs=1,
+            numHiddenLayers=2,
+            hiddenLayerSizes=[8, 8],
+            activationFunction=ReLUNode,
+            outputLayerType=LinearNode,
+        )
+        mlpGraph.BuildMLP()
+
+        # Load dataset into the MLP
+        mlpGraph.LoadData(X, y)
+
+        # Build concurrent Backprop and attach
+        backprop_graph = BackpropGraph(mlpGraph, learningRate=0.01)
+        backprop_graph.BuildBackprop()
+
+        # Create error buffers and MSE nodes
+        mlpGraph.CreateErrorBuffers(bufferSize=200, mse_buffer_size=len(X[0]))
+
+        # Combine into a single Graph for the GUI
+        fullGraph = Graph()
+        for node in mlpGraph.nodes:
+            fullGraph.AddNode(node)
+        for node in backprop_graph.nodes:
+            fullGraph.AddNode(node)
+        for eb in mlpGraph.errorBuffers:
+            if eb not in fullGraph.nodes:
+                fullGraph.AddNode(eb)
+        for mse in mlpGraph.mseNodes:
+            if mse not in fullGraph.nodes:
+                fullGraph.AddNode(mse)
+
+        # Set starting nodes for concurrent processing: data streams + labels
+        fullGraph.starting_nodes = [
+            input_pair[0] for input_pair in mlpGraph.inputLayer
+        ] + mlpGraph.labelLayer
+
+        # Copy stopping nodes (weights)
+        if hasattr(mlpGraph, "stopping_nodes"):
+            fullGraph.stopping_nodes = list(mlpGraph.stopping_nodes)
+
+        fullGraph.UpdateAdjacencyMatrix()
+
+        # Store references for GUI interactions
+        fullGraph._mlp_graph = mlpGraph
+        fullGraph._backprop_graph = backprop_graph
+
+        return fullGraph
+
+    def _build_hybrid_temperature_mlp_fis_concurrent(self) -> Graph:
+        """Build a hybrid concurrent graph combining an MLP predictor and a Mamdani-style FIS."""
+        # Local imports
+        import numpy as np
+
+        from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
+        from ComputationalGraphs.Core.MLPGraph import MLPGraph
+        from ComputationalGraphs.Nodes.BufferNode import BufferNode
+        from ComputationalGraphs.Nodes.DivisionNode import DivisionNode
+        from ComputationalGraphs.Nodes.LinearNode import LinearNode
+        from ComputationalGraphs.Nodes.MaxNode import MaxNode
+        from ComputationalGraphs.Nodes.MinNode import MinNode
+        from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
+
+        # Build MLP predictor (same config as temperature prediction)
+        mlp_builder_graph = self._build_temperature_prediction_mlp_concurrent()
+
+        # Extract the embedded mlp and backprop references if present
+        mlpGraph = getattr(mlp_builder_graph, "_mlp_graph", None)
+        backprop_graph = getattr(mlp_builder_graph, "_backprop_graph", None)
+
+        # If not present (unlikely), rebuild the predictor quickly
+        if mlpGraph is None:
+            temp_graph = self._build_temperature_prediction_mlp_concurrent()
+            mlpGraph = getattr(temp_graph, "_mlp_graph", None)
+            backprop_graph = getattr(temp_graph, "_backprop_graph", None)
+
+        fullGraph = Graph()
+        # Add MLP and Backprop nodes
+        for node in mlpGraph.nodes:
+            fullGraph.AddNode(node)
+        if backprop_graph is not None:
+            for node in backprop_graph.nodes:
+                fullGraph.AddNode(node)
+
+        # Add MLP error buffers and mse nodes if available
+        for eb in getattr(mlpGraph, "errorBuffers", []):
+            if eb not in fullGraph.nodes:
+                fullGraph.AddNode(eb)
+        for mse in getattr(mlpGraph, "mseNodes", []):
+            if mse not in fullGraph.nodes:
+                fullGraph.AddNode(mse)
+
+        # FIS inputs: Target temperature (user-controlled DisplayNode)
+        target = DisplayNode("TargetTemp", value=22.0)
+        fullGraph.AddNode(target)
+
+        # Error = target - current_temp
+        # Create a dedicated buffer to align current_temp with the MLP forward delay
+        forward_length = 3 * (mlpGraph.numHiddenLayers + 1)
+        current_temp_buffer = BufferNode("Buff_x0_for_FIS", size=forward_length)
+        # buffer reads from the input DataStreamNode (do not reuse the MLP internal input buffer)
+        current_temp_buffer.AddPreNode(mlpGraph.inputLayer[0][0])
+        error_node = SubtractionNode("Error")
+        error_node.AddPreNode(target, current_temp_buffer)
+        fullGraph.AddNode(current_temp_buffer)
+        fullGraph.AddNode(error_node)
+
+        # Prediction input for FIS: use MLP output activation node (y0)
+        delta_pred_node = mlpGraph.outputLayer[0][1]
+
+        # Memberships for error: Negative, Zero, Positive
+        neg = PiecewiseLinearNode(
+            "Err_Neg", xs=[-10, -5, -2, 0, 2], mus=[1, 1, 0.5, 0.0, 0.0]
+        )
+        neg.AddPreNode(error_node)
+        zero = PiecewiseLinearNode(
+            "Err_Zero", xs=[-2, -1, 0, 1, 2], mus=[0.0, 0.5, 1.0, 0.5, 0.0]
+        )
+        zero.AddPreNode(error_node)
+        pos = PiecewiseLinearNode(
+            "Err_Pos", xs=[-2, 0, 2, 5, 10], mus=[0.0, 0.0, 0.5, 1.0, 1.0]
+        )
+        pos.AddPreNode(error_node)
+
+        # Memberships for delta_T_pred: use the MLP output directly (MLP output is delayed)
+        dec = PiecewiseLinearNode(
+            "DT_Dec",
+            xs=[-2.0, -1.0, -0.5, 0.0, 0.0],
+            mus=[1, 1, 0.5, 0.0, 0.0],
+        )
+        dec.AddPreNode(delta_pred_node)
+        stable = PiecewiseLinearNode(
+            "DT_Stable",
+            xs=[-0.5, -0.1, 0.0, 0.1, 0.5],
+            mus=[0.0, 0.5, 1.0, 0.5, 0.0],
+        )
+        stable.AddPreNode(delta_pred_node)
+        inc = PiecewiseLinearNode(
+            "DT_Inc",
+            xs=[0.0, 0.0, 0.5, 1.0, 2.0],
+            mus=[0.0, 0.0, 0.5, 1.0, 1.0],
+        )
+        inc.AddPreNode(delta_pred_node)
+
+        fullGraph.AddNode(neg, zero, pos, dec, stable, inc)
+
+        # Rules (3x3): combine error x delta using MinNode (AND)
+        rules = []
+        consequents = []
+        # Consequent value matrix (error rows: Neg, Zero, Pos) x (DT: Dec, Stable, Inc)
+        cons_matrix = [
+            [0.0, 0.0, 0.0],
+            [25.0, 50.0, 75.0],
+            [50.0, 75.0, 100.0],
+        ]
+        antecedent_rows = [neg, zero, pos]
+        antecedent_cols = [dec, stable, inc]
+        for i, arow in enumerate(antecedent_rows):
+            for j, acol in enumerate(antecedent_cols):
+                r = MinNode(f"R_{i}_{j}")
+                r.AddPreNode(arow, acol)
+                fullGraph.AddNode(r)
+                rules.append(r)
+
+                c = DisplayNode(f"Cons_{i}_{j}", value=cons_matrix[i][j])
+                consequents.append(c)
+                fullGraph.AddNode(c)
+
+        # Multiply rule strength by consequent and sum
+        products = []
+        for k, r in enumerate(rules):
+            p = MultiplicationNode(f"P{k}")
+            p.AddPreNode(r, consequents[k])
+            products.append(p)
+            fullGraph.AddNode(p)
+
+        numerator = AdditionNode("FIS_Numerator", 0.0)
+        numerator.AddPreNode(*products)
+        denominator = AdditionNode("FIS_Denominator", 0.0)
+        denominator.AddPreNode(*rules)
+        fullGraph.AddNode(numerator, denominator)
+
+        # Division gives raw heater power (0..100 in practice)
+        raw_output = DivisionNode("FIS_Output")
+        raw_output.AddPreNode(numerator, denominator)
+        fullGraph.AddNode(raw_output)
+
+        # Clamp to [0,100]
+        zero_const = DisplayNode("MinPower", 0.0)
+        hundred_const = DisplayNode("MaxPower", 100.0)
+        maxed = MaxNode("AtLeastZero")
+        maxed.AddPreNode(raw_output, zero_const)
+        clamped = MinNode("ClampedPower")
+        clamped.AddPreNode(maxed, hundred_const)
+        fullGraph.AddNode(zero_const, hundred_const, maxed, clamped)
+
+        # Set starting nodes: MLP data streams + labels + target input
+        fullGraph.starting_nodes = (
+            [input_pair[0] for input_pair in mlpGraph.inputLayer]
+            + mlpGraph.labelLayer
+            + [target]
+        )
+
+        # Copy stopping_nodes (weights)
+        if hasattr(mlpGraph, "stopping_nodes"):
+            fullGraph.stopping_nodes = list(mlpGraph.stopping_nodes)
+
+        fullGraph.UpdateAdjacencyMatrix()
+
+        # Attach references
+        fullGraph._mlp_graph = mlpGraph
+        fullGraph._backprop_graph = backprop_graph
+        fullGraph._fis_output = clamped
 
         return fullGraph
 
