@@ -348,10 +348,13 @@ def graph_predict_single(mlp_graph, x_temp, x_prev, scalers):
 
 
 def closed_loop_simulation_graph_detached(
-    mlp_graph, scalers, steps=200, target=22.0, rng_seed=123
+    mlp_graph, scalers, steps=200, target=22.0, rng_seed=None, verbose=False
 ):
     """Closed-loop sim that treats MLP and FIS as detached: use MLP prediction then run FIS (classic) on recorded current temp."""
     # episode parameters (deterministic with seed)
+    # Allow a random seed when rng_seed is None for non-deterministic experiments
+    if rng_seed is None:
+        rng_seed = np.random.randint(0, 2**31 - 1)
     rng = np.random.RandomState(rng_seed)
     outside = rng.uniform(-10.0, 35.0)
     k_loss = rng.uniform(0.01, 0.12)
@@ -359,6 +362,8 @@ def closed_loop_simulation_graph_detached(
 
     # initialize
     T = rng.uniform(5.0, 25.0)
+    if verbose:
+        print(f"[Graph Detached] rng_seed={rng_seed}, initial_T={T:.6f}")
     prev_power = 0.0
     temps = []
     powers = []
@@ -389,14 +394,18 @@ def closed_loop_simulation_graph_detached(
 
 
 def closed_loop_simulation_classic_detached(
-    classic_mlp, scalers, steps=200, target=22.0, rng_seed=123
+    classic_mlp, scalers, steps=200, target=22.0, rng_seed=None, verbose=False
 ):
+    if rng_seed is None:
+        rng_seed = np.random.randint(0, 2**31 - 1)
     rng = np.random.RandomState(rng_seed)
     outside = rng.uniform(-10.0, 35.0)
     k_loss = rng.uniform(0.01, 0.12)
     k_heater = rng.uniform(0.05, 0.5)
 
     T = rng.uniform(5.0, 25.0)
+    if verbose:
+        print(f"[Classic Detached] rng_seed={rng_seed}, initial_T={T:.6f}")
     prev_power = 0.0
     temps = []
     powers = []
@@ -428,13 +437,19 @@ def closed_loop_simulation_classic_detached(
     return np.array(temps), np.array(powers), np.array(errors)
 
 
-def closed_loop_simulation_classic(classic_mlp, steps=200, target=22.0):
-    rng = np.random.RandomState(456)
+def closed_loop_simulation_classic(
+    classic_mlp, steps=200, target=22.0, rng_seed=None, verbose=False
+):
+    if rng_seed is None:
+        rng_seed = np.random.randint(0, 2**31 - 1)
+    rng = np.random.RandomState(rng_seed)
     outside = rng.uniform(-10.0, 35.0)
     k_loss = rng.uniform(0.01, 0.12)
     k_heater = rng.uniform(0.05, 0.5)
 
     T = rng.uniform(5.0, 25.0)
+    if verbose:
+        print(f"[Classic] rng_seed={rng_seed}, initial_T={T:.6f}")
     prev_power = 0.0
     temps = []
     powers = []
@@ -457,7 +472,9 @@ def closed_loop_simulation_classic(classic_mlp, steps=200, target=22.0):
 
 def run_compare():
     # generate data
-    X, y = generate_dataset_samples(1200, seed=1)
+    master_seed = np.random.randint(0, 2**31 - 1)
+    print(f"Experiment master_seed={master_seed}")
+    X, y = generate_dataset_samples(1200, seed=master_seed)
     # split train/test
     n = len(X[0])
     idx = np.arange(n)
@@ -471,6 +488,12 @@ def run_compare():
 
     X_test = [np.array(X[0])[test_idx].tolist(), np.array(X[1])[test_idx].tolist()]
     y_test = [np.array(y[0])[test_idx].tolist()]
+
+    import random
+
+    # Ensure deterministic initial weights by seeding Python's RNG and numpy
+    random.seed(master_seed)
+    np.random.seed(master_seed)
 
     # Build an untrained graph MLP to capture initial weights
     mlp_graph, scalers = build_graph_mlp(X_train, y_train)
@@ -486,6 +509,17 @@ def run_compare():
         use_bias=True,
     )
     copy_weights_to_classic(mlp_graph, classic)
+
+    # Verify initial weight copy is exact (should be zero diff)
+    for layer_idx, weightLayer in enumerate(mlp_graph.weightLayers):
+        W_expected = np.zeros_like(classic.weights[layer_idx])
+        rows = len(weightLayer)
+        cols = len(weightLayer[0])
+        for i in range(rows):
+            for j in range(cols):
+                W_expected[i, j] = weightLayer[i][j].value
+        diff_init = np.max(np.abs(W_expected - classic.weights[layer_idx]))
+        print(f"Initial copy - Layer {layer_idx} max weight diff: {diff_init}")
 
     # Now train both from the same starting point
     mlp_graph, full_graph, scalers = train_graph_mlp(
@@ -507,19 +541,15 @@ def run_compare():
     # build hybrid graph from trained mlp (graph's trained weights + FIS)
     hybrid_graph = build_hybrid_from_trained_mlp(mlp_graph, setpoint=22.0)
 
-    # build hybrid graph from trained mlp (graph's trained weights + FIS)
-    hybrid_graph = build_hybrid_from_trained_mlp(mlp_graph, setpoint=22.0)
-
-    # Copy trained graph weights into ClassicMLP so they use identical parameters
-    copy_weights_to_classic(mlp_graph, classic)
+    # Note: do NOT overwrite the `classic` weights with the trained graph weights here.
+    # We want to compare the separately-trained Classic MLP vs the Graph MLP.
 
     # Debug: print bias values from mlp_graph
     for idx, biasRow in enumerate(mlp_graph.biasLayers):
         vals = [b.value for b in biasRow]
         print(f"mlp_graph bias layer {idx} min {min(vals):.6e} max {max(vals):.6e}")
 
-    # Equality checks
-    # verify weight copy
+    # Post-training equality checks (these compare the trained Graph vs trained Classic)
     for layer_idx, weightLayer in enumerate(mlp_graph.weightLayers):
         W_expected = np.zeros_like(classic.weights[layer_idx])
         rows = len(weightLayer)
@@ -528,7 +558,9 @@ def run_compare():
             for j in range(cols):
                 W_expected[i, j] = weightLayer[i][j].value
         diff = np.max(np.abs(W_expected - classic.weights[layer_idx]))
-        print(f"Layer {layer_idx} max weight diff after copy: {diff}")
+        print(
+            f"Post-training Layer {layer_idx} max weight diff (Graph vs Classic): {diff}"
+        )
 
     # Build a fresh ClassicMLP and copy graph weights into it, then verify parity
     classic_copy = ClassicMLP(
@@ -641,11 +673,13 @@ def run_compare():
         )
 
     # run detached closed-loop evaluation for one representative episode (MLP->FIS detached)
+    # Use a shared, random seed for fair comparison between Graph and Classic sims
+    shared_seed = np.random.randint(0, 2**31 - 1)
     g_temps, g_powers, g_errors = closed_loop_simulation_graph_detached(
-        mlp_graph, scalers, steps=200, target=22.0, rng_seed=99
+        mlp_graph, scalers, steps=200, target=22.0, rng_seed=shared_seed, verbose=True
     )
     c_temps, c_powers, c_errors = closed_loop_simulation_classic_detached(
-        classic, scalers, steps=200, target=22.0, rng_seed=99
+        classic, scalers, steps=200, target=22.0, rng_seed=shared_seed, verbose=True
     )
 
     # compute metrics
