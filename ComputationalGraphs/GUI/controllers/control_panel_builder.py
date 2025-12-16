@@ -171,7 +171,19 @@ class _IconHoverFilter(QObject):
         # styles and platforms. When hovering, update the icon color AND temporarily
         # highlight the button background to match app styling. Restore both on leave.
         hover_enter_types = (QEvent.Type.Enter, QEvent.Type.HoverEnter)
-        hover_leave_types = (QEvent.Type.Leave, QEvent.Type.HoverLeave)
+        # Expand leave types to cover cases where the button is hidden, disabled,
+        # focus changes, parent changes, clicks, or the app/window deactivates.
+        hover_leave_types = (
+            QEvent.Type.Leave,
+            QEvent.Type.HoverLeave,
+            QEvent.Type.Hide,
+            QEvent.Type.EnabledChange,
+            QEvent.Type.FocusOut,
+            QEvent.Type.ParentChange,
+            QEvent.Type.WindowDeactivate,
+            QEvent.Type.ApplicationDeactivate,
+            QEvent.Type.MouseButtonPress,
+        )
 
         # Determine the button hover background color from theme (used for button
         # background highlight, not the icon tint)
@@ -225,18 +237,28 @@ class _IconHoverFilter(QObject):
 
             return False
         elif event.type() in hover_leave_types:
-            # restore base color
+            # restore icon using canonical resolver so current state (checked/disabled)
+            # is respected and we get the same icon the control normally uses
             try:
-                import qtawesome as qta
-
-                icon = qta.icon(self.fa_name, color=base_color)
-            except Exception:
-                icon = self.widget.style().standardIcon(self.fallback)
-                icon = QIcon(
-                    _tint_pixmap(
-                        icon.pixmap(QSize(self.size_px, self.size_px)), base_color
-                    )
+                icon = _resolve_icon(
+                    self.widget,
+                    self.fa_name,
+                    self.fallback,
+                    self.size_px,
+                    self.color_key,
                 )
+            except Exception:
+                try:
+                    import qtawesome as qta
+
+                    icon = qta.icon(self.fa_name, color=base_color)
+                except Exception:
+                    icon = self.widget.style().standardIcon(self.fallback)
+                    icon = QIcon(
+                        _tint_pixmap(
+                            icon.pixmap(QSize(self.size_px, self.size_px)), base_color
+                        )
+                    )
             try:
                 obj.setIcon(icon)
             except Exception:

@@ -58,6 +58,10 @@ def test_icon_hover_uses_theme_color(monkeypatch):
     assert btn.property("_prev_style") is None or btn.property("_prev_style") == ""
     assert called["color"] == QColor("#112233").name()
 
+    # Simulate hide (edge case) and ensure it restores icon as well
+    filter_obj.eventFilter(btn, QEvent(QEvent.Type.Hide))
+    assert called["color"] == QColor("#112233").name()
+
 
 def test_icon_hover_fallback_derived_from_base(monkeypatch):
     ensure_app()
