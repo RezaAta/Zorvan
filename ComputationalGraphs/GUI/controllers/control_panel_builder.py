@@ -167,7 +167,20 @@ class _IconHoverFilter(QObject):
             base_color = "#4a86e8"
             hover_color = QColor(base_color).lighter(120).name()
 
-        if event.type() == QEvent.Type.Enter:
+        # Handle both Enter/Leave and HoverEnter/HoverLeave to be robust across
+        # styles and platforms. When hovering, update the icon color AND temporarily
+        # highlight the button background to match app styling. Restore both on leave.
+        hover_enter_types = (QEvent.Type.Enter, QEvent.Type.HoverEnter)
+        hover_leave_types = (QEvent.Type.Leave, QEvent.Type.HoverLeave)
+
+        # Determine the button hover background color from theme (used for button
+        # background highlight, not the icon tint)
+        try:
+            button_hover_bg = tm.get_color("button_hover", "#5a5a5a").name()
+        except Exception:
+            button_hover_bg = "#5a5a5a"
+
+        if event.type() in hover_enter_types:
             # apply hover tint
             try:
                 import qtawesome as qta
@@ -184,8 +197,34 @@ class _IconHoverFilter(QObject):
                 obj.setIcon(icon)
             except Exception:
                 pass
+
+            # Temporarily apply button hover background (preserve previous stylesheet)
+            try:
+                from PyQt6.QtWidgets import QPushButton
+
+                if isinstance(obj, QPushButton):
+                    prev = None
+                    try:
+                        prev = obj.property("_prev_style")
+                    except Exception:
+                        prev = None
+                    if prev is None:
+                        prev = obj.styleSheet() or ""
+                        obj.setProperty("_prev_style", prev)
+                    try:
+                        # Append hover background to existing inline stylesheet safely
+                        obj.setStyleSheet(
+                            prev
+                            + ("; " if prev and not prev.endswith(";") else "")
+                            + f"background-color: {button_hover_bg};"
+                        )
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
             return False
-        elif event.type() == QEvent.Type.Leave:
+        elif event.type() in hover_leave_types:
             # restore base color
             try:
                 import qtawesome as qta
@@ -202,6 +241,25 @@ class _IconHoverFilter(QObject):
                 obj.setIcon(icon)
             except Exception:
                 pass
+
+            # Restore previous stylesheet if we changed it
+            try:
+                from PyQt6.QtWidgets import QPushButton
+
+                if isinstance(obj, QPushButton):
+                    prev = obj.property("_prev_style")
+                    if prev is not None:
+                        try:
+                            obj.setStyleSheet(prev)
+                        except Exception:
+                            pass
+                        try:
+                            obj.setProperty("_prev_style", None)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
             return False
         return False
 
