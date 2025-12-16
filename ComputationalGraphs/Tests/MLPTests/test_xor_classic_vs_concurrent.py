@@ -29,7 +29,7 @@ print("  Architecture: 2-2-1 (2 inputs, 2 hidden neurons, 1 output)")
 print("  Hidden Activation: Sigmoid")
 print("  Output Activation: Linear")
 print("  Learning Rate: 0.5")
-print("  Training: 2000 epochs × 4 iterations = 8000 total iterations")
+print("  Training: 2000 epochs x 4 iterations = 8000 total iterations")
 print("=" * 80)
 
 # XOR Dataset

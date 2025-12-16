@@ -58,8 +58,19 @@ class NodeItem(QGraphicsEllipseItem):
             self.default_color = QColor(155, 89, 182)  # #9B59B6 - purple
             self.selected_color = QColor(187, 143, 206)  # Lighter purple for selection
         else:
-            self.default_color = QColor(0, 63, 189)  # #003fbd
-            self.selected_color = QColor(50, 113, 239)  # Lighter blue for selection
+            # Use theme-managed default node color when available
+            try:
+                from .theme import get_theme_manager
+
+                tm = get_theme_manager()
+                self.default_color = tm.get_color("node_default", "#003fbd")
+                # Selected color is a lighter variant of default
+                self.selected_color = QColor(self.default_color).lighter(120)
+                # Subscribe to theme changes to update default color dynamically
+                tm.theme_changed.connect(self._on_theme_changed)
+            except Exception:
+                self.default_color = QColor(0, 63, 189)  # #003fbd
+                self.selected_color = QColor(50, 113, 239)  # Lighter blue for selection
 
         self.active_color = QColor(100, 180, 255)  # Bright light blue for active nodes
         self.color = None  # Custom color (set by layout/coloring functions)
@@ -79,10 +90,30 @@ class NodeItem(QGraphicsEllipseItem):
             label_text = f"{node.name} [{len(node)}]"
         else:
             label_text = node.name
-        self.label = QGraphicsTextItem(label_text, self)
-        self.label.setDefaultTextColor(Qt.GlobalColor.white)
-        font = QFont("Arial", 10, QFont.Weight.Bold)
-        self.label.setFont(font)
+        # Label - prefer theme-managed node_text color when available
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            node_text_color = tm.get_color("node_text", "#ffffff")
+            self.label = QGraphicsTextItem(label_text, self)
+            self.label.setDefaultTextColor(node_text_color)
+            tm.theme_changed.connect(self._on_theme_changed)
+        except Exception:
+            self.label = QGraphicsTextItem(label_text, self)
+            self.label.setDefaultTextColor(Qt.GlobalColor.white)
+
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            node_font = tm.get_font("node")
+            # make label bold while preserving family and size
+            node_font.setBold(True)
+            self.label.setFont(node_font)
+        except Exception:
+            font = QFont("Arial", 10, QFont.Weight.Bold)
+            self.label.setFont(font)
 
         # Center the label
         label_rect = self.label.boundingRect()
@@ -90,17 +121,36 @@ class NodeItem(QGraphicsEllipseItem):
 
         # Value display
         self.value_label = QGraphicsTextItem("", self)
-        self.value_label.setDefaultTextColor(Qt.GlobalColor.white)
-        value_font = QFont("Arial", 8)
-        self.value_label.setFont(value_font)
+        try:
+            self.value_label.setDefaultTextColor(node_text_color)
+        except Exception:
+            self.value_label.setDefaultTextColor(Qt.GlobalColor.white)
+        try:
+            node_font = tm.get_font("node")
+            value_font = node_font
+            # Slightly smaller for value display
+            value_font.setPointSize(max(6, node_font.pointSize() - 2))
+            self.value_label.setFont(value_font)
+        except Exception:
+            value_font = QFont("Arial", 8)
+            self.value_label.setFont(value_font)
         # Populate with initial value
         self.update_value_display()
 
         # Topology type label (displayed below the node, hidden by default)
         self.topology_label = QGraphicsTextItem("", self)
-        self.topology_label.setDefaultTextColor(Qt.GlobalColor.lightGray)
-        topology_font = QFont("Arial", 7, QFont.Weight.Normal)
-        self.topology_label.setFont(topology_font)
+        try:
+            # Topology label uses muted_text color so it's less prominent
+            self.topology_label.setDefaultTextColor(
+                tm.get_color("muted_text", "#a0a0a0")
+            )
+            topo_font = tm.get_font("node")
+            topo_font.setPointSize(max(6, topo_font.pointSize() - 3))
+            self.topology_label.setFont(topo_font)
+        except Exception:
+            self.topology_label.setDefaultTextColor(Qt.GlobalColor.lightGray)
+            topology_font = QFont("Arial", 7, QFont.Weight.Normal)
+            self.topology_label.setFont(topology_font)
         self.topology_label.setVisible(False)
 
         # Track move state to avoid unnecessary updates when clicking without movement
@@ -552,7 +602,8 @@ class NodeItem(QGraphicsEllipseItem):
 
             # Check if this is a CompressedNode (show decompress option)
             if isinstance(self.node, CompressedNode):
-                decompress_action = menu.addAction("📦 Decompress Node")
+                # Use plain text menu entries instead of emoji-prefixed labels
+                decompress_action = menu.addAction("Decompress Node")
                 decompress_action.setToolTip(
                     "Expand compressed node back to original nodes"
                 )
@@ -565,7 +616,7 @@ class NodeItem(QGraphicsEllipseItem):
                         item for item in selected if isinstance(item, NodeItem)
                     ]
                     if len(node_items) >= 2:
-                        compress_action = menu.addAction("📦 Compress Selection")
+                        compress_action = menu.addAction("Compress Selection")
                         compress_action.setToolTip(
                             "Combine selected sequential nodes into one"
                         )
@@ -1057,6 +1108,51 @@ class NodeItem(QGraphicsEllipseItem):
         """Set whether this node is currently active (for Forward Processing)."""
         self.is_active = active
         self.update()  # Trigger repaint
+
+    def _on_theme_changed(self):
+        """Update default and text colors when the theme changes."""
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            # Only update default fill colors if this node uses the generic default
+            from ComputationalGraphs.Nodes.AbstractNode import AbstractNode
+            from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
+
+            if not isinstance(self.node, (AbstractNode, CompressedNode)):
+                self.default_color = tm.get_color("node_default", "#003fbd")
+                self.selected_color = QColor(self.default_color).lighter(120)
+
+            # Update text colors
+            try:
+                node_text = tm.get_color("node_text", "#ffffff")
+                self.label.setDefaultTextColor(node_text)
+                self.value_label.setDefaultTextColor(node_text)
+            except Exception:
+                pass
+            try:
+                muted = tm.get_color("muted_text", "#a0a0a0")
+                self.topology_label.setDefaultTextColor(muted)
+            except Exception:
+                pass
+
+            # Reapply node fonts from theme
+            try:
+                node_font = tm.get_font("node")
+                node_font.setBold(True)
+                self.label.setFont(node_font)
+                value_font = tm.get_font("node")
+                value_font.setPointSize(max(6, value_font.pointSize() - 2))
+                self.value_label.setFont(value_font)
+                topo_font = tm.get_font("node")
+                topo_font.setPointSize(max(6, topo_font.pointSize() - 3))
+                self.topology_label.setFont(topo_font)
+            except Exception:
+                pass
+
+            self.update()
+        except Exception:
+            pass
 
     def set_manual_color(self, color):
         """Set a manual color for this node and update the display.

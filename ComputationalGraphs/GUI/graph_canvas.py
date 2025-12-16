@@ -191,13 +191,21 @@ class GraphCanvas(QGraphicsView):
 
         # Scene settings
         self.scene.setSceneRect(-2000, -2000, 4000, 4000)
-        self.scene.setBackgroundBrush(QColor(35, 35, 35))  # Dark background
+        # Use theme manager for canvas background if available
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            canvas_qcolor = tm.get_color("canvas_bg", "#232526")
+        except Exception:
+            canvas_qcolor = QColor(35, 35, 35)
+        self.scene.setBackgroundBrush(canvas_qcolor)
 
         # View settings
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setRenderHint(QPainter.RenderHint.TextAntialiasing)
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-        self.setBackgroundBrush(QColor(35, 35, 35))  # Match scene background
+        self.setBackgroundBrush(canvas_qcolor)  # Match scene background
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
@@ -228,8 +236,20 @@ class GraphCanvas(QGraphicsView):
         self.grid_mode = "4x4"
         self.grid_size = max(1, int(self.node_diameter / 4))
         self.grid_major_every = 4  # draw a major line every 4 cells (node size)
-        self.grid_minor_color = QColor(45, 45, 45)
-        self.grid_major_color = QColor(70, 70, 70)
+        # Use theme grid_color if available (single color -> derive minor/major)
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            base_grid = tm.get_color("grid_color", "#4a4a4a")
+            # Derive minor and major by slightly darkening/lightening
+            self.grid_minor_color = base_grid.darker(110)
+            self.grid_major_color = base_grid.lighter(120)
+            # React to theme changes
+            tm.theme_changed.connect(self._on_theme_changed)
+        except Exception:
+            self.grid_minor_color = QColor(45, 45, 45)
+            self.grid_major_color = QColor(70, 70, 70)
         self.show_grid = False
         # Default to no grid snapping (preserve manual node positions typical for user layout)
         self.snap_to_grid = False
@@ -417,6 +437,28 @@ class GraphCanvas(QGraphicsView):
             painter.setPen(pen)
             painter.drawLine(left, y, right, y)
             y += g
+
+    def _on_theme_changed(self):
+        """Update canvas-specific visuals when theme changes."""
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            canvas_qcolor = tm.get_color("canvas_bg", "#232526")
+            self.scene.setBackgroundBrush(canvas_qcolor)
+            self.setBackgroundBrush(canvas_qcolor)
+
+            base_grid = tm.get_color("grid_color", "#4a4a4a")
+            self.grid_minor_color = base_grid.darker(110)
+            self.grid_major_color = base_grid.lighter(120)
+
+            # Force a repaint of the viewport to show updates
+            try:
+                self.viewport().update()
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def drawForeground(self, painter, rect):
         """Draw sub-graph visual groupings (colored outlines and labels) on top of nodes."""
@@ -656,18 +698,18 @@ class GraphCanvas(QGraphicsView):
             button_y = min_y - 40  # Same height as label
             button_x = min_x + 5 + label_rect.width() + 10  # After the label
 
-            # Create "Select All" button (⭕ icon)
+            # Create "Select All" button (plain label used instead of emoji)
             def make_select_callback(sg=subgraph):
                 return lambda: self.select_nodes_in_subgraph(sg)
 
             select_btn = SubgraphControlButton(
-                "⭕", make_select_callback(), "Select All Nodes"
+                "All", make_select_callback(), "Select All Nodes"
             )
             select_btn.setPos(button_x, button_y)
             self.scene.addItem(select_btn)
             widgets.append(select_btn)
 
-            # Create "Remove" button (❌ icon - removes subgraph grouping, not nodes)
+            # Create "Remove" button (plain label)
             def make_remove_callback(sg=subgraph, sg_id=subgraph_id):
                 def remove_subgraph():
                     if hasattr(self, "graph") and self.graph:
@@ -683,13 +725,13 @@ class GraphCanvas(QGraphicsView):
                 return remove_subgraph
 
             remove_btn = SubgraphControlButton(
-                "❌", make_remove_callback(), "Remove Sub-Graph"
+                "Remove", make_remove_callback(), "Remove Sub-Graph"
             )
             remove_btn.setPos(button_x + 26, button_y)  # Next to Select All
             self.scene.addItem(remove_btn)
             widgets.append(remove_btn)
 
-            # Create "Color" button (🎨 icon)
+            # Create "Color" button (plain label)
             def make_color_callback(sg=subgraph, sg_id=subgraph_id):
                 def change_color():
                     current_color = QColor(getattr(sg, "graph_color", "#3498db"))
@@ -705,7 +747,7 @@ class GraphCanvas(QGraphicsView):
                 return change_color
 
             color_btn = SubgraphControlButton(
-                "🎨", make_color_callback(), "Change Color"
+                "Color", make_color_callback(), "Change Color"
             )
             color_btn.setPos(button_x + 52, button_y)  # Next to Remove
             self.scene.addItem(color_btn)

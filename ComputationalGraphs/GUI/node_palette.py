@@ -20,7 +20,10 @@ except Exception:
     from PyQt6.QtGui import QAction
 
 
-class NodePalette(QDockWidget):
+from .theme_utils import ThemeMixin
+
+
+class NodePalette(QDockWidget, ThemeMixin):
     """Dockable palette showing available node types."""
 
     def __init__(self, parent=None):
@@ -46,7 +49,19 @@ class NodePalette(QDockWidget):
         self.search_bar.textChanged.connect(self.filter_nodes)
         search_layout.addWidget(self.search_bar)
 
-        self.create_custom_button = QPushButton("➕ Create")
+        self.create_custom_button = QPushButton("Create")
+        try:
+            from .controllers.control_panel_builder import _apply_icon
+
+            _apply_icon(
+                self,
+                self.create_custom_button,
+                "fa5s.plus",
+                QStyle.StandardPixmap.SP_FileDialogNewFolder,
+                14,
+            )
+        except Exception:
+            pass
         self.create_custom_button.setMinimumWidth(110)
         self.create_custom_button.setMaximumWidth(180)
         self.create_custom_button.clicked.connect(self.on_create_custom_node)
@@ -59,6 +74,14 @@ class NodePalette(QDockWidget):
         self.tree_widget.setHeaderHidden(True)
         self.tree_widget.setIndentation(15)
         self.tree_widget.setUniformRowHeights(False)  # Allow varying row heights
+        # Use theme for palette body and text (handled by ThemeMixin.apply_theme)
+        try:
+            # Initialize ThemeMixin to subscribe to theme changes and call apply_theme()
+            ThemeMixin.__init__(self)
+        except Exception:
+            pass
+
+        # Finish widget setup and populate nodes
         layout.addWidget(self.tree_widget)
 
         self.setWidget(main_widget)
@@ -206,31 +229,11 @@ class NodePalette(QDockWidget):
                     ),
                 ],
             },
-            "Utility": {
-                "description": "Helper and visualization nodes",
-                "nodes": [
-                    (
-                        "BufferNode",
-                        "Buffer",
-                        "Stores values (set allowNone=False to filter None)",
-                    ),
-                    ("DisplayNode", "Display", "Prints values to console output"),
-                ],
-            },
-            "Custom Nodes": {
-                "description": "User-defined custom nodes",
-                "nodes": [],  # Populated dynamically
-            },
         }
 
         # Populate tree with categories and nodes
         self.all_items = []  # Keep track of all items for search
         self.custom_node_items = []  # Track custom node items for refresh
-        (
-            "InitializableContainerNode",
-            "Container (Init)",
-            "Container node with initializable/random value (weights)",
-        ),
         self.refresh_custom_nodes()
         for category, category_data in self.node_categories.items():
             # Create category header
@@ -273,6 +276,8 @@ class NodePalette(QDockWidget):
         # Custom drag handler
         self.tree_widget.startDrag = self.start_drag
 
+    # Theme handling is implemented in `apply_theme()` via ThemeMixin
+    # (keeps behavior centralized and easier to test).
     def filter_nodes(self, text):
         """Filter node list based on search text."""
         search_text = text.lower()
@@ -349,6 +354,13 @@ class NodePalette(QDockWidget):
 
         manager = get_custom_node_manager()
         custom_types = manager.get_type_names()
+
+        # Ensure the Custom Nodes category exists before updating
+        if "Custom Nodes" not in self.node_categories:
+            self.node_categories["Custom Nodes"] = {
+                "description": "User-defined custom nodes",
+                "nodes": [],
+            }
 
         # Clear and update custom nodes in category
         self.node_categories["Custom Nodes"]["nodes"] = [

@@ -181,13 +181,13 @@ class NodeEditorDialog(QDialog):
         actions_layout = QVBoxLayout()
 
         # Regenerate button
-        regen_btn = QPushButton("🔄 Regenerate Population")
+        regen_btn = QPushButton("Regenerate Population")
         regen_btn.setToolTip("Generate a new random population with current parameters")
         regen_btn.clicked.connect(self.on_regenerate_population)
         actions_layout.addWidget(regen_btn)
 
         # Stats display
-        stats_btn = QPushButton("📊 Show Statistics")
+        stats_btn = QPushButton("Show Statistics")
         stats_btn.setToolTip("Display current population statistics")
         stats_btn.clicked.connect(self.on_show_population_stats)
         actions_layout.addWidget(stats_btn)
@@ -272,7 +272,7 @@ class NodeEditorDialog(QDialog):
                     value_str = f"[{len(node_value)} items]"
             else:
                 value_str = str(node_value)[:20]
-            list_widget.addItem(f"• {node_name} ({node_type}) = {value_str}")
+            list_widget.addItem(f"- {node_name} ({node_type}) = {value_str}")
 
         # Set height based on number of nodes, but cap at reasonable size
         row_height = 20

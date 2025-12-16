@@ -37,8 +37,9 @@ class BackpropDialog(QDialog):
         is_mlp = isinstance(self.current_graph, MLPGraph)
 
         if not is_mlp:
+            # Use plain text (no emoji) for cross-platform consistency
             warning = QLabel(
-                "⚠️ Warning: Current graph may not be an MLP.\n"
+                "Warning: Current graph may not be an MLP.\n"
                 "Backpropagation is designed for MLPGraph instances."
             )
             warning.setWordWrap(True)

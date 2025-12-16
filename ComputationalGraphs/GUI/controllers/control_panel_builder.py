@@ -7,8 +7,8 @@ Handles creation of all control panel UI widgets.
 
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import QEvent, QObject, QSize, Qt
+from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -20,12 +20,231 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QSlider,
     QSpinBox,
+    QStyle,
     QVBoxLayout,
     QWidget,
 )
 
 if TYPE_CHECKING:
     from ..main_window import CollapsibleSection, MainWindow
+
+# Optional qtawesome icon pack (fallback to QStyle if unavailable)
+try:
+    import qtawesome as qta
+except Exception:
+    qta = None
+
+
+def _tint_pixmap(pixmap: QPixmap, color: str) -> QPixmap:
+    """Return a copy of pixmap tinted with the given color (hex string)."""
+    if pixmap.isNull():
+        return pixmap
+    result = QPixmap(pixmap.size())
+    result.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(result)
+    painter.setCompositionMode(QPainter.CompositionMode_Source)
+    painter.drawPixmap(0, 0, pixmap)
+    painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+    painter.fillRect(result.rect(), QColor(color))
+    painter.end()
+    return result
+
+
+def _safe_set_stylesheet(widget, stylesheet: str):
+    """Set stylesheet defensively: detect and log common issues that cause the
+    "Could not parse stylesheet" Qt warning (missing resources, malformed CSS,
+    concatenation problems, or embedded emoji characters). Returns the final
+    stylesheet string that was applied.
+    """
+    # Quick sanity checks and automatic corrections
+    s = stylesheet or ""
+    # Remove url(...) references (missing resource warnings are a common cause)
+    if "url(" in s:
+        # strip out url(...) occurrences to avoid parse errors when files missing
+        import re
+
+        s = re.sub(r"url\([^)]*\)", "", s)
+        print(
+            "[theme] Removed url(...) entries from stylesheet to avoid parse warnings"
+        )
+
+    # Ensure concatenated rules have spaces e.g. ';Q' -> '; Q'
+    if ";Q" in s:
+        s = s.replace(";Q", "; Q")
+        print("[theme] Fixed concatenated selector spacing in stylesheet")
+
+    # Warn if non-ASCII characters are present in stylesheet (often emojis)
+    for ch in s:
+        if ord(ch) > 127:
+            print(
+                f"[theme] Warning: stylesheet contains non-ASCII char U+{ord(ch):04X}"
+            )
+            break
+
+    try:
+        widget.setStyleSheet(s)
+    except Exception:
+        # If Qt raises, log the string for inspection and rethrow
+        try:
+            print("[theme] Failed to apply stylesheet; content below:\n", s)
+        except Exception:
+            pass
+        raise
+    return s
+
+
+def _resolve_icon(
+    widget, fa_name, fallback_pixmap, size_px: int = 14, color_key: str = "accent"
+):
+    """Return a QIcon from qtawesome colored with theme color specified by color_key (default: 'accent'),
+    or a QStyle fallback tinted to the same color.
+
+    This function imports qtawesome lazily so installing qtawesome at runtime works without restarting the app.
+    """
+    color = "#4a86e8"
+    try:
+        from ..theme import get_theme_manager
+
+        tm = get_theme_manager()
+        color = tm.get_color(color_key, color).name()
+    except Exception:
+        pass
+
+    # Try to use qtawesome (lazy import)
+    try:
+        import qtawesome as _qta
+
+        try:
+            return _qta.icon(fa_name, color=color)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    # Fallback to QStyle pixmap then tint it
+    try:
+        fallback_icon = widget.style().standardIcon(fallback_pixmap)
+        pix = fallback_icon.pixmap(QSize(size_px, size_px))
+        tinted = _tint_pixmap(pix, color)
+        return QIcon(tinted)
+    except Exception:
+        return widget.style().standardIcon(fallback_pixmap)
+
+
+class _IconHoverFilter(QObject):
+    """Event filter to recolor button icons on hover using theme colors."""
+
+    def __init__(
+        self, widget, fa_name, fallback_pixmap, size_px=14, color_key="accent"
+    ):
+        super().__init__(widget)
+        self.widget = widget
+        self.fa_name = fa_name
+        self.fallback = fallback_pixmap
+        self.size_px = size_px
+        self.color_key = color_key
+
+    def eventFilter(self, obj, event):
+        from PyQt6.QtCore import QEvent
+
+        try:
+            from ..theme import get_theme_manager
+
+            # Obtain the ThemeManager safely and keep a strong reference on both
+            # the filter instance and the widget to avoid GC and preserve signals.
+            tm = get_theme_manager()
+            self._theme_manager = tm
+            try:
+                # Not all widgets accept arbitrary attributes in tests; ignore failures.
+                self.widget._theme_manager = tm
+            except Exception:
+                pass
+
+            base_color = tm.get_color(self.color_key, "#4a86e8").name()
+            # Derive hover color from the base so fallback and theme stay in sync
+            hover_color = QColor(base_color).lighter(120).name()
+        except Exception:
+            base_color = "#4a86e8"
+            hover_color = QColor(base_color).lighter(120).name()
+
+        if event.type() == QEvent.Type.Enter:
+            # apply hover tint
+            try:
+                import qtawesome as qta
+
+                icon = qta.icon(self.fa_name, color=hover_color)
+            except Exception:
+                icon = self.widget.style().standardIcon(self.fallback)
+                icon = QIcon(
+                    _tint_pixmap(
+                        icon.pixmap(QSize(self.size_px, self.size_px)), hover_color
+                    )
+                )
+            try:
+                obj.setIcon(icon)
+            except Exception:
+                pass
+            return False
+        elif event.type() == QEvent.Type.Leave:
+            # restore base color
+            try:
+                import qtawesome as qta
+
+                icon = qta.icon(self.fa_name, color=base_color)
+            except Exception:
+                icon = self.widget.style().standardIcon(self.fallback)
+                icon = QIcon(
+                    _tint_pixmap(
+                        icon.pixmap(QSize(self.size_px, self.size_px)), base_color
+                    )
+                )
+            try:
+                obj.setIcon(icon)
+            except Exception:
+                pass
+            return False
+        return False
+
+
+def _apply_icon(
+    widget, btn, fa_name, fallback_pixmap, size_px: int = 14, color_key: str = "accent"
+):
+    """Set icon on `btn` using qtawesome (colored by theme color_key when available), install hover filter,
+    and reapply on theme changes."""
+    # Apply immediately with accent color by default
+    btn.setIcon(_resolve_icon(widget, fa_name, fallback_pixmap, size_px, color_key))
+    btn.setIconSize(QSize(size_px, size_px))
+
+    # Install hover filter to recolor icon on enter/leave
+    try:
+        filter_obj = _IconHoverFilter(
+            widget, fa_name, fallback_pixmap, size_px, color_key
+        )
+        btn.installEventFilter(filter_obj)
+        # keep a reference to avoid GC
+        if not hasattr(btn, "_icon_hover_filters"):
+            btn._icon_hover_filters = []
+        btn._icon_hover_filters.append(filter_obj)
+    except Exception:
+        pass
+
+    # Re-apply when theme changes so the color tracks theme settings
+    try:
+        from ..theme import get_theme_manager
+
+        tm = get_theme_manager()
+        # Keep a reference on the button to prevent ThemeManager from being GC'd
+        btn._theme_manager = tm
+
+        def _reapply(
+            fa=fa_name, fb=fallback_pixmap, b=btn, w=widget, s=size_px, ck=color_key
+        ):
+            b.setIcon(_resolve_icon(w, fa, fb, s, ck))
+            b.setIconSize(QSize(s, s))
+
+        btn._theme_manager.theme_changed.connect(_reapply)
+    except Exception:
+        pass
 
 
 class ControlPanelBuilder:
@@ -46,6 +265,31 @@ class ControlPanelBuilder:
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         widget = QWidget()
+        widget.setObjectName("controlPanel")
+        # Apply panel background from theme and ensure child QPushButton hover is respected
+        try:
+            from ..theme import get_theme_manager
+
+            tm = get_theme_manager()
+            panel = tm.get_color("panel_bg", "#3c3f41").name()
+            text = tm.get_color("text", "#bbbbbb").name()
+            btn_hover = tm.get_color("button_hover", "#5a5a5a").name()
+            # Apply only basic panel-level styles; avoid child selectors (Qt may reject them when applied to widget-level)
+            _safe_set_stylesheet(widget, (f"background-color: {panel}; color: {text};"))
+
+            def _update_widget_style():
+                # Apply style defensively and log potential problems
+                # Update only panel-level properties
+                _safe_set_stylesheet(
+                    widget,
+                    (
+                        f"background-color: {tm.get_color('panel_bg').name()}; color: {tm.get_color('text').name()};"
+                    ),
+                )
+
+            tm.theme_changed.connect(_update_widget_style)
+        except Exception:
+            pass
         layout = QVBoxLayout(widget)
 
         # Build section containers
@@ -156,9 +400,18 @@ class ControlPanelBuilder:
         from ..main_window import CollapsibleSection
 
         queue_container = self._build_queue_section()
-        layout.addWidget(
-            CollapsibleSection("📋 Processing Queue", queue_container, expanded=False)
+        # Use a FontAwesome icon for the section header instead of an emoji
+        section = CollapsibleSection(
+            "Processing Queue", queue_container, expanded=False
         )
+        _apply_icon(
+            mw,
+            section.toggle_button,
+            "fa5s.tasks",
+            QStyle.StandardPixmap.SP_FileDialogListView,
+            14,
+        )
+        layout.addWidget(section)
 
         return container
 
@@ -173,19 +426,53 @@ class ControlPanelBuilder:
 
         mw.starting_nodes_list = QListWidget()
         mw.starting_nodes_list.setMaximumHeight(120)
-        mw.starting_nodes_list.setStyleSheet(
-            "QListWidget { background-color: #2a2a2a; border: 1px solid #555; }"
-        )
+        try:
+            from ..theme import get_theme_manager
+
+            # Always fetch a fresh ThemeManager instance for signal connections
+            tm = get_theme_manager()
+            mw._theme_manager = tm
+            list_bg = tm.get_color("list_bg", "#313335").name()
+            border = tm.get_color("border", "#555555").name()
+            mw.starting_nodes_list.setStyleSheet(
+                f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
+            )
+            try:
+                mw._theme_manager.theme_changed.connect(
+                    lambda: mw.starting_nodes_list.setStyleSheet(
+                        f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
+                    )
+                )
+            except Exception:
+                pass
+        except Exception:
+            mw.starting_nodes_list.setStyleSheet(
+                "QListWidget { background-color: #2a2a2a; border: 1px solid #555; }"
+            )
         group.addWidget(mw.starting_nodes_list)
 
         btn_row1 = QHBoxLayout()
         mw.add_to_starting_btn = QPushButton("Add Selected")
         mw.add_to_starting_btn.setToolTip("Add selected node(s) from canvas")
+        _apply_icon(
+            mw,
+            mw.add_to_starting_btn,
+            "fa5s.arrow-right",
+            QStyle.StandardPixmap.SP_ArrowRight,
+            14,
+        )
         mw.add_to_starting_btn.clicked.connect(mw.add_selected_to_starting_nodes)
         btn_row1.addWidget(mw.add_to_starting_btn)
 
         mw.remove_from_starting_btn = QPushButton("Remove")
         mw.remove_from_starting_btn.setToolTip("Remove selected node(s)")
+        _apply_icon(
+            mw,
+            mw.remove_from_starting_btn,
+            "fa5s.trash",
+            QStyle.StandardPixmap.SP_TrashIcon,
+            14,
+        )
         mw.remove_from_starting_btn.clicked.connect(mw.remove_from_starting_nodes)
         btn_row1.addWidget(mw.remove_from_starting_btn)
         group.addLayout(btn_row1)
@@ -193,10 +480,24 @@ class ControlPanelBuilder:
         btn_row2 = QHBoxLayout()
         mw.auto_detect_starting_btn = QPushButton("Auto-Detect")
         mw.auto_detect_starting_btn.setToolTip("Auto-detect nodes with no predecessors")
+        _apply_icon(
+            mw,
+            mw.auto_detect_starting_btn,
+            "fa5s.sync",
+            QStyle.StandardPixmap.SP_BrowserReload,
+            14,
+        )
         mw.auto_detect_starting_btn.clicked.connect(mw.auto_detect_starting_nodes)
         btn_row2.addWidget(mw.auto_detect_starting_btn)
 
         mw.clear_starting_btn = QPushButton("Clear All")
+        _apply_icon(
+            mw,
+            mw.clear_starting_btn,
+            "fa5s.eraser",
+            QStyle.StandardPixmap.SP_DialogResetButton,
+            14,
+        )
         mw.clear_starting_btn.clicked.connect(mw.clear_starting_nodes)
         btn_row2.addWidget(mw.clear_starting_btn)
         group.addLayout(btn_row2)
@@ -214,19 +515,56 @@ class ControlPanelBuilder:
 
         mw.stopping_nodes_list = QListWidget()
         mw.stopping_nodes_list.setMaximumHeight(120)
-        mw.stopping_nodes_list.setStyleSheet(
-            "QListWidget { background-color: #2a2a2a; border: 1px solid #555; }"
-        )
+        try:
+            from ..theme import get_theme_manager
+
+            tm = get_theme_manager()
+            mw._theme_manager = tm
+        except Exception:
+            tm = None
+        if tm is not None:
+            panel = tm.get_color("panel_bg", "#3c3f41").name()
+            border = tm.get_color("border", "#555555").name()
+            list_bg = tm.get_color("list_bg", "#313335").name()
+            mw.stopping_nodes_list.setStyleSheet(
+                f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
+            )
+            try:
+                mw._theme_manager.theme_changed.connect(
+                    lambda: mw.stopping_nodes_list.setStyleSheet(
+                        f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
+                    )
+                )
+            except Exception:
+                pass
+        else:
+            mw.stopping_nodes_list.setStyleSheet(
+                "QListWidget { background-color: #2a2a2a; border: 1px solid #555; }"
+            )
         group.addWidget(mw.stopping_nodes_list)
 
         btn_row1 = QHBoxLayout()
         mw.add_to_stopping_btn = QPushButton("Add Selected")
         mw.add_to_stopping_btn.setToolTip("Add selected node(s) from canvas")
+        _apply_icon(
+            mw,
+            mw.add_to_stopping_btn,
+            "fa5s.arrow-right",
+            QStyle.StandardPixmap.SP_ArrowRight,
+            14,
+        )
         mw.add_to_stopping_btn.clicked.connect(mw.add_selected_to_stopping_nodes)
         btn_row1.addWidget(mw.add_to_stopping_btn)
 
         mw.remove_from_stopping_btn = QPushButton("Remove")
         mw.remove_from_stopping_btn.setToolTip("Remove selected node(s)")
+        _apply_icon(
+            mw,
+            mw.remove_from_stopping_btn,
+            "fa5s.trash",
+            QStyle.StandardPixmap.SP_TrashIcon,
+            14,
+        )
         mw.remove_from_stopping_btn.clicked.connect(mw.remove_from_stopping_nodes)
         btn_row1.addWidget(mw.remove_from_stopping_btn)
         group.addLayout(btn_row1)
@@ -234,10 +572,24 @@ class ControlPanelBuilder:
         btn_row2 = QHBoxLayout()
         mw.auto_detect_stopping_btn = QPushButton("Auto-Detect")
         mw.auto_detect_stopping_btn.setToolTip("Auto-detect candidate stopping nodes")
+        _apply_icon(
+            mw,
+            mw.auto_detect_stopping_btn,
+            "fa5s.sync",
+            QStyle.StandardPixmap.SP_BrowserReload,
+            14,
+        )
         mw.auto_detect_stopping_btn.clicked.connect(mw.auto_detect_stopping_nodes)
         btn_row2.addWidget(mw.auto_detect_stopping_btn)
 
         mw.clear_stopping_btn = QPushButton("Clear All")
+        _apply_icon(
+            mw,
+            mw.clear_stopping_btn,
+            "fa5s.eraser",
+            QStyle.StandardPixmap.SP_DialogResetButton,
+            14,
+        )
         mw.clear_stopping_btn.clicked.connect(mw.clear_stopping_nodes)
         btn_row2.addWidget(mw.clear_stopping_btn)
         group.addLayout(btn_row2)
@@ -256,43 +608,111 @@ class ControlPanelBuilder:
         mw.manual_sequence_list = QListWidget()
         mw.manual_sequence_list.setMinimumHeight(120)
         mw.manual_sequence_list.setMaximumHeight(300)
-        mw.manual_sequence_list.setStyleSheet(
-            "QListWidget { background-color: #2a2a2a; border: 1px solid #555; }"
-        )
+        try:
+            from ..theme import get_theme_manager
+
+            tm = get_theme_manager()
+            mw._theme_manager = tm
+        except Exception:
+            tm = None
+        if tm is not None:
+            panel = tm.get_color("panel_bg", "#3c3f41").name()
+            border = tm.get_color("border", "#555555").name()
+            list_bg = tm.get_color("list_bg", "#313335").name()
+            mw.manual_sequence_list.setStyleSheet(
+                f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
+            )
+            try:
+                mw._theme_manager.theme_changed.connect(
+                    lambda: mw.manual_sequence_list.setStyleSheet(
+                        f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
+                    )
+                )
+            except Exception:
+                pass
+        else:
+            mw.manual_sequence_list.setStyleSheet(
+                "QListWidget { background-color: #2a2a2a; border: 1px solid #555; }"
+            )
         group.addWidget(mw.manual_sequence_list)
 
         btn_row1 = QHBoxLayout()
         mw.add_step_selected_btn = QPushButton("Add Step (Selected)")
+        _apply_icon(
+            mw,
+            mw.add_step_selected_btn,
+            "fa5s.plus",
+            QStyle.StandardPixmap.SP_FileDialogNewFolder,
+            14,
+        )
         mw.add_step_selected_btn.clicked.connect(mw.add_selected_to_manual_sequence)
         btn_row1.addWidget(mw.add_step_selected_btn)
 
         mw.add_to_selected_step_btn = QPushButton("Add to Selected Step")
         mw.add_to_selected_step_btn.setToolTip("Add selected node(s) to chosen step")
+        _apply_icon(
+            mw,
+            mw.add_to_selected_step_btn,
+            "fa5s.arrow-right",
+            QStyle.StandardPixmap.SP_ArrowRight,
+            14,
+        )
         mw.add_to_selected_step_btn.clicked.connect(
             mw.add_selected_nodes_to_selected_step
         )
         btn_row1.addWidget(mw.add_to_selected_step_btn)
 
         mw.remove_step_btn = QPushButton("Remove Step")
+        _apply_icon(
+            mw, mw.remove_step_btn, "fa5s.trash", QStyle.StandardPixmap.SP_TrashIcon, 14
+        )
         mw.remove_step_btn.clicked.connect(mw.remove_from_manual_sequence)
         btn_row1.addWidget(mw.remove_step_btn)
 
         mw.clear_sequence_btn = QPushButton("Clear Sequence")
+        _apply_icon(
+            mw,
+            mw.clear_sequence_btn,
+            "fa5s.eraser",
+            QStyle.StandardPixmap.SP_DialogResetButton,
+            14,
+        )
         mw.clear_sequence_btn.clicked.connect(mw.clear_manual_sequence)
         btn_row1.addWidget(mw.clear_sequence_btn)
         group.addLayout(btn_row1)
 
         btn_row2 = QHBoxLayout()
         mw.load_sequence_btn = QPushButton("Load Sequence")
+        _apply_icon(
+            mw,
+            mw.load_sequence_btn,
+            "fa5s.folder-open",
+            QStyle.StandardPixmap.SP_DialogOpenButton,
+            14,
+        )
         mw.load_sequence_btn.clicked.connect(mw.load_manual_sequence_from_graph)
         btn_row2.addWidget(mw.load_sequence_btn)
 
         mw.apply_sequence_btn = QPushButton("Apply to Graph")
+        _apply_icon(
+            mw,
+            mw.apply_sequence_btn,
+            "fa5s.check",
+            QStyle.StandardPixmap.SP_DialogApplyButton,
+            14,
+        )
         mw.apply_sequence_btn.clicked.connect(mw.apply_manual_sequence_to_graph)
         btn_row2.addWidget(mw.apply_sequence_btn)
 
         mw.replace_selected_step_btn = QPushButton("Replace Selected Step")
         mw.replace_selected_step_btn.setToolTip("Replace step with selected nodes")
+        _apply_icon(
+            mw,
+            mw.replace_selected_step_btn,
+            "fa5s.sync",
+            QStyle.StandardPixmap.SP_BrowserReload,
+            14,
+        )
         mw.replace_selected_step_btn.clicked.connect(
             mw.replace_selected_step_with_selected_nodes
         )
@@ -306,52 +726,89 @@ class ControlPanelBuilder:
         mw = self.mw
 
         btn_row = QHBoxLayout()
-        mw.play_btn = QPushButton("▶ Start")
+        mw.play_btn = QPushButton("Start")
+        _apply_icon(
+            mw, mw.play_btn, "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 16
+        )
         mw.play_btn.clicked.connect(mw.play_graph)
         btn_row.addWidget(mw.play_btn)
 
-        mw.pause_btn = QPushButton("⏸ Pause")
+        mw.pause_btn = QPushButton("Pause")
+        _apply_icon(
+            mw, mw.pause_btn, "fa5s.pause", QStyle.StandardPixmap.SP_MediaPause, 16
+        )
         mw.pause_btn.clicked.connect(mw.pause_graph)
         mw.pause_btn.setEnabled(False)
         btn_row.addWidget(mw.pause_btn)
 
-        mw.resume_btn = QPushButton("⤻ Resume")
+        mw.resume_btn = QPushButton("Resume")
+        _apply_icon(
+            mw, mw.resume_btn, "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 16
+        )
         mw.resume_btn.clicked.connect(mw.resume_graph)
         mw.resume_btn.setEnabled(False)
         btn_row.addWidget(mw.resume_btn)
         parent_layout.addLayout(btn_row)
 
-        mw.step_btn = QPushButton("Step →")
+        mw.step_btn = QPushButton("Step")
+        _apply_icon(
+            mw,
+            mw.step_btn,
+            "fa5s.step-forward",
+            QStyle.StandardPixmap.SP_ArrowRight,
+            14,
+        )
         mw.step_btn.clicked.connect(mw.step_graph)
         parent_layout.addWidget(mw.step_btn)
 
         # Reset controls - split into Restore Graph, Reset Processor, and Reset All
         reset_row = QHBoxLayout()
 
-        mw.restore_graph_btn = QPushButton("📸 Restore")
+        mw.restore_graph_btn = QPushButton("Restore")
         mw.restore_graph_btn.setToolTip(
             "Restore graph to iteration 0 state (node values) without changing iteration counter"
+        )
+        _apply_icon(
+            mw,
+            mw.restore_graph_btn,
+            "fa5s.undo",
+            QStyle.StandardPixmap.SP_BrowserReload,
+            14,
         )
         mw.restore_graph_btn.clicked.connect(mw.restore_graph)
         reset_row.addWidget(mw.restore_graph_btn)
 
-        mw.reset_processor_btn = QPushButton("🔄 Reset Proc")
+        mw.reset_processor_btn = QPushButton("Reset Proc")
         mw.reset_processor_btn.setToolTip(
             "Reset iteration counter to 0 and reinitialize processor (preserves node values)"
+        )
+        _apply_icon(
+            mw,
+            mw.reset_processor_btn,
+            "fa5s.stop",
+            QStyle.StandardPixmap.SP_MediaStop,
+            14,
         )
         mw.reset_processor_btn.clicked.connect(mw.reset_processor)
         reset_row.addWidget(mw.reset_processor_btn)
 
-        mw.reset_btn = QPushButton("⏹ Reset All")
+        mw.reset_btn = QPushButton("Reset All")
         mw.reset_btn.setToolTip(
             "Full reset: restore graph to iteration 0 AND reset processor/counter"
+        )
+        _apply_icon(
+            mw,
+            mw.reset_btn,
+            "fa5s.sync",
+            QStyle.StandardPixmap.SP_DialogResetButton,
+            14,
         )
         mw.reset_btn.clicked.connect(mw.reset_graph)
         reset_row.addWidget(mw.reset_btn)
 
         parent_layout.addLayout(reset_row)
 
-        mw.rebuild_exec_btn = QPushButton("🔁 Rebuild")
+        mw.rebuild_exec_btn = QPushButton("Rebuild")
         mw.rebuild_exec_btn.setToolTip("Rebuild graph from canvas")
         mw.rebuild_exec_btn.clicked.connect(mw.rebuild_graph)
         parent_layout.addWidget(mw.rebuild_exec_btn)
@@ -361,7 +818,10 @@ class ControlPanelBuilder:
         mw = self.mw
         speed_layout = QVBoxLayout()
 
-        mw.max_speed_btn = QPushButton("⚡ Max Speed (0ms)")
+        mw.max_speed_btn = QPushButton("Max Speed (0ms)")
+        _apply_icon(
+            mw, mw.max_speed_btn, "fa5s.bolt", QStyle.StandardPixmap.SP_ArrowRight, 14
+        )
         mw.max_speed_btn.setCheckable(True)
         mw.max_speed_btn.setToolTip("Set visualization delay to 0ms")
         mw.max_speed_btn.clicked.connect(mw.on_max_speed_toggled)
@@ -423,9 +883,32 @@ class ControlPanelBuilder:
         # Queue list
         mw.queue_list = QListWidget()
         mw.queue_list.setMaximumHeight(150)
-        mw.queue_list.setStyleSheet(
-            "QListWidget { background-color: #2a2a2a; border: 1px solid #555; }"
-        )
+        try:
+            from ..theme import get_theme_manager
+
+            tm = getattr(mw, "_theme_manager", None) or get_theme_manager()
+            mw._theme_manager = tm
+        except Exception:
+            tm = None
+        if tm is not None:
+            panel = tm.get_color("panel_bg", "#3c3f41").name()
+            border = tm.get_color("border", "#555555").name()
+            list_bg = tm.get_color("list_bg", "#313335").name()
+            mw.queue_list.setStyleSheet(
+                f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
+            )
+            try:
+                mw._theme_manager.theme_changed.connect(
+                    lambda: mw.queue_list.setStyleSheet(
+                        f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
+                    )
+                )
+            except Exception:
+                pass
+        else:
+            mw.queue_list.setStyleSheet(
+                "QListWidget { background-color: #2a2a2a; border: 1px solid #555; }"
+            )
         mw.queue_list.setToolTip(
             "Processing queue: each item runs for its specified iterations"
         )
@@ -439,7 +922,14 @@ class ControlPanelBuilder:
         mw.queue_iterations_spin.setValue(100)
         add_row.addWidget(mw.queue_iterations_spin)
 
-        mw.add_to_queue_btn = QPushButton("+ Add")
+        mw.add_to_queue_btn = QPushButton("Add")
+        _apply_icon(
+            mw,
+            mw.add_to_queue_btn,
+            "fa5s.plus",
+            QStyle.StandardPixmap.SP_FileDialogNewFolder,
+            14,
+        )
         mw.add_to_queue_btn.setToolTip(
             "Add the currently selected graph/subgraph to the queue"
         )
@@ -449,7 +939,7 @@ class ControlPanelBuilder:
 
         # Repeat controls
         repeat_row = QHBoxLayout()
-        mw.queue_repeat_check = QCheckBox("🔁 Repeat")
+        mw.queue_repeat_check = QCheckBox("Repeat")
         mw.queue_repeat_check.setToolTip(
             "When checked, queue will restart from beginning after completing"
         )
@@ -462,18 +952,26 @@ class ControlPanelBuilder:
         mw.queue_repeat_spin.setToolTip("Repeat count: 0 = forever, N = repeat N times")
         mw.queue_repeat_spin.setEnabled(False)  # Disabled until repeat is checked
         repeat_row.addWidget(mw.queue_repeat_spin)
-        repeat_row.addWidget(QLabel("times (0=∞)"))
+        # Use ASCII 'inf' to avoid non-ASCII infinity symbol
+        repeat_row.addWidget(QLabel("times (0=inf)"))
         repeat_row.addStretch()
         layout.addLayout(repeat_row)
 
         # Queue control buttons
         btn_row1 = QHBoxLayout()
-        mw.start_queue_btn = QPushButton("▶ Run Queue")
+        btn_row1 = QHBoxLayout()
+        mw.start_queue_btn = QPushButton("Run Queue")
+        _apply_icon(
+            mw, mw.start_queue_btn, "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 14
+        )
         mw.start_queue_btn.setToolTip("Start processing the queue sequentially")
         mw.start_queue_btn.clicked.connect(mw.start_processing_queue)
         btn_row1.addWidget(mw.start_queue_btn)
 
-        mw.stop_queue_btn = QPushButton("⏹ Stop Queue")
+        mw.stop_queue_btn = QPushButton("Stop Queue")
+        _apply_icon(
+            mw, mw.stop_queue_btn, "fa5s.stop", QStyle.StandardPixmap.SP_MediaStop, 14
+        )
         mw.stop_queue_btn.setToolTip("Stop queue processing")
         mw.stop_queue_btn.clicked.connect(mw.stop_processing_queue)
         mw.stop_queue_btn.setEnabled(False)
@@ -482,11 +980,25 @@ class ControlPanelBuilder:
 
         btn_row2 = QHBoxLayout()
         mw.remove_from_queue_btn = QPushButton("Remove Selected")
+        _apply_icon(
+            mw,
+            mw.remove_from_queue_btn,
+            "fa5s.trash",
+            QStyle.StandardPixmap.SP_TrashIcon,
+            14,
+        )
         mw.remove_from_queue_btn.setToolTip("Remove selected item from queue")
         mw.remove_from_queue_btn.clicked.connect(mw.remove_selected_from_queue)
         btn_row2.addWidget(mw.remove_from_queue_btn)
 
         mw.clear_queue_btn = QPushButton("Clear Queue")
+        _apply_icon(
+            mw,
+            mw.clear_queue_btn,
+            "fa5s.eraser",
+            QStyle.StandardPixmap.SP_DialogResetButton,
+            14,
+        )
         mw.clear_queue_btn.clicked.connect(mw.clear_processing_queue)
         btn_row2.addWidget(mw.clear_queue_btn)
         layout.addLayout(btn_row2)
@@ -496,14 +1008,28 @@ class ControlPanelBuilder:
         layout.addWidget(QLabel("<b>Per-Graph Reset</b>"))
 
         reset_row = QHBoxLayout()
-        mw.save_graph_snapshot_btn = QPushButton("📸 Save Snapshot")
+        mw.save_graph_snapshot_btn = QPushButton("Save Snapshot")
+        _apply_icon(
+            mw,
+            mw.save_graph_snapshot_btn,
+            "fa5s.camera",
+            QStyle.StandardPixmap.SP_DialogSaveButton,
+            14,
+        )
         mw.save_graph_snapshot_btn.setToolTip(
             "Save snapshot of selected graph/subgraph"
         )
         mw.save_graph_snapshot_btn.clicked.connect(mw.save_selected_graph_snapshot)
         reset_row.addWidget(mw.save_graph_snapshot_btn)
 
-        mw.reset_selected_graph_btn = QPushButton("🔄 Reset Graph")
+        mw.reset_selected_graph_btn = QPushButton("Reset Graph")
+        _apply_icon(
+            mw,
+            mw.reset_selected_graph_btn,
+            "fa5s.undo",
+            QStyle.StandardPixmap.SP_BrowserReload,
+            14,
+        )
         mw.reset_selected_graph_btn.setToolTip(
             "Reset selected graph/subgraph to its snapshot"
         )
@@ -590,9 +1116,6 @@ class ControlPanelBuilder:
         )
         ann_colors_row.addWidget(mw.clear_ann_colors_btn)
 
-        # Add ANN and Clear to colorize group so they are inside 'Colorize Graph' and Clear appears last
-        mw.colorize_group_layout.addLayout(ann_colors_row)
-
         # Topology Labels toggle
         mw.topology_labels_check = QCheckBox("Show Topology Labels")
         mw.topology_labels_check.setToolTip(
@@ -604,6 +1127,9 @@ class ControlPanelBuilder:
             getattr(mw, "topology_labels_enabled", False)
         )
         mw.colorize_group_layout.addWidget(mw.topology_labels_check)
+
+        # Add ANN and Clear to colorize group so they are inside 'Colorize Graph' and Clear appears last
+        mw.colorize_group_layout.addLayout(ann_colors_row)
 
         layout.addStretch()
         return container
@@ -734,7 +1260,7 @@ class ControlPanelBuilder:
 
         # Grid mode
         mw.grid_mode_combo = QComboBox()
-        mw.grid_mode_combo.addItems(["Node cell (1×1)", "Node 4×4"])
+        mw.grid_mode_combo.addItems(["Node cell (1x1)", "Node 4x4"])
         # Default to Node 4x4 as requested
         mw.grid_mode_combo.setCurrentIndex(1)
 
@@ -758,7 +1284,7 @@ class ControlPanelBuilder:
 
         # Snap granularity
         mw.snap_gran_combo = QComboBox()
-        mw.snap_gran_combo.addItems(["Snap to Grid Cell", "Snap to Node Block (4×)"])
+        mw.snap_gran_combo.addItems(["Snap to Grid Cell", "Snap to Node Block (4x)"])
         # Default to 'Snap to Grid Cell' (snap granularity = 1)
         mw.snap_gran_combo.setCurrentIndex(0)
 
@@ -848,11 +1374,25 @@ class ControlPanelBuilder:
 
         layout.addWidget(QLabel("<b>Plotting</b>"))
 
-        mw.open_plot_btn = QPushButton("📊 Open Plot Window")
+        mw.open_plot_btn = QPushButton("Open Plot Window")
+        _apply_icon(
+            mw,
+            mw.open_plot_btn,
+            "fa5s.chart-bar",
+            QStyle.StandardPixmap.SP_DialogOpenButton,
+            14,
+        )
         mw.open_plot_btn.clicked.connect(mw.open_plot_window)
         layout.addWidget(mw.open_plot_btn)
 
-        mw.add_to_plot_btn = QPushButton("➕ Add Selected to Plot")
+        mw.add_to_plot_btn = QPushButton("Add Selected to Plot")
+        _apply_icon(
+            mw,
+            mw.add_to_plot_btn,
+            "fa5s.plus",
+            QStyle.StandardPixmap.SP_FileDialogNewFolder,
+            14,
+        )
         mw.add_to_plot_btn.clicked.connect(mw.add_selected_to_plot)
         layout.addWidget(mw.add_to_plot_btn)
 
@@ -886,7 +1426,14 @@ class ControlPanelBuilder:
         layout.addWidget(desc_label)
 
         # Simplify Step button
-        mw.simplify_step_btn = QPushButton("⏩ Simplify Step")
+        mw.simplify_step_btn = QPushButton("Simplify Step")
+        _apply_icon(
+            mw,
+            mw.simplify_step_btn,
+            "fa5s.compress",
+            QStyle.StandardPixmap.SP_ArrowRight,
+            14,
+        )
         mw.simplify_step_btn.setToolTip(
             "Apply one simplification transformation (compression or abstraction)"
         )
@@ -894,7 +1441,14 @@ class ControlPanelBuilder:
         layout.addWidget(mw.simplify_step_btn)
 
         # Fully Simplify button
-        mw.simplify_fully_btn = QPushButton("⏭️ Fully Simplify")
+        mw.simplify_fully_btn = QPushButton("Fully Simplify")
+        _apply_icon(
+            mw,
+            mw.simplify_fully_btn,
+            "fa5s.forward",
+            QStyle.StandardPixmap.SP_MediaPlay,
+            14,
+        )
         mw.simplify_fully_btn.setToolTip(
             "Apply all possible simplifications until graph is fully simplified"
         )
@@ -902,7 +1456,14 @@ class ControlPanelBuilder:
         layout.addWidget(mw.simplify_fully_btn)
 
         # Expand Step button
-        mw.expand_step_btn = QPushButton("⏪ Expand Step")
+        mw.expand_step_btn = QPushButton("Expand Step")
+        _apply_icon(
+            mw,
+            mw.expand_step_btn,
+            "fa5s.expand",
+            QStyle.StandardPixmap.SP_ArrowBack,
+            14,
+        )
         mw.expand_step_btn.setToolTip(
             "Reverse the last simplification (decompress or expand abstracted nodes)"
         )

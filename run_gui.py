@@ -21,16 +21,24 @@ def main():
     app.setApplicationName("Computational Graphs Editor")
     app.setOrganizationName("ComputationalGraphs")
 
-    # Load stylesheet (optional)
+    # Load stylesheet (optional) and apply theme manager if available
     try:
-        import os
+        # Prefer the theme manager which will use a template if present
+        try:
+            from ComputationalGraphs.GUI.theme import get_theme_manager
 
-        style_path = os.path.join(
-            os.path.dirname(__file__), "ComputationalGraphs", "GUI", "styles.qss"
-        )
-        if os.path.exists(style_path):
-            with open(style_path, "r") as f:
-                app.setStyleSheet(f.read())
+            tm = get_theme_manager()
+            tm.apply_theme(app)
+        except Exception:
+            # Fallback to legacy static stylesheet
+            import os
+
+            style_path = os.path.join(
+                os.path.dirname(__file__), "ComputationalGraphs", "GUI", "styles.qss"
+            )
+            if os.path.exists(style_path):
+                with open(style_path, "r", encoding="utf-8") as f:
+                    app.setStyleSheet(f.read())
     except Exception as e:
         print(f"Could not load stylesheet: {e}")
 

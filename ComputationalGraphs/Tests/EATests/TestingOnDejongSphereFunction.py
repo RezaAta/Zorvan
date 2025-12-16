@@ -127,7 +127,7 @@ def run_graph_ea(
 
     if verbose:
         print(
-            f"Running Graph EA: {generations} generations × {pop_size} population = {total_iterations} iterations"
+            f"Running Graph EA: {generations} generations x {pop_size} population = {total_iterations} iterations"
         )
 
     # Run graph

@@ -348,7 +348,14 @@ def graph_predict_single(mlp_graph, x_temp, x_prev, scalers):
 
 
 def closed_loop_simulation_graph_detached(
-    mlp_graph, scalers, steps=200, target=22.0, rng_seed=None, verbose=False
+    mlp_graph,
+    scalers,
+    steps=200,
+    target=22.0,
+    rng_seed=None,
+    verbose=False,
+    initial_prev_power=None,
+    max_delta=None,
 ):
     """Closed-loop sim that treats MLP and FIS as detached: use MLP prediction then run FIS (classic) on recorded current temp."""
     # episode parameters (deterministic with seed)
@@ -356,15 +363,29 @@ def closed_loop_simulation_graph_detached(
     if rng_seed is None:
         rng_seed = np.random.randint(0, 2**31 - 1)
     rng = np.random.RandomState(rng_seed)
-    outside = rng.uniform(-10.0, 35.0)
-    k_loss = rng.uniform(0.01, 0.12)
-    k_heater = rng.uniform(0.05, 0.5)
+    outside = None
+    k_loss = None
+    k_heater = None
+
+    randomize_env = False
+
+    # environment params: by default static values that allow heating to be feasible
+    if randomize_env:
+        outside = rng.uniform(-10.0, 35.0) if outside is None else outside
+        k_loss = rng.uniform(0.01, 0.12) if k_loss is None else k_loss
+        k_heater = rng.uniform(0.05, 0.5) if k_heater is None else k_heater
+    else:
+        outside = 15.0 if outside is None else outside
+        k_loss = 0.03 if k_loss is None else k_loss
+        k_heater = 0.3 if k_heater is None else k_heater
 
     # initialize
     T = rng.uniform(5.0, 25.0)
     if verbose:
         print(f"[Graph Detached] rng_seed={rng_seed}, initial_T={T:.6f}")
-    prev_power = 0.0
+    # Allow caller to set a non-zero initial previous power to avoid large initial
+    # temperature drops when outside is very cold.
+    prev_power = 0.0 if initial_prev_power is None else initial_prev_power
     temps = []
     powers = []
     errors = []
@@ -384,7 +405,11 @@ def closed_loop_simulation_graph_detached(
         err = target - T_pre
         power = fis_classic(err, delta_pred)
         power_norm = power / 100.0
-        T = T + (k_heater * power_norm - k_loss * (T - outside))
+        delta = k_heater * power_norm - k_loss * (T - outside)
+        if max_delta is not None:
+            # clamp the temperature change per step to avoid extreme jumps
+            delta = max(-max_delta, min(max_delta, delta))
+        T = T + delta
         prev_power = power_norm
         temps.append(T)
         powers.append(power)
@@ -394,14 +419,33 @@ def closed_loop_simulation_graph_detached(
 
 
 def closed_loop_simulation_classic_detached(
-    classic_mlp, scalers, steps=200, target=22.0, rng_seed=None, verbose=False
+    classic_mlp,
+    scalers,
+    steps=200,
+    target=22.0,
+    rng_seed=None,
+    verbose=False,
+    initial_prev_power=None,
+    max_delta=None,
 ):
     if rng_seed is None:
         rng_seed = np.random.randint(0, 2**31 - 1)
     rng = np.random.RandomState(rng_seed)
-    outside = rng.uniform(-10.0, 35.0)
-    k_loss = rng.uniform(0.01, 0.12)
-    k_heater = rng.uniform(0.05, 0.5)
+    outside = None
+    k_loss = None
+    k_heater = None
+
+    randomize_env = False
+
+    # environment params: by default static values that allow heating to be feasible
+    if randomize_env:
+        outside = rng.uniform(-10.0, 35.0) if outside is None else outside
+        k_loss = rng.uniform(0.01, 0.12) if k_loss is None else k_loss
+        k_heater = rng.uniform(0.05, 0.5) if k_heater is None else k_heater
+    else:
+        outside = 15.0 if outside is None else outside
+        k_loss = 0.03 if k_loss is None else k_loss
+        k_heater = 0.3 if k_heater is None else k_heater
 
     T = rng.uniform(5.0, 25.0)
     if verbose:
@@ -428,7 +472,10 @@ def closed_loop_simulation_classic_detached(
         err = target - T_pre
         power = fis_classic(err, delta_pred)
         power_norm = power / 100.0
-        T = T + (k_heater * power_norm - k_loss * (T - outside))
+        delta = k_heater * power_norm - k_loss * (T - outside)
+        if max_delta is not None:
+            delta = max(-max_delta, min(max_delta, delta))
+        T = T + delta
         prev_power = power_norm
         temps.append(T)
         powers.append(power)
@@ -438,26 +485,65 @@ def closed_loop_simulation_classic_detached(
 
 
 def closed_loop_simulation_classic(
-    classic_mlp, steps=200, target=22.0, rng_seed=None, verbose=False
+    classic_mlp,
+    steps=200,
+    target=22.0,
+    rng_seed=None,
+    verbose=False,
+    scalers=None,
+    initial_prev_power=None,
+    max_delta=None,
 ):
+    """Closed-loop simulation for Classic MLP.
+
+    If `scalers` is provided, inputs will be normalized before prediction and
+    outputs denormalized (matching training). When `scalers` is None the
+    function preserves the historical behavior (raw inputs).
+    """
     if rng_seed is None:
         rng_seed = np.random.randint(0, 2**31 - 1)
     rng = np.random.RandomState(rng_seed)
-    outside = rng.uniform(-10.0, 35.0)
-    k_loss = rng.uniform(0.01, 0.12)
-    k_heater = rng.uniform(0.05, 0.5)
+    outside = None
+    k_loss = None
+    k_heater = None
+
+    randomize_env = False
+
+    # environment params: by default static values that allow heating to be feasible
+    if randomize_env:
+        outside = rng.uniform(-10.0, 35.0) if outside is None else outside
+        k_loss = rng.uniform(0.01, 0.12) if k_loss is None else k_loss
+        k_heater = rng.uniform(0.05, 0.5) if k_heater is None else k_heater
+    else:
+        outside = 15.0 if outside is None else outside
+        k_loss = 0.03 if k_loss is None else k_loss
+        k_heater = 0.3 if k_heater is None else k_heater
 
     T = rng.uniform(5.0, 25.0)
     if verbose:
         print(f"[Classic] rng_seed={rng_seed}, initial_T={T:.6f}")
-    prev_power = 0.0
+    prev_power = 0.0 if initial_prev_power is None else initial_prev_power
     temps = []
     powers = []
     errors = []
 
     for t in range(steps):
         x = np.array([[T, prev_power]])
-        delta_pred = classic_mlp.predict(x)[0, 0]
+        # If scalers are given, normalize inputs and denormalize the output
+        if scalers is not None:
+            xn = np.array(
+                [
+                    [
+                        (T - scalers["x0_mean"]) / scalers["x0_std"],
+                        (prev_power - scalers["x1_mean"]) / scalers["x1_std"],
+                    ]
+                ]
+            )
+            delta_pred = (
+                classic_mlp.predict(xn)[0, 0] * scalers["y_std"] + scalers["y_mean"]
+            )
+        else:
+            delta_pred = classic_mlp.predict(x)[0, 0]
         err = target - T
         power = fis_classic(err, delta_pred)
         power_norm = power / 100.0
@@ -707,11 +793,25 @@ def run_compare():
     temp_rmse = np.sqrt(np.mean((g_temps - c_temps) ** 2))
     print(f"Closed-loop temps RMSE between Graph and Classic hybrids: {temp_rmse:.6f}")
 
-    # plot
+    # plot with fixed y-axis and final error annotations
     plt.figure(figsize=(10, 6))
     plt.plot(g_temps, label="Graph Temp")
     plt.plot(c_temps, label="Classic Temp")
     plt.axhline(22.0, color="k", linestyle="--", label="Setpoint")
+    # Set vertical axis scale to 0-28 as requested
+    plt.ylim(0, 28)
+    # annotate final absolute error values on the plot (upper-left)
+    ax = plt.gca()
+    info_text = f"Graph final_abs_error={gm:.3f}\nClassic final_abs_error={cm:.3f}"
+    ax.text(
+        0.02,
+        0.95,
+        info_text,
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
+    )
     plt.legend()
     plt.title("Closed-loop temperature (Graph vs Classic)")
     plt.xlabel("Time step")

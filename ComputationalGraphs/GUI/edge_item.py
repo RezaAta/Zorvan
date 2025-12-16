@@ -24,7 +24,16 @@ class EdgeItem(QGraphicsPathItem):
         self.target_node = target_node  # NodeItem
 
         # Visual properties
-        self.setPen(QPen(QColor(80, 80, 80), 2))
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            edge_qcolor = tm.get_color("edge_color", "#505050")
+            tm.theme_changed.connect(self._on_theme_changed)
+        except Exception:
+            edge_qcolor = QColor(80, 80, 80)
+
+        self.setPen(QPen(edge_qcolor, 2))
         self.setZValue(-1)  # Draw edges behind nodes
         # Allow edges to be selectable and receive hover events
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
@@ -104,6 +113,15 @@ class EdgeItem(QGraphicsPathItem):
         if self.isSelected():
             pen.setColor(QColor(255, 200, 0))  # Yellow when selected
             pen.setWidth(max(2, pen.width() + 1))
+        else:
+            # Ensure normal color follows theme (in case theme changed since creation)
+            try:
+                from .theme import get_theme_manager
+
+                tm = get_theme_manager()
+                pen.setColor(tm.get_color("edge_color", "#505050"))
+            except Exception:
+                pass
         painter.setPen(pen)
 
         # Draw the path (the line) but prevent the default dotted selection bbox
@@ -176,6 +194,19 @@ class EdgeItem(QGraphicsPathItem):
             except Exception:
                 pass
         return super().itemChange(change, value)
+
+    def _on_theme_changed(self):
+        """Called when theme changes; update pen color."""
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            c = tm.get_color("edge_color", "#505050")
+            pen = QPen(c, self.pen().width())
+            self.setPen(pen)
+            self.update()
+        except Exception:
+            pass
 
     def remove(self):
         """Remove this edge from the scene and unregister from nodes."""

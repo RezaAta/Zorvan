@@ -162,6 +162,21 @@ class MenuToolbarController:
         # Add rebuild action to Tools
         tools_menu.addAction(mw.rebuild_action)
 
+        # Preferences (Colors / Theme)
+        mw.preferences_action = QAction("&Preferences...", mw)
+        mw.preferences_action.setShortcut(QKeySequence("Ctrl+,"))
+        mw.preferences_action.setStatusTip("Open Preferences (Colors & Theme)")
+        mw.preferences_action.triggered.connect(mw.show_preferences)
+        # Put Preferences under Edit for discoverability
+        try:
+            edit_menu = menubar.actions()[1].menu()
+            edit_menu.addSeparator()
+            edit_menu.addAction(mw.preferences_action)
+        except Exception:
+            # Fallback: add to Tools
+            tools_menu.addSeparator()
+            tools_menu.addAction(mw.preferences_action)
+
         # View menu
         view_menu = menubar.addMenu("&View")
 

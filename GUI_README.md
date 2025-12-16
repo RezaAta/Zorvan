@@ -16,6 +16,12 @@ python run_gui.py
 
 ## Features
 
+### Theming & Styling 🔧
+
+- The GUI uses a singleton `ThemeManager` (see `ComputationalGraphs/GUI/theme.py`) to store colors, fonts and stylesheet fragments.
+- Widgets that should react to theme changes should inherit from `ThemeMixin` (`ComputationalGraphs/GUI/theme_utils.py`). `ThemeMixin` subscribes to `theme_changed` and calls an `apply_theme()` method which the widget implements to reapply colors/fonts/styles. This centralizes theme logic, avoids inline `setStyleSheet` duplication, and simplifies testing.
+
+
 ### 1. **Node Palette (Left Panel)**
 Contains all available node types organized by category:
 

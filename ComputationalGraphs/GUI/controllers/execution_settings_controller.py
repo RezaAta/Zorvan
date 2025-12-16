@@ -75,7 +75,8 @@ class ExecutionSettingsController:
                 mw.speed_spin.setEnabled(False)
             mw.graph_runner.set_speed(0)
             mw.speed_label.setText("0 ms (MAX)")
-            mw.max_speed_btn.setText("⚡ Max Speed (ON)")
+            # Remove emoji from button text; keep state description
+            mw.max_speed_btn.setText("Max Speed (ON)")
         else:
             # Restore previous speed
             mw.speed_slider.setEnabled(True)
@@ -102,7 +103,7 @@ class ExecutionSettingsController:
 
             mw.graph_runner.set_speed(restore_speed)
             mw.speed_label.setText(f"{restore_speed} ms")
-            mw.max_speed_btn.setText("⚡ Max Speed (0ms)")
+            mw.max_speed_btn.setText("Max Speed (0ms)")
 
     def on_verbose_changed(self, state: int):
         """Handle verbose checkbox change.

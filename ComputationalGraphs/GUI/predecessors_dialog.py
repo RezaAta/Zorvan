@@ -109,7 +109,8 @@ class PredecessorsDialog(QDialog):
                 from PyQt6.QtWidgets import QToolButton
 
                 btn = QToolButton()
-                btn.setText("✕")
+                # Use plain ASCII 'X' to avoid emoji characters in UI
+                btn.setText("X")
                 btn.setFixedSize(26, 26)
                 btn.setToolTip("Disconnect predecessor")
                 btn.setStyleSheet("font-size: 12px; padding: 0px;")

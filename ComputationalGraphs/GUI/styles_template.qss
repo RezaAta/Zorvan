@@ -1,0 +1,148 @@
+/* Modern stylesheet template for ComputationalGraphs GUI */
+
+QMainWindow {
+    background-color: {{panel_bg}};
+}
+
+QDockWidget {
+    background-color: {{panel_bg}};
+    color: {{text}};
+}
+
+QDockWidget::title {
+    background-color: {{header_bg}};
+    padding: 6px;
+    border: 1px solid {{border}};
+}
+
+QListWidget {
+    background-color: {{list_bg}};
+    color: {{text}};
+    border: 1px solid {{border}};
+    outline: none;
+}
+
+/* Node items are drawn directly by NodeItem, not via stylesheet. Use node_default in code. */
+
+QListWidget::item {
+    padding: 8px;
+    border-bottom: 1px solid {{border}};
+}
+
+QListWidget::item:selected {
+    background-color: {{accent}};
+}
+
+QListWidget::item:hover {
+    background-color: {{accent}};
+}
+
+QPushButton {
+    background-color: {{button_bg}};
+    color: {{text}};
+    border: 1px solid {{border}};
+    padding: 6px 12px;
+    border-radius: 3px;
+}
+
+QPushButton:hover {
+    background-color: {{button_hover}};
+}
+
+QPushButton:pressed {
+    background-color: {{button_pressed}};
+}
+
+QPushButton:disabled {
+    background-color: {{button_disabled_bg}};
+    color: {{muted_text}};
+}
+
+QLabel {
+    color: {{text}};
+}
+
+QSpinBox, QDoubleSpinBox {
+    background-color: {{list_bg}};
+    color: {{text}};
+    border: 1px solid {{border}};
+    padding: 3px;
+}
+
+QSlider::groove:horizontal {
+    background-color: {{list_bg}};
+    height: 6px;
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    background-color: {{accent}};
+    width: 14px;
+    margin: -4px 0;
+    border-radius: 7px;
+}
+
+QCheckBox {
+    color: {{text}};
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid {{border}};
+    background-color: {{list_bg}};
+}
+
+QCheckBox::indicator:checked {
+    background-color: {{accent}};
+}
+
+QStatusBar {
+    background-color: {{dock_bg}};
+    color: {{text}};
+}
+
+QMenuBar {
+    background-color: {{header_bg}};
+    color: {{text}};
+}
+
+QMenuBar::item:selected {
+    background-color: {{header_bg}};
+}
+
+QMenu {
+    background-color: {{header_bg}};
+    color: {{text}};
+    border: 1px solid {{border}};
+}
+
+QMenu::item:selected {
+    background-color: {{header_bg}};
+}
+
+QToolBar {
+    background-color: {{header_bg}};
+    border: 1px solid {{border}};
+    spacing: 3px;
+}
+
+/* Collapsible section toggles (QToolButton) - provide a subtle hover highlight */
+QToolButton {
+    text-align: left;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-weight: bold;
+}
+QToolButton:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+QToolButton:checked {
+    background-color: {{header_bg}};
+    color: white;
+}
+
+QGraphicsView {
+    background-color: {{canvas_bg}};
+    border: none;
+}

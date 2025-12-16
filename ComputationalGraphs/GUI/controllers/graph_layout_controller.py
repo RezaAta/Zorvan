@@ -26,13 +26,13 @@ class GraphLayoutController:
         label = self.main_window.layout_status_label
 
         if layout_algorithms.is_grandalf_available():
-            label.setText("✓ grandalf available (Sugiyama)")
+            label.setText("grandalf available (Sugiyama)")
             label.setStyleSheet("color: #4CAF50;")
         elif layout_algorithms.is_networkx_available():
-            label.setText("⚠ Using NetworkX fallback")
+            label.setText("Using NetworkX fallback")
             label.setStyleSheet("color: #FFC107;")
         else:
-            label.setText("⚠ No layout library found")
+            label.setText("No layout library found")
             label.setStyleSheet("color: #f44336;")
 
     def apply_graph_layout(self, layout_type: str, spacing: int = None):

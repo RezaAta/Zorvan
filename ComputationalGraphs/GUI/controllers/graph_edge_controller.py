@@ -27,7 +27,7 @@ class GraphEdgeController:
             target_node: The target node of the edge
         """
         mw = self.main_window
-        mw.status_bar.showMessage(f"Connected {source_node.name} → {target_node.name}")
+        mw.status_bar.showMessage(f"Connected {source_node.name} -> {target_node.name}")
 
         # Keep adjacency matrix updated
         try:
@@ -48,7 +48,7 @@ class GraphEdgeController:
         """
         mw = self.main_window
         mw.status_bar.showMessage(
-            f"Disconnected {source_node.name} → {target_node.name}"
+            f"Disconnected {source_node.name} -> {target_node.name}"
         )
 
         try:

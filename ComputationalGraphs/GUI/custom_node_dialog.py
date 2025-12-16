@@ -153,8 +153,8 @@ class CustomNodeDialog(QDialog):
         # List to track property widgets
         self.custom_property_rows: List[Dict[str, QWidget]] = []
 
-        # Add property button
-        add_prop_btn = QPushButton("➕ Add Property")
+        # Add property button (use plain text instead of emoji)
+        add_prop_btn = QPushButton("Add Property")
         add_prop_btn.clicked.connect(lambda: self.add_custom_property_row())
         custom_props_layout.addWidget(add_prop_btn)
 
@@ -241,8 +241,8 @@ class CustomNodeDialog(QDialog):
         default_edit.setMinimumWidth(150)
         row_layout.addWidget(default_edit)
 
-        # Remove button
-        remove_btn = QPushButton("✕")
+        # Remove button (plain text)
+        remove_btn = QPushButton("Remove")
         remove_btn.setMaximumWidth(30)
         row_layout.addWidget(remove_btn)
 

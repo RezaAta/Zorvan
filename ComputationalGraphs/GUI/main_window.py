@@ -73,10 +73,23 @@ class CollapsibleSection(QWidget):
         self.toggle_button.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self.toggle_button.setStyleSheet(
-            "QToolButton { text-align: left; padding: 6px 8px; border-radius: 6px; font-weight: bold; }"
-            "QToolButton:checked { background-color: #239483; color: white; }"
-        )
+        # Apply initial style from theme (header color for checked state)
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            header = tm.get_color("header_bg", "#239483").name()
+            self.toggle_button.setStyleSheet(
+                f"QToolButton {{ text-align: left; padding: 6px 8px; border-radius: 6px; font-weight: bold; }} "
+                f"QToolButton:checked {{ background-color: {header}; color: white; }} "
+            )
+            # update style when theme changes
+            tm.theme_changed.connect(self._on_theme_changed)
+        except Exception:
+            self.toggle_button.setStyleSheet(
+                "QToolButton { text-align: left; padding: 6px 8px; border-radius: 6px; font-weight: bold; } "
+                "QToolButton:checked { background-color: #239483; color: white; }"
+            )
         # Ensure arrow and text align nicely and font weight is clear
         self.toggle_button.setFont(
             QFont(
@@ -100,9 +113,30 @@ class CollapsibleSection(QWidget):
 
         # Connect
         self.toggle_button.toggled.connect(self.on_toggled)
+        # Ensure content visibility matches initial expanded flag
+        try:
+            self.content.setVisible(self.toggle_button.isChecked())
+        except Exception:
+            pass
+        # Theme change handler
+        try:
+            tm
+        except Exception:
+            tm = None
 
-        # Initial state
-        self.content.setVisible(expanded)
+    def _on_theme_changed(self):
+        """Update toggle button style when theme changes."""
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            header = tm.get_color("header_bg", "#239483").name()
+            self.toggle_button.setStyleSheet(
+                f"QToolButton {{ text-align: left; padding: 6px 8px; border-radius: 6px; font-weight: bold; }} "
+                f"QToolButton:checked {{ background-color: {header}; color: white; }} "
+            )
+        except Exception:
+            pass
 
     def on_toggled(self, checked: bool):
         self.content.setVisible(checked)
@@ -118,9 +152,17 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        # Set a consistent application font for UI (adjustable)
+        # Set a consistent application font for UI (adjustable via Preferences)
         try:
-            QApplication.setFont(QFont("Segoe UI", 10))
+            from PyQt6.QtGui import QFont
+
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            ui_font = tm.get_font("ui")
+            QApplication.setFont(ui_font)
+            # Ensure runtime updates to UI font are applied
+            tm.theme_changed.connect(lambda: QApplication.setFont(tm.get_font("ui")))
         except Exception:
             # If QApplication not available or font fails, ignore silently
             pass
@@ -396,6 +438,16 @@ class MainWindow(QMainWindow):
     def edit_selected_node(self):
         """Open editor for the selected node. Delegated to NodeEditingController."""
         self.node_editing_controller.edit_selected_node()
+
+    def show_preferences(self):
+        """Show color/theme preferences dialog."""
+        try:
+            from .color_preferences import ColorPreferencesDialog
+
+            dlg = ColorPreferencesDialog(self)
+            dlg.exec()
+        except Exception as e:
+            QMessageBox.warning(self, "Preferences", f"Unable to open preferences: {e}")
 
     # Execution controls - delegated to ExecutionController
 
@@ -821,7 +873,8 @@ class MainWindow(QMainWindow):
                 name = getattr(subgraph, "graph_name", "Sub-Graph")
                 color = getattr(subgraph, "graph_color", "#4ECDC4")
                 # Add with colored icon indicator (using stylesheet)
-                self.graph_selector_combo.addItem(f"● {name}")
+                # Use ASCII dash prefix for portability instead of a bullet symbol
+                self.graph_selector_combo.addItem(f"- {name}")
                 # Set item color to match the sub-graph color
                 idx = self.graph_selector_combo.count() - 1
                 self.graph_selector_combo.setItemData(

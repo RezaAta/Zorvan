@@ -7,8 +7,6 @@ QMainWindow {
 QDockWidget {
     background-color: #3c3f41;
     color: #bbbbbb;
-    titlebar-close-icon: url(close.png);
-    titlebar-normal-icon: url(float.png);
 }
 
 QDockWidget::title {
