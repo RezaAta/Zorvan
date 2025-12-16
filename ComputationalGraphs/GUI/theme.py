@@ -281,7 +281,8 @@ class ThemeManager(QObject):
                 with open(template_path, "r", encoding="utf-8") as f:
                     s = f.read()
                 for k, v in self.theme.items():
-                    s = s.replace("{{%s}}" % k, v)
+                    # Ensure replacement values are strings to avoid TypeErrors
+                    s = s.replace("{{%s}}" % k, str(v))
                 if app is None:
                     app = QApplication.instance()
                 if app is not None:
