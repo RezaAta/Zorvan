@@ -45,17 +45,17 @@ def test_icon_hover_uses_theme_color(monkeypatch):
     btn = QPushButton()
     filter_obj = _IconHoverFilter(btn, "fa-test", None, 14, "accent")
 
-    # Simulate Enter event and ensure temporary button hover background applied
+    # Simulate Enter event; icon color should be derived from theme and
+    # we must NOT set inline button styles here (global QSS should handle hover).
     filter_obj.eventFilter(btn, QEvent(QEvent.Type.Enter))
 
     assert "color" in called
     assert called["color"] == QColor("#112233").lighter(120).name()
-    # Button inline stylesheet should include the hover background
-    assert "background-color" in btn.styleSheet()
+    # We should not have modified the button stylesheet inline
+    assert btn.styleSheet() == ""
 
-    # Simulate Leave and ensure the button stylesheet is restored
+    # Simulate Leave and ensure the icon is restored to base color
     filter_obj.eventFilter(btn, QEvent(QEvent.Type.Leave))
-    assert btn.property("_prev_style") is None or btn.property("_prev_style") == ""
     assert called["color"] == QColor("#112233").name()
 
     # Simulate hide (edge case) and ensure it restores icon as well

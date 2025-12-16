@@ -210,30 +210,7 @@ class _IconHoverFilter(QObject):
             except Exception:
                 pass
 
-            # Temporarily apply button hover background (preserve previous stylesheet)
-            try:
-                from PyQt6.QtWidgets import QPushButton
-
-                if isinstance(obj, QPushButton):
-                    prev = None
-                    try:
-                        prev = obj.property("_prev_style")
-                    except Exception:
-                        prev = None
-                    if prev is None:
-                        prev = obj.styleSheet() or ""
-                        obj.setProperty("_prev_style", prev)
-                    try:
-                        # Append hover background to existing inline stylesheet safely
-                        obj.setStyleSheet(
-                            prev
-                            + ("; " if prev and not prev.endswith(";") else "")
-                            + f"background-color: {button_hover_bg};"
-                        )
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+            # Let global QSS handle button hover background; do not modify inline stylesheet here.
 
             return False
         elif event.type() in hover_leave_types:
@@ -261,24 +238,6 @@ class _IconHoverFilter(QObject):
                     )
             try:
                 obj.setIcon(icon)
-            except Exception:
-                pass
-
-            # Restore previous stylesheet if we changed it
-            try:
-                from PyQt6.QtWidgets import QPushButton
-
-                if isinstance(obj, QPushButton):
-                    prev = obj.property("_prev_style")
-                    if prev is not None:
-                        try:
-                            obj.setStyleSheet(prev)
-                        except Exception:
-                            pass
-                        try:
-                            obj.setProperty("_prev_style", None)
-                        except Exception:
-                            pass
             except Exception:
                 pass
 
