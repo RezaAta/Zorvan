@@ -4,12 +4,12 @@ from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
 
 from ComputationalGraphs.GUI.main_window import MainWindow
 
-app = QApplication.instance() or QApplication(sys.argv)
-mw = MainWindow()
-control_panel = mw.findChild(QWidget, "controlPanel")
-buttons = control_panel.findChildren(QPushButton)
-for i, btn in enumerate(buttons):
-    print(i, repr(btn.objectName()), repr(btn.text()), repr(btn.styleSheet()))
+"""
+DEPRECATED: list_control_panel_buttons.py
 
-mw.close()
-app.quit()
+This helper was used during development to inspect control panel buttons; tests
+have replaced it. Kept as a no-op placeholder for historical reference.
+"""
+
+if __name__ == "__main__":
+    print("list_control_panel_buttons.py is deprecated. Use unit tests instead.")

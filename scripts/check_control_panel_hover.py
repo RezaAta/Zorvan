@@ -1,17 +1,11 @@
-import sys
+"""
+DEPRECATED: check_control_panel_hover.py
 
-from PyQt6.QtCore import QEvent
-from PyQt6.QtWidgets import QApplication
+Manual hover-checking utility. Replaced by unit tests and removed from active use.
+"""
 
-if QApplication.instance() is None:
-    app = QApplication([])
-
-import sys
-import types
-
-# Install a fake qtawesome to capture color arguments when icons are created
-qta = types.ModuleType("qtawesome")
-called = {}
+if __name__ == "__main__":
+    print("check_control_panel_hover.py is deprecated. Use unit tests instead.")
 
 
 def fake_icon(name, color=None):

@@ -1,33 +1,10 @@
-import sys
+"""
+DEPRECATED: check_qss_runtime.py
 
-from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
+This script was used for manual debugging during the QSS/theme investigation.
+All checks are now covered by proper unit tests; the interactive script is
+left as a deprecated placeholder and should not be used.
+"""
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-
-app = QApplication.instance() or QApplication(sys.argv)
-window = MainWindow()
-window.show()
-
-print("--- Application stylesheet (first 1000 chars) ---")
-ss = app.styleSheet() or "<empty>"
-print(ss[:1000])
-print("--- contains QPushButton:hover? ->", "QPushButton:hover" in ss)
-
-control_panel = window.findChild(QWidget, "controlPanel")
-print("control_panel found:", control_panel is not None)
-if control_panel is not None:
-    buttons = control_panel.findChildren(QPushButton)
-    print(f"Found {len(buttons)} QPushButton(s) in control panel")
-    for i, btn in enumerate(buttons[:30]):
-        print(
-            i,
-            repr(btn.text()),
-            "objectName=",
-            repr(btn.objectName()),
-            "styleSheet=[" + btn.styleSheet() + "]",
-        )
-
-# Keep window open briefly so manual inspection possible when running interactively
-# (When run from tests, this will exit immediately)
-window.close()
-app.quit()
+if __name__ == "__main__":
+    print("check_qss_runtime.py is deprecated. Use unit tests instead.")
