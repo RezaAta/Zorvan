@@ -304,10 +304,14 @@ def _create_standard_button(
     from PyQt6.QtWidgets import QPushButton
 
     btn = QPushButton(text)
-    # Apply icon and hover filter (if an icon name is provided)
+    # Apply a static icon (no dynamic theme reapply or hover icon recolor) so
+    # control panel buttons behave like plain QPushButton styled by the global QSS.
     try:
         if fa_name:
-            _apply_icon(widget, btn, fa_name, fallback_pixmap, size_px, color_key)
+            btn.setIcon(
+                _resolve_icon(widget, fa_name, fallback_pixmap, size_px, color_key)
+            )
+            btn.setIconSize(QSize(size_px, size_px))
     except Exception:
         pass
 
@@ -344,30 +348,10 @@ class ControlPanelBuilder:
 
         widget = QWidget()
         widget.setObjectName("controlPanel")
-        # Apply panel background from theme and ensure child QPushButton hover is respected
-        try:
-            from ..theme import get_theme_manager
-
-            tm = get_theme_manager()
-            panel = tm.get_color("panel_bg", "#3c3f41").name()
-            text = tm.get_color("text", "#bbbbbb").name()
-            btn_hover = tm.get_color("button_hover", "#5a5a5a").name()
-            # Apply only basic panel-level styles; avoid child selectors (Qt may reject them when applied to widget-level)
-            _safe_set_stylesheet(widget, (f"background-color: {panel}; color: {text};"))
-
-            def _update_widget_style():
-                # Apply style defensively and log potential problems
-                # Update only panel-level properties
-                _safe_set_stylesheet(
-                    widget,
-                    (
-                        f"background-color: {tm.get_color('panel_bg').name()}; color: {tm.get_color('text').name()};"
-                    ),
-                )
-
-            tm.theme_changed.connect(_update_widget_style)
-        except Exception:
-            pass
+        # Rely on the global application QSS for control panel appearance. Avoid
+        # applying ThemeManager-driven per-widget styles here so the control
+        # panel buttons remain plain QPushButton instances that pick up the
+        # application stylesheet (hover/background) like the NodePalette.
         layout = QVBoxLayout(widget)
 
         # Build section containers

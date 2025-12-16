@@ -21,6 +21,11 @@ def test_control_panel_buttons_have_no_inline_hover_styles():
     control_panel = mw.findChild(QWidget, "controlPanel")
     assert control_panel is not None
 
+    # The control panel should not apply per-widget theme styles; rely on global QSS
+    assert (
+        not control_panel.styleSheet().strip()
+    ), "Control panel must not set inline stylesheet"
+
     buttons = control_panel.findChildren(QPushButton)
     # Ensure we actually found some buttons to validate
     assert len(buttons) > 0

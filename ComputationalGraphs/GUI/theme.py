@@ -311,8 +311,16 @@ class ThemeManager(QObject):
                         pass
                     self.theme_changed.emit()
                     return True
-        except Exception:
-            pass
+        except Exception as e:
+            # Surface exceptions during theme application to aid debugging
+            try:
+                import traceback
+
+                print("[theme] apply_theme failed:", e)
+                traceback.print_exc()
+            except Exception:
+                pass
+            return False
         return False
 
 
