@@ -530,48 +530,36 @@ class ControlPanelBuilder:
         group.addWidget(mw.starting_nodes_list)
 
         btn_row1 = QHBoxLayout()
-        mw.add_to_starting_btn = QPushButton("Add Selected")
-        mw.add_to_starting_btn.setToolTip("Add selected node(s) from canvas")
-        _apply_icon(
+        mw.add_to_starting_btn = _create_standard_button(
             mw,
-            mw.add_to_starting_btn,
+            "Add Selected",
             "fa5s.arrow-right",
             QStyle.StandardPixmap.SP_ArrowRight,
             14,
         )
+        mw.add_to_starting_btn.setToolTip("Add selected node(s) from canvas")
         mw.add_to_starting_btn.clicked.connect(mw.add_selected_to_starting_nodes)
         btn_row1.addWidget(mw.add_to_starting_btn)
 
-        mw.remove_from_starting_btn = QPushButton("Remove")
-        mw.remove_from_starting_btn.setToolTip("Remove selected node(s)")
-        _apply_icon(
-            mw,
-            mw.remove_from_starting_btn,
-            "fa5s.trash",
-            QStyle.StandardPixmap.SP_TrashIcon,
-            14,
+        mw.remove_from_starting_btn = _create_standard_button(
+            mw, "Remove", "fa5s.trash", QStyle.StandardPixmap.SP_TrashIcon, 14
         )
+        mw.remove_from_starting_btn.setToolTip("Remove selected node(s)")
         mw.remove_from_starting_btn.clicked.connect(mw.remove_from_starting_nodes)
         btn_row1.addWidget(mw.remove_from_starting_btn)
         group.addLayout(btn_row1)
 
         btn_row2 = QHBoxLayout()
-        mw.auto_detect_starting_btn = QPushButton("Auto-Detect")
-        mw.auto_detect_starting_btn.setToolTip("Auto-detect nodes with no predecessors")
-        _apply_icon(
-            mw,
-            mw.auto_detect_starting_btn,
-            "fa5s.sync",
-            QStyle.StandardPixmap.SP_BrowserReload,
-            14,
+        mw.auto_detect_starting_btn = _create_standard_button(
+            mw, "Auto-Detect", "fa5s.sync", QStyle.StandardPixmap.SP_BrowserReload, 14
         )
+        mw.auto_detect_starting_btn.setToolTip("Auto-detect nodes with no predecessors")
         mw.auto_detect_starting_btn.clicked.connect(mw.auto_detect_starting_nodes)
         btn_row2.addWidget(mw.auto_detect_starting_btn)
 
-        mw.clear_starting_btn = QPushButton("Clear All")
-        _apply_icon(
+        mw.clear_starting_btn = _create_standard_button(
             mw,
-            mw.clear_starting_btn,
+            "Clear All",
             "fa5s.eraser",
             QStyle.StandardPixmap.SP_DialogResetButton,
             14,
@@ -622,48 +610,36 @@ class ControlPanelBuilder:
         group.addWidget(mw.stopping_nodes_list)
 
         btn_row1 = QHBoxLayout()
-        mw.add_to_stopping_btn = QPushButton("Add Selected")
-        mw.add_to_stopping_btn.setToolTip("Add selected node(s) from canvas")
-        _apply_icon(
+        mw.add_to_stopping_btn = _create_standard_button(
             mw,
-            mw.add_to_stopping_btn,
+            "Add Selected",
             "fa5s.arrow-right",
             QStyle.StandardPixmap.SP_ArrowRight,
             14,
         )
+        mw.add_to_stopping_btn.setToolTip("Add selected node(s) from canvas")
         mw.add_to_stopping_btn.clicked.connect(mw.add_selected_to_stopping_nodes)
         btn_row1.addWidget(mw.add_to_stopping_btn)
 
-        mw.remove_from_stopping_btn = QPushButton("Remove")
-        mw.remove_from_stopping_btn.setToolTip("Remove selected node(s)")
-        _apply_icon(
-            mw,
-            mw.remove_from_stopping_btn,
-            "fa5s.trash",
-            QStyle.StandardPixmap.SP_TrashIcon,
-            14,
+        mw.remove_from_stopping_btn = _create_standard_button(
+            mw, "Remove", "fa5s.trash", QStyle.StandardPixmap.SP_TrashIcon, 14
         )
+        mw.remove_from_stopping_btn.setToolTip("Remove selected node(s)")
         mw.remove_from_stopping_btn.clicked.connect(mw.remove_from_stopping_nodes)
         btn_row1.addWidget(mw.remove_from_stopping_btn)
         group.addLayout(btn_row1)
 
         btn_row2 = QHBoxLayout()
-        mw.auto_detect_stopping_btn = QPushButton("Auto-Detect")
-        mw.auto_detect_stopping_btn.setToolTip("Auto-detect candidate stopping nodes")
-        _apply_icon(
-            mw,
-            mw.auto_detect_stopping_btn,
-            "fa5s.sync",
-            QStyle.StandardPixmap.SP_BrowserReload,
-            14,
+        mw.auto_detect_stopping_btn = _create_standard_button(
+            mw, "Auto-Detect", "fa5s.sync", QStyle.StandardPixmap.SP_BrowserReload, 14
         )
+        mw.auto_detect_stopping_btn.setToolTip("Auto-detect candidate stopping nodes")
         mw.auto_detect_stopping_btn.clicked.connect(mw.auto_detect_stopping_nodes)
         btn_row2.addWidget(mw.auto_detect_stopping_btn)
 
-        mw.clear_stopping_btn = QPushButton("Clear All")
-        _apply_icon(
+        mw.clear_stopping_btn = _create_standard_button(
             mw,
-            mw.clear_stopping_btn,
+            "Clear All",
             "fa5s.eraser",
             QStyle.StandardPixmap.SP_DialogResetButton,
             14,
@@ -715,10 +691,9 @@ class ControlPanelBuilder:
         group.addWidget(mw.manual_sequence_list)
 
         btn_row1 = QHBoxLayout()
-        mw.add_step_selected_btn = QPushButton("Add Step (Selected)")
-        _apply_icon(
+        mw.add_step_selected_btn = _create_standard_button(
             mw,
-            mw.add_step_selected_btn,
+            "Add Step (Selected)",
             "fa5s.plus",
             QStyle.StandardPixmap.SP_FileDialogNewFolder,
             14,
@@ -726,31 +701,28 @@ class ControlPanelBuilder:
         mw.add_step_selected_btn.clicked.connect(mw.add_selected_to_manual_sequence)
         btn_row1.addWidget(mw.add_step_selected_btn)
 
-        mw.add_to_selected_step_btn = QPushButton("Add to Selected Step")
-        mw.add_to_selected_step_btn.setToolTip("Add selected node(s) to chosen step")
-        _apply_icon(
+        mw.add_to_selected_step_btn = _create_standard_button(
             mw,
-            mw.add_to_selected_step_btn,
+            "Add to Selected Step",
             "fa5s.arrow-right",
             QStyle.StandardPixmap.SP_ArrowRight,
             14,
         )
+        mw.add_to_selected_step_btn.setToolTip("Add selected node(s) to chosen step")
         mw.add_to_selected_step_btn.clicked.connect(
             mw.add_selected_nodes_to_selected_step
         )
         btn_row1.addWidget(mw.add_to_selected_step_btn)
 
-        mw.remove_step_btn = QPushButton("Remove Step")
-        _apply_icon(
-            mw, mw.remove_step_btn, "fa5s.trash", QStyle.StandardPixmap.SP_TrashIcon, 14
+        mw.remove_step_btn = _create_standard_button(
+            mw, "Remove Step", "fa5s.trash", QStyle.StandardPixmap.SP_TrashIcon, 14
         )
         mw.remove_step_btn.clicked.connect(mw.remove_from_manual_sequence)
         btn_row1.addWidget(mw.remove_step_btn)
 
-        mw.clear_sequence_btn = QPushButton("Clear Sequence")
-        _apply_icon(
+        mw.clear_sequence_btn = _create_standard_button(
             mw,
-            mw.clear_sequence_btn,
+            "Clear Sequence",
             "fa5s.eraser",
             QStyle.StandardPixmap.SP_DialogResetButton,
             14,
@@ -760,10 +732,9 @@ class ControlPanelBuilder:
         group.addLayout(btn_row1)
 
         btn_row2 = QHBoxLayout()
-        mw.load_sequence_btn = QPushButton("Load Sequence")
-        _apply_icon(
+        mw.load_sequence_btn = _create_standard_button(
             mw,
-            mw.load_sequence_btn,
+            "Load Sequence",
             "fa5s.folder-open",
             QStyle.StandardPixmap.SP_DialogOpenButton,
             14,
@@ -771,10 +742,9 @@ class ControlPanelBuilder:
         mw.load_sequence_btn.clicked.connect(mw.load_manual_sequence_from_graph)
         btn_row2.addWidget(mw.load_sequence_btn)
 
-        mw.apply_sequence_btn = QPushButton("Apply to Graph")
-        _apply_icon(
+        mw.apply_sequence_btn = _create_standard_button(
             mw,
-            mw.apply_sequence_btn,
+            "Apply to Graph",
             "fa5s.check",
             QStyle.StandardPixmap.SP_DialogApplyButton,
             14,
@@ -782,15 +752,14 @@ class ControlPanelBuilder:
         mw.apply_sequence_btn.clicked.connect(mw.apply_manual_sequence_to_graph)
         btn_row2.addWidget(mw.apply_sequence_btn)
 
-        mw.replace_selected_step_btn = QPushButton("Replace Selected Step")
-        mw.replace_selected_step_btn.setToolTip("Replace step with selected nodes")
-        _apply_icon(
+        mw.replace_selected_step_btn = _create_standard_button(
             mw,
-            mw.replace_selected_step_btn,
+            "Replace Selected Step",
             "fa5s.sync",
             QStyle.StandardPixmap.SP_BrowserReload,
             14,
         )
+        mw.replace_selected_step_btn.setToolTip("Replace step with selected nodes")
         mw.replace_selected_step_btn.clicked.connect(
             mw.replace_selected_step_with_selected_nodes
         )
@@ -976,13 +945,8 @@ class ControlPanelBuilder:
         mw.queue_iterations_spin.setValue(100)
         add_row.addWidget(mw.queue_iterations_spin)
 
-        mw.add_to_queue_btn = QPushButton("Add")
-        _apply_icon(
-            mw,
-            mw.add_to_queue_btn,
-            "fa5s.plus",
-            QStyle.StandardPixmap.SP_FileDialogNewFolder,
-            14,
+        mw.add_to_queue_btn = _create_standard_button(
+            mw, "Add", "fa5s.plus", QStyle.StandardPixmap.SP_FileDialogNewFolder, 14
         )
         mw.add_to_queue_btn.setToolTip(
             "Add the currently selected graph/subgraph to the queue"
@@ -1014,17 +978,15 @@ class ControlPanelBuilder:
         # Queue control buttons
         btn_row1 = QHBoxLayout()
         btn_row1 = QHBoxLayout()
-        mw.start_queue_btn = QPushButton("Run Queue")
-        _apply_icon(
-            mw, mw.start_queue_btn, "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 14
+        mw.start_queue_btn = _create_standard_button(
+            mw, "Run Queue", "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 14
         )
         mw.start_queue_btn.setToolTip("Start processing the queue sequentially")
         mw.start_queue_btn.clicked.connect(mw.start_processing_queue)
         btn_row1.addWidget(mw.start_queue_btn)
 
-        mw.stop_queue_btn = QPushButton("Stop Queue")
-        _apply_icon(
-            mw, mw.stop_queue_btn, "fa5s.stop", QStyle.StandardPixmap.SP_MediaStop, 14
+        mw.stop_queue_btn = _create_standard_button(
+            mw, "Stop Queue", "fa5s.stop", QStyle.StandardPixmap.SP_MediaStop, 14
         )
         mw.stop_queue_btn.setToolTip("Stop queue processing")
         mw.stop_queue_btn.clicked.connect(mw.stop_processing_queue)
@@ -1033,22 +995,16 @@ class ControlPanelBuilder:
         layout.addLayout(btn_row1)
 
         btn_row2 = QHBoxLayout()
-        mw.remove_from_queue_btn = QPushButton("Remove Selected")
-        _apply_icon(
-            mw,
-            mw.remove_from_queue_btn,
-            "fa5s.trash",
-            QStyle.StandardPixmap.SP_TrashIcon,
-            14,
+        mw.remove_from_queue_btn = _create_standard_button(
+            mw, "Remove Selected", "fa5s.trash", QStyle.StandardPixmap.SP_TrashIcon, 14
         )
         mw.remove_from_queue_btn.setToolTip("Remove selected item from queue")
         mw.remove_from_queue_btn.clicked.connect(mw.remove_selected_from_queue)
         btn_row2.addWidget(mw.remove_from_queue_btn)
 
-        mw.clear_queue_btn = QPushButton("Clear Queue")
-        _apply_icon(
+        mw.clear_queue_btn = _create_standard_button(
             mw,
-            mw.clear_queue_btn,
+            "Clear Queue",
             "fa5s.eraser",
             QStyle.StandardPixmap.SP_DialogResetButton,
             14,
@@ -1062,10 +1018,9 @@ class ControlPanelBuilder:
         layout.addWidget(QLabel("<b>Per-Graph Reset</b>"))
 
         reset_row = QHBoxLayout()
-        mw.save_graph_snapshot_btn = QPushButton("Save Snapshot")
-        _apply_icon(
+        mw.save_graph_snapshot_btn = _create_standard_button(
             mw,
-            mw.save_graph_snapshot_btn,
+            "Save Snapshot",
             "fa5s.camera",
             QStyle.StandardPixmap.SP_DialogSaveButton,
             14,
@@ -1076,13 +1031,8 @@ class ControlPanelBuilder:
         mw.save_graph_snapshot_btn.clicked.connect(mw.save_selected_graph_snapshot)
         reset_row.addWidget(mw.save_graph_snapshot_btn)
 
-        mw.reset_selected_graph_btn = QPushButton("Reset Graph")
-        _apply_icon(
-            mw,
-            mw.reset_selected_graph_btn,
-            "fa5s.undo",
-            QStyle.StandardPixmap.SP_BrowserReload,
-            14,
+        mw.reset_selected_graph_btn = _create_standard_button(
+            mw, "Reset Graph", "fa5s.undo", QStyle.StandardPixmap.SP_BrowserReload, 14
         )
         mw.reset_selected_graph_btn.setToolTip(
             "Reset selected graph/subgraph to its snapshot"
@@ -1131,7 +1081,9 @@ class ControlPanelBuilder:
         mw.colorize_settings_container.setVisible(False)
         mw.colorize_group_layout.addWidget(mw.colorize_settings_container)
 
-        mw.auto_range_btn = QPushButton("Auto Detect Min/Max")
+        mw.auto_range_btn = _create_standard_button(
+            mw, "Auto Detect Min/Max", None, None, 14
+        )
         mw.auto_range_btn.clicked.connect(mw.auto_detect_range)
         mw.auto_range_btn.setEnabled(False)
         mw.colorize_settings_layout.addWidget(mw.auto_range_btn)
@@ -1160,7 +1112,7 @@ class ControlPanelBuilder:
         ann_colors_row.addWidget(mw.ann_colors_check)
         mw.ann_colors_check.setChecked(getattr(mw, "ann_colors_enabled", False))
 
-        mw.clear_ann_colors_btn = QPushButton("Clear")
+        mw.clear_ann_colors_btn = _create_standard_button(mw, "Clear", None, None, 14)
         mw.clear_ann_colors_btn.setToolTip(
             "Clear coloring (ANN or value) and revert to default colors"
         )
@@ -1218,7 +1170,7 @@ class ControlPanelBuilder:
 
         min_color_layout = QHBoxLayout()
         min_color_layout.addWidget(QLabel("Min Color:"))
-        mw.min_color_btn = QPushButton()
+        mw.min_color_btn = _create_standard_button(mw, "", None, None, 14)
         mw.min_color_btn.setFixedSize(60, 25)
         mw.min_color_btn.setStyleSheet(
             f"background-color: {mw.min_gradient_color.name()};"
@@ -1230,7 +1182,7 @@ class ControlPanelBuilder:
 
         max_color_layout = QHBoxLayout()
         max_color_layout.addWidget(QLabel("Max Color:"))
-        mw.max_color_btn = QPushButton()
+        mw.max_color_btn = _create_standard_button(mw, "", None, None, 14)
         mw.max_color_btn.setFixedSize(60, 25)
         mw.max_color_btn.setStyleSheet(
             f"background-color: {mw.max_gradient_color.name()};"
@@ -1249,7 +1201,7 @@ class ControlPanelBuilder:
 
         node_color_layout = QHBoxLayout()
         node_color_layout.addWidget(QLabel("Node Color:"))
-        mw.node_color_btn = QPushButton()
+        mw.node_color_btn = _create_standard_button(mw, "", None, None, 14)
         mw.node_color_btn.setFixedSize(60, 25)
         mw.default_node_color = QColor(100, 150, 200)
         mw.node_color_btn.setStyleSheet(
@@ -1262,7 +1214,7 @@ class ControlPanelBuilder:
 
         text_color_layout = QHBoxLayout()
         text_color_layout.addWidget(QLabel("Text Color:"))
-        mw.text_color_btn = QPushButton()
+        mw.text_color_btn = _create_standard_button(mw, "", None, None, 14)
         mw.text_color_btn.setFixedSize(60, 25)
         mw.default_text_color = QColor(255, 255, 255)
         mw.text_color_btn.setStyleSheet(
@@ -1273,11 +1225,15 @@ class ControlPanelBuilder:
         text_color_layout.addStretch()
         parent_layout.addLayout(text_color_layout)
 
-        mw.apply_colors_btn = QPushButton("Apply to All Nodes")
+        mw.apply_colors_btn = _create_standard_button(
+            mw, "Apply to All Nodes", None, None, 14
+        )
         mw.apply_colors_btn.clicked.connect(mw.apply_node_colors)
         parent_layout.addWidget(mw.apply_colors_btn)
 
-        mw.apply_selected_colors_btn = QPushButton("Apply to Selected")
+        mw.apply_selected_colors_btn = _create_standard_button(
+            mw, "Apply to Selected", None, None, 14
+        )
         mw.apply_selected_colors_btn.clicked.connect(mw.apply_node_colors_selected)
         parent_layout.addWidget(mw.apply_selected_colors_btn)
 
@@ -1364,24 +1320,30 @@ class ControlPanelBuilder:
 
         layout.addWidget(QLabel("<b>Graph Layout</b>"))
 
-        mw.layout_sugiyama_btn = QPushButton("Hierarchical (Sugiyama)")
+        mw.layout_sugiyama_btn = _create_standard_button(
+            mw, "Hierarchical (Sugiyama)", None, None, 14
+        )
         mw.layout_sugiyama_btn.setToolTip("Sugiyama algorithm for DAGs")
         mw.layout_sugiyama_btn.clicked.connect(
             lambda: mw.apply_graph_layout("sugiyama")
         )
         layout.addWidget(mw.layout_sugiyama_btn)
 
-        mw.layout_tree_btn = QPushButton("Tree Layout")
+        mw.layout_tree_btn = _create_standard_button(mw, "Tree Layout", None, None, 14)
         mw.layout_tree_btn.setToolTip("Walker's tree layout")
         mw.layout_tree_btn.clicked.connect(lambda: mw.apply_graph_layout("tree"))
         layout.addWidget(mw.layout_tree_btn)
 
-        mw.layout_mlp_btn = QPushButton("Neural Network Layers")
+        mw.layout_mlp_btn = _create_standard_button(
+            mw, "Neural Network Layers", None, None, 14
+        )
         mw.layout_mlp_btn.setToolTip("Auto-detect MLP structure")
         mw.layout_mlp_btn.clicked.connect(lambda: mw.apply_graph_layout("mlp_layered"))
         layout.addWidget(mw.layout_mlp_btn)
 
-        mw.layout_mlp_full_btn = QPushButton("MLP Layout (Full)")
+        mw.layout_mlp_full_btn = _create_standard_button(
+            mw, "MLP Layout (Full)", None, None, 14
+        )
         mw.layout_mlp_full_btn.setToolTip("Full MLP layout with backprop")
         mw.layout_mlp_full_btn.clicked.connect(
             lambda: mw.apply_graph_layout("mlp_layout")
@@ -1428,10 +1390,9 @@ class ControlPanelBuilder:
 
         layout.addWidget(QLabel("<b>Plotting</b>"))
 
-        mw.open_plot_btn = QPushButton("Open Plot Window")
-        _apply_icon(
+        mw.open_plot_btn = _create_standard_button(
             mw,
-            mw.open_plot_btn,
+            "Open Plot Window",
             "fa5s.chart-bar",
             QStyle.StandardPixmap.SP_DialogOpenButton,
             14,
@@ -1439,10 +1400,9 @@ class ControlPanelBuilder:
         mw.open_plot_btn.clicked.connect(mw.open_plot_window)
         layout.addWidget(mw.open_plot_btn)
 
-        mw.add_to_plot_btn = QPushButton("Add Selected to Plot")
-        _apply_icon(
+        mw.add_to_plot_btn = _create_standard_button(
             mw,
-            mw.add_to_plot_btn,
+            "Add Selected to Plot",
             "fa5s.plus",
             QStyle.StandardPixmap.SP_FileDialogNewFolder,
             14,
@@ -1480,10 +1440,9 @@ class ControlPanelBuilder:
         layout.addWidget(desc_label)
 
         # Simplify Step button
-        mw.simplify_step_btn = QPushButton("Simplify Step")
-        _apply_icon(
+        mw.simplify_step_btn = _create_standard_button(
             mw,
-            mw.simplify_step_btn,
+            "Simplify Step",
             "fa5s.compress",
             QStyle.StandardPixmap.SP_ArrowRight,
             14,
@@ -1495,13 +1454,8 @@ class ControlPanelBuilder:
         layout.addWidget(mw.simplify_step_btn)
 
         # Fully Simplify button
-        mw.simplify_fully_btn = QPushButton("Fully Simplify")
-        _apply_icon(
-            mw,
-            mw.simplify_fully_btn,
-            "fa5s.forward",
-            QStyle.StandardPixmap.SP_MediaPlay,
-            14,
+        mw.simplify_fully_btn = _create_standard_button(
+            mw, "Fully Simplify", "fa5s.forward", QStyle.StandardPixmap.SP_MediaPlay, 14
         )
         mw.simplify_fully_btn.setToolTip(
             "Apply all possible simplifications until graph is fully simplified"
@@ -1510,13 +1464,8 @@ class ControlPanelBuilder:
         layout.addWidget(mw.simplify_fully_btn)
 
         # Expand Step button
-        mw.expand_step_btn = QPushButton("Expand Step")
-        _apply_icon(
-            mw,
-            mw.expand_step_btn,
-            "fa5s.expand",
-            QStyle.StandardPixmap.SP_ArrowBack,
-            14,
+        mw.expand_step_btn = _create_standard_button(
+            mw, "Expand Step", "fa5s.expand", QStyle.StandardPixmap.SP_ArrowBack, 14
         )
         mw.expand_step_btn.setToolTip(
             "Reverse the last simplification (decompress or expand abstracted nodes)"
