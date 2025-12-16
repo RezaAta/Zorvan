@@ -286,6 +286,45 @@ def _apply_icon(
         pass
 
 
+def _create_standard_button(
+    widget,
+    text: str,
+    fa_name,
+    fallback_pixmap,
+    size_px: int = 14,
+    color_key: str = "accent",
+    min_width: int = None,
+    max_width: int = None,
+):
+    """Create a standard QPushButton that mirrors NodePalette's 'Create' button.
+
+    This helper ensures consistent sizing, icon application via _apply_icon, and leaves
+    hover/background behavior to the global stylesheet (no inline hover styles).
+    """
+    from PyQt6.QtWidgets import QPushButton
+
+    btn = QPushButton(text)
+    # Apply icon and hover filter (if an icon name is provided)
+    try:
+        if fa_name:
+            _apply_icon(widget, btn, fa_name, fallback_pixmap, size_px, color_key)
+    except Exception:
+        pass
+
+    if min_width is not None:
+        try:
+            btn.setMinimumWidth(min_width)
+        except Exception:
+            pass
+    if max_width is not None:
+        try:
+            btn.setMaximumWidth(max_width)
+        except Exception:
+            pass
+
+    return btn
+
+
 class ControlPanelBuilder:
     """Builder for the control panel dock widget."""
 
@@ -765,37 +804,29 @@ class ControlPanelBuilder:
         mw = self.mw
 
         btn_row = QHBoxLayout()
-        mw.play_btn = QPushButton("Start")
-        _apply_icon(
-            mw, mw.play_btn, "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 16
+        mw.play_btn = _create_standard_button(
+            mw, "Start", "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 16
         )
         mw.play_btn.clicked.connect(mw.play_graph)
         btn_row.addWidget(mw.play_btn)
 
-        mw.pause_btn = QPushButton("Pause")
-        _apply_icon(
-            mw, mw.pause_btn, "fa5s.pause", QStyle.StandardPixmap.SP_MediaPause, 16
+        mw.pause_btn = _create_standard_button(
+            mw, "Pause", "fa5s.pause", QStyle.StandardPixmap.SP_MediaPause, 16
         )
         mw.pause_btn.clicked.connect(mw.pause_graph)
         mw.pause_btn.setEnabled(False)
         btn_row.addWidget(mw.pause_btn)
 
-        mw.resume_btn = QPushButton("Resume")
-        _apply_icon(
-            mw, mw.resume_btn, "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 16
+        mw.resume_btn = _create_standard_button(
+            mw, "Resume", "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 16
         )
         mw.resume_btn.clicked.connect(mw.resume_graph)
         mw.resume_btn.setEnabled(False)
         btn_row.addWidget(mw.resume_btn)
         parent_layout.addLayout(btn_row)
 
-        mw.step_btn = QPushButton("Step")
-        _apply_icon(
-            mw,
-            mw.step_btn,
-            "fa5s.step-forward",
-            QStyle.StandardPixmap.SP_ArrowRight,
-            14,
+        mw.step_btn = _create_standard_button(
+            mw, "Step", "fa5s.step-forward", QStyle.StandardPixmap.SP_ArrowRight, 14
         )
         mw.step_btn.clicked.connect(mw.step_graph)
         parent_layout.addWidget(mw.step_btn)
@@ -803,51 +834,36 @@ class ControlPanelBuilder:
         # Reset controls - split into Restore Graph, Reset Processor, and Reset All
         reset_row = QHBoxLayout()
 
-        mw.restore_graph_btn = QPushButton("Restore")
+        mw.restore_graph_btn = _create_standard_button(
+            mw, "Restore", "fa5s.undo", QStyle.StandardPixmap.SP_BrowserReload, 14
+        )
         mw.restore_graph_btn.setToolTip(
             "Restore graph to iteration 0 state (node values) without changing iteration counter"
-        )
-        _apply_icon(
-            mw,
-            mw.restore_graph_btn,
-            "fa5s.undo",
-            QStyle.StandardPixmap.SP_BrowserReload,
-            14,
         )
         mw.restore_graph_btn.clicked.connect(mw.restore_graph)
         reset_row.addWidget(mw.restore_graph_btn)
 
-        mw.reset_processor_btn = QPushButton("Reset Proc")
+        mw.reset_processor_btn = _create_standard_button(
+            mw, "Reset Proc", "fa5s.stop", QStyle.StandardPixmap.SP_MediaStop, 14
+        )
         mw.reset_processor_btn.setToolTip(
             "Reset iteration counter to 0 and reinitialize processor (preserves node values)"
-        )
-        _apply_icon(
-            mw,
-            mw.reset_processor_btn,
-            "fa5s.stop",
-            QStyle.StandardPixmap.SP_MediaStop,
-            14,
         )
         mw.reset_processor_btn.clicked.connect(mw.reset_processor)
         reset_row.addWidget(mw.reset_processor_btn)
 
-        mw.reset_btn = QPushButton("Reset All")
+        mw.reset_btn = _create_standard_button(
+            mw, "Reset All", "fa5s.sync", QStyle.StandardPixmap.SP_DialogResetButton, 14
+        )
         mw.reset_btn.setToolTip(
             "Full reset: restore graph to iteration 0 AND reset processor/counter"
-        )
-        _apply_icon(
-            mw,
-            mw.reset_btn,
-            "fa5s.sync",
-            QStyle.StandardPixmap.SP_DialogResetButton,
-            14,
         )
         mw.reset_btn.clicked.connect(mw.reset_graph)
         reset_row.addWidget(mw.reset_btn)
 
         parent_layout.addLayout(reset_row)
 
-        mw.rebuild_exec_btn = QPushButton("Rebuild")
+        mw.rebuild_exec_btn = _create_standard_button(mw, "Rebuild", None, None, 14)
         mw.rebuild_exec_btn.setToolTip("Rebuild graph from canvas")
         mw.rebuild_exec_btn.clicked.connect(mw.rebuild_graph)
         parent_layout.addWidget(mw.rebuild_exec_btn)
@@ -857,9 +873,8 @@ class ControlPanelBuilder:
         mw = self.mw
         speed_layout = QVBoxLayout()
 
-        mw.max_speed_btn = QPushButton("Max Speed (0ms)")
-        _apply_icon(
-            mw, mw.max_speed_btn, "fa5s.bolt", QStyle.StandardPixmap.SP_ArrowRight, 14
+        mw.max_speed_btn = _create_standard_button(
+            mw, "Max Speed (0ms)", "fa5s.bolt", QStyle.StandardPixmap.SP_ArrowRight, 14
         )
         mw.max_speed_btn.setCheckable(True)
         mw.max_speed_btn.setToolTip("Set visualization delay to 0ms")
