@@ -164,6 +164,12 @@ _NODE_REGISTRY: Dict[str, tuple] = {
         {},
         "SingleXO",
     ),
+    "SingleInputCrossover": (
+        "ComputationalGraphs.Nodes.SingleInputCrossover",
+        "SingleInputCrossover",
+        {},
+        "SInXO",
+    ),
     "MutationNode": (
         "ComputationalGraphs.Nodes.MutationNode",
         "MutaionNode",
@@ -175,6 +181,18 @@ _NODE_REGISTRY: Dict[str, tuple] = {
         "DeJongSphereNode",
         {},
         "DeJong",
+    ),
+    "PopulationNode": (
+        "ComputationalGraphs.Nodes.PopulationNode",
+        "PopulationNode",
+        {},
+        "Population",
+    ),
+    "LinearNodeDerivative": (
+        "ComputationalGraphs.Nodes.LinearNodeDerivative",
+        "LinearNodeDerivative",
+        {},
+        "Linear'",
     ),
     # Utility nodes
     "DisplayNode": (

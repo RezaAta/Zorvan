@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
+    QProgressBar,
     QPushButton,
     QScrollArea,
     QSlider,
@@ -33,6 +34,10 @@ try:
     import qtawesome as qta
 except Exception:
     qta = None
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _tint_pixmap(pixmap: QPixmap, color: str) -> QPixmap:
@@ -64,20 +69,20 @@ def _safe_set_stylesheet(widget, stylesheet: str):
         import re
 
         s = re.sub(r"url\([^)]*\)", "", s)
-        print(
+        logger.debug(
             "[theme] Removed url(...) entries from stylesheet to avoid parse warnings"
         )
 
     # Ensure concatenated rules have spaces e.g. ';Q' -> '; Q'
     if ";Q" in s:
         s = s.replace(";Q", "; Q")
-        print("[theme] Fixed concatenated selector spacing in stylesheet")
+        logger.debug("[theme] Fixed concatenated selector spacing in stylesheet")
 
     # Warn if non-ASCII characters are present in stylesheet (often emojis)
     for ch in s:
         if ord(ch) > 127:
-            print(
-                f"[theme] Warning: stylesheet contains non-ASCII char U+{ord(ch):04X}"
+            logger.warning(
+                "[theme] Warning: stylesheet contains non-ASCII char U+%04X", ord(ch)
             )
             break
 
@@ -86,7 +91,9 @@ def _safe_set_stylesheet(widget, stylesheet: str):
     except Exception:
         # If Qt raises, log the string for inspection and rethrow
         try:
-            print("[theme] Failed to apply stylesheet; content below:\n", s)
+            logger.exception(
+                "[theme] Failed to apply stylesheet; content below:\n%s", s
+            )
         except Exception:
             pass
         raise
@@ -110,12 +117,17 @@ def _resolve_icon(
     except Exception:
         pass
 
-    # Try to use qtawesome (lazy import)
+    # Try to use qtawesome (lazy import). To make recoloring deterministic across
+    # environments, obtain a pixmap and tint it using our _tint_pixmap helper so the
+    # resulting QIcon uses a bitmap we control (avoids qtawesome caching quirks).
     try:
         import qtawesome as _qta
 
         try:
-            return _qta.icon(fa_name, color=color)
+            qicon = _qta.icon(fa_name, color=color)
+            pm = qicon.pixmap(QSize(size_px, size_px))
+            if pm and not pm.isNull():
+                return QIcon(_tint_pixmap(pm, color))
         except Exception:
             pass
     except Exception:
@@ -245,6 +257,10 @@ class _IconHoverFilter(QObject):
         return False
 
 
+# Global registry of icon reapply handlers (used to force-refresh icons after theme changes)
+_ICON_REAPPLY_HANDLERS = []
+
+
 def _apply_icon(
     widget, btn, fa_name, fallback_pixmap, size_px: int = 14, color_key: str = "accent"
 ):
@@ -278,10 +294,41 @@ def _apply_icon(
         def _reapply(
             fa=fa_name, fb=fallback_pixmap, b=btn, w=widget, s=size_px, ck=color_key
         ):
-            b.setIcon(_resolve_icon(w, fa, fb, s, ck))
-            b.setIconSize(QSize(s, s))
+            # Re-resolve the icon using latest theme color and force an immediate redraw
+            try:
+                # Resolve an icon (may be qtawesome or style fallback)
+                icon = _resolve_icon(w, fa, fb, s, ck)
+                try:
+                    pm = icon.pixmap(QSize(s, s))
+                    # Tint the pixmap explicitly to ensure color fidelity across
+                    # qtawesome caching or platform differences
+                    try:
+                        from ..theme import get_theme_manager as _get_tm
+
+                        tm_for_color = getattr(b, "_theme_manager", None) or _get_tm()
+                        colored = _tint_pixmap(pm, tm_for_color.get_color(ck).name())
+                        b.setIcon(QIcon(colored))
+                    except Exception:
+                        # Fallback: try to tint with a reasonable default
+                        colored = _tint_pixmap(pm, "#4a86e8")
+                        b.setIcon(QIcon(colored))
+                except Exception:
+                    b.setIcon(icon)
+                b.setIconSize(QSize(s, s))
+                try:
+                    b.repaint()
+                    b.update()
+                except Exception:
+                    pass
+            except Exception:
+                pass
 
         btn._theme_manager.theme_changed.connect(_reapply)
+        # Register handler to allow forced reapply from preferences UI/tests
+        try:
+            _ICON_REAPPLY_HANDLERS.append(_reapply)
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -383,6 +430,56 @@ class ControlPanelBuilder:
         self.mw.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         self.mw.control_dock = dock
 
+        # Apply dock/body background color from theme (dock_bg) and listen for changes
+        try:
+            from ..theme import get_theme_manager
+
+            tm = get_theme_manager()
+            dock_color = tm.get_color(
+                "dock_bg", tm.get_color("panel_bg", "#3c3f41")
+            ).name()
+            try:
+                dock.setStyleSheet(f"QDockWidget {{ background: {dock_color}; }}")
+                scroll.setStyleSheet(f"QWidget {{ background: {dock_color}; }}")
+            except Exception:
+                pass
+
+            def _on_theme():
+                try:
+                    # Prefer panel_bg (single authoritative key)
+                    c = tm.get_color("panel_bg", tm.get_color("bg", "#3c3f41")).name()
+                    try:
+                        dock.setStyleSheet(f"QDockWidget {{ background: {c}; }}")
+                        scroll.setStyleSheet(f"QWidget {{ background: {c}; }}")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            try:
+                tm.theme_changed.connect(_on_theme)
+            except Exception:
+                pass
+
+            def refresh_dock_backgrounds():
+                try:
+                    c = get_theme_manager().get_color("panel_bg", "#3c3f41").name()
+                    try:
+                        dock.setStyleSheet(f"QDockWidget {{ background: {c}; }}")
+                        scroll.setStyleSheet(f"QWidget {{ background: {c}; }}")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            # Attach refresh helper for external use
+            try:
+                self.mw.refresh_dock_backgrounds = refresh_dock_backgrounds
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     def _build_execution_section(self) -> QWidget:
         """Build the execution controls section."""
         mw = self.mw
@@ -454,8 +551,31 @@ class ControlPanelBuilder:
         # Speed controls
         self._build_speed_controls(layout)
 
-        mw.step_label = QLabel("Step: 0")
+        # Display steps as 'current / max' on the main step label
+        mw.step_label = QLabel(f"Step: 0 / {mw.max_steps_spin.value()}")
         layout.addWidget(mw.step_label)
+
+        # Progress bar showing execution progress under the step counter (no inline text)
+        mw.step_progress = QProgressBar()
+        mw.step_progress.setMinimum(0)
+        mw.step_progress.setMaximum(mw.max_steps_spin.value())
+        mw.step_progress.setValue(0)
+        mw.step_progress.setTextVisible(False)
+        layout.addWidget(mw.step_progress)
+
+        # Keep the progress bar maximum in sync with Max Steps spin box and update step label
+        def _on_max_steps_changed(v):
+            try:
+                mw.step_progress.setMaximum(v)
+                current = (
+                    mw.step_progress.value() if mw.step_progress is not None else 0
+                )
+                mw.step_label.setText(f"Step: {current} / {v}")
+            except Exception:
+                pass
+
+        mw.max_steps_spin.valueChanged.connect(_on_max_steps_changed)
+
         layout.addWidget(QLabel(""))  # Spacer
 
         # Add processing queue as collapsible sub-section inside execution
@@ -873,6 +993,73 @@ class ControlPanelBuilder:
         spin_layout.addWidget(mw.speed_label)
         spin_layout.addStretch()
         speed_layout.addLayout(spin_layout)
+
+        # Apply a themed stylesheet to the slider so the groove/track is visible
+        try:
+            from ..theme import get_theme_manager
+
+            tm = get_theme_manager()
+
+            def _apply_slider_theme():
+                try:
+                    # Prefer list_bg for the groove; if it equals panel_bg, derive a contrasting color
+                    panel_bg = tm.get_color(
+                        "panel_bg", tm.get_color("bg", "#3c3f41")
+                    ).name()
+                    list_bg = tm.get_color("list_bg", panel_bg).name()
+                    fill = tm.get_color("accent", "#4a86e8").name()
+                    handle = tm.get_color("accent", "#4a86e8").name()
+
+                    from PyQt6.QtGui import QColor
+
+                    groove_color = list_bg
+                    try:
+                        if QColor(list_bg).name() == QColor(panel_bg).name():
+                            # Compute luminance to pick lighter/darker for contrast
+                            c = QColor(panel_bg)
+                            lum = 0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue()
+                            if lum < 128:
+                                groove_color = c.lighter(120).name()
+                            else:
+                                groove_color = c.darker(120).name()
+                    except Exception:
+                        groove_color = list_bg
+
+                    # Border color for subtle outline
+                    border = tm.get_color("border", "#555555").name()
+
+                    ss = (
+                        "QSlider::groove:horizontal { height: 10px; background: %s; border-radius: 5px; border: 1px solid %s; } "
+                        "QSlider::sub-page:horizontal { background: %s; border-radius: 5px; } "
+                        "QSlider::add-page:horizontal { background: %s; border-radius: 5px; } "
+                        "QSlider::handle:horizontal { background: %s; width: 16px; height: 16px; margin: -4px 0; border-radius: 8px; border: 1px solid %s; } "
+                        "QSlider::handle:horizontal:hover { border-color: %s; background: %s; }"
+                        % (
+                            groove_color,
+                            border,
+                            fill,
+                            groove_color,
+                            handle,
+                            border,
+                            tm.get_color("accent").name(),
+                            tm.get_color("accent").lighter(110).name(),
+                        )
+                    )
+                    try:
+                        mw.speed_slider.setStyleSheet(ss)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            # Apply initially and on theme changes
+            _apply_slider_theme()
+            try:
+                tm.theme_changed.connect(_apply_slider_theme)
+            except Exception:
+                pass
+        except Exception:
+            pass
 
         parent_layout.addLayout(speed_layout)
 

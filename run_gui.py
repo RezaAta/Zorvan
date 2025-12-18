@@ -40,7 +40,10 @@ def main():
                 with open(style_path, "r", encoding="utf-8") as f:
                     app.setStyleSheet(f.read())
     except Exception as e:
-        print(f"Could not load stylesheet: {e}")
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.warning("Could not load stylesheet: %s", e)
 
     # Create and show main window
     window = MainWindow()

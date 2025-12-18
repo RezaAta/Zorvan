@@ -82,6 +82,38 @@ class ConsoleController:
             pass
         mw.console_dock = dock
 
+        # Apply dock/body background color from theme (dock_bg) and listen for changes
+        try:
+            from ..theme import get_theme_manager
+
+            tm = get_theme_manager()
+            dock_color = tm.get_color(
+                "dock_bg", tm.get_color("panel_bg", "#3c3f41")
+            ).name()
+            try:
+                dock.setStyleSheet(f"QDockWidget {{ background: {dock_color}; }}")
+                container.setStyleSheet(f"QWidget {{ background: {dock_color}; }}")
+            except Exception:
+                pass
+
+            def _on_theme():
+                try:
+                    c = tm.get_color("panel_bg", tm.get_color("bg", "#3c3f41")).name()
+                    try:
+                        dock.setStyleSheet(f"QDockWidget {{ background: {c}; }}")
+                        container.setStyleSheet(f"QWidget {{ background: {c}; }}")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            try:
+                tm.theme_changed.connect(_on_theme)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
         # Set up stdout/stderr redirection
         self._setup_output_redirection()
 

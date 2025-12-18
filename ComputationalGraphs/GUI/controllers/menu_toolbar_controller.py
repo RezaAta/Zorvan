@@ -188,6 +188,11 @@ class MenuToolbarController:
 
         view_menu.addSeparator()
         view_menu.addAction(mw.palette.toggleViewAction())
+        # Optional combined palette toggle (for testing / migration)
+        try:
+            view_menu.addAction(mw.combined_palette.toggleViewAction())
+        except Exception:
+            pass
         view_menu.addAction(mw.control_dock.toggleViewAction())
         # Console toggle (hidden by default)
         try:

@@ -46,8 +46,9 @@ class ColorPreferencesDialog(QDialog):
         # Create simple color pickers for a few keys
         self.buttons: dict[str, QPushButton] = {}
 
+        # Use a single 'Panel Background' control to drive all panel/dock/list backgrounds
         for key, label in [
-            ("panel_bg", "Background / Panel Background"),
+            ("panel_bg", "Panel Background (panels, docks, palettes)"),
             ("canvas_bg", "Canvas Background"),
             ("grid_color", "Grid Color"),
             ("edge_color", "Edge Color"),
@@ -223,27 +224,84 @@ class ColorPreferencesDialog(QDialog):
             pass
 
     def choose_color(self, key: str):
+        """Open color dialog for a key and apply the color immediately."""
         current = QColor(self.theme.get(key, "#000000"))
         c = QColorDialog.getColor(current, self, f"Choose {key}")
         if c.isValid():
-            # If user changed the combined panel background, mirror it to 'bg' too
-            if key == "panel_bg":
-                self.theme["panel_bg"] = c.name()
-                self.theme["bg"] = c.name()
-            else:
-                self.theme[key] = c.name()
-            self.buttons[key].setStyleSheet(f"background: {c.name()}")
-            # Apply immediately (real-time preview) without persisting
+            self.set_color_for_key(key, c.name())
+
+    def set_color_for_key(self, key: str, hex_color: str, apply_theme: bool = True):
+        """Programmatic helper to set a color for a key (used by tests).
+
+        If apply_theme=True, the change is applied immediately (preview).
+        For panel_bg, also sync dock_bg and list_bg so panels/docks follow the single attribute.
+        """
+        if key == "panel_bg":
+            # Panel background is authoritative; keep bg for legacy keys in sync
+            self.theme["panel_bg"] = hex_color
+            self.theme["bg"] = hex_color
+            # Also set derived keys explicitly for immediate consistency
+            self.theme["dock_bg"] = hex_color
+            self.theme["list_bg"] = hex_color
+        else:
+            self.theme[key] = hex_color
+
+        if key in self.buttons:
             try:
-                # Ensure merged keys stay synced for immediate preview
+                self.buttons[key].setStyleSheet(f"background: {hex_color}")
+            except Exception:
+                pass
+
+        if apply_theme:
+            try:
+                # Keep merged keys synced for immediate preview
                 if "panel_bg" in self.theme:
                     self.theme["bg"] = self.theme["panel_bg"]
+                    self.theme["dock_bg"] = self.theme["panel_bg"]
+                    self.theme["list_bg"] = self.theme["panel_bg"]
                 elif "bg" in self.theme:
                     self.theme["panel_bg"] = self.theme["bg"]
                 self.tm.set_theme(self.theme, persist=False)
-                # Update stylesheet too for any values used there
                 self.tm.apply_theme()
-                # Mark as applied so changes are not reverted on dialog close
+                # Force icon reapply handlers to run immediately so icons update in tests
+                try:
+                    from .controllers.control_panel_builder import (
+                        _ICON_REAPPLY_HANDLERS,
+                    )
+
+                    for h in _ICON_REAPPLY_HANDLERS:
+                        try:
+                            h()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                # Also emit theme_changed to trigger any handlers connected via signals
+                try:
+                    self.tm.theme_changed.emit()
+                except Exception:
+                    pass
+                # Ensure event loop processes pending painting and stylesheet updates
+                try:
+                    from PyQt6.QtWidgets import QApplication
+
+                    app = QApplication.instance()
+                    if app is not None:
+                        app.processEvents()
+                except Exception:
+                    pass
+                # If dialog has a parent MainWindow, ask it to refresh dock backgrounds
+                try:
+                    parent = self.parent()
+                    if parent is not None and hasattr(
+                        parent, "refresh_dock_backgrounds"
+                    ):
+                        try:
+                            parent.refresh_dock_backgrounds()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
                 self._applied = True
             except Exception:
                 pass

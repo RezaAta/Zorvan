@@ -47,6 +47,18 @@ class ThemeManager(QObject):
             "node_font_weight": "Medium",
         }
         self.theme = self.load_theme()
+        # Migrate old per-component keys to the single authoritative 'panel_bg' if needed
+        try:
+            # If panel_bg exists, remove legacy dock/list keys to avoid duplicate controls
+            if self.settings.contains("theme/panel_bg"):
+                try:
+                    self.settings.remove("theme/dock_bg")
+                    self.settings.remove("theme/list_bg")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # If the user hasn't selected a UI font yet, apply the new default (Oswald Medium 12)
         try:
             if not self.settings.contains("font/ui_family"):
@@ -105,30 +117,66 @@ class ThemeManager(QObject):
 
     def save_theme(self, theme: Dict[str, str]):
         try:
+            # Write current theme keys
             for k, v in theme.items():
                 self.settings.setValue(f"theme/{k}", v)
+            # Clean up legacy keys if panel_bg is authoritative
+            if "panel_bg" in theme:
+                try:
+                    self.settings.remove("theme/dock_bg")
+                    self.settings.remove("theme/list_bg")
+                except Exception:
+                    pass
             self.theme = dict(theme)
             # Persist and notify listeners
-            self.theme_changed.emit()
+            try:
+                self.theme_changed.emit()
+            except Exception:
+                pass
         except Exception:
             pass
 
     def set_theme(self, theme: Dict[str, str], persist: bool = False):
         """Set theme temporarily (or persist if requested) and notify listeners.
 
-        Keep 'bg' and 'panel_bg' in sync so a single control can drive both.
+        Keep 'bg' and 'panel_bg' in sync so a single control can drive both. Also
+        ensure derived panel keys (dock_bg, list_bg) mirror panel_bg for
+        consistent panel backgrounds across the app.
         """
         t = dict(theme)
+        # Keep 'panel_bg' and 'bg' in sync
         if "panel_bg" in t and "bg" not in t:
             t["bg"] = t["panel_bg"]
         if "bg" in t and "panel_bg" not in t:
             t["panel_bg"] = t["bg"]
+
+        # If panel_bg present, make derived keys explicit
+        if "panel_bg" in t:
+            t["dock_bg"] = t["panel_bg"]
+            t["list_bg"] = t["panel_bg"]
+        else:
+            # If older keys present, ensure panel_bg is set from them (back-compat)
+            if "dock_bg" in t and "panel_bg" not in t:
+                t["panel_bg"] = t["dock_bg"]
+                t["list_bg"] = t["dock_bg"]
+            if "list_bg" in t and "panel_bg" not in t:
+                t["panel_bg"] = t["list_bg"]
+                t["dock_bg"] = t["list_bg"]
+
         self.theme = t
         if persist:
             self.save_theme(self.theme)
         else:
-            # notify listeners so UI can update even if not saved
-            self.theme_changed.emit()
+            # Apply the theme immediately (this updates the application stylesheet
+            # and emits theme_changed), providing more deterministic behavior for
+            # runtime changes and tests.
+            try:
+                self.apply_theme()
+            except Exception:
+                try:
+                    self.theme_changed.emit()
+                except Exception:
+                    pass
 
     def get_color(self, key: str, fallback: str = "#000000"):
         v = self.theme.get(key, None)
@@ -294,6 +342,12 @@ class ThemeManager(QObject):
                     except Exception:
                         pass
                     self.theme_changed.emit()
+                    try:
+                        app = QApplication.instance()
+                        if app is not None:
+                            app.processEvents()
+                    except Exception:
+                        pass
                     return True
                 return False
             elif os.path.exists(fallback_path):
@@ -310,13 +364,22 @@ class ThemeManager(QObject):
                     except Exception:
                         pass
                     self.theme_changed.emit()
+                    try:
+                        app = QApplication.instance()
+                        if app is not None:
+                            app.processEvents()
+                    except Exception:
+                        pass
                     return True
         except Exception as e:
             # Surface exceptions during theme application to aid debugging
             try:
+                import logging
                 import traceback
 
-                print("[theme] apply_theme failed:", e)
+                logging.getLogger(__name__).exception(
+                    "[theme] apply_theme failed: %s", e
+                )
                 traceback.print_exc()
             except Exception:
                 pass

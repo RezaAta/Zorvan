@@ -35,14 +35,13 @@ class ReplaceNodeDialog(QDialog):
         layout.addLayout(btn_layout)
         self.cancel_btn.clicked.connect(self.reject)
 
-        # Populate node categories. Import NodePalette to copy categories.
+        # Populate node categories from the central registry (includes custom nodes)
         try:
-            from .node_palette import NodePalette
+            from .node_registry import get_node_categories
 
-            palette = NodePalette()
-            self.node_categories = palette.node_categories
+            self.node_categories = get_node_categories()
         except Exception:
-            # fallback to minimal list if palette is unavailable
+            # fallback to minimal list if registry is unavailable
             self.node_categories = {
                 "Basic": {
                     "description": "Basic nodes",

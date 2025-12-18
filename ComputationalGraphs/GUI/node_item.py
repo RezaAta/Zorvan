@@ -72,6 +72,11 @@ class NodeItem(QGraphicsEllipseItem):
                 self.default_color = QColor(0, 63, 189)  # #003fbd
                 self.selected_color = QColor(50, 113, 239)  # Lighter blue for selection
 
+        # Track whether default_color was explicitly overridden by the
+        # VisualizationController (apply_node_colors). If True, theme updates
+        # should not overwrite the user-applied default color.
+        self._default_color_overridden = False
+
         self.active_color = QColor(100, 180, 255)  # Bright light blue for active nodes
         self.color = None  # Custom color (set by layout/coloring functions)
         # Manual color is used for ANN/explicit coloring which takes precedence
@@ -1120,8 +1125,12 @@ class NodeItem(QGraphicsEllipseItem):
             from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
 
             if not isinstance(self.node, (AbstractNode, CompressedNode)):
-                self.default_color = tm.get_color("node_default", "#003fbd")
-                self.selected_color = QColor(self.default_color).lighter(120)
+                # Respect any user-applied default color override from the
+                # visualization controller. Only update default colors from the
+                # theme if the override is not present.
+                if not getattr(self, "_default_color_overridden", False):
+                    self.default_color = tm.get_color("node_default", "#003fbd")
+                    self.selected_color = QColor(self.default_color).lighter(120)
 
             # Update text colors
             try:

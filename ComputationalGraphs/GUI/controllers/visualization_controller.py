@@ -139,6 +139,22 @@ class VisualizationController:
             self.canvas.update_node_visuals(False, 0, 1)
         except Exception:
             pass
+        # Also clear any user-applied default color overrides so nodes revert to theme defaults
+        try:
+            from ComputationalGraphs.GUI.theme import get_theme_manager
+
+            for node_item in self.canvas.node_items.values():
+                try:
+                    node_item._default_color_overridden = False
+                except Exception:
+                    pass
+                try:
+                    # Immediately refresh default colors from theme
+                    node_item._on_theme_changed()
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def auto_detect_range(self):
         """Automatically detect min and max values from current node values."""
@@ -255,6 +271,12 @@ class VisualizationController:
         for node_item in self.canvas.node_items.values():
             # Update node fill color
             node_item.default_color = self.main_window.default_node_color
+            # Mark that the default color was explicitly overridden by user
+            # action so theme updates don't overwrite it.
+            try:
+                node_item._default_color_overridden = True
+            except Exception:
+                pass
             # Clear any colorize-by-value color and manual_color so paint() uses default_color
             node_item.color = None
             # Clear manual_color so default_color is used
@@ -294,6 +316,10 @@ class VisualizationController:
 
         for node_item in node_items:
             node_item.default_color = self.main_window.default_node_color
+            try:
+                node_item._default_color_overridden = True
+            except Exception:
+                pass
             # Clear any colorize-by-value color and manual_color so paint() uses default_color
             node_item.color = None
             try:

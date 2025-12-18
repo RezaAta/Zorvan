@@ -66,6 +66,25 @@ class ExecutionController:
 
         max_steps = self.main_window.max_steps_spin.value()
 
+        # Set up progress bar for the upcoming run
+        try:
+            if (
+                hasattr(self.main_window, "step_progress")
+                and self.main_window.step_progress
+            ):
+                self.main_window.step_progress.setMaximum(max_steps)
+                # Keep current progress (in case of resume) or reset to 0 for new runs
+                current_step = getattr(self.graph_runner, "current_step", 0) or 0
+                self.main_window.step_progress.setValue(current_step)
+                try:
+                    self.main_window.step_label.setText(
+                        f"Step: {current_step} / {max_steps}"
+                    )
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # Use batch mode only when BOTH skip visualization AND skip plotting are enabled
         # This runs at max speed with no per-step callbacks
         if self.main_window.skip_visualization and self.main_window.skip_plotting:
@@ -189,11 +208,25 @@ class ExecutionController:
                 else:
                     processor.ComputeGraphSingleThread(additional_steps)
 
-            # Update step counter
+            # Update step counter and label to show current/max
             new_step = start_step + additional_steps
             self.graph_runner.current_step = new_step
             self.graph_runner.max_steps = new_step
-            self.main_window.step_label.setText(f"Step: {new_step}")
+            try:
+                self.main_window.step_label.setText(f"Step: {new_step} / {new_step}")
+            except Exception:
+                pass
+
+            # Update progress bar
+            try:
+                if (
+                    hasattr(self.main_window, "step_progress")
+                    and self.main_window.step_progress
+                ):
+                    self.main_window.step_progress.setMaximum(new_step)
+                    self.main_window.step_progress.setValue(new_step)
+            except Exception:
+                pass
 
             # Update visuals
             if self.main_window.colorize_enabled:
@@ -229,7 +262,23 @@ class ExecutionController:
     def reset(self):
         """Full reset: restore graph to snapshot state AND reset processor."""
         self.graph_runner.reset()
-        self.main_window.step_label.setText("Step: 0")
+        max_steps = self.main_window.max_steps_spin.value()
+        try:
+            self.main_window.step_label.setText(f"Step: 0 / {max_steps}")
+        except Exception:
+            pass
+
+        # Reset progress bar
+        try:
+            if (
+                hasattr(self.main_window, "step_progress")
+                and self.main_window.step_progress
+            ):
+                max_steps = self.main_window.max_steps_spin.value()
+                self.main_window.step_progress.setMaximum(max_steps)
+                self.main_window.step_progress.setValue(0)
+        except Exception:
+            pass
 
         self._set_stopped_state()
 
@@ -262,6 +311,19 @@ class ExecutionController:
             else:
                 self.canvas.update_node_visuals(False, 0, 1)
 
+            # Update progress bar to reflect current_step preserved
+            try:
+                if (
+                    hasattr(self.main_window, "step_progress")
+                    and self.main_window.step_progress
+                ):
+                    current = current_step
+                    max_steps = current_max_steps
+                    self.main_window.step_progress.setMaximum(max_steps)
+                    self.main_window.step_progress.setValue(current)
+            except Exception:
+                pass
+
             # Don't call _set_stopped_state() - preserve resume button state
             # Just ensure play is enabled and we're not running
             self.main_window.play_btn.setEnabled(True)
@@ -291,7 +353,23 @@ class ExecutionController:
         but keeps all node values unchanged.
         """
         self.graph_runner.reset_processor()
-        self.main_window.step_label.setText("Step: 0")
+        max_steps = self.main_window.max_steps_spin.value()
+        try:
+            self.main_window.step_label.setText(f"Step: 0 / {max_steps}")
+        except Exception:
+            pass
+
+        # Reset progress bar value
+        try:
+            if (
+                hasattr(self.main_window, "step_progress")
+                and self.main_window.step_progress
+            ):
+                max_steps = self.main_window.max_steps_spin.value()
+                self.main_window.step_progress.setMaximum(max_steps)
+                self.main_window.step_progress.setValue(0)
+        except Exception:
+            pass
 
         self._set_stopped_state()
 
@@ -343,8 +421,22 @@ class ExecutionController:
             self.graph_runner.current_step = max_steps
             self.graph_runner.max_steps = max_steps
 
+            # Update progress bar to reflect completed batch
+            try:
+                if (
+                    hasattr(self.main_window, "step_progress")
+                    and self.main_window.step_progress
+                ):
+                    self.main_window.step_progress.setMaximum(max_steps)
+                    self.main_window.step_progress.setValue(max_steps)
+            except Exception:
+                pass
+
             # Update visuals once at the end
-            self.main_window.step_label.setText(f"Step: {max_steps}")
+            try:
+                self.main_window.step_label.setText(f"Step: {max_steps} / {max_steps}")
+            except Exception:
+                pass
             if self.main_window.colorize_enabled:
                 self.main_window.auto_detect_range()
             else:
@@ -372,7 +464,39 @@ class ExecutionController:
 
     def on_step_completed(self, step):
         """Handle step completion callback from GraphRunner."""
-        self.main_window.step_label.setText(f"Step: {step}")
+        # Update step label to show current / max
+        try:
+            max_steps = (
+                getattr(
+                    self.graph_runner,
+                    "max_steps",
+                    self.main_window.max_steps_spin.value(),
+                )
+                or self.main_window.max_steps_spin.value()
+            )
+            self.main_window.step_label.setText(f"Step: {step} / {max_steps}")
+        except Exception:
+            pass
+
+        # Update progress bar
+        try:
+            if (
+                hasattr(self.main_window, "step_progress")
+                and self.main_window.step_progress
+            ):
+                max_steps = (
+                    getattr(
+                        self.graph_runner,
+                        "max_steps",
+                        self.main_window.max_steps_spin.value(),
+                    )
+                    or self.main_window.max_steps_spin.value()
+                )
+                # Ensure progress maximum matches current run
+                self.main_window.step_progress.setMaximum(max_steps)
+                self.main_window.step_progress.setValue(step)
+        except Exception:
+            pass
 
         # If 'Skip Graph Visualization' is enabled, skip canvas/visual updates
         if self.main_window.skip_visualization:
@@ -418,6 +542,28 @@ class ExecutionController:
 
     def on_execution_finished(self):
         """Handle execution completion callback."""
+        # Ensure progress bar reflects completion
+        try:
+            if (
+                hasattr(self.main_window, "step_progress")
+                and self.main_window.step_progress
+            ):
+                max_steps = getattr(self.graph_runner, "max_steps", None)
+                if max_steps is not None and max_steps > 0:
+                    self.main_window.step_progress.setMaximum(max_steps)
+                    self.main_window.step_progress.setValue(max_steps)
+            # Also update main step label to show completion
+            try:
+                max_steps2 = getattr(self.graph_runner, "max_steps", None)
+                if max_steps2 is not None and max_steps2 > 0:
+                    self.main_window.step_label.setText(
+                        f"Step: {max_steps2} / {max_steps2}"
+                    )
+            except Exception:
+                pass
+        except Exception:
+            pass
+
         self._set_stopped_state()
         self.status_bar.showMessage("Execution finished")
 
