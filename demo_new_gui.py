@@ -33,7 +33,9 @@ except ImportError:
     sys.exit(1)
 
 from gui_framework.viewmodels.base import BaseViewModel, ObservableProperty
+from gui_framework.viewmodels.execution_viewmodel import ExecutionViewModel, ExecutionStatus
 from gui_framework.views.base import BaseView
+from gui_framework.views.execution_view import ExecutionView
 from gui_framework.state.store import get_store
 from gui_framework.events.bus import get_event_bus, Event, EventType
 from gui_framework.widgets.collapsible_section_view import CollapsibleSectionView
@@ -241,13 +243,26 @@ class DemoMainWindow(QMainWindow):
         collapsible_group.setLayout(collapsible_layout)
         main_layout.addWidget(collapsible_group)
         
+        # Execution Controls example
+        execution_group = QGroupBox("Execution Controls Example")
+        execution_layout = QVBoxLayout()
+        
+        # Create ExecutionViewModel and ExecutionView
+        self.execution_vm = ExecutionViewModel(max_steps=100, speed_ms=100)
+        self.execution_view = ExecutionView(self.execution_vm)
+        execution_layout.addWidget(self.execution_view)
+        
+        execution_group.setLayout(execution_layout)
+        main_layout.addWidget(execution_group)
+        
         # Instructions
         instructions = QLabel(
             "This demo shows:\n"
             "• Pure Python ViewModels (testable without GUI)\n"
             "• Observable properties (UI auto-updates)\n"
             "• Event bus integration (loose coupling)\n"
-            "• CollapsibleSection widget from new framework"
+            "• CollapsibleSection widget from new framework\n"
+            "• Execution controls with full state management"
         )
         instructions.setWordWrap(True)
         main_layout.addWidget(instructions)
@@ -265,6 +280,7 @@ class DemoMainWindow(QMainWindow):
         print("3. Event bus for loose coupling")
         print("4. State store integration (available but not shown)")
         print("5. CollapsibleSection widget from new framework")
+        print("6. Execution controls with complete state management")
         print("\nWatch the console for ViewModel/View interaction logs.")
         print("="*60 + "\n")
 
