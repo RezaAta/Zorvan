@@ -1,17 +1,16 @@
-"""InitializableContainerNode - extension of ContainerNode with reinitialization support.
-"""
-
 import random
 from typing import Optional
 
 from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
+from ComputationalGraphs.Nodes.Initializers.Initializer import Initializer
 
 
 class InitializableContainerNode(ContainerNode):
     """A ContainerNode that supports random initialization / re-initialization.
 
-    Thin subclass of ContainerNode that adds init range parameters and a
-    convenience method `reinitialize` to randomize the node's value.
+    This is a thin subclass of ContainerNode that adds parameters for the
+    initialization range and a convenience method ``reinitialize`` to assign
+    a new random value to the node.
     """
 
     def __init__(
@@ -21,29 +20,43 @@ class InitializableContainerNode(ContainerNode):
         init_low: float = -1.0,
         init_high: float = 1.0,
         init_method: str = "uniform",
-        init_mean: float = 0.0,
-        init_std: float = 0.01,
+        initializer: Optional[Initializer] = None,
     ):
+        # Keep underlying ContainerNode behavior
         super().__init__(name=name, value=value)
+        # Initialization params
         self.init_low = init_low
         self.init_high = init_high
         self.init_method = init_method
-        self.init_mean = init_mean
-        self.init_std = init_std
+        # optional initializer object
+        self.initializer = initializer
 
     def reinitialize(self) -> float:
         """Randomize this node's value using the configured init method.
 
-        Supports 'uniform' currently; more methods can be added later.
-        Returns the newly set value.
+        Currently supports 'uniform' only. Returns the new value.
         """
-        if self.init_method == "uniform":
+        if self.initializer is not None:
+            try:
+                self.value = self.initializer.generate()
+            except Exception:
+                # fall back to internal uniform logic
+                self.value = random.uniform(self.init_low, self.init_high)
+        elif self.init_method == "uniform":
             self.value = random.uniform(self.init_low, self.init_high)
-        elif self.init_method == "normal":
-            # Clip if desired to keep in range, but base functionality returns gaussian
-            self.value = random.gauss(self.init_mean, self.init_std)
-        # Removed 'zeros', 'ones', 'constant' modes - these were redundant
         else:
-            # Fallback: uniform
+            # fallback to uniform if unknown method
             self.value = random.uniform(self.init_low, self.init_high)
+
         return self.value
+
+    # Keep Operation inherited from ContainerNode; that preserves backprop semantics
+
+    def set_initializer(self, initializer: Initializer):
+        """Set an initializer object and return it."""
+        self.initializer = initializer
+        return self.initializer
+
+    def regenerate_value(self):
+        """Compatibility alias for other code that expects regenerate_value()"""
+        return self.reinitialize()
