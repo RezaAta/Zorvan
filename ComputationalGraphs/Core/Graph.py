@@ -1,5 +1,4 @@
-import uuid
-from typing import List, Optional, Set
+import logging
 
 from graphviz import Digraph
 
@@ -10,26 +9,11 @@ from ComputationalGraphs.Nodes.BasicNode import (  # Import the abstract BasicNo
 from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
 from ComputationalGraphs.Nodes.Node import Node
 
-# Default colors for sub-graphs (cycling through these)
-DEFAULT_GRAPH_COLORS = [
-    "#FF6B6B",  # Red
-    "#4ECDC4",  # Teal
-    "#45B7D1",  # Blue
-    "#96CEB4",  # Green
-    "#FFEAA7",  # Yellow
-    "#DDA0DD",  # Plum
-    "#98D8C8",  # Mint
-    "#F7DC6F",  # Gold
-    "#BB8FCE",  # Purple
-    "#85C1E9",  # Light Blue
-]
+logger = logging.getLogger(__name__)
 
 
 class Graph:
-    # Class-level counter for unique graph colors
-    _color_index = 0
-
-    def __init__(self, name: str = None, graph_id: str = None):
+    def __init__(self):
         self.nodes = []  # List to hold nodes
         self.adjacencyMatrix = []  # Adjacency matrix for node connections
         self.idToNodeDictionary = {}  # Map node ids to node objects
@@ -44,301 +28,6 @@ class Graph:
         self.compressed_counter = 1
         self.basic_counter = 0  # Using alphabet positions for basic nodes
         self.basic_suffix_counter = 1  # Used when a-z are all used up
-
-        # === Multi-Graph Support (Phase 1) ===
-        # Unique identifier for this graph
-        self.graph_id: str = graph_id or str(uuid.uuid4())[:8]
-        # Human-readable name for this graph
-        self.graph_name: str = name or "Default Graph"
-        # Color for visual distinction (used for outlines/labels in GUI)
-        self.graph_color: str = self._get_next_color()
-        # Parent graph (None for mother/root graph)
-        self.parent_graph: Optional["Graph"] = None
-        # Sub-graphs contained within this graph
-        self.sub_graphs: List["Graph"] = []
-        # Flag indicating if this is the mother (root) graph
-        self.is_mother_graph: bool = False
-
-    @classmethod
-    def _get_next_color(cls) -> str:
-        """Get the next color from the default palette, cycling through."""
-        color = DEFAULT_GRAPH_COLORS[cls._color_index % len(DEFAULT_GRAPH_COLORS)]
-        cls._color_index += 1
-        return color
-
-    def create_subgraph_from_nodes(
-        self, nodes: List[Node], name: str = None
-    ) -> Optional["Graph"]:
-        """
-        Create a new sub-graph from a selection of nodes.
-
-        The nodes remain in this (parent) graph but are also registered in the new sub-graph.
-        This allows shared nodes between graphs - the processor treats them normally.
-
-        Args:
-            nodes: List of Node objects to include in the sub-graph
-            name: Optional name for the new sub-graph
-
-        Returns:
-            The newly created sub-graph, or None if creation failed
-        """
-        if not nodes:
-            return None
-
-        # Verify all nodes belong to this graph
-        for node in nodes:
-            if node not in self.nodes:
-                raise ValueError(
-                    f"Node '{getattr(node, 'name', node)}' is not in this graph"
-                )
-
-        # Check for duplicate sub-graph (same set of nodes)
-        node_set = set(nodes)
-        for existing_subgraph in self.sub_graphs:
-            if set(existing_subgraph.nodes) == node_set:
-                raise ValueError(
-                    "A sub-graph with identical nodes already exists: "
-                    f"'{existing_subgraph.graph_name}'"
-                )
-
-        # Create the new sub-graph
-        subgraph_name = name or f"Sub-Graph {len(self.sub_graphs) + 1}"
-        new_subgraph = Graph(name=subgraph_name)
-        new_subgraph.parent_graph = self
-        new_subgraph.is_mother_graph = False
-
-        # Add nodes to the sub-graph (they remain in parent too)
-        # We directly add to the list without re-generating IDs
-        for node in nodes:
-            new_subgraph.nodes.append(node)
-            new_subgraph.idToNodeDictionary[node.id] = node
-            # Mark node as belonging to this sub-graph (Phase 2)
-            node.sub_graph_id = new_subgraph.graph_id
-
-        # Build adjacency matrix for the sub-graph
-        new_subgraph.UpdateAdjacencyMatrix()
-
-        # Determine starting nodes for the sub-graph
-        # (nodes with no predecessors within the sub-graph)
-        for node in nodes:
-            has_internal_predecessor = False
-            for pred in node.predecessors:
-                if pred in nodes:
-                    has_internal_predecessor = True
-                    break
-            if not has_internal_predecessor:
-                new_subgraph.starting_nodes.append(node)
-
-        # Register the sub-graph
-        self.sub_graphs.append(new_subgraph)
-
-        return new_subgraph
-
-    def remove_subgraph(self, subgraph: "Graph") -> bool:
-        """
-        Remove a sub-graph from this graph.
-
-        Note: This does NOT remove the nodes from the parent graph,
-        it only removes the sub-graph grouping.
-
-        Args:
-            subgraph: The sub-graph to remove
-
-        Returns:
-            True if removed, False if not found
-        """
-        if subgraph in self.sub_graphs:
-            subgraph.parent_graph = None
-            self.sub_graphs.remove(subgraph)
-            return True
-        return False
-
-    def add_nodes_to_subgraph(self, subgraph_or_id, nodes: List[Node]) -> int:
-        """
-        Add nodes to an existing sub-graph.
-
-        Args:
-            subgraph_or_id: The sub-graph (Graph object or graph_id) to add nodes to
-            nodes: List of nodes to add
-
-        Returns:
-            Number of nodes actually added (excludes already-present nodes)
-        """
-        subgraph = self._resolve_subgraph(subgraph_or_id)
-        if subgraph is None:
-            raise ValueError("Sub-graph is not part of this graph")
-
-        added = 0
-        for node in nodes:
-            if node not in self.nodes:
-                raise ValueError(
-                    f"Node '{getattr(node, 'name', node)}' is not in the parent graph"
-                )
-            if node not in subgraph.nodes:
-                subgraph.nodes.append(node)
-                subgraph.idToNodeDictionary[node.id] = node
-                added += 1
-
-        if added > 0:
-            subgraph.UpdateAdjacencyMatrix()
-            # Re-detect starting nodes
-            subgraph.starting_nodes = []
-            for node in subgraph.nodes:
-                has_internal_predecessor = False
-                for pred in node.predecessors:
-                    if pred in subgraph.nodes:
-                        has_internal_predecessor = True
-                        break
-                if not has_internal_predecessor:
-                    subgraph.starting_nodes.append(node)
-
-        return added
-
-    def _resolve_subgraph(self, subgraph_or_id) -> Optional["Graph"]:
-        """
-        Resolve a subgraph argument to a Graph object.
-
-        Args:
-            subgraph_or_id: Either a Graph object or a graph_id string
-
-        Returns:
-            The Graph object, or None if not found
-        """
-        if isinstance(subgraph_or_id, Graph):
-            return subgraph_or_id if subgraph_or_id in self.sub_graphs else None
-        # It's an ID, search for it
-        for sg in self.sub_graphs:
-            if getattr(sg, "graph_id", None) == subgraph_or_id:
-                return sg
-        return None
-
-    def remove_nodes_from_subgraph(self, subgraph_or_id, nodes: List[Node]) -> int:
-        """
-        Remove nodes from an existing sub-graph.
-
-        Args:
-            subgraph_or_id: The sub-graph (Graph object or graph_id) to remove nodes from
-            nodes: List of nodes to remove
-
-        Returns:
-            Number of nodes actually removed
-        """
-        subgraph = self._resolve_subgraph(subgraph_or_id)
-        if subgraph is None:
-            raise ValueError("Sub-graph is not part of this graph")
-
-        removed = 0
-        for node in nodes:
-            if node in subgraph.nodes:
-                subgraph.nodes.remove(node)
-                if node.id in subgraph.idToNodeDictionary:
-                    del subgraph.idToNodeDictionary[node.id]
-                if node in subgraph.starting_nodes:
-                    subgraph.starting_nodes.remove(node)
-                removed += 1
-
-        if removed > 0:
-            subgraph.UpdateAdjacencyMatrix()
-
-        # If subgraph is now empty, optionally remove it
-        if len(subgraph.nodes) == 0:
-            self.remove_subgraph(subgraph)
-
-        return removed
-
-    def rename_subgraph(self, subgraph_or_id, new_name: str) -> bool:
-        """
-        Rename a sub-graph.
-
-        Args:
-            subgraph_or_id: The sub-graph (Graph object or graph_id) to rename
-            new_name: The new name
-
-        Returns:
-            True if renamed, False if subgraph not found
-        """
-        subgraph = self._resolve_subgraph(subgraph_or_id)
-        if subgraph is None:
-            return False
-        subgraph.graph_name = new_name
-        return True
-
-    def set_subgraph_color(self, subgraph_or_id, color: str) -> bool:
-        """
-        Change the color of a sub-graph.
-
-        Args:
-            subgraph_or_id: The sub-graph (Graph object or graph_id) to modify
-            color: New color as hex string (e.g., '#FF0000')
-
-        Returns:
-            True if color changed, False if subgraph not found
-        """
-        subgraph = self._resolve_subgraph(subgraph_or_id)
-        if subgraph is None:
-            return False
-        subgraph.graph_color = color
-        return True
-
-    def get_all_subgraphs(self, recursive: bool = True) -> List["Graph"]:
-        """
-        Get all sub-graphs of this graph.
-
-        Args:
-            recursive: If True, also include nested sub-graphs
-
-        Returns:
-            List of all sub-graphs
-        """
-        result = list(self.sub_graphs)
-        if recursive:
-            for subgraph in self.sub_graphs:
-                result.extend(subgraph.get_all_subgraphs(recursive=True))
-        return result
-
-    def find_subgraph_by_id(self, graph_id: str) -> Optional["Graph"]:
-        """Find a sub-graph by its ID, searching recursively."""
-        if self.graph_id == graph_id:
-            return self
-        for subgraph in self.sub_graphs:
-            found = subgraph.find_subgraph_by_id(graph_id)
-            if found:
-                return found
-        return None
-
-    def find_subgraph_by_name(self, name: str) -> Optional["Graph"]:
-        """Find a sub-graph by its name, searching recursively."""
-        if self.graph_name == name:
-            return self
-        for subgraph in self.sub_graphs:
-            found = subgraph.find_subgraph_by_name(name)
-            if found:
-                return found
-        return None
-
-    def get_node_subgraphs(self, node: Node) -> List["Graph"]:
-        """
-        Get all sub-graphs that contain a specific node.
-
-        Args:
-            node: The node to search for
-
-        Returns:
-            List of sub-graphs containing this node (can be multiple if shared)
-        """
-        result = []
-        for subgraph in self.sub_graphs:
-            if node in subgraph.nodes:
-                result.append(subgraph)
-            # Also check nested sub-graphs
-            result.extend(subgraph.get_node_subgraphs(node))
-        return result
-
-    def set_as_mother_graph(self):
-        """Mark this graph as the mother (root) graph."""
-        self.is_mother_graph = True
-        self.parent_graph = None
-        self.graph_name = self.graph_name or "Mother Graph"
 
     def GenerateIdForNode(self, node):
         """
@@ -429,8 +118,10 @@ class Graph:
                     node.predecessors.remove(preNode)
                     # Debug output to help with synchronization issues
                     try:
-                        print(
-                            f"Graph: removed predecessor {getattr(preNode, 'name', str(preNode))} from {getattr(node, 'name', str(node))}"
+                        logger.debug(
+                            "Graph: removed predecessor %s from %s",
+                            getattr(preNode, "name", str(preNode)),
+                            getattr(node, "name", str(node)),
                         )
                     except Exception:
                         pass
@@ -470,8 +161,10 @@ class Graph:
                 try:
                     node.predecessors.remove(matched)
                     try:
-                        print(
-                            f"Graph: removed predecessor {getattr(matched, 'name', str(matched))} from {getattr(node, 'name', str(node))} (matched)"
+                        logger.debug(
+                            "Graph: removed predecessor %s from %s (matched)",
+                            getattr(matched, "name", str(matched)),
+                            getattr(node, "name", str(node)),
                         )
                     except Exception:
                         pass
@@ -705,6 +398,47 @@ class Graph:
         self.UpdateAdjacencyMatrix()
 
         return compressed
+
+    def apply_initializer(self, initializer, node_filter=None, reinit=True):
+        """Apply an initializer object to nodes in the graph.
+
+        Args:
+            initializer: An object with generate() method (Initializer) to set on nodes.
+            node_filter: Optional callable(node) -> bool to select nodes. If None, apply to all
+                InitializableContainerNode-like nodes.
+            reinit: If True, call reinitialize/regenerate_value on matched nodes to set new values.
+        """
+        for node in list(self.nodes):
+            try:
+                if node_filter is not None and not node_filter(node):
+                    continue
+                # Support both set_initializer and direct attribute usage
+                if hasattr(node, "set_initializer"):
+                    node.set_initializer(initializer)
+                else:
+                    setattr(node, "initializer", initializer)
+
+                if reinit:
+                    if hasattr(node, "reinitialize"):
+                        node.reinitialize()
+                    elif hasattr(node, "regenerate_value"):
+                        node.regenerate_value()
+            except Exception:
+                # ignore nodes where initialization cannot be applied
+                pass
+
+    def clear_initializer(self, node_filter=None):
+        """Clear assigned initializer from matching nodes."""
+        for node in list(self.nodes):
+            try:
+                if node_filter is not None and not node_filter(node):
+                    continue
+                if hasattr(node, "set_initializer"):
+                    node.set_initializer(None)
+                elif hasattr(node, "initializer"):
+                    setattr(node, "initializer", None)
+            except Exception:
+                pass
 
     def _order_nodes_into_chain(self, nodes):
         """
@@ -2001,77 +1735,3 @@ class Graph:
     def clear_simplification_history(self):
         """Clear the simplification history."""
         self._simplification_history = []
-
-    # === Multi-Graph Serialization Methods ===
-
-    def get_subgraph_metadata(self) -> dict:
-        """
-        Get metadata about this graph for serialization.
-
-        Returns:
-            Dictionary with graph identity information
-        """
-        return {
-            "graph_id": self.graph_id,
-            "graph_name": self.graph_name,
-            "graph_color": self.graph_color,
-            "is_mother_graph": self.is_mother_graph,
-            "node_ids": [node.id for node in self.nodes],
-            "starting_node_ids": [
-                node.id for node in self.starting_nodes if hasattr(node, "id")
-            ],
-            "sub_graphs": [sg.get_subgraph_metadata() for sg in self.sub_graphs],
-        }
-
-    def restore_subgraph_from_metadata(
-        self, metadata: dict, id_to_node_map: dict
-    ) -> Optional["Graph"]:
-        """
-        Restore a sub-graph structure from serialized metadata.
-
-        Args:
-            metadata: Dictionary containing graph metadata
-            id_to_node_map: Mapping from node IDs to Node objects
-
-        Returns:
-            The restored sub-graph, or None if restoration failed
-        """
-        if not metadata:
-            return None
-
-        # Create the sub-graph with the saved identity
-        subgraph = Graph(
-            name=metadata.get("graph_name", "Restored Sub-Graph"),
-            graph_id=metadata.get("graph_id"),
-        )
-        subgraph.graph_color = metadata.get("graph_color", subgraph.graph_color)
-        subgraph.is_mother_graph = metadata.get("is_mother_graph", False)
-        subgraph.parent_graph = self
-
-        # Restore nodes (they should already exist in the parent)
-        for node_id in metadata.get("node_ids", []):
-            if node_id in id_to_node_map:
-                node = id_to_node_map[node_id]
-                subgraph.nodes.append(node)
-                subgraph.idToNodeDictionary[node_id] = node
-
-        # Restore starting nodes
-        for node_id in metadata.get("starting_node_ids", []):
-            if node_id in id_to_node_map:
-                subgraph.starting_nodes.append(id_to_node_map[node_id])
-
-        # Build adjacency matrix
-        subgraph.UpdateAdjacencyMatrix()
-
-        # Recursively restore nested sub-graphs
-        for sub_meta in metadata.get("sub_graphs", []):
-            nested_subgraph = subgraph.restore_subgraph_from_metadata(
-                sub_meta, id_to_node_map
-            )
-            if nested_subgraph:
-                subgraph.sub_graphs.append(nested_subgraph)
-
-        # Register with parent
-        self.sub_graphs.append(subgraph)
-
-        return subgraph

@@ -9,6 +9,7 @@ Steps:
 - Print comparison metrics and plot a single episode
 """
 
+import logging
 import math
 import time
 
@@ -31,15 +32,23 @@ from ComputationalGraphs.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
 from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
 from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
 
+logger = logging.getLogger(__name__)
 
-def generate_dataset_samples(n_samples=1000, seed=42):
+
+def generate_dataset_samples(n_samples=1000, seed=42, k_loss=0.03, k_heater=0.3):
+    """Generate training samples with fixed physical parameters.
+
+    Args:
+        n_samples: Number of samples to generate
+        seed: Random seed for reproducibility
+        k_loss: Heat loss coefficient (constant)
+        k_heater: Heater gain coefficient (constant)
+    """
     rng = np.random.RandomState(seed)
     dt = 1.0
     current_temps = rng.uniform(5.0, 30.0, size=n_samples)
     prev_powers = rng.uniform(0.0, 1.0, size=n_samples)
     outside = rng.uniform(-10.0, 35.0, size=n_samples)
-    k_loss = rng.uniform(0.01, 0.12, size=n_samples)
-    k_heater = rng.uniform(0.05, 0.5, size=n_samples)
     delta_T = dt * (k_heater * prev_powers - k_loss * (current_temps - outside))
     X = [current_temps.tolist(), prev_powers.tolist()]
     y = [delta_T.tolist()]
@@ -382,7 +391,7 @@ def closed_loop_simulation_graph_detached(
     # initialize
     T = rng.uniform(5.0, 25.0)
     if verbose:
-        print(f"[Graph Detached] rng_seed={rng_seed}, initial_T={T:.6f}")
+        logger.debug("[Graph Detached] rng_seed=%s, initial_T=%.6f", rng_seed, T)
     # Allow caller to set a non-zero initial previous power to avoid large initial
     # temperature drops when outside is very cold.
     prev_power = 0.0 if initial_prev_power is None else initial_prev_power
@@ -449,7 +458,7 @@ def closed_loop_simulation_classic_detached(
 
     T = rng.uniform(5.0, 25.0)
     if verbose:
-        print(f"[Classic Detached] rng_seed={rng_seed}, initial_T={T:.6f}")
+        logger.debug("[Classic Detached] rng_seed=%s, initial_T=%.6f", rng_seed, T)
     prev_power = 0.0
     temps = []
     powers = []
@@ -521,7 +530,7 @@ def closed_loop_simulation_classic(
 
     T = rng.uniform(5.0, 25.0)
     if verbose:
-        print(f"[Classic] rng_seed={rng_seed}, initial_T={T:.6f}")
+        logger.debug("[Classic] rng_seed=%s, initial_T=%.6f", rng_seed, T)
     prev_power = 0.0 if initial_prev_power is None else initial_prev_power
     temps = []
     powers = []
@@ -559,7 +568,7 @@ def closed_loop_simulation_classic(
 def run_compare():
     # generate data
     master_seed = np.random.randint(0, 2**31 - 1)
-    print(f"Experiment master_seed={master_seed}")
+    logger.debug("Experiment master_seed=%s", master_seed)
     X, y = generate_dataset_samples(1200, seed=master_seed)
     # split train/test
     n = len(X[0])
@@ -605,7 +614,9 @@ def run_compare():
             for j in range(cols):
                 W_expected[i, j] = weightLayer[i][j].value
         diff_init = np.max(np.abs(W_expected - classic.weights[layer_idx]))
-        print(f"Initial copy - Layer {layer_idx} max weight diff: {diff_init}")
+        logger.debug(
+            "Initial copy - Layer %s max weight diff: %s", layer_idx, diff_init
+        )
 
     # Now train both from the same starting point
     mlp_graph, full_graph, scalers = train_graph_mlp(
@@ -622,7 +633,8 @@ def run_compare():
     )
     yn = (np.array(y_train[0]) - scalers["y_mean"]) / scalers["y_std"]
     yn = yn.reshape(-1, 1)
-    classic.train(Xn, yn, epochs=200, batch_size=32)
+    # Train for 320 epochs with full batch (960 samples) to match Graph's 320 iterations
+    classic.train(Xn, yn, epochs=320, batch_size=len(Xn))
 
     # build hybrid graph from trained mlp (graph's trained weights + FIS)
     hybrid_graph = build_hybrid_from_trained_mlp(mlp_graph, setpoint=22.0)
@@ -633,7 +645,9 @@ def run_compare():
     # Debug: print bias values from mlp_graph
     for idx, biasRow in enumerate(mlp_graph.biasLayers):
         vals = [b.value for b in biasRow]
-        print(f"mlp_graph bias layer {idx} min {min(vals):.6e} max {max(vals):.6e}")
+        logger.debug(
+            "mlp_graph bias layer %s min %.6e max %.6e", idx, min(vals), max(vals)
+        )
 
     # Post-training equality checks (these compare the trained Graph vs trained Classic)
     for layer_idx, weightLayer in enumerate(mlp_graph.weightLayers):
@@ -644,8 +658,10 @@ def run_compare():
             for j in range(cols):
                 W_expected[i, j] = weightLayer[i][j].value
         diff = np.max(np.abs(W_expected - classic.weights[layer_idx]))
-        print(
-            f"Post-training Layer {layer_idx} max weight diff (Graph vs Classic): {diff}"
+        logger.debug(
+            "Post-training Layer %s max weight diff (Graph vs Classic): %s",
+            layer_idx,
+            diff,
         )
 
     # Build a fresh ClassicMLP and copy graph weights into it, then verify parity
@@ -677,8 +693,9 @@ def run_compare():
             classic_copy.predict(xn)[0, 0] * scalers["y_std"] + scalers["y_mean"]
         )
         diffs.append(abs(gpred - ccopy_pred))
-    print(
-        f"Max abs diff between graph MLP and Classic(copy) after weight copy: {max(diffs):.6f}"
+    logger.debug(
+        "Max abs diff between graph MLP and Classic(copy) after weight copy: %.6f",
+        max(diffs),
     )
 
     # compare predictions on a subset
@@ -704,14 +721,17 @@ def run_compare():
         diffs.append(abs(gpred - cpred))
         # Print first mismatch for debugging
         if abs(gpred - cpred) > 1e-3:
-            print(f"Debug sample xt={xt:.4f}, xp={xp:.4f}")
-            print(" graph pred:", gpred)
-            print(" classic pred:", cpred)
+            logger.debug("Debug sample xt=%.4f, xp=%.4f", xt, xp)
+            logger.debug("graph pred: %s", gpred)
+            logger.debug("classic pred: %s", cpred)
             for li, a in enumerate(activations):
-                print(
-                    f"  layer {li} activation shape {a.shape} min {a.min():.6f} max {a.max():.6f}"
+                logger.debug(
+                    "layer %s activation shape %s min %.6f max %.6f",
+                    li,
+                    a.shape,
+                    float(a.min()),
+                    float(a.max()),
                 )
-
             # Additional diagnostic: manual forward using graph-extracted weights/biases
             xtn = (xt - scalers["x0_mean"]) / scalers["x0_std"]
             xpn = (xp - scalers["x1_mean"]) / scalers["x1_std"]
@@ -737,25 +757,35 @@ def run_compare():
                     # ReLU
                     h = np.maximum(0.0, h)
                 man_acts.append(h)
-            print(" Manual forward activations shapes:")
+            logger.debug("Manual forward activations shapes:")
             for li, a in enumerate(man_acts):
-                print(
-                    f"  layer {li} shape {a.shape} min {a.min():.6f} max {a.max():.6f}"
+                logger.debug(
+                    "manual layer %s shape %s min %.6f max %.6f",
+                    li,
+                    a.shape,
+                    float(a.min()),
+                    float(a.max()),
                 )
             break
     maxdiff = max(diffs)
-    print(
-        f"Max abs diff between graph MLP and ClassicMLP after weight copy: {maxdiff:.6f}"
+    logger.debug(
+        "Max abs diff between graph MLP and ClassicMLP after weight copy: %.6f", maxdiff
     )
-    print(
-        f"Graph preds min/max/mean: {min(g_preds):.6e}/{max(g_preds):.6e}/{np.mean(g_preds):.6e}"
+    logger.debug(
+        "Graph preds min/max/mean: %.6e/%.6e/%.6e",
+        min(g_preds),
+        max(g_preds),
+        np.mean(g_preds),
     )
-    print(
-        f"Classic preds min/max/mean: {min(c_preds):.6e}/{max(c_preds):.6e}/{np.mean(c_preds):.6e}"
+    logger.debug(
+        "Classic preds min/max/mean: %.6e/%.6e/%.6e",
+        min(c_preds),
+        max(c_preds),
+        np.mean(c_preds),
     )
     if maxdiff > 1e-6:
-        print(
-            "Warning: MLP outputs differ — check weight/bias mapping or numeric stability"
+        logger.warning(
+            "MLP outputs differ — check weight/bias mapping or numeric stability"
         )
 
     # run detached closed-loop evaluation for one representative episode (MLP->FIS detached)
@@ -778,20 +808,24 @@ def run_compare():
     gm, ge, go = metrics(g_errors, g_powers)
     cm, ce, co = metrics(c_errors, c_powers)
 
-    print(
-        "Graph Hybrid -> final_abs_error={:.3f}, energy={:.3f}, overshoot={:.3f}".format(
-            gm, ge, go
-        )
+    logger.info(
+        "Graph Hybrid -> final_abs_error=%.3f, energy=%.3f, overshoot=%.3f",
+        gm,
+        ge,
+        go,
     )
-    print(
-        "Classic Hybrid -> final_abs_error={:.3f}, energy={:.3f}, overshoot={:.3f}".format(
-            cm, ce, co
-        )
+    logger.info(
+        "Classic Hybrid -> final_abs_error=%.3f, energy=%.3f, overshoot=%.3f",
+        cm,
+        ce,
+        co,
     )
 
     # simple comparison metric between the two closed-loop temperature traces
     temp_rmse = np.sqrt(np.mean((g_temps - c_temps) ** 2))
-    print(f"Closed-loop temps RMSE between Graph and Classic hybrids: {temp_rmse:.6f}")
+    logger.info(
+        "Closed-loop temps RMSE between Graph and Classic hybrids: %.6f", temp_rmse
+    )
 
     # plot with fixed y-axis and final error annotations
     plt.figure(figsize=(10, 6))
@@ -819,5 +853,163 @@ def run_compare():
     plt.show()
 
 
+def run_compare_once(master_seed=None, verbose=False):
+    """Run one instance of the compare experiment. Returns a dict with results."""
+    # generate data
+    if master_seed is None:
+        master_seed = np.random.randint(0, 2**31 - 1)
+    if verbose:
+        logger.debug("Experiment master_seed=%s", master_seed)
+    X, y = generate_dataset_samples(1200, seed=master_seed)
+    # split train/test
+    n = len(X[0])
+    idx = np.arange(n)
+    np.random.seed(1)
+    np.random.shuffle(idx)
+    train_idx = idx[: int(0.8 * n)]
+    test_idx = idx[int(0.8 * n) :]
+
+    X_train = [np.array(X[0])[train_idx].tolist(), np.array(X[1])[train_idx].tolist()]
+    y_train = [np.array(y[0])[train_idx].tolist()]
+
+    X_test = [np.array(X[0])[test_idx].tolist(), np.array(X[1])[test_idx].tolist()]
+    y_test = [np.array(y[0])[test_idx].tolist()]
+
+    import random
+
+    # Ensure deterministic initial weights by seeding Python's RNG and numpy
+    random.seed(master_seed)
+    np.random.seed(master_seed)
+
+    # Build an untrained graph MLP to capture initial weights
+    mlp_graph, scalers = build_graph_mlp(X_train, y_train)
+
+    # Initialize Classic MLP with the graph's starting weights so both start identically
+    classic = ClassicMLP(
+        input_size=2,
+        output_size=1,
+        hidden_layers=[8, 8],
+        hidden_activation="relu",
+        output_activation="linear",
+        learning_rate=0.001,
+        use_bias=True,
+    )
+    copy_weights_to_classic(mlp_graph, classic)
+
+    # Train both
+    mlp_graph, full_graph, scalers = train_graph_mlp(
+        X_train, y_train, epochs=80, itersPerEpoch=4, mlp=mlp_graph
+    )
+
+    # Classic training on same normalized data
+    Xn_raw = np.vstack([np.array(X_train[0]), np.array(X_train[1])]).T
+    Xn = np.column_stack(
+        [
+            (Xn_raw[:, 0] - scalers["x0_mean"]) / scalers["x0_std"],
+            (Xn_raw[:, 1] - scalers["x1_mean"]) / scalers["x1_std"],
+        ]
+    )
+    yn = (np.array(y_train[0]) - scalers["y_mean"]) / scalers["y_std"]
+    yn = yn.reshape(-1, 1)
+    # Train for 320 epochs with full batch (960 samples) to match Graph's 320 iterations
+    classic.train(Xn, yn, epochs=320, batch_size=len(Xn))
+
+    # run detached closed-loop evaluation for one representative episode (MLP->FIS detached)
+    # Use a shared, random seed for fair comparison between Graph and Classic sims
+    shared_seed = np.random.randint(0, 2**31 - 1)
+    g_temps, g_powers, g_errors = closed_loop_simulation_graph_detached(
+        mlp_graph,
+        scalers,
+        steps=200,
+        target=22.0,
+        rng_seed=shared_seed,
+        verbose=verbose,
+    )
+    c_temps, c_powers, c_errors = closed_loop_simulation_classic_detached(
+        classic, scalers, steps=200, target=22.0, rng_seed=shared_seed, verbose=verbose
+    )
+
+    # compute metrics
+    def metrics(errors, powers):
+        final_abs_error = np.abs(errors[-10:]).mean()
+        energy = np.sum(np.array(powers) / 100.0)
+        overshoot = np.max(-np.minimum(errors, 0.0))
+        return dict(final_abs_error=final_abs_error, energy=energy, overshoot=overshoot)
+
+    gm = metrics(g_errors, g_powers)
+    cm = metrics(c_errors, c_powers)
+
+    results = dict(
+        master_seed=master_seed,
+        shared_seed=shared_seed,
+        g_temps=g_temps,
+        g_powers=g_powers,
+        g_errors=g_errors,
+        c_temps=c_temps,
+        c_powers=c_powers,
+        c_errors=c_errors,
+        graph_metrics=gm,
+        classic_metrics=cm,
+        scalers=scalers,
+    )
+    return results
+
+
+def run_compare_multiple(n_runs=10, verbose=False, save_file=None):
+    """Run the experiment n_runs times and plot all temperature traces on a single graph."""
+    seeds = np.random.randint(0, 2**31 - 1, size=n_runs)
+    all_results = []
+    for i, s in enumerate(seeds):
+        if verbose:
+            logger.debug("Running trial %s/%s seed=%s", i + 1, n_runs, s)
+        res = run_compare_once(master_seed=int(s), verbose=verbose)
+        all_results.append(res)
+
+    # Plot all runs on one figure
+    plt.figure(figsize=(12, 7))
+    for res in all_results:
+        plt.plot(res["g_temps"], color="tab:blue", alpha=0.25, linewidth=1)
+        plt.plot(res["c_temps"], color="tab:orange", alpha=0.25, linewidth=1)
+
+    # plot mean trajectories
+    g_mean = np.mean([r["g_temps"] for r in all_results], axis=0)
+    c_mean = np.mean([r["c_temps"] for r in all_results], axis=0)
+    plt.plot(g_mean, color="tab:blue", linewidth=2, label="Graph mean")
+    plt.plot(c_mean, color="tab:orange", linewidth=2, label="Classic mean")
+
+    plt.axhline(22.0, color="k", linestyle="--", label="Setpoint")
+    plt.ylim(0, 28)
+    plt.legend()
+    plt.title(f"Closed-loop temperature (Graph vs Classic) - {n_runs} runs")
+    plt.xlabel("Time step")
+    plt.ylabel("Temperature")
+
+    # annotate mean final_abs_error
+    gm_mean = np.mean([r["graph_metrics"]["final_abs_error"] for r in all_results])
+    cm_mean = np.mean([r["classic_metrics"]["final_abs_error"] for r in all_results])
+    info_text = f"Graph mean final_abs_error={gm_mean:.3f}\nClassic mean final_abs_error={cm_mean:.3f}"
+    ax = plt.gca()
+    ax.text(
+        0.02,
+        0.95,
+        info_text,
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
+    )
+
+    if save_file:
+        plt.savefig(save_file, bbox_inches="tight")
+        if verbose:
+            logger.info("Saved consolidated plot to %s", save_file)
+    plt.show()
+    return all_results
+
+
 if __name__ == "__main__":
+    # Run the original single experiment for backward compatibility
+    # and additionally run the experiment 10 times and show consolidated results.
     run_compare()
+    # Now run the repeated experiment and display consolidated figure
+    run_compare_multiple(n_runs=10, verbose=True, save_file="compare_10_runs.png")

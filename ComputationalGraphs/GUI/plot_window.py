@@ -219,16 +219,34 @@ class PlotWindow(QWidget):
         control_layout.setSpacing(8)  # Compact spacing
 
         self.clear_btn = QPushButton("Clear")
+        try:
+            self.clear_btn.setProperty("themed", True)
+            self.clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.clear_btn.setMouseTracking(True)
+        except Exception:
+            pass
         self.clear_btn.clicked.connect(self.clear_plot)
         self.clear_btn.setMaximumWidth(80)
         control_layout.addWidget(self.clear_btn)
 
         self.remove_btn = QPushButton("Remove Selected")
+        try:
+            self.remove_btn.setProperty("themed", True)
+            self.remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.remove_btn.setMouseTracking(True)
+        except Exception:
+            pass
         self.remove_btn.clicked.connect(self.remove_selected_node)
         self.remove_btn.setMaximumWidth(130)
         control_layout.addWidget(self.remove_btn)
 
         self.close_btn = QPushButton("Close")
+        try:
+            self.close_btn.setProperty("themed", True)
+            self.close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.close_btn.setMouseTracking(True)
+        except Exception:
+            pass
         self.close_btn.clicked.connect(self.close)
         self.close_btn.setMaximumWidth(80)
         control_layout.addWidget(self.close_btn)

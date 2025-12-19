@@ -245,7 +245,8 @@ python run_gui.py
 # GUI is PyQt6-based, structure:
 # - ComputationalGraphs/GUI/main_window.py: Main application
 # - ComputationalGraphs/GUI/graph_canvas.py: Visual editor
-# - ComputationalGraphs/GUI/node_palette.py: Node library
+# - ComputationalGraphs/GUI/combined_node_palette.py: Node library (combined)
+- ComputationalGraphs/GUI/node_registry.py: Node categories registry
 # - ComputationalGraphs/GUI/examples_loader.py: Pre-built examples
 ```
 
@@ -258,7 +259,7 @@ python run_gui.py
 1. Create node class in `ComputationalGraphs/Nodes/` inheriting from `Node`, `BasicNode`, or `AbstractNode`
 2. Implement `Operation(self, *inputs)` method
 3. For differentiable nodes, create derivative class (see `SigmoidNode` + `SigmoidDerivativeNode`)
-4. Register in `ComputationalGraphs/GUI/node_palette.py` for GUI availability
+4. Register in `ComputationalGraphs/GUI/node_registry.py` for GUI availability
 
 Example pattern:
 ```python

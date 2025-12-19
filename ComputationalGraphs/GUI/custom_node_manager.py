@@ -280,7 +280,11 @@ class {definition.type_name}(BasicNode):
                 json.dump(data, f, indent=2)
             return True
         except Exception as e:
-            print(f"Failed to save custom nodes library: {e}")
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Failed to save custom nodes library: %s", e
+            )
             return False
 
     def load_library(self, path: Optional[str] = None) -> bool:
@@ -312,7 +316,9 @@ class {definition.type_name}(BasicNode):
                     self._definitions[definition.type_name] = definition
                     self._generate_class(definition)
                 except Exception as e:
-                    print(
+                    import logging
+
+                    logging.getLogger(__name__).exception(
                         "Failed to load custom node "
                         + str(node_data.get("type_name", "unknown"))
                         + ": "
@@ -321,7 +327,11 @@ class {definition.type_name}(BasicNode):
 
             return True
         except Exception as e:
-            print(f"Failed to load custom nodes library: {e}")
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Failed to load custom nodes library: %s", e
+            )
             return False
 
     def create_node(self, type_name: str, name: str = "") -> Optional[BasicNode]:

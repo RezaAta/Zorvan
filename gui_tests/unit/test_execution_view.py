@@ -138,7 +138,7 @@ class TestExecutionView:
         assert viewmodel.can_pause is False
         assert viewmodel.can_resume is False
         assert viewmodel.can_step is True
-        assert viewmodel.can_reset is True
+        assert viewmodel.can_reset is False  # Reset is disabled when IDLE with current_step=0
     
     def test_button_state_running(self, viewmodel):
         """Test button enabled states when execution is RUNNING."""
@@ -164,7 +164,9 @@ class TestExecutionView:
     def test_button_state_completed(self, viewmodel):
         """Test button enabled states when execution is COMPLETED."""
         viewmodel.play()
-        viewmodel.stop()
+        # Simulate completion through step complete event (stop() returns to IDLE, not COMPLETED)
+        viewmodel._current_step = 100
+        viewmodel._on_step_complete(type('Event', (), {'payload': {'step': 100}})())
         assert viewmodel.status == ExecutionStatus.COMPLETED
         assert viewmodel.can_play is True
         assert viewmodel.can_pause is False
@@ -213,7 +215,7 @@ class TestExecutionView:
         """Test that stop action works correctly."""
         viewmodel.play()
         viewmodel.stop()
-        assert viewmodel.status == ExecutionStatus.COMPLETED
+        assert viewmodel.status == ExecutionStatus.IDLE  # stop() returns to IDLE (abort), not COMPLETED
     
     def test_speed_slider_interaction(self, viewmodel):
         """Test speed slider value changes."""
@@ -245,27 +247,27 @@ class TestExecutionView:
         # Initial state
         assert viewmodel.status == ExecutionStatus.IDLE
         assert viewmodel.current_step == 0
-        
+    
         # Start execution
         viewmodel.play()
         assert viewmodel.status == ExecutionStatus.RUNNING
         assert viewmodel.can_pause is True
-        
+    
         # Simulate some steps
         viewmodel._current_step = 10
-        
+    
         # Pause
         viewmodel.pause()
         assert viewmodel.status == ExecutionStatus.PAUSED
         assert viewmodel.can_resume is True
-        
+    
         # Resume
         viewmodel.resume()
         assert viewmodel.status == ExecutionStatus.RUNNING
-        
+    
         # Stop
         viewmodel.stop()
-        assert viewmodel.status == ExecutionStatus.COMPLETED
+        assert viewmodel.status == ExecutionStatus.IDLE  # stop() returns to IDLE (abort), not COMPLETED
         
         # Reset
         viewmodel.reset()

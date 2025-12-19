@@ -2,6 +2,8 @@
 Main window for the ComputationalGraphs visual editor.
 """
 
+import logging
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QUndoStack
 from PyQt6.QtWidgets import (
@@ -26,6 +28,8 @@ from PyQt6.QtWidgets import (
 
 from ComputationalGraphs.Core.Graph import Graph
 
+from .combined_node_palette import CombinedNodePalette
+
 # Import refactored controllers
 from .controllers import (
     ConsoleController,
@@ -47,7 +51,8 @@ from .controllers import (
 from .examples_loader import ExamplesLoader
 from .graph_canvas import GraphCanvas
 from .graph_runner import GraphRunner
-from .node_palette import NodePalette
+
+logger = logging.getLogger(__name__)
 
 # Import plot_window early to init PyQtGraph config
 from .plot_window import PlotConfigDialog, create_plot_window  # noqa: F401
@@ -63,6 +68,12 @@ class CollapsibleSection(QWidget):
     def __init__(self, title: str, content_widget: QWidget, expanded: bool = True):
         super().__init__()
         self.toggle_button = QToolButton()
+        try:
+            self.toggle_button.setProperty("themed", True)
+            self.toggle_button.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.toggle_button.setMouseTracking(True)
+        except Exception:
+            pass
         self.toggle_button.setText(title)
         self.toggle_button.setCheckable(True)
         self.toggle_button.setChecked(expanded)
@@ -182,26 +193,32 @@ class MainWindow(QMainWindow):
             self.custom_node_manager = get_custom_node_manager()
             self.custom_node_manager.register_with_factory()
         except Exception as e:
-            print(f"Warning: Failed to initialize custom node manager: {e}")
+            logger.warning("Failed to initialize custom node manager: %s", e)
             self.custom_node_manager = None
 
         # Core components
         # Create a new Graph object and use set_graph to keep everything in sync
         new_graph = Graph()
+        logger.debug("MainWindow: Graph created")
         self.graph_runner = GraphRunner(self)
+        logger.debug("MainWindow: GraphRunner created")
         # Ensure runner and canvas reference the authoritative graph (use set_graph)
         try:
             self.set_graph(new_graph)
+            logger.debug("MainWindow: set_graph successful")
         except Exception:
             # If set_graph is not yet available, fallback to direct assignment
             self.graph = new_graph
             self.graph_runner.set_graph(self.graph)
+            logger.debug("MainWindow: set_graph fallback used")
         self.examples_loader = ExamplesLoader()
+        logger.debug("MainWindow: ExamplesLoader created")
 
         # Connect signals
         self.graph_runner.step_completed.connect(self.on_step_completed)
         self.graph_runner.execution_finished.connect(self.on_execution_finished)
         self.graph_runner.error_occurred.connect(self.on_error)
+        logger.debug("MainWindow: connected graph_runner signals")
 
         # Initialize controllers (refactored from monolithic methods)
         self.execution_controller = ExecutionController(self)
@@ -224,13 +241,37 @@ class MainWindow(QMainWindow):
         self.colorize_enabled = False
         self.min_value_range = 0.0  # Numeric min value
         self.max_value_range = 1.0  # Numeric max value
-        self.min_gradient_color = QColor(0, 0, 255)  # Blue for minimum
-        self.max_gradient_color = QColor(255, 0, 0)  # Red for maximum
+        # Load persisted visualization preferences if available
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            min_col = tm.settings.value("visualization/min_gradient_color", None)
+            max_col = tm.settings.value("visualization/max_gradient_color", None)
+            node_col = tm.settings.value("visualization/default_node_color", None)
+            text_col = tm.settings.value("visualization/default_text_color", None)
+        except Exception:
+            min_col = max_col = node_col = text_col = None
+
+        self.min_gradient_color = (
+            QColor(min_col) if min_col else QColor(0, 0, 255)
+        )  # Blue for minimum
+        self.max_gradient_color = (
+            QColor(max_col) if max_col else QColor(255, 0, 0)
+        )  # Red for maximum
         self.skip_visualization = False  # Skip graph canvas updates
         self.skip_plotting = False  # Skip plot window updates
         self.saved_speed = 500  # For max speed toggle
         # ANN coloring state (checkbox)
         self.ann_colors_enabled = False
+
+        # Default node/text colors (may have been persisted)
+        self.default_node_color = (
+            QColor(node_col) if node_col else QColor(100, 150, 200)
+        )
+        self.default_text_color = (
+            QColor(text_col) if text_col else QColor(255, 255, 255)
+        )
 
         # Plot window
         self.plot_window = None
@@ -243,6 +284,74 @@ class MainWindow(QMainWindow):
         self.create_menus()
         self.create_toolbars()
         self.create_status_bar()
+
+        # Ensure persisted color preferences are fully applied to widgets
+        # that registered theme handlers during initialization (dock backgrounds,
+        # icon reapply handlers, etc.). Some components register listeners
+        # during controller construction, so re-applying the theme here guarantees
+        # those handlers run at startup as well.
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            try:
+                tm.apply_theme()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+        # Refresh dock backgrounds if control panel provided the helper
+        try:
+            if hasattr(self, "refresh_dock_backgrounds"):
+                try:
+                    self.refresh_dock_backgrounds()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Re-run any registered icon reapply handlers so icons pick up accent
+        # colors when the handlers were registered after the initial theme
+        # application during startup.
+        try:
+            from .controllers.control_panel_builder import _ICON_REAPPLY_HANDLERS
+
+            for h in list(_ICON_REAPPLY_HANDLERS):
+                try:
+                    h()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Apply visualization defaults immediately so the UI reflects persisted
+        # or initial default colors without requiring the user to press Apply.
+        try:
+            try:
+                # Ensure color buttons show current color values
+                self.min_color_btn.setStyleSheet(
+                    f"background-color: {self.min_gradient_color.name()};"
+                )
+                self.max_color_btn.setStyleSheet(
+                    f"background-color: {self.max_gradient_color.name()};"
+                )
+                self.node_color_btn.setStyleSheet(
+                    f"background-color: {self.default_node_color.name()};"
+                )
+                self.text_color_btn.setStyleSheet(
+                    f"background-color: {self.default_text_color.name()};"
+                )
+            except Exception:
+                pass
+
+            # Apply colors to nodes if any exist on canvas
+            try:
+                self.visualization_controller.apply_node_colors()
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def set_graph(self, graph: Graph):
         """Set the authoritative Graph instance and keep canvas and runner in sync.
@@ -318,9 +427,19 @@ class MainWindow(QMainWindow):
         self.canvas.edge_removed.connect(self.on_edge_removed)
         self.setCentralWidget(self.canvas)
 
-        # Left dock - Node Palette
-        self.palette = NodePalette(self)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.palette)
+        # Left dock - Combined Node Palette (default)
+        try:
+            self.combined_palette = CombinedNodePalette(self)
+            self.combined_palette.setVisible(True)
+            self.addDockWidget(
+                Qt.DockWidgetArea.LeftDockWidgetArea, self.combined_palette
+            )
+            # Expose under the legacy attribute name for compatibility
+            self.palette = self.combined_palette
+        except Exception:
+            # If instantiation fails, still continue - UI will operate without palette
+            self.combined_palette = None
+            self.palette = None
 
         # Right dock - Controls
         self.create_control_panel()

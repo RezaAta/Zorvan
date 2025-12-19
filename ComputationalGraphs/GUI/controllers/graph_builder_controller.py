@@ -91,9 +91,14 @@ class GraphBuilderController:
             pos, use_gui_positions = self._get_layout_positions(graph, G, scale)
 
             t1 = time.time()
+            import logging
+
+            logger = logging.getLogger(__name__)
             if self._is_verbose():
-                print(
-                    f"Layout computed in {t1 - t0:.3f}s for {num_nodes} nodes (ANN algorithm)"
+                logger.debug(
+                    "Layout computed in %.3fs for %d nodes (ANN algorithm)",
+                    (t1 - t0),
+                    num_nodes,
                 )
 
             # Create node items
@@ -109,11 +114,12 @@ class GraphBuilderController:
                     self.main_window.auto_detect_range()
                 else:
                     self.canvas.update_node_visuals(False, 0, 1)
-            except Exception:
-                print("Error while updating node visuals:")
-                import traceback
+            except Exception as exc:
+                import logging
 
-                traceback.print_exc()
+                logging.getLogger(__name__).exception(
+                    "Error while updating node visuals: %s", exc
+                )
                 raise
 
             t5 = time.time()

@@ -1,6 +1,11 @@
-"""
-Palette widget showing available node types for drag-and-drop.
-"""
+import warnings
+
+from .combined_node_palette import CombinedNodePalette as NodePalette
+
+warnings.warn(
+    "NodePalette is deprecated; use CombinedNodePalette instead", DeprecationWarning
+)
+
 
 from PyQt6.QtCore import QMimeData, Qt
 from PyQt6.QtGui import QBrush, QCursor, QDrag, QFont
@@ -18,7 +23,6 @@ try:
 except Exception:
     # Some PyQt6 builds provide QAction under QtGui
     from PyQt6.QtGui import QAction
-
 
 from .theme_utils import ThemeMixin
 
@@ -51,6 +55,12 @@ class NodePalette(QDockWidget, ThemeMixin):
 
         self.create_custom_button = QPushButton("Create")
         try:
+            self.create_custom_button.setProperty("themed", True)
+            self.create_custom_button.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.create_custom_button.setMouseTracking(True)
+        except Exception:
+            pass
+        try:
             from .controllers.control_panel_builder import _apply_icon
 
             _apply_icon(
@@ -78,6 +88,14 @@ class NodePalette(QDockWidget, ThemeMixin):
         try:
             # Initialize ThemeMixin to subscribe to theme changes and call apply_theme()
             ThemeMixin.__init__(self)
+        except Exception:
+            pass
+        # Also ensure we have a direct connection to the ThemeManager so tests and
+        # runtime theme changes reliably invoke our apply_theme implementation.
+        try:
+            from .theme import get_theme_manager
+
+            get_theme_manager().theme_changed.connect(self.apply_theme)
         except Exception:
             pass
 
@@ -229,6 +247,12 @@ class NodePalette(QDockWidget, ThemeMixin):
                     ),
                 ],
             },
+            "Utility Nodes": {
+                "description": "Utility and I/O nodes",
+                "nodes": [
+                    ("DisplayNode", "Display", "Prints values to console or log"),
+                ],
+            },
         }
 
         # Populate tree with categories and nodes
@@ -275,6 +299,31 @@ class NodePalette(QDockWidget, ThemeMixin):
 
         # Custom drag handler
         self.tree_widget.startDrag = self.start_drag
+
+    def apply_theme(self):
+        """Apply theme colors to node palette widgets (called by ThemeMixin)."""
+        try:
+            tm = self.get_theme_manager()
+            list_bg = tm.get_color("list_bg", "#313335").name()
+            border = tm.get_color("border", "#555555").name()
+            text_col = tm.get_color("text", "#bbbbbb").name()
+            # Use inline stylesheet so tests can observe the applied color values
+            ss = f"QTreeWidget {{ background-color: {list_bg}; border: 1px solid {border}; color: {text_col}; }}"
+            try:
+                self.tree_widget.setStyleSheet(ss)
+                # Ensure UI updates propagate in tests
+                try:
+                    from PyQt6.QtWidgets import QApplication
+
+                    app = QApplication.instance()
+                    if app is not None:
+                        app.processEvents()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     # Theme handling is implemented in `apply_theme()` via ThemeMixin
     # (keeps behavior centralized and easier to test).

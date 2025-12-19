@@ -206,7 +206,7 @@ Support genetic algorithm implementations:
 ## Contributing
 
 Feel free to extend the GUI with additional features or node types by:
-1. Adding node types to `node_palette.py`
+1. Adding node types to `node_registry.py`
 2. Implementing instantiation in `graph_canvas.py` dropEvent
 3. Adding type-specific editors in `node_editor_dialog.py`
 

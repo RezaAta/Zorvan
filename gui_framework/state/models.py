@@ -71,6 +71,19 @@ class ThemeState:
 
 
 @dataclass(frozen=True)
+class PaletteState:
+    """
+    Immutable palette state.
+    
+    Attributes:
+        search_text: Current search/filter text
+        expanded_categories: List of expanded category names
+    """
+    search_text: str = ""
+    expanded_categories: List[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class AppState:
     """
     Complete immutable application state.
@@ -82,10 +95,12 @@ class AppState:
         execution: Execution state slice
         canvas: Canvas state slice
         theme: Theme state slice
+        palette: Palette state slice
         file_path: Current file path (None if unsaved)
     """
     graph: Any = None
     execution: ExecutionState = field(default_factory=ExecutionState)
     canvas: CanvasState = field(default_factory=CanvasState)
     theme: ThemeState = field(default_factory=ThemeState)
+    palette: PaletteState = field(default_factory=PaletteState)
     file_path: str = None

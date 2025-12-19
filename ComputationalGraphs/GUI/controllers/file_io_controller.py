@@ -32,6 +32,18 @@ class FileIOController:
         """Access the current graph from main window."""
         return self.main_window.graph
 
+    @graph.setter
+    def graph(self, g):
+        """Set the current graph on the main window using set_graph helper."""
+        try:
+            self.main_window.set_graph(g)
+        except Exception:
+            # Fallback to direct assignment if helper not available
+            try:
+                self.main_window.graph = g
+            except Exception:
+                pass
+
     @property
     def canvas(self):
         """Access the canvas from main window."""

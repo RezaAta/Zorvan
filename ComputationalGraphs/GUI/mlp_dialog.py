@@ -104,10 +104,22 @@ class MLPGeneratorDialog(QDialog):
         button_layout = QHBoxLayout()
 
         generate_btn = QPushButton("Generate")
+        try:
+            generate_btn.setProperty("themed", True)
+            generate_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            generate_btn.setMouseTracking(True)
+        except Exception:
+            pass
         generate_btn.clicked.connect(self._generate_mlp)
         button_layout.addWidget(generate_btn)
 
         cancel_btn = QPushButton("Cancel")
+        try:
+            cancel_btn.setProperty("themed", True)
+            cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            cancel_btn.setMouseTracking(True)
+        except Exception:
+            pass
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
 
