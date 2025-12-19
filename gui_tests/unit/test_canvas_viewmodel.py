@@ -417,3 +417,110 @@ class TestObservableProperties:
         
         assert len(observed_values) > 0
         assert observed_values[0][1] > observed_values[0][0]
+
+
+class TestSelectionInteractive:
+    """Test Stage 2 interactive selection features."""
+    
+    def test_select_node(self, viewmodel, simple_graph):
+        """Test selecting a single node."""
+        viewmodel.load_graph(simple_graph)
+        
+        viewmodel.select_node("A")
+        
+        assert viewmodel.is_node_selected("A")
+        assert "A" in viewmodel.get_selected_nodes()
+        assert viewmodel.get_node("A").is_selected
+    
+    def test_select_node_add_to_selection(self, viewmodel, simple_graph):
+        """Test adding nodes to selection."""
+        viewmodel.load_graph(simple_graph)
+        
+        viewmodel.select_node("A")
+        viewmodel.select_node("B", add_to_selection=True)
+        
+        assert viewmodel.is_node_selected("A")
+        assert viewmodel.is_node_selected("B")
+        assert len(viewmodel.get_selected_nodes()) == 2
+    
+    def test_select_node_clears_previous(self, viewmodel, simple_graph):
+        """Test that selecting without add_to_selection clears previous."""
+        viewmodel.load_graph(simple_graph)
+        
+        viewmodel.select_node("A")
+        viewmodel.select_node("B")  # Should clear A
+        
+        assert not viewmodel.is_node_selected("A")
+        assert viewmodel.is_node_selected("B")
+        assert len(viewmodel.get_selected_nodes()) == 1
+    
+    def test_deselect_node(self, viewmodel, simple_graph):
+        """Test deselecting a node."""
+        viewmodel.load_graph(simple_graph)
+        
+        viewmodel.select_node("A")
+        assert viewmodel.is_node_selected("A")
+        
+        viewmodel.deselect_node("A")
+        assert not viewmodel.is_node_selected("A")
+        assert len(viewmodel.get_selected_nodes()) == 0
+    
+    def test_select_nodes_in_rect(self, viewmodel, simple_graph):
+        """Test selecting nodes in a rectangular region."""
+        viewmodel.load_graph(simple_graph)
+        
+        # Select nodes in rect that includes A and B
+        viewmodel.select_nodes_in_rect(-50, -50, 150, 50)
+        
+        assert viewmodel.is_node_selected("A")
+        assert viewmodel.is_node_selected("B")
+        assert not viewmodel.is_node_selected("C")  # C is at (50, 100), outside rect
+    
+    def test_select_nodes_in_rect_normalized(self, viewmodel, simple_graph):
+        """Test that rect selection handles inverted coordinates."""
+        viewmodel.load_graph(simple_graph)
+        
+        # Inverted rect (bottom-right to top-left)
+        viewmodel.select_nodes_in_rect(150, 50, -50, -50)
+        
+        # Should work the same as normal order
+        assert viewmodel.is_node_selected("A")
+        assert viewmodel.is_node_selected("B")
+    
+    def test_clear_selection(self, viewmodel, simple_graph):
+        """Test clearing all selection."""
+        viewmodel.load_graph(simple_graph)
+        
+        viewmodel.select_node("A")
+        viewmodel.select_node("B", add_to_selection=True)
+        assert len(viewmodel.get_selected_nodes()) == 2
+        
+        viewmodel.clear_selection()
+        
+        assert len(viewmodel.get_selected_nodes()) == 0
+        assert not viewmodel.get_node("A").is_selected
+        assert not viewmodel.get_node("B").is_selected
+    
+    def test_select_edge(self, viewmodel, simple_graph):
+        """Test selecting an edge."""
+        viewmodel.load_graph(simple_graph)
+        edges = viewmodel.get_edges()
+        edge_id = edges[0].edge_id
+        
+        viewmodel.select_edge(edge_id)
+        
+        assert viewmodel.is_edge_selected(edge_id)
+        assert edge_id in viewmodel.get_selected_edges()
+    
+    def test_deselect_edge(self, viewmodel, simple_graph):
+        """Test deselecting an edge."""
+        viewmodel.load_graph(simple_graph)
+        edges = viewmodel.get_edges()
+        edge_id = edges[0].edge_id
+        
+        viewmodel.select_edge(edge_id)
+        assert viewmodel.is_edge_selected(edge_id)
+        
+        viewmodel.deselect_edge(edge_id)
+        assert not viewmodel.is_edge_selected(edge_id)
+

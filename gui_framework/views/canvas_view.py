@@ -52,8 +52,9 @@ if PYQT_AVAILABLE:
             self.setPos(node_state.x, node_state.y)
             
             # Set flags
-            self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)  # Stage 1: no interaction
-            self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)  # Stage 1: no selection
+            self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)  # Stage 2: enable dragging
+            self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)  # Stage 2: enable selection
+            self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)  # Stage 2: notify position changes
             self.setZValue(2)  # Draw above edges
             
             # Set colors based on node type
@@ -94,6 +95,32 @@ if PYQT_AVAILABLE:
             label_x = -label_rect.width() / 2
             label_y = -label_rect.height() / 2
             self.label.setPos(label_x, label_y)
+            
+            # Store reference to canvas view for callbacks (set by CanvasView)
+            self.canvas_view = None
+        
+        def itemChange(self, change, value):
+            """Handle item changes (position, selection)."""
+            if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
+                # Notify canvas view of position change
+                if self.canvas_view:
+                    new_pos = value  # QPointF
+                    self.canvas_view._on_node_moved(self.node_id, new_pos.x(), new_pos.y())
+                
+                # Update connected edges
+                for edge in self.scene().items():
+                    if isinstance(edge, EdgeItemView):
+                        if edge.source_item == self or edge.target_item == self:
+                            edge.update_position()
+            
+            elif change == QGraphicsItem.GraphicsItemChange.ItemSelectedHasChanged:
+                # Update selection highlight
+                if value:  # Selected
+                    self.setPen(QPen(QColor(255, 255, 0), 3))  # Yellow highlight
+                else:  # Deselected
+                    self.setPen(QPen(Qt.GlobalColor.black, 2))
+            
+            return super().itemChange(change, value)
         
         def update_state(self, node_state: NodeRenderState):
             """
@@ -253,11 +280,14 @@ if PYQT_AVAILABLE:
             self.scene = QGraphicsScene()
             self.view = QGraphicsView(self.scene)
             self.view.setRenderHint(QPainter.RenderHint.Antialiasing)
-            self.view.setDragMode(QGraphicsView.DragMode.NoDrag)  # Stage 1: no drag
+            self.view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)  # Stage 2: enable rubber band selection
             
             # Node and edge item tracking
             self._node_items: Dict[str, NodeItemView] = {}
             self._edge_items: Dict[str, EdgeItemView] = {}
+            
+            # Interaction state
+            self._drag_start_pos = None
             
             self._setup_ui()
         
@@ -311,12 +341,18 @@ if PYQT_AVAILABLE:
             for node_state in nodes:
                 if node_state.node_id in self._node_items:
                     # Update existing node
-                    self._node_items[node_state.node_id].update_state(node_state)
+                    item = self._node_items[node_state.node_id]
+                    item.update_state(node_state)
+                    # Update selection state
+                    item.setSelected(node_state.is_selected)
                 else:
                     # Create new node
                     item = NodeItemView(node_state)
+                    item.canvas_view = self  # Set callback reference
                     self.scene.addItem(item)
                     self._node_items[node_state.node_id] = item
+                    # Set initial selection state
+                    item.setSelected(node_state.is_selected)
         
         def _render_edges(self):
             """Render all edges from viewmodel."""
@@ -356,6 +392,67 @@ if PYQT_AVAILABLE:
                 self._viewmodel.zoom_in(1.1)
             else:
                 self._viewmodel.zoom_out(1.1)
+        
+        def _on_node_moved(self, node_id: str, x: float, y: float):
+            """
+            Callback when a node is moved by user drag.
+            
+            Args:
+                node_id: Node that was moved
+                x, y: New position
+            """
+            self._viewmodel.update_node_position(node_id, x, y)
+        
+        def _sync_selection_to_viewmodel(self):
+            """Synchronize scene selection to ViewModel."""
+            # Get selected items from scene
+            selected_items = self.scene.selectedItems()
+            
+            selected_node_ids = set()
+            selected_edge_ids = set()
+            
+            for item in selected_items:
+                if isinstance(item, NodeItemView):
+                    selected_node_ids.add(item.node_id)
+                elif isinstance(item, EdgeItemView):
+                    selected_edge_ids.add(item.edge_id)
+            
+            # Update ViewModel if selection changed
+            current_nodes = set(self._viewmodel.get_selected_nodes())
+            current_edges = set(self._viewmodel.get_selected_edges())
+            
+            if selected_node_ids != current_nodes or selected_edge_ids != current_edges:
+                # Clear and re-select
+                self._viewmodel.clear_selection()
+                
+                for node_id in selected_node_ids:
+                    self._viewmodel.select_node(node_id, add_to_selection=True)
+                
+                for edge_id in selected_edge_ids:
+                    self._viewmodel.select_edge(edge_id, add_to_selection=True)
+        
+        def keyPressEvent(self, event):
+            """Handle keyboard events."""
+            from PyQt6.QtCore import Qt as QtCore
+            
+            # Delete selected items
+            if event.key() in (QtCore.Key.Key_Delete, QtCore.Key.Key_Backspace):
+                selected_nodes = self._viewmodel.get_selected_nodes()
+                if selected_nodes:
+                    print(f"[CanvasView] Delete key pressed, {len(selected_nodes)} nodes selected")
+                    # TODO: Stage 3 - implement delete command
+                event.accept()
+                return
+            
+            # Select all
+            if event.key() == QtCore.Key.Key_A and event.modifiers() & QtCore.KeyboardModifier.ControlModifier:
+                for item in self._node_items.values():
+                    item.setSelected(True)
+                self._sync_selection_to_viewmodel()
+                event.accept()
+                return
+            
+            super().keyPressEvent(event)
         
         def get_scene(self) -> QGraphicsScene:
             """Get the graphics scene."""

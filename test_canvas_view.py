@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Test application for CanvasView - Stage 1 (Rendering).
+Test application for CanvasView - Stage 2 (Interaction).
 
 Creates a simple graph and displays it in the new CanvasView.
-Tests zoom, pan, and basic rendering.
+Tests zoom, pan, dragging, selection, and interaction.
 """
 
 import sys
@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 try:
-    from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QHBoxLayout
+    from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QLabel
     from PyQt6.QtCore import Qt
     HAS_PYQT = True
 except ImportError:
@@ -65,8 +65,8 @@ class TestCanvasWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("CanvasView Test - Stage 1 (Rendering)")
-        self.setMinimumSize(800, 600)
+        self.setWindowTitle("CanvasView Test - Stage 2 (Interaction)")
+        self.setMinimumSize(900, 700)
         
         # Create central widget
         central = QWidget()
@@ -80,6 +80,11 @@ class TestCanvasWindow(QMainWindow):
         self.canvas_view = CanvasView(self.canvas_vm)
         
         main_layout.addWidget(self.canvas_view)
+        
+        # Status label
+        self.status_label = QLabel("Stage 2: Interaction Enabled")
+        self.status_label.setStyleSheet("padding: 5px; background: #E8F5E9; border: 1px solid #4CAF50;")
+        main_layout.addWidget(self.status_label)
         
         # Add control buttons
         controls_layout = QHBoxLayout()
@@ -104,6 +109,14 @@ class TestCanvasWindow(QMainWindow):
         active_btn.clicked.connect(self._toggle_active)
         controls_layout.addWidget(active_btn)
         
+        select_all_btn = QPushButton("Select All")
+        select_all_btn.clicked.connect(self._select_all)
+        controls_layout.addWidget(select_all_btn)
+        
+        clear_btn = QPushButton("Clear Selection")
+        clear_btn.clicked.connect(self._clear_selection)
+        controls_layout.addWidget(clear_btn)
+        
         controls_layout.addStretch()
         
         main_layout.addLayout(controls_layout)
@@ -113,16 +126,26 @@ class TestCanvasWindow(QMainWindow):
         
         self._node_c_active = False
         
+        # Update status label periodically
+        from PyQt6.QtCore import QTimer
+        self.status_timer = QTimer()
+        self.status_timer.timeout.connect(self._update_status)
+        self.status_timer.start(500)  # Update every 500ms
+        
         print("\n" + "="*60)
-        print("CanvasView Test Application")
+        print("CanvasView Test Application - Stage 2")
         print("="*60)
         print("\nFeatures:")
         print("- Graph with 4 nodes and 3 edges")
         print("- Zoom in/out with buttons or mouse wheel")
-        print("- Pan (not yet implemented)")
+        print("- Drag nodes to move them")
+        print("- Click nodes to select (Ctrl+Click to add to selection)")
+        print("- Drag on empty area for rubber band selection")
+        print("- Ctrl+A to select all")
+        print("- Delete key to delete selected (not yet implemented)")
         print("- Node coloring test")
         print("- Active node highlighting test")
-        print("\nStage 1: Rendering only (no interaction yet)")
+        print("\nStage 2: Interaction enabled (drag, select)")
         print("="*60 + "\n")
     
     def _color_node_c(self):
@@ -138,6 +161,27 @@ class TestCanvasWindow(QMainWindow):
         self._node_c_active = not self._node_c_active
         self.canvas_vm.set_node_active("Process", self._node_c_active)
         print(f"[Test] Process node active: {self._node_c_active}")
+    
+    def _select_all(self):
+        """Select all nodes."""
+        for node in self.canvas_vm.get_nodes():
+            self.canvas_vm.select_node(node.node_id, add_to_selection=True)
+        print("[Test] Selected all nodes")
+    
+    def _clear_selection(self):
+        """Clear selection."""
+        self.canvas_vm.clear_selection()
+        print("[Test] Cleared selection")
+    
+    def _update_status(self):
+        """Update status label with current state."""
+        selected = self.canvas_vm.get_selected_nodes()
+        if selected:
+            self.status_label.setText(f"Selected: {', '.join(selected)}")
+            self.status_label.setStyleSheet("padding: 5px; background: #FFF9C4; border: 1px solid #FBC02D;")
+        else:
+            self.status_label.setText("Stage 2: Interaction Enabled - Drag nodes, click to select, rubber band selection")
+            self.status_label.setStyleSheet("padding: 5px; background: #E8F5E9; border: 1px solid #4CAF50;")
 
 
 def main():

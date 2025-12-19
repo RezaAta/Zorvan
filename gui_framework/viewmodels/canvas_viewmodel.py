@@ -293,7 +293,7 @@ class CanvasViewModel(BaseViewModel):
             node.is_active = False
         self.nodes_changed += 1
     
-    # Selection management (read-only in Stage 1)
+    # Selection management (Stage 2: Interactive)
     
     def get_selected_nodes(self) -> List[str]:
         """Get list of selected node IDs."""
@@ -310,6 +310,104 @@ class CanvasViewModel(BaseViewModel):
     def is_edge_selected(self, edge_id: str) -> bool:
         """Check if an edge is selected."""
         return edge_id in self._selected_edges
+    
+    def select_node(self, node_id: str, add_to_selection: bool = False):
+        """
+        Select a node.
+        
+        Args:
+            node_id: Node identifier
+            add_to_selection: If True, add to existing selection; if False, clear and select
+        """
+        if not add_to_selection:
+            self.clear_selection()
+        
+        if node_id in self._nodes:
+            self._selected_nodes.add(node_id)
+            self._nodes[node_id].is_selected = True
+            self.nodes_changed += 1
+            print(f"[CanvasViewModel] Node {node_id} selected")
+    
+    def deselect_node(self, node_id: str):
+        """Deselect a node."""
+        if node_id in self._selected_nodes:
+            self._selected_nodes.remove(node_id)
+            if node_id in self._nodes:
+                self._nodes[node_id].is_selected = False
+            self.nodes_changed += 1
+            print(f"[CanvasViewModel] Node {node_id} deselected")
+    
+    def select_edge(self, edge_id: str, add_to_selection: bool = False):
+        """
+        Select an edge.
+        
+        Args:
+            edge_id: Edge identifier
+            add_to_selection: If True, add to existing selection; if False, clear and select
+        """
+        if not add_to_selection:
+            self.clear_selection()
+        
+        if edge_id in self._edges:
+            self._selected_edges.add(edge_id)
+            self._edges[edge_id].is_selected = True
+            self.edges_changed += 1
+            print(f"[CanvasViewModel] Edge {edge_id} selected")
+    
+    def deselect_edge(self, edge_id: str):
+        """Deselect an edge."""
+        if edge_id in self._selected_edges:
+            self._selected_edges.remove(edge_id)
+            if edge_id in self._edges:
+                self._edges[edge_id].is_selected = False
+            self.edges_changed += 1
+            print(f"[CanvasViewModel] Edge {edge_id} deselected")
+    
+    def select_nodes_in_rect(self, x1: float, y1: float, x2: float, y2: float, add_to_selection: bool = False):
+        """
+        Select all nodes within a rectangular region.
+        
+        Args:
+            x1, y1: Top-left corner
+            x2, y2: Bottom-right corner
+            add_to_selection: If True, add to existing selection
+        """
+        if not add_to_selection:
+            self.clear_selection()
+        
+        # Normalize coordinates
+        min_x, max_x = min(x1, x2), max(x1, x2)
+        min_y, max_y = min(y1, y2), max(y1, y2)
+        
+        selected_count = 0
+        for node_id, node in self._nodes.items():
+            if min_x <= node.x <= max_x and min_y <= node.y <= max_y:
+                self._selected_nodes.add(node_id)
+                node.is_selected = True
+                selected_count += 1
+        
+        if selected_count > 0:
+            self.nodes_changed += 1
+            print(f"[CanvasViewModel] Selected {selected_count} nodes in rect")
+    
+    def clear_selection(self):
+        """Clear all selection."""
+        if self._selected_nodes or self._selected_edges:
+            # Clear node selection
+            for node_id in self._selected_nodes:
+                if node_id in self._nodes:
+                    self._nodes[node_id].is_selected = False
+            self._selected_nodes.clear()
+            
+            # Clear edge selection
+            for edge_id in self._selected_edges:
+                if edge_id in self._edges:
+                    self._edges[edge_id].is_selected = False
+            self._selected_edges.clear()
+            
+            self.nodes_changed += 1
+            self.edges_changed += 1
+            print("[CanvasViewModel] Selection cleared")
     
     # Statistics
     
