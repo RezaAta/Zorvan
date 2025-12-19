@@ -65,8 +65,8 @@ class TestCanvasWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("CanvasView Test - Stage 2 (Interaction)")
-        self.setMinimumSize(900, 700)
+        self.setWindowTitle("CanvasView Test - Stage 3 (Commands & Undo/Redo)")
+        self.setMinimumSize(1000, 700)
         
         # Create central widget
         central = QWidget()
@@ -82,12 +82,23 @@ class TestCanvasWindow(QMainWindow):
         main_layout.addWidget(self.canvas_view)
         
         # Status label
-        self.status_label = QLabel("Stage 2: Interaction Enabled")
+        self.status_label = QLabel("Stage 3: Commands & Undo/Redo Enabled")
         self.status_label.setStyleSheet("padding: 5px; background: #E8F5E9; border: 1px solid #4CAF50;")
         main_layout.addWidget(self.status_label)
         
         # Add control buttons
         controls_layout = QHBoxLayout()
+        
+        # Undo/Redo buttons (Stage 3)
+        undo_btn = QPushButton("Undo (Ctrl+Z)")
+        undo_btn.clicked.connect(lambda: self.canvas_view.undo_stack.undo() if self.canvas_view.undo_stack else None)
+        controls_layout.addWidget(undo_btn)
+        
+        redo_btn = QPushButton("Redo (Ctrl+Shift+Z)")
+        redo_btn.clicked.connect(lambda: self.canvas_view.undo_stack.redo() if self.canvas_view.undo_stack else None)
+        controls_layout.addWidget(redo_btn)
+        
+        controls_layout.addWidget(QLabel("|"))
         
         zoom_in_btn = QPushButton("Zoom In")
         zoom_in_btn.clicked.connect(self.canvas_vm.zoom_in)
@@ -101,6 +112,8 @@ class TestCanvasWindow(QMainWindow):
         reset_btn.clicked.connect(self.canvas_vm.reset_viewport)
         controls_layout.addWidget(reset_btn)
         
+        controls_layout.addWidget(QLabel("|"))
+        
         color_btn = QPushButton("Color Node C")
         color_btn.clicked.connect(self._color_node_c)
         controls_layout.addWidget(color_btn)
@@ -108,6 +121,8 @@ class TestCanvasWindow(QMainWindow):
         active_btn = QPushButton("Toggle Node C Active")
         active_btn.clicked.connect(self._toggle_active)
         controls_layout.addWidget(active_btn)
+        
+        controls_layout.addWidget(QLabel("|"))
         
         select_all_btn = QPushButton("Select All")
         select_all_btn.clicked.connect(self._select_all)
@@ -133,7 +148,7 @@ class TestCanvasWindow(QMainWindow):
         self.status_timer.start(500)  # Update every 500ms
         
         print("\n" + "="*60)
-        print("CanvasView Test Application - Stage 2")
+        print("CanvasView Test Application - Stage 3")
         print("="*60)
         print("\nFeatures:")
         print("- Graph with 4 nodes and 3 edges")
@@ -142,10 +157,14 @@ class TestCanvasWindow(QMainWindow):
         print("- Click nodes to select (Ctrl+Click to add to selection)")
         print("- Drag on empty area for rubber band selection")
         print("- Ctrl+A to select all")
-        print("- Delete key to delete selected (not yet implemented)")
+        print("- Delete key to delete selected (placeholder)")
+        print("- Undo/Redo support:")
+        print("  * Ctrl+Z to undo")
+        print("  * Ctrl+Shift+Z or Ctrl+Y to redo")
+        print("  * Undo/Redo buttons in toolbar")
         print("- Node coloring test")
         print("- Active node highlighting test")
-        print("\nStage 2: Interaction enabled (drag, select)")
+        print("\nStage 3: Commands & Undo/Redo enabled")
         print("="*60 + "\n")
     
     def _color_node_c(self):
@@ -176,11 +195,22 @@ class TestCanvasWindow(QMainWindow):
     def _update_status(self):
         """Update status label with current state."""
         selected = self.canvas_vm.get_selected_nodes()
+        
+        # Get undo/redo status
+        undo_text = ""
+        redo_text = ""
+        if self.canvas_view.undo_stack:
+            if self.canvas_view.undo_stack.canUndo():
+                undo_text = f" | Undo: {self.canvas_view.undo_stack.undoText()}"
+            if self.canvas_view.undo_stack.canRedo():
+                redo_text = f" | Redo: {self.canvas_view.undo_stack.redoText()}"
+        
         if selected:
-            self.status_label.setText(f"Selected: {', '.join(selected)}")
+            self.status_label.setText(f"Selected: {', '.join(selected)}{undo_text}{redo_text}")
             self.status_label.setStyleSheet("padding: 5px; background: #FFF9C4; border: 1px solid #FBC02D;")
         else:
-            self.status_label.setText("Stage 2: Interaction Enabled - Drag nodes, click to select, rubber band selection")
+            status_msg = f"Stage 3: Commands & Undo/Redo - Drag nodes, select, use Ctrl+Z/Ctrl+Shift+Z{undo_text}{redo_text}"
+            self.status_label.setText(status_msg)
             self.status_label.setStyleSheet("padding: 5px; background: #E8F5E9; border: 1px solid #4CAF50;")
 
 

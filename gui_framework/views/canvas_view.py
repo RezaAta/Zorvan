@@ -101,7 +101,13 @@ if PYQT_AVAILABLE:
         
         def itemChange(self, change, value):
             """Handle item changes (position, selection)."""
-            if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
+            if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange:
+                # Stage 3: Track position when drag starts
+                if self.canvas_view and not self.canvas_view._node_drag_start_positions.get(self.node_id):
+                    current_pos = self.scenePos()
+                    self.canvas_view._node_drag_start_positions[self.node_id] = (current_pos.x(), current_pos.y())
+            
+            elif change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
                 # Notify canvas view of position change
                 if self.canvas_view:
                     new_pos = value  # QPointF
@@ -121,6 +127,14 @@ if PYQT_AVAILABLE:
                     self.setPen(QPen(Qt.GlobalColor.black, 2))
             
             return super().itemChange(change, value)
+        
+        def mouseReleaseEvent(self, event):
+            """Handle mouse release to create undo command for move."""
+            super().mouseReleaseEvent(event)
+            
+            # Stage 3: Create undo command when drag ends
+            if self.canvas_view:
+                self.canvas_view._on_node_drag_ended()
         
         def update_state(self, node_state: NodeRenderState):
             """
@@ -288,6 +302,15 @@ if PYQT_AVAILABLE:
             
             # Interaction state
             self._drag_start_pos = None
+            self._node_drag_start_positions: Dict[str, tuple] = {}  # Stage 3: track drag start for undo
+            
+            # Stage 3: Undo/Redo support
+            try:
+                from PyQt6.QtGui import QUndoStack
+                self.undo_stack = QUndoStack(self)
+                self.undo_stack.setUndoLimit(50)  # Limit undo history
+            except ImportError:
+                self.undo_stack = None
             
             self._setup_ui()
         
@@ -403,6 +426,35 @@ if PYQT_AVAILABLE:
             """
             self._viewmodel.update_node_position(node_id, x, y)
         
+        def _on_node_drag_ended(self):
+            """
+            Called when node drag ends. Creates an undo command for the move.
+            
+            Stage 3: Integrates with QUndoStack for undo/redo support.
+            """
+            if not self.undo_stack or not self._node_drag_start_positions:
+                return
+            
+            # Build position changes
+            node_positions = {}
+            for node_id, (old_x, old_y) in self._node_drag_start_positions.items():
+                node_state = self._viewmodel.get_node(node_id)
+                if node_state:
+                    new_x, new_y = node_state.x, node_state.y
+                    # Only create command if position actually changed
+                    if abs(new_x - old_x) > 0.1 or abs(new_y - old_y) > 0.1:
+                        node_positions[node_id] = (old_x, old_y, new_x, new_y)
+            
+            # Clear drag tracking
+            self._node_drag_start_positions.clear()
+            
+            # Create and push undo command
+            if node_positions:
+                from gui_framework.commands import MoveNodesCommand
+                command = MoveNodesCommand(self._viewmodel, node_positions)
+                self.undo_stack.push(command)
+                print(f"[CanvasView] Created undo command for {len(node_positions)} moved nodes")
+        
         def _sync_selection_to_viewmodel(self):
             """Synchronize scene selection to ViewModel."""
             # Get selected items from scene
@@ -435,12 +487,41 @@ if PYQT_AVAILABLE:
             """Handle keyboard events."""
             from PyQt6.QtCore import Qt as QtCore
             
+            # Undo/Redo shortcuts
+            if event.key() == QtCore.Key.Key_Z and event.modifiers() & QtCore.KeyboardModifier.ControlModifier:
+                if self.undo_stack:
+                    if event.modifiers() & QtCore.KeyboardModifier.ShiftModifier:
+                        # Ctrl+Shift+Z = Redo
+                        if self.undo_stack.canRedo():
+                            self.undo_stack.redo()
+                            print(f"[CanvasView] Redo: {self.undo_stack.redoText()}")
+                    else:
+                        # Ctrl+Z = Undo
+                        if self.undo_stack.canUndo():
+                            self.undo_stack.undo()
+                            print(f"[CanvasView] Undo: {self.undo_stack.undoText()}")
+                event.accept()
+                return
+            
+            # Ctrl+Y = Redo (alternative)
+            if event.key() == QtCore.Key.Key_Y and event.modifiers() & QtCore.KeyboardModifier.ControlModifier:
+                if self.undo_stack and self.undo_stack.canRedo():
+                    self.undo_stack.redo()
+                    print(f"[CanvasView] Redo: {self.undo_stack.redoText()}")
+                event.accept()
+                return
+            
             # Delete selected items
             if event.key() in (QtCore.Key.Key_Delete, QtCore.Key.Key_Backspace):
                 selected_nodes = self._viewmodel.get_selected_nodes()
-                if selected_nodes:
-                    print(f"[CanvasView] Delete key pressed, {len(selected_nodes)} nodes selected")
-                    # TODO: Stage 3 - implement delete command
+                selected_edges = self._viewmodel.get_selected_edges()
+                if selected_nodes or selected_edges:
+                    print(f"[CanvasView] Delete key: {len(selected_nodes)} nodes, {len(selected_edges)} edges")
+                    # Stage 3: Create delete command (placeholder - needs graph model integration)
+                    if self.undo_stack:
+                        from gui_framework.commands import DeleteItemsCommand
+                        command = DeleteItemsCommand(self._viewmodel, selected_nodes, selected_edges)
+                        self.undo_stack.push(command)
                 event.accept()
                 return
             
