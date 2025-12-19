@@ -94,12 +94,12 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
    - Estimated: 2-3 days
    - **Status**: NOT STARTED
 
-3. ⏳ **PR #9**: Theme Manager Migration
+3. ⏳ **PR #9**: Theme Manager Migration (IN PROGRESS)
    - Migrate theme system to StateStore
    - Update ThemeMixin to use state
    - Color preferences dialog
    - Estimated: 1-2 days
-   - **Status**: NOT STARTED
+   - **Status**: IN PROGRESS - ThemeViewModel complete with 19 tests (40%)
 
 4. ⏳ **PR #10**: File I/O
    - FileIOViewModel: New/open/save operations
@@ -109,11 +109,11 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
    - **Status**: NOT STARTED
 
 **Current Metrics**:
-- Framework: ~2,600 LOC (includes Phase 1-3 work)
-- Tests: ~2,200 LOC
+- Framework: ~3,200 LOC (includes Phase 1-3 work)
+- Tests: ~2,800 LOC
 - Demo: ~350 LOC
-- **Total tests**: 164/164 passing (100%) ✅
-- Test execution time: 0.18 seconds
+- **Total tests**: 183/183 passing (100%) ✅
+- Test execution time: 0.37 seconds
 
 **Remaining Work for Phase 3**:
 - 3 more PRs (Node Palette, Theme Manager, File I/O)
@@ -202,10 +202,10 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
 ### Completed Work
 - **Phases complete**: 2 out of 6 (33%)
 - **PRs complete**: 7 out of 22 (32%)
-- **Code written**: ~4,800 LOC (framework + tests + demo)
-- **Tests passing**: 164/164 (100%) ✅
-- **Time invested**: ~3-4 days (vs 2 weeks planned for Phases 1-2)
-- **Latest fix**: ExecutionViewModel bugs resolved (toggle_max_speed, can_step for COMPLETED state)
+- **Code written**: ~6,400 LOC (framework + tests + demo)
+- **Tests passing**: 183/183 (100%) ✅
+- **Time invested**: ~4-5 days (vs 2 weeks planned for Phases 1-2)
+- **Latest work**: ThemeViewModel with 19 tests (Phase 3 PR #9 - 40% complete)
 
 ### Remaining Work
 - **Phases remaining**: 4 (Phases 3-6)
