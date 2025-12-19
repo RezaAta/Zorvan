@@ -76,6 +76,7 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
 **Timeline**: Week 3-4  
 **Status**: 25% complete (1 of 4 PRs done)  
 **Started**: Week 3
+**Updated**: 2025-12-19
 
 **PRs Planned**:
 1. ✅ **PR #7**: Execution Controls (COMPLETE)
@@ -83,7 +84,8 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
    - ExecutionView: PyQt6 UI with full controls (23 tests)
    - Total: 48 tests, all passing
    - Demo updated to showcase execution controls
-   - **Status**: COMPLETE
+   - **Bugs Fixed**: toggle_max_speed now correctly restores previous speed, can_step includes COMPLETED state
+   - **Status**: COMPLETE - All 164 tests passing (100%)
 
 2. ⏳ **PR #8**: Node Palette (NEXT)
    - PaletteViewModel: Node categories, search/filter logic
@@ -110,7 +112,7 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
 - Framework: ~2,600 LOC (includes Phase 1-3 work)
 - Tests: ~2,200 LOC
 - Demo: ~350 LOC
-- **Total tests**: 167/167 passing (100%)
+- **Total tests**: 164/164 passing (100%) ✅
 - Test execution time: 0.18 seconds
 
 **Remaining Work for Phase 3**:
@@ -199,10 +201,11 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
 
 ### Completed Work
 - **Phases complete**: 2 out of 6 (33%)
-- **PRs complete**: 5 out of 22 (23%)
+- **PRs complete**: 7 out of 22 (32%)
 - **Code written**: ~4,800 LOC (framework + tests + demo)
-- **Tests passing**: 167/167 (100%)
+- **Tests passing**: 164/164 (100%) ✅
 - **Time invested**: ~3-4 days (vs 2 weeks planned for Phases 1-2)
+- **Latest fix**: ExecutionViewModel bugs resolved (toggle_max_speed, can_step for COMPLETED state)
 
 ### Remaining Work
 - **Phases remaining**: 4 (Phases 3-6)
@@ -235,9 +238,10 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
 ### Technical Achievements
 1. ✅ **Complete MVVM framework** with State Store, Event Bus, base classes
 2. ✅ **Pattern validated** with real widgets (CollapsibleSection, Execution)
-3. ✅ **167 tests** passing with >90% coverage
+3. ✅ **164 tests** passing with >90% coverage
 4. ✅ **Zero breaking changes** to existing GUI
 5. ✅ **Fast tests** (<1 second execution, no GUI required)
+6. ✅ **Bug fixes**: ExecutionViewModel edge cases resolved
 
 ### Process Achievements
 1. ✅ **Comprehensive documentation** (~140KB)
