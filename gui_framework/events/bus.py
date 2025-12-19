@@ -32,6 +32,7 @@ class EventType(Enum):
     EXECUTION_PAUSED = "execution_paused"
     EXECUTION_STOPPED = "execution_stopped"
     EXECUTION_STEP_COMPLETE = "execution_step_complete"
+    EXECUTION_SPEED_CHANGED = "execution_speed_changed"
     EXECUTION_ERROR = "execution_error"
     
     # Graph Events
