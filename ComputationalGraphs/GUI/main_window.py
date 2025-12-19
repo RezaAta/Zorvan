@@ -68,6 +68,12 @@ class CollapsibleSection(QWidget):
     def __init__(self, title: str, content_widget: QWidget, expanded: bool = True):
         super().__init__()
         self.toggle_button = QToolButton()
+        try:
+            self.toggle_button.setProperty("themed", True)
+            self.toggle_button.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.toggle_button.setMouseTracking(True)
+        except Exception:
+            pass
         self.toggle_button.setText(title)
         self.toggle_button.setCheckable(True)
         self.toggle_button.setChecked(expanded)
@@ -235,13 +241,37 @@ class MainWindow(QMainWindow):
         self.colorize_enabled = False
         self.min_value_range = 0.0  # Numeric min value
         self.max_value_range = 1.0  # Numeric max value
-        self.min_gradient_color = QColor(0, 0, 255)  # Blue for minimum
-        self.max_gradient_color = QColor(255, 0, 0)  # Red for maximum
+        # Load persisted visualization preferences if available
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            min_col = tm.settings.value("visualization/min_gradient_color", None)
+            max_col = tm.settings.value("visualization/max_gradient_color", None)
+            node_col = tm.settings.value("visualization/default_node_color", None)
+            text_col = tm.settings.value("visualization/default_text_color", None)
+        except Exception:
+            min_col = max_col = node_col = text_col = None
+
+        self.min_gradient_color = (
+            QColor(min_col) if min_col else QColor(0, 0, 255)
+        )  # Blue for minimum
+        self.max_gradient_color = (
+            QColor(max_col) if max_col else QColor(255, 0, 0)
+        )  # Red for maximum
         self.skip_visualization = False  # Skip graph canvas updates
         self.skip_plotting = False  # Skip plot window updates
         self.saved_speed = 500  # For max speed toggle
         # ANN coloring state (checkbox)
         self.ann_colors_enabled = False
+
+        # Default node/text colors (may have been persisted)
+        self.default_node_color = (
+            QColor(node_col) if node_col else QColor(100, 150, 200)
+        )
+        self.default_text_color = (
+            QColor(text_col) if text_col else QColor(255, 255, 255)
+        )
 
         # Plot window
         self.plot_window = None
@@ -292,6 +322,34 @@ class MainWindow(QMainWindow):
                     h()
                 except Exception:
                     pass
+        except Exception:
+            pass
+
+        # Apply visualization defaults immediately so the UI reflects persisted
+        # or initial default colors without requiring the user to press Apply.
+        try:
+            try:
+                # Ensure color buttons show current color values
+                self.min_color_btn.setStyleSheet(
+                    f"background-color: {self.min_gradient_color.name()};"
+                )
+                self.max_color_btn.setStyleSheet(
+                    f"background-color: {self.max_gradient_color.name()};"
+                )
+                self.node_color_btn.setStyleSheet(
+                    f"background-color: {self.default_node_color.name()};"
+                )
+                self.text_color_btn.setStyleSheet(
+                    f"background-color: {self.default_text_color.name()};"
+                )
+            except Exception:
+                pass
+
+            # Apply colors to nodes if any exist on canvas
+            try:
+                self.visualization_controller.apply_node_colors()
+            except Exception:
+                pass
         except Exception:
             pass
 

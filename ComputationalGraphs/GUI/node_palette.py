@@ -55,6 +55,12 @@ class NodePalette(QDockWidget, ThemeMixin):
 
         self.create_custom_button = QPushButton("Create")
         try:
+            self.create_custom_button.setProperty("themed", True)
+            self.create_custom_button.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.create_custom_button.setMouseTracking(True)
+        except Exception:
+            pass
+        try:
             from .controllers.control_panel_builder import _apply_icon
 
             _apply_icon(

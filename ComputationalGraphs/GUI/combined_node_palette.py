@@ -33,8 +33,15 @@ try:
 except Exception:
     ThemeMixin = object
 
+# Optional convenience wrappers for themed widgets (fall back gracefully)
+try:
+    from .theme_widgets import ThemedScrollArea, ThemedToolButton
+except Exception:
+    ThemedScrollArea = None
+    ThemedToolButton = None
 
-class NodeItemWidget(QWidget):
+
+class NodeItemWidget(QWidget, ThemeMixin):
     """Visual representation of a node inside the grid.
 
     Renders as a circular thumbnail with the node's short name centered inside
@@ -48,6 +55,15 @@ class NodeItemWidget(QWidget):
         self, node_type: str, display_name: str, description: str, parent=None
     ):
         super().__init__(parent)
+        # Subscribe to theme changes and mark as themed for QSS
+        try:
+            ThemeMixin.__init__(self)
+        except Exception:
+            pass
+        try:
+            self.setProperty("themed", True)
+        except Exception:
+            pass
         self.node_type = node_type
         self.display_name = display_name
         self.description = description
@@ -77,6 +93,13 @@ class NodeItemWidget(QWidget):
 
     def minimumSizeHint(self):
         return self.sizeHint()
+
+    def apply_theme(self):
+        """Called by ThemeMixin when theme changes; trigger repaint so paintEvent uses updated colors."""
+        try:
+            self.update()
+        except Exception:
+            pass
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -194,8 +217,20 @@ class CategoryPanel(QWidget):
 
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
-        # Header
-        self.header = QToolButton()
+        # Header (use themed tool button when available)
+        try:
+            if ThemedToolButton is not None:
+                self.header = ThemedToolButton()
+            else:
+                self.header = QToolButton()
+        except Exception:
+            self.header = QToolButton()
+        try:
+            self.header.setProperty("themed", True)
+            self.header.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.header.setMouseTracking(True)
+        except Exception:
+            pass
         self.header.setText(title)
         self.header.setCheckable(True)
         self.header.setChecked(True)
@@ -220,6 +255,11 @@ class CategoryPanel(QWidget):
 
         # Content
         self.content = QWidget()
+        # Mark content as themed panel so QSS can apply panel styles
+        try:
+            self.content.setProperty("themed_panel", True)
+        except Exception:
+            pass
         self.content_layout = QGridLayout(self.content)
         self.content_layout.setContentsMargins(6, 6, 6, 6)
         self.content_layout.setSpacing(6)
@@ -253,8 +293,16 @@ class CombinedNodePalette(QDockWidget, ThemeMixin):
             pass
 
         main = QWidget()
+        try:
+            main.setProperty("themed_panel", True)
+        except Exception:
+            pass
         layout = QVBoxLayout(main)
         layout.setContentsMargins(6, 6, 6, 6)
+        try:
+            self.setProperty("themed", True)
+        except Exception:
+            pass
 
         # Search + Create
         top = QWidget()
@@ -266,13 +314,25 @@ class CombinedNodePalette(QDockWidget, ThemeMixin):
         top_l.addWidget(self.search_bar)
 
         self.create_btn = QPushButton("Create")
+        try:
+            self.create_btn.setProperty("themed", True)
+            self.create_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.create_btn.setMouseTracking(True)
+        except Exception:
+            pass
         self.create_btn.clicked.connect(self.on_create)
         top_l.addWidget(self.create_btn)
 
         layout.addWidget(top)
 
-        # Scroll area with categories
-        self.scroll = QScrollArea()
+        # Scroll area with categories (prefer themed scroll area)
+        try:
+            if ThemedScrollArea is not None:
+                self.scroll = ThemedScrollArea()
+            else:
+                self.scroll = QScrollArea()
+        except Exception:
+            self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll_content = QWidget()
         self.scroll_layout = QVBoxLayout(self.scroll_content)

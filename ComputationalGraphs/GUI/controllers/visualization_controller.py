@@ -298,6 +298,37 @@ class VisualizationController:
         self.status_bar.showMessage(
             f"Applied colors to {len(self.canvas.node_items)} nodes"
         )
+        # Persist visualization color defaults so they are applied on next startup
+        try:
+            from ComputationalGraphs.GUI.theme import get_theme_manager
+
+            tm = get_theme_manager()
+            try:
+                tm.settings.setValue(
+                    "visualization/min_gradient_color",
+                    self.main_window.min_gradient_color.name(),
+                )
+                tm.settings.setValue(
+                    "visualization/max_gradient_color",
+                    self.main_window.max_gradient_color.name(),
+                )
+                tm.settings.setValue(
+                    "visualization/default_node_color",
+                    self.main_window.default_node_color.name(),
+                )
+                tm.settings.setValue(
+                    "visualization/default_text_color",
+                    self.main_window.default_text_color.name(),
+                )
+                # Force sync to ensure persistence across new MainWindow instances
+                try:
+                    tm.settings.sync()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def apply_node_colors_selected(self):
         """Apply selected colors only to currently selected node items on the canvas."""

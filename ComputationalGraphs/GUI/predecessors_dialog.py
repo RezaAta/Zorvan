@@ -37,9 +37,21 @@ class PredecessorsDialog(QDialog):
         # Close/Refresh buttons
         btn_layout = QHBoxLayout()
         refresh_btn = QPushButton("Refresh")
+        try:
+            refresh_btn.setProperty("themed", True)
+            refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            refresh_btn.setMouseTracking(True)
+        except Exception:
+            pass
         refresh_btn.clicked.connect(self.populate)
         btn_layout.addWidget(refresh_btn)
         close_btn = QPushButton("Close")
+        try:
+            close_btn.setProperty("themed", True)
+            close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            close_btn.setMouseTracking(True)
+        except Exception:
+            pass
         close_btn.clicked.connect(self.accept)
         btn_layout.addWidget(close_btn)
         layout.addLayout(btn_layout)
@@ -109,6 +121,12 @@ class PredecessorsDialog(QDialog):
                 from PyQt6.QtWidgets import QToolButton
 
                 btn = QToolButton()
+                try:
+                    btn.setProperty("themed", True)
+                    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                    btn.setMouseTracking(True)
+                except Exception:
+                    pass
                 # Use plain ASCII 'X' to avoid emoji characters in UI
                 btn.setText("X")
                 btn.setFixedSize(26, 26)

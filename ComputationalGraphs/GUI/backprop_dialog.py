@@ -1,5 +1,6 @@
 """Dialog for adding backpropagation to existing MLP."""
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog,
     QDoubleSpinBox,
@@ -71,14 +72,32 @@ class BackpropDialog(QDialog):
         button_layout = QHBoxLayout()
 
         add_btn = QPushButton("Add Backpropagation")
+        try:
+            add_btn.setProperty("themed", True)
+            add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            add_btn.setMouseTracking(True)
+        except Exception:
+            pass
         add_btn.clicked.connect(self._add_backprop)
         button_layout.addWidget(add_btn)
 
         remove_btn = QPushButton("Remove Backpropagation")
+        try:
+            remove_btn.setProperty("themed", True)
+            remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            remove_btn.setMouseTracking(True)
+        except Exception:
+            pass
         remove_btn.clicked.connect(self._remove_backprop)
         button_layout.addWidget(remove_btn)
 
         cancel_btn = QPushButton("Cancel")
+        try:
+            cancel_btn.setProperty("themed", True)
+            cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            cancel_btn.setMouseTracking(True)
+        except Exception:
+            pass
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
 

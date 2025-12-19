@@ -30,6 +30,12 @@ class ReplaceNodeDialog(QDialog):
         # Buttons - keep just Cancel to allow aborting. Selecting a node will auto-accept
         btn_layout = QHBoxLayout()
         self.cancel_btn = QPushButton("Cancel")
+        try:
+            self.cancel_btn.setProperty("themed", True)
+            self.cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.cancel_btn.setMouseTracking(True)
+        except Exception:
+            pass
         btn_layout.addStretch()
         btn_layout.addWidget(self.cancel_btn)
         layout.addLayout(btn_layout)
