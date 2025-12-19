@@ -409,6 +409,16 @@ class CanvasViewModel(BaseViewModel):
             self.edges_changed += 1
             print("[CanvasViewModel] Selection cleared")
     
+    def select_all_nodes(self):
+        """Select all nodes."""
+        for node_id, node in self._nodes.items():
+            self._selected_nodes.add(node_id)
+            node.is_selected = True
+        
+        if self._nodes:
+            self.nodes_changed += 1
+            print(f"[CanvasViewModel] Selected all {len(self._nodes)} nodes")
+    
     # Statistics
     
     def get_node_count(self) -> int:

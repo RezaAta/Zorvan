@@ -276,8 +276,9 @@ if PYQT_AVAILABLE:
         """
         PyQt6 view for the computational graph canvas.
 
-        Stage 1 (Rendering): Displays nodes and edges from ViewModel.
-        Supports zoom/pan but no interaction yet.
+        Stage 1 (Rendering): Displays nodes and edges from ViewModel. ✅ COMPLETE
+        Stage 2 (Interaction): Node drag/drop, selection, rubber band. ✅ COMPLETE
+        Stage 3 (Commands): Undo/redo with QUndoStack integration. ✅ COMPLETE
         """
 
         def __init__(self, viewmodel: CanvasViewModel, parent=None):
@@ -321,6 +322,9 @@ if PYQT_AVAILABLE:
             layout = QVBoxLayout(self)
             layout.setContentsMargins(0, 0, 0, 0)
             layout.addWidget(self.view)
+            
+            # Connect scene selection changes to ViewModel sync
+            self.scene.selectionChanged.connect(self._on_selection_changed)
         
         def _bind_viewmodel(self):
             """Bind to viewmodel properties."""
@@ -346,6 +350,10 @@ if PYQT_AVAILABLE:
             
             # Apply pan
             self.view.centerOn(viewport.center_x, viewport.center_y)
+        
+        def _on_selection_changed(self):
+            """Handle scene selection changed event."""
+            self._sync_selection_to_viewmodel()
         
         def _render_nodes(self):
             """Render all nodes from viewmodel."""
