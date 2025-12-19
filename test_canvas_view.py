@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+"""
+Test application for CanvasView - Stage 1 (Rendering).
+
+Creates a simple graph and displays it in the new CanvasView.
+Tests zoom, pan, and basic rendering.
+"""
+
+import sys
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+try:
+    from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QHBoxLayout
+    from PyQt6.QtCore import Qt
+    HAS_PYQT = True
+except ImportError:
+    print("PyQt6 not installed. Install with: pip install PyQt6")
+    HAS_PYQT = False
+    sys.exit(1)
+
+from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
+from gui_framework.views.canvas_view import CanvasView
+
+
+class MockNode:
+    """Mock computational graph node."""
+    
+    def __init__(self, name, x=0, y=0):
+        self.name = name
+        self.x = x
+        self.y = y
+        self.predecessors = []
+
+
+class MockGraph:
+    """Mock computational graph."""
+    
+    def __init__(self):
+        self.nodes = []
+
+
+def create_test_graph():
+    """Create a simple test graph."""
+    graph = MockGraph()
+    
+    # Create nodes in a simple layout
+    node_a = MockNode("Input A", -200, -100)
+    node_b = MockNode("Input B", -200, 100)
+    node_c = MockNode("Process", 0, 0)
+    node_d = MockNode("Output", 200, 0)
+    
+    # Set up connections
+    node_c.predecessors = [node_a, node_b]
+    node_d.predecessors = [node_c]
+    
+    graph.nodes = [node_a, node_b, node_c, node_d]
+    return graph
+
+
+class TestCanvasWindow(QMainWindow):
+    """Test window for canvas view."""
+    
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("CanvasView Test - Stage 1 (Rendering)")
+        self.setMinimumSize(800, 600)
+        
+        # Create central widget
+        central = QWidget()
+        main_layout = QVBoxLayout()
+        
+        # Create test graph
+        self.graph = create_test_graph()
+        
+        # Create ViewModel and View
+        self.canvas_vm = CanvasViewModel(self.graph)
+        self.canvas_view = CanvasView(self.canvas_vm)
+        
+        main_layout.addWidget(self.canvas_view)
+        
+        # Add control buttons
+        controls_layout = QHBoxLayout()
+        
+        zoom_in_btn = QPushButton("Zoom In")
+        zoom_in_btn.clicked.connect(self.canvas_vm.zoom_in)
+        controls_layout.addWidget(zoom_in_btn)
+        
+        zoom_out_btn = QPushButton("Zoom Out")
+        zoom_out_btn.clicked.connect(self.canvas_vm.zoom_out)
+        controls_layout.addWidget(zoom_out_btn)
+        
+        reset_btn = QPushButton("Reset View")
+        reset_btn.clicked.connect(self.canvas_vm.reset_viewport)
+        controls_layout.addWidget(reset_btn)
+        
+        color_btn = QPushButton("Color Node C")
+        color_btn.clicked.connect(self._color_node_c)
+        controls_layout.addWidget(color_btn)
+        
+        active_btn = QPushButton("Toggle Node C Active")
+        active_btn.clicked.connect(self._toggle_active)
+        controls_layout.addWidget(active_btn)
+        
+        controls_layout.addStretch()
+        
+        main_layout.addLayout(controls_layout)
+        
+        central.setLayout(main_layout)
+        self.setCentralWidget(central)
+        
+        self._node_c_active = False
+        
+        print("\n" + "="*60)
+        print("CanvasView Test Application")
+        print("="*60)
+        print("\nFeatures:")
+        print("- Graph with 4 nodes and 3 edges")
+        print("- Zoom in/out with buttons or mouse wheel")
+        print("- Pan (not yet implemented)")
+        print("- Node coloring test")
+        print("- Active node highlighting test")
+        print("\nStage 1: Rendering only (no interaction yet)")
+        print("="*60 + "\n")
+    
+    def _color_node_c(self):
+        """Test node coloring."""
+        import random
+        colors = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", None]
+        color = random.choice(colors)
+        self.canvas_vm.set_node_color("Process", color)
+        print(f"[Test] Set Process node color to: {color or 'default'}")
+    
+    def _toggle_active(self):
+        """Test active node highlighting."""
+        self._node_c_active = not self._node_c_active
+        self.canvas_vm.set_node_active("Process", self._node_c_active)
+        print(f"[Test] Process node active: {self._node_c_active}")
+
+
+def main():
+    """Run the test application."""
+    if not HAS_PYQT:
+        return
+    
+    app = QApplication(sys.argv)
+    
+    window = TestCanvasWindow()
+    window.show()
+    
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()
