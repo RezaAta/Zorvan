@@ -24,7 +24,7 @@ try:
         QApplication, QMainWindow, QWidget, QVBoxLayout,
         QHBoxLayout, QPushButton, QLabel, QSpinBox, QGroupBox
     )
-    from PyQt6.QtCore import Qt
+    from PyQt6.QtCore import Qt, QTimer
     HAS_PYQT = True
 except ImportError:
     print("PyQt6 not installed. Install with: pip install PyQt6")
@@ -255,6 +255,17 @@ class DemoMainWindow(QMainWindow):
         execution_group.setLayout(execution_layout)
         main_layout.addWidget(execution_group)
         
+        # Create execution timer to simulate execution loop
+        self.execution_timer = QTimer()
+        self.execution_timer.timeout.connect(self._simulate_execution_step)
+        
+        # Subscribe to execution events to start/stop timer
+        event_bus = get_event_bus()
+        event_bus.subscribe(EventType.EXECUTION_STARTED, self._on_execution_started)
+        event_bus.subscribe(EventType.EXECUTION_PAUSED, self._on_execution_paused)
+        event_bus.subscribe(EventType.EXECUTION_STOPPED, self._on_execution_stopped)
+        event_bus.subscribe(EventType.EXECUTION_SPEED_CHANGED, self._on_execution_speed_changed)
+        
         # Instructions
         instructions = QLabel(
             "This demo shows:\n"
@@ -283,6 +294,59 @@ class DemoMainWindow(QMainWindow):
         print("6. Execution controls with complete state management")
         print("\nWatch the console for ViewModel/View interaction logs.")
         print("="*60 + "\n")
+    
+    def _simulate_execution_step(self):
+        """Simulate one execution step."""
+        # Check if still running
+        if self.execution_vm.status != ExecutionStatus.RUNNING:
+            self.execution_timer.stop()
+            return
+        
+        # Increment step
+        current = self.execution_vm.current_step
+        max_steps = self.execution_vm.max_steps
+        
+        if current < max_steps:
+            # Simulate step completion by publishing event
+            event_bus = get_event_bus()
+            event_bus.publish(Event(
+                type=EventType.EXECUTION_STEP_COMPLETE,
+                payload={"step": current + 1}
+            ))
+            print(f"[Demo] Execution step {current + 1}/{max_steps} completed")
+        else:
+            # Execution complete
+            self.execution_vm.stop()
+            print("[Demo] Execution completed")
+    
+    def _on_execution_started(self, event: Event):
+        """Handle execution started event."""
+        speed_ms = self.execution_vm.speed_ms
+        if speed_ms == 0:
+            speed_ms = 10  # Min 10ms for max speed to avoid UI freeze
+        
+        self.execution_timer.setInterval(speed_ms)
+        self.execution_timer.start()
+        print(f"[Demo] Execution timer started with interval {speed_ms}ms")
+    
+    def _on_execution_paused(self, event: Event):
+        """Handle execution paused event."""
+        self.execution_timer.stop()
+        print("[Demo] Execution timer stopped (paused)")
+    
+    def _on_execution_stopped(self, event: Event):
+        """Handle execution stopped event."""
+        self.execution_timer.stop()
+        print("[Demo] Execution timer stopped")
+    
+    def _on_execution_speed_changed(self, event: Event):
+        """Handle execution speed changed event."""
+        if self.execution_vm.status == ExecutionStatus.RUNNING:
+            speed_ms = event.payload.get("speed_ms", 100)
+            if speed_ms == 0:
+                speed_ms = 10  # Min 10ms for max speed
+            self.execution_timer.setInterval(speed_ms)
+            print(f"[Demo] Execution timer interval updated to {speed_ms}ms")
 
 
 def main():
