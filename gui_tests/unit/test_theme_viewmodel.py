@@ -30,6 +30,8 @@ class TestThemeViewModel:
     def test_default_colors(self):
         """Test default color values are set correctly."""
         vm = ThemeViewModel()
+        # Reset to defaults before initializing
+        vm._store.update(theme=ThemeState())
         vm.initialize()
 
         # Check some key colors
@@ -62,6 +64,8 @@ class TestThemeViewModel:
     def test_get_color_with_fallback(self):
         """Test get_color returns fallback for missing keys."""
         vm = ThemeViewModel()
+        # Reset to defaults before initializing
+        vm._store.update(theme=ThemeState())
         vm.initialize()
 
         # Existing color
