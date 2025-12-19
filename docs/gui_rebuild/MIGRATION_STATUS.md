@@ -207,9 +207,9 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
 - **Latest work**: Phase 3 Complete - All 3 critical PRs delivered
 
 ### Remaining Work
-- **Phases remaining**: 4 (Phases 3-6)
-- **PRs remaining**: 17
-- **Estimated time**: 6-7 weeks
+- **Phases remaining**: 3 (Phases 4-6)
+- **PRs remaining**: 13 (Phase 3 Node Palette deferred, included in Phase 4)
+- **Estimated time**: 4-6 weeks
 - **Major risks**: Canvas complexity (2,606 LOC), integration testing
 
 ### Progress Metrics
