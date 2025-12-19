@@ -99,7 +99,7 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
    - Update ThemeMixin to use state
    - Color preferences dialog
    - Estimated: 1-2 days
-   - **Status**: IN PROGRESS - ThemeViewModel complete with 19 tests (40%)
+   - **Status**: IN PROGRESS - ThemeViewModel (19 tests) + ThemeMixin (15 tests) complete (60%)
 
 4. ⏳ **PR #10**: File I/O
    - FileIOViewModel: New/open/save operations
@@ -109,11 +109,11 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
    - **Status**: NOT STARTED
 
 **Current Metrics**:
-- Framework: ~3,200 LOC (includes Phase 1-3 work)
-- Tests: ~2,800 LOC
+- Framework: ~3,800 LOC (includes Phase 1-3 work)
+- Tests: ~3,400 LOC
 - Demo: ~350 LOC
-- **Total tests**: 183/183 passing (100%) ✅
-- Test execution time: 0.37 seconds
+- **Total tests**: 198/198 passing (100%) ✅
+- Test execution time: 0.21 seconds
 
 **Remaining Work for Phase 3**:
 - 3 more PRs (Node Palette, Theme Manager, File I/O)
@@ -202,10 +202,10 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in progress*
 ### Completed Work
 - **Phases complete**: 2 out of 6 (33%)
 - **PRs complete**: 7 out of 22 (32%)
-- **Code written**: ~6,400 LOC (framework + tests + demo)
-- **Tests passing**: 183/183 (100%) ✅
-- **Time invested**: ~4-5 days (vs 2 weeks planned for Phases 1-2)
-- **Latest work**: ThemeViewModel with 19 tests (Phase 3 PR #9 - 40% complete)
+- **Code written**: ~7,600 LOC (framework + tests + demo + docs)
+- **Tests passing**: 198/198 (100%) ✅
+- **Time invested**: ~5-6 days (vs 2 weeks planned for Phases 1-2)
+- **Latest work**: ThemeMixin with dual-mode support (Phase 3 PR #9 - 60% complete)
 
 ### Remaining Work
 - **Phases remaining**: 4 (Phases 3-6)
