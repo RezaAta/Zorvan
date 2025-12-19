@@ -93,6 +93,13 @@ class CounterView(BaseView):
     Thin UI layer - all logic is in ViewModel.
     """
     
+    def __init__(self, viewmodel: CounterViewModel, parent=None):
+        """Initialize the counter view."""
+        super().__init__(viewmodel, parent)
+        # Get event bus singleton for event subscription
+        self._event_bus = get_event_bus()
+        self._setup_ui()
+    
     def _setup_ui(self):
         """Create the UI components."""
         layout = QVBoxLayout()
