@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
+    QProgressBar,
     QPushButton,
     QScrollArea,
     QSlider,
@@ -25,6 +26,27 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+# Optional themed widgets (use if available for consistent styling)
+try:
+    from ..theme_widgets import (
+        ThemedCheckBox,
+        ThemedComboBox,
+        ThemedLabel,
+        ThemedListWidget,
+        ThemedProgressBar,
+        ThemedSlider,
+        ThemedSpinBox,
+    )
+
+    # Prefer themed class aliases for convenience - fall back to original names
+    QCheckBox = ThemedCheckBox
+    QSpinBox = ThemedSpinBox
+    QComboBox = ThemedComboBox
+    QProgressBar = ThemedProgressBar
+    QListWidget = ThemedListWidget
+except Exception:
+    ThemedLabel = None
+    ThemedSlider = None
 if TYPE_CHECKING:
     from ..main_window import CollapsibleSection, MainWindow
 
@@ -33,6 +55,10 @@ try:
     import qtawesome as qta
 except Exception:
     qta = None
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _tint_pixmap(pixmap: QPixmap, color: str) -> QPixmap:
@@ -64,20 +90,20 @@ def _safe_set_stylesheet(widget, stylesheet: str):
         import re
 
         s = re.sub(r"url\([^)]*\)", "", s)
-        print(
+        logger.debug(
             "[theme] Removed url(...) entries from stylesheet to avoid parse warnings"
         )
 
     # Ensure concatenated rules have spaces e.g. ';Q' -> '; Q'
     if ";Q" in s:
         s = s.replace(";Q", "; Q")
-        print("[theme] Fixed concatenated selector spacing in stylesheet")
+        logger.debug("[theme] Fixed concatenated selector spacing in stylesheet")
 
     # Warn if non-ASCII characters are present in stylesheet (often emojis)
     for ch in s:
         if ord(ch) > 127:
-            print(
-                f"[theme] Warning: stylesheet contains non-ASCII char U+{ord(ch):04X}"
+            logger.warning(
+                "[theme] Warning: stylesheet contains non-ASCII char U+%04X", ord(ch)
             )
             break
 
@@ -86,7 +112,9 @@ def _safe_set_stylesheet(widget, stylesheet: str):
     except Exception:
         # If Qt raises, log the string for inspection and rethrow
         try:
-            print("[theme] Failed to apply stylesheet; content below:\n", s)
+            logger.exception(
+                "[theme] Failed to apply stylesheet; content below:\n%s", s
+            )
         except Exception:
             pass
         raise
@@ -110,12 +138,17 @@ def _resolve_icon(
     except Exception:
         pass
 
-    # Try to use qtawesome (lazy import)
+    # Try to use qtawesome (lazy import). To make recoloring deterministic across
+    # environments, obtain a pixmap and tint it using our _tint_pixmap helper so the
+    # resulting QIcon uses a bitmap we control (avoids qtawesome caching quirks).
     try:
         import qtawesome as _qta
 
         try:
-            return _qta.icon(fa_name, color=color)
+            qicon = _qta.icon(fa_name, color=color)
+            pm = qicon.pixmap(QSize(size_px, size_px))
+            if pm and not pm.isNull():
+                return QIcon(_tint_pixmap(pm, color))
         except Exception:
             pass
     except Exception:
@@ -245,6 +278,10 @@ class _IconHoverFilter(QObject):
         return False
 
 
+# Global registry of icon reapply handlers (used to force-refresh icons after theme changes)
+_ICON_REAPPLY_HANDLERS = []
+
+
 def _apply_icon(
     widget, btn, fa_name, fallback_pixmap, size_px: int = 14, color_key: str = "accent"
 ):
@@ -278,10 +315,41 @@ def _apply_icon(
         def _reapply(
             fa=fa_name, fb=fallback_pixmap, b=btn, w=widget, s=size_px, ck=color_key
         ):
-            b.setIcon(_resolve_icon(w, fa, fb, s, ck))
-            b.setIconSize(QSize(s, s))
+            # Re-resolve the icon using latest theme color and force an immediate redraw
+            try:
+                # Resolve an icon (may be qtawesome or style fallback)
+                icon = _resolve_icon(w, fa, fb, s, ck)
+                try:
+                    pm = icon.pixmap(QSize(s, s))
+                    # Tint the pixmap explicitly to ensure color fidelity across
+                    # qtawesome caching or platform differences
+                    try:
+                        from ..theme import get_theme_manager as _get_tm
+
+                        tm_for_color = getattr(b, "_theme_manager", None) or _get_tm()
+                        colored = _tint_pixmap(pm, tm_for_color.get_color(ck).name())
+                        b.setIcon(QIcon(colored))
+                    except Exception:
+                        # Fallback: try to tint with a reasonable default
+                        colored = _tint_pixmap(pm, "#4a86e8")
+                        b.setIcon(QIcon(colored))
+                except Exception:
+                    b.setIcon(icon)
+                b.setIconSize(QSize(s, s))
+                try:
+                    b.repaint()
+                    b.update()
+                except Exception:
+                    pass
+            except Exception:
+                pass
 
         btn._theme_manager.theme_changed.connect(_reapply)
+        # Register handler to allow forced reapply from preferences UI/tests
+        try:
+            _ICON_REAPPLY_HANDLERS.append(_reapply)
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -301,17 +369,31 @@ def _create_standard_button(
     This helper ensures consistent sizing, icon application via _apply_icon, and leaves
     hover/background behavior to the global stylesheet (no inline hover styles).
     """
-    from PyQt6.QtWidgets import QPushButton
+    try:
+        from ..theme_widgets import ThemedPushButton as QPushButton
+    except Exception:
+        from PyQt6.QtWidgets import QPushButton
 
     btn = QPushButton(text)
+    # Ensure the button explicitly opts into themed behavior so QSS selectors
+    # like QPushButton[themed="true"]:hover apply even if ThemedPushButton
+    # isn't available in this environment.
+    try:
+        btn.setProperty("themed", True)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setMouseTracking(True)
+    except Exception:
+        pass
+
+    # Appearance is driven by global QSS and Themed widgets; avoid inline styles here
+    # (previous temporary inline styles removed to keep styling canonical).
+
     # Apply a static icon (no dynamic theme reapply or hover icon recolor) so
     # control panel buttons behave like plain QPushButton styled by the global QSS.
     try:
         if fa_name:
-            btn.setIcon(
-                _resolve_icon(widget, fa_name, fallback_pixmap, size_px, color_key)
-            )
-            btn.setIconSize(QSize(size_px, size_px))
+            # Use _apply_icon so icons are recolored on theme changes and hover
+            _apply_icon(widget, btn, fa_name, fallback_pixmap, size_px, color_key)
     except Exception:
         pass
 
@@ -342,7 +424,14 @@ class ControlPanelBuilder:
             Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.LeftDockWidgetArea
         )
 
-        scroll = QScrollArea()
+        # Use themed scroll area so panel backgrounds and child widgets
+        # receive the 'themed_panel' property and QSS styles.
+        try:
+            from ..theme_widgets import ThemedScrollArea
+
+            scroll = ThemedScrollArea()
+        except Exception:
+            scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -383,6 +472,56 @@ class ControlPanelBuilder:
         self.mw.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         self.mw.control_dock = dock
 
+        # Apply dock/body background color from theme (dock_bg) and listen for changes
+        try:
+            from ..theme import get_theme_manager
+
+            tm = get_theme_manager()
+            dock_color = tm.get_color(
+                "dock_bg", tm.get_color("panel_bg", "#3c3f41")
+            ).name()
+            try:
+                dock.setStyleSheet(f"QDockWidget {{ background: {dock_color}; }}")
+                scroll.setStyleSheet(f"QWidget {{ background: {dock_color}; }}")
+            except Exception:
+                pass
+
+            def _on_theme():
+                try:
+                    # Prefer panel_bg (single authoritative key)
+                    c = tm.get_color("panel_bg", tm.get_color("bg", "#3c3f41")).name()
+                    try:
+                        dock.setStyleSheet(f"QDockWidget {{ background: {c}; }}")
+                        scroll.setStyleSheet(f"QWidget {{ background: {c}; }}")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            try:
+                tm.theme_changed.connect(_on_theme)
+            except Exception:
+                pass
+
+            def refresh_dock_backgrounds():
+                try:
+                    c = get_theme_manager().get_color("panel_bg", "#3c3f41").name()
+                    try:
+                        dock.setStyleSheet(f"QDockWidget {{ background: {c}; }}")
+                        scroll.setStyleSheet(f"QWidget {{ background: {c}; }}")
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            # Attach refresh helper for external use
+            try:
+                self.mw.refresh_dock_backgrounds = refresh_dock_backgrounds
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     def _build_execution_section(self) -> QWidget:
         """Build the execution controls section."""
         mw = self.mw
@@ -390,7 +529,10 @@ class ControlPanelBuilder:
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel("<b>Execution Controls</b>"))
+        if ThemedLabel is not None:
+            layout.addWidget(ThemedLabel("<b>Execution Controls</b>"))
+        else:
+            layout.addWidget(QLabel("<b>Execution Controls</b>"))
 
         # Processor type
         proc_layout = QHBoxLayout()
@@ -454,8 +596,31 @@ class ControlPanelBuilder:
         # Speed controls
         self._build_speed_controls(layout)
 
-        mw.step_label = QLabel("Step: 0")
+        # Display steps as 'current / max' on the main step label
+        mw.step_label = QLabel(f"Step: 0 / {mw.max_steps_spin.value()}")
         layout.addWidget(mw.step_label)
+
+        # Progress bar showing execution progress under the step counter (no inline text)
+        mw.step_progress = QProgressBar()
+        mw.step_progress.setMinimum(0)
+        mw.step_progress.setMaximum(mw.max_steps_spin.value())
+        mw.step_progress.setValue(0)
+        mw.step_progress.setTextVisible(False)
+        layout.addWidget(mw.step_progress)
+
+        # Keep the progress bar maximum in sync with Max Steps spin box and update step label
+        def _on_max_steps_changed(v):
+            try:
+                mw.step_progress.setMaximum(v)
+                current = (
+                    mw.step_progress.value() if mw.step_progress is not None else 0
+                )
+                mw.step_label.setText(f"Step: {current} / {v}")
+            except Exception:
+                pass
+
+        mw.max_steps_spin.valueChanged.connect(_on_max_steps_changed)
+
         layout.addWidget(QLabel(""))  # Spacer
 
         # Add processing queue as collapsible sub-section inside execution
@@ -484,7 +649,10 @@ class ControlPanelBuilder:
         mw.starting_nodes_widget.setVisible(False)
         group = QVBoxLayout(mw.starting_nodes_widget)
         group.setContentsMargins(0, 0, 0, 0)
-        group.addWidget(QLabel("<b>Starting Nodes</b>"))
+        if ThemedLabel is not None:
+            group.addWidget(ThemedLabel("<b>Starting Nodes</b>"))
+        else:
+            group.addWidget(QLabel("<b>Starting Nodes</b>"))
 
         mw.starting_nodes_list = QListWidget()
         mw.starting_nodes_list.setMaximumHeight(120)
@@ -561,7 +729,10 @@ class ControlPanelBuilder:
         mw.stopping_nodes_widget.setVisible(False)
         group = QVBoxLayout(mw.stopping_nodes_widget)
         group.setContentsMargins(0, 0, 0, 0)
-        group.addWidget(QLabel("<b>Stopping Nodes</b>"))
+        if ThemedLabel is not None:
+            group.addWidget(ThemedLabel("<b>Stopping Nodes</b>"))
+        else:
+            group.addWidget(QLabel("<b>Stopping Nodes</b>"))
 
         mw.stopping_nodes_list = QListWidget()
         mw.stopping_nodes_list.setMaximumHeight(120)
@@ -641,7 +812,10 @@ class ControlPanelBuilder:
         mw.manual_sequence_widget.setVisible(False)
         group = QVBoxLayout(mw.manual_sequence_widget)
         group.setContentsMargins(0, 0, 0, 0)
-        group.addWidget(QLabel("<b>Manual Sequence</b>"))
+        if ThemedLabel is not None:
+            group.addWidget(ThemedLabel("<b>Manual Sequence</b>"))
+        else:
+            group.addWidget(QLabel("<b>Manual Sequence</b>"))
 
         mw.manual_sequence_list = QListWidget()
         mw.manual_sequence_list.setMinimumHeight(120)
@@ -760,6 +934,13 @@ class ControlPanelBuilder:
         mw.play_btn = _create_standard_button(
             mw, "Start", "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 16
         )
+        # Ensure a stable objectName and inline style for exact parity with toolbar button
+        try:
+            mw.play_btn.setObjectName("play_btn")
+            # Do not apply inline styles; rely on global QSS for unified appearance
+            pass
+        except Exception:
+            pass
         mw.play_btn.clicked.connect(mw.play_graph)
         btn_row.addWidget(mw.play_btn)
 
@@ -855,7 +1036,13 @@ class ControlPanelBuilder:
         speed_layout.addWidget(mw.dim_processed_check)
 
         speed_layout.addWidget(QLabel("Visualization Delay (ms/step):"))
-        mw.speed_slider = QSlider(Qt.Orientation.Horizontal)
+        try:
+            if ThemedSlider is not None:
+                mw.speed_slider = ThemedSlider(Qt.Orientation.Horizontal)
+            else:
+                mw.speed_slider = QSlider(Qt.Orientation.Horizontal)
+        except Exception:
+            mw.speed_slider = QSlider(Qt.Orientation.Horizontal)
         mw.speed_slider.setRange(5, 2000)
         mw.speed_slider.setValue(500)
         mw.speed_slider.valueChanged.connect(mw.on_speed_changed)
@@ -873,6 +1060,73 @@ class ControlPanelBuilder:
         spin_layout.addWidget(mw.speed_label)
         spin_layout.addStretch()
         speed_layout.addLayout(spin_layout)
+
+        # Apply a themed stylesheet to the slider so the groove/track is visible
+        try:
+            from ..theme import get_theme_manager
+
+            tm = get_theme_manager()
+
+            def _apply_slider_theme():
+                try:
+                    # Prefer list_bg for the groove; if it equals panel_bg, derive a contrasting color
+                    panel_bg = tm.get_color(
+                        "panel_bg", tm.get_color("bg", "#3c3f41")
+                    ).name()
+                    list_bg = tm.get_color("list_bg", panel_bg).name()
+                    fill = tm.get_color("accent", "#4a86e8").name()
+                    handle = tm.get_color("accent", "#4a86e8").name()
+
+                    from PyQt6.QtGui import QColor
+
+                    groove_color = list_bg
+                    try:
+                        if QColor(list_bg).name() == QColor(panel_bg).name():
+                            # Compute luminance to pick lighter/darker for contrast
+                            c = QColor(panel_bg)
+                            lum = 0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue()
+                            if lum < 128:
+                                groove_color = c.lighter(120).name()
+                            else:
+                                groove_color = c.darker(120).name()
+                    except Exception:
+                        groove_color = list_bg
+
+                    # Border color for subtle outline
+                    border = tm.get_color("border", "#555555").name()
+
+                    ss = (
+                        "QSlider::groove:horizontal { height: 10px; background: %s; border-radius: 5px; border: 1px solid %s; } "
+                        "QSlider::sub-page:horizontal { background: %s; border-radius: 5px; } "
+                        "QSlider::add-page:horizontal { background: %s; border-radius: 5px; } "
+                        "QSlider::handle:horizontal { background: %s; width: 16px; height: 16px; margin: -4px 0; border-radius: 8px; border: 1px solid %s; } "
+                        "QSlider::handle:horizontal:hover { border-color: %s; background: %s; }"
+                        % (
+                            groove_color,
+                            border,
+                            fill,
+                            groove_color,
+                            handle,
+                            border,
+                            tm.get_color("accent").name(),
+                            tm.get_color("accent").lighter(110).name(),
+                        )
+                    )
+                    try:
+                        mw.speed_slider.setStyleSheet(ss)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            # Apply initially and on theme changes
+            _apply_slider_theme()
+            try:
+                tm.theme_changed.connect(_apply_slider_theme)
+            except Exception:
+                pass
+        except Exception:
+            pass
 
         parent_layout.addLayout(speed_layout)
 
@@ -999,7 +1253,10 @@ class ControlPanelBuilder:
 
         # Per-graph reset
         layout.addWidget(QLabel(""))  # Spacer
-        layout.addWidget(QLabel("<b>Per-Graph Reset</b>"))
+        if ThemedLabel is not None:
+            layout.addWidget(ThemedLabel("<b>Per-Graph Reset</b>"))
+        else:
+            layout.addWidget(QLabel("<b>Per-Graph Reset</b>"))
 
         reset_row = QHBoxLayout()
         mw.save_graph_snapshot_btn = _create_standard_button(
@@ -1038,10 +1295,16 @@ class ControlPanelBuilder:
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel("<b>Visualization</b>"))
+        if ThemedLabel is not None:
+            layout.addWidget(ThemedLabel("<b>Visualization</b>"))
+        else:
+            layout.addWidget(QLabel("<b>Visualization</b>"))
 
         # Colorize Graph subsection inside Visualization
-        colorize_group_label = QLabel("<b>Colorize Graph</b>")
+        if ThemedLabel is not None:
+            colorize_group_label = ThemedLabel("<b>Colorize Graph</b>")
+        else:
+            colorize_group_label = QLabel("<b>Colorize Graph</b>")
         layout.addWidget(colorize_group_label)
 
         # Container for all colorize controls (value & ANN, plus clear)
@@ -1181,13 +1444,18 @@ class ControlPanelBuilder:
     def _build_node_appearance_controls(self, parent_layout):
         """Build node color controls."""
         mw = self.mw
-        parent_layout.addWidget(QLabel("<b>Node Appearance</b>"))
+        if ThemedLabel is not None:
+            parent_layout.addWidget(ThemedLabel("<b>Node Appearance</b>"))
+        else:
+            parent_layout.addWidget(QLabel("<b>Node Appearance</b>"))
 
         node_color_layout = QHBoxLayout()
         node_color_layout.addWidget(QLabel("Node Color:"))
         mw.node_color_btn = _create_standard_button(mw, "", None, None, 14)
         mw.node_color_btn.setFixedSize(60, 25)
-        mw.default_node_color = QColor(100, 150, 200)
+        # Respect any previously loaded/default value (persisted) before assigning
+        if not hasattr(mw, "default_node_color") or mw.default_node_color is None:
+            mw.default_node_color = QColor(100, 150, 200)
         mw.node_color_btn.setStyleSheet(
             f"background-color: {mw.default_node_color.name()};"
         )
@@ -1200,7 +1468,9 @@ class ControlPanelBuilder:
         text_color_layout.addWidget(QLabel("Text Color:"))
         mw.text_color_btn = _create_standard_button(mw, "", None, None, 14)
         mw.text_color_btn.setFixedSize(60, 25)
-        mw.default_text_color = QColor(255, 255, 255)
+        # Respect persisted text color if available
+        if not hasattr(mw, "default_text_color") or mw.default_text_color is None:
+            mw.default_text_color = QColor(255, 255, 255)
         mw.text_color_btn.setStyleSheet(
             f"background-color: {mw.default_text_color.name()};"
         )
@@ -1224,7 +1494,10 @@ class ControlPanelBuilder:
     def _build_grid_snap_controls(self, parent_layout):
         """Build grid and snap controls."""
         mw = self.mw
-        parent_layout.addWidget(QLabel("<b>Grid & Snap</b>"))
+        if ThemedLabel is not None:
+            parent_layout.addWidget(ThemedLabel("<b>Grid & Snap</b>"))
+        else:
+            parent_layout.addWidget(QLabel("<b>Grid & Snap</b>"))
 
         mw.show_grid_check = QCheckBox("Show Grid")
         mw.show_grid_check.setToolTip("Toggle drawing the background grid")
@@ -1302,7 +1575,10 @@ class ControlPanelBuilder:
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel("<b>Graph Layout</b>"))
+        if ThemedLabel is not None:
+            layout.addWidget(ThemedLabel("<b>Graph Layout</b>"))
+        else:
+            layout.addWidget(QLabel("<b>Graph Layout</b>"))
 
         mw.layout_sugiyama_btn = _create_standard_button(
             mw, "Hierarchical (Sugiyama)", None, None, 14
@@ -1372,7 +1648,10 @@ class ControlPanelBuilder:
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel("<b>Plotting</b>"))
+        if ThemedLabel is not None:
+            layout.addWidget(ThemedLabel("<b>Plotting</b>"))
+        else:
+            layout.addWidget(QLabel("<b>Plotting</b>"))
 
         mw.open_plot_btn = _create_standard_button(
             mw,
@@ -1413,7 +1692,10 @@ class ControlPanelBuilder:
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel("<b>Graph Simplification</b>"))
+        if ThemedLabel is not None:
+            layout.addWidget(ThemedLabel("<b>Graph Simplification</b>"))
+        else:
+            layout.addWidget(QLabel("<b>Graph Simplification</b>"))
 
         # Description label
         desc_label = QLabel(

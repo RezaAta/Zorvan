@@ -122,11 +122,12 @@ class SubgraphLabel(QGraphicsSimpleTextItem):
         super().mouseDoubleClickEvent(event)
 
 
-class GraphCanvas(QGraphicsView):
-    """Interactive canvas for node graph editing."""
-
-    # Mapping from node class names to short display names for UI
-    NODE_SHORT_NAMES = {
+# Provide a module-level short-name resolver so both palette and canvas
+# can use a single robust function without scoping issues.
+try:
+    from .node_short_names import get_short_name as _global_get_short_name
+except Exception:
+    _LEGACY_NODE_SHORT_NAMES = {
         # Data nodes
         "DataStreamNode": "Data",
         "DynamicDataStreamNode": "DynData",
@@ -166,13 +167,17 @@ class GraphCanvas(QGraphicsView):
         "DisplayNode": "Display",
     }
 
+    def _global_get_short_name(class_name: str) -> str:
+        return _LEGACY_NODE_SHORT_NAMES.get(class_name, class_name)
+
+
+class GraphCanvas(QGraphicsView):
+    """Interactive canvas for node graph editing."""
+
     @classmethod
     def get_short_name(cls, class_name: str) -> str:
-        """Get the short display name for a node class name.
-
-        Returns the mapped short name if available, otherwise returns the class name.
-        """
-        return cls.NODE_SHORT_NAMES.get(class_name, class_name)
+        """Get the short display name for a node class name by delegating to shared mapping."""
+        return _global_get_short_name(class_name)
 
     node_selected = pyqtSignal(object)  # Emits the selected node
     edge_created = pyqtSignal(object, object)  # Emits (source_node, target_node)
@@ -455,6 +460,50 @@ class GraphCanvas(QGraphicsView):
             # Force a repaint of the viewport to show updates
             try:
                 self.viewport().update()
+            except Exception:
+                pass
+            # If visualization overlays are active (ANN or value-based), reapply them
+            try:
+                # Attempt to locate the main window to inspect visualization state
+                main_window = None
+                try:
+                    if self.scene() and self.scene().views():
+                        main_window = self.scene().views()[0].window()
+                except Exception:
+                    main_window = None
+
+                # Reapply ANN colors if active (canvas tracks ann_colors_active but the
+                # main window may also track ann_colors_enabled). Reapplying ensures
+                # visualization overlays take precedence over any theme changes.
+                try:
+                    if getattr(self, "ann_colors_active", False) or (
+                        main_window is not None
+                        and getattr(main_window, "ann_colors_enabled", False)
+                    ):
+                        try:
+                            self.apply_ann_colors()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+                # Reapply colorize-by-value if the main window indicates it's enabled
+                try:
+                    if main_window is not None and getattr(
+                        main_window, "colorize_enabled", False
+                    ):
+                        try:
+                            self.update_node_visuals(
+                                True,
+                                getattr(main_window, "min_value_range", 0.0),
+                                getattr(main_window, "max_value_range", 1.0),
+                                getattr(main_window, "min_gradient_color", None),
+                                getattr(main_window, "max_gradient_color", None),
+                            )
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
             except Exception:
                 pass
         except Exception:

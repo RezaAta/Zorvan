@@ -42,16 +42,67 @@ QPushButton {
     color: {{text}};
     border: 1px solid {{border}};
     padding: 6px 12px;
-    border-radius: 3px;
+    border-radius: {{button_border_radius}};
+}
+
+/* Themed widgets set a property themed=true so QSS can target them explicitly */
+QPushButton[themed="true"] {
+    background-color: {{button_bg}};
+    color: {{text}};
+    border: 1px solid {{border}};
+    padding: 6px 12px;
+    border-radius: {{button_border_radius}};
+}
+
+QToolButton[themed="true"] {
+    background-color: transparent;
+    color: {{text}};
+    padding: 6px 8px;
+    border-radius: {{button_border_radius}};
+}
+
+/* Hover/pressed states for themed tool buttons */
+QToolButton[themed="true"]:hover {
+    background-color: {{button_hover}};
+}
+QToolButton[themed="true"]:pressed {
+    background-color: {{button_pressed}};
+}
+
+/* Toolbar-scoped base + hover so toolbar buttons match the control panel's hover */
+QToolBar QPushButton[themed="true"],
+QToolBar QToolButton[themed="true"] {
+    background-color: {{button_bg}};
+    color: {{text}};
+    border: 1px solid transparent;
+    padding: 6px 8px;
+    border-radius: {{button_border_radius}};
+    min-height: 28px;
+    max-height: 36px;
+    margin: 6px 0;
+}
+QToolBar QPushButton[themed="true"]:hover,
+QToolBar QToolButton[themed="true"]:hover {
+    background-color: {{button_hover}};
+    border: 1px solid {{accent}};
+    color: white;
 }
 
 QPushButton:hover {
     background-color: {{button_hover}};
 }
 
+/* More specific selector for themed push buttons to ensure hover works
+   even when application style interplay would otherwise suppress it. */
+QPushButton[themed="true"]:hover {
+    background-color: {{button_hover}};
+    border: 1px solid {{accent}};
+}
+
 QPushButton:pressed {
     background-color: {{button_pressed}};
 }
+
 
 QPushButton:disabled {
     background-color: {{button_disabled_bg}};
@@ -80,6 +131,28 @@ QSlider::handle:horizontal {
     width: 14px;
     margin: -4px 0;
     border-radius: 7px;
+}
+
+/* Scroll area + panels */
+QScrollArea[themed="true"] QWidget {
+    background-color: {{list_bg}};
+}
+
+QScrollBar:vertical {
+    background: {{list_bg}};
+    width: 12px;
+}
+
+QScrollBar::handle:vertical {
+    background: {{button_bg}};
+    border-radius: 6px;
+}
+
+/* Add radius and subtle border to panels */
+QWidget[themed_panel="true"] {
+    background-color: {{panel_bg}};
+    border-radius: {{panel_border_radius}};
+    border: 1px solid {{panel_border}};
 }
 
 QCheckBox {

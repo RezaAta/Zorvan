@@ -89,10 +89,22 @@ class PlotWindowPG(QWidget):
         # Control buttons
         control_layout = QHBoxLayout()
         self.clear_btn = QPushButton("Clear")
+        try:
+            self.clear_btn.setProperty("themed", True)
+            self.clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.clear_btn.setMouseTracking(True)
+        except Exception:
+            pass
         self.clear_btn.clicked.connect(self.clear_plot)
         control_layout.addWidget(self.clear_btn)
 
         self.remove_btn = QPushButton("Remove Selected")
+        try:
+            self.remove_btn.setProperty("themed", True)
+            self.remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.remove_btn.setMouseTracking(True)
+        except Exception:
+            pass
         self.remove_btn.clicked.connect(self.remove_selected_node)
         control_layout.addWidget(self.remove_btn)
 
@@ -101,6 +113,12 @@ class PlotWindowPG(QWidget):
         control_layout.addWidget(self.autoscale_check)
 
         self.reset_zoom_btn = QPushButton("Reset Zoom")
+        try:
+            self.reset_zoom_btn.setProperty("themed", True)
+            self.reset_zoom_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.reset_zoom_btn.setMouseTracking(True)
+        except Exception:
+            pass
         self.reset_zoom_btn.clicked.connect(self.reset_zoom)
         control_layout.addWidget(self.reset_zoom_btn)
 

@@ -188,6 +188,11 @@ class MenuToolbarController:
 
         view_menu.addSeparator()
         view_menu.addAction(mw.palette.toggleViewAction())
+        # Optional combined palette toggle (for testing / migration)
+        try:
+            view_menu.addAction(mw.combined_palette.toggleViewAction())
+        except Exception:
+            pass
         view_menu.addAction(mw.control_dock.toggleViewAction())
         # Console toggle (hidden by default)
         try:
@@ -210,17 +215,40 @@ class MenuToolbarController:
         toolbar.addAction(mw.edit_node_action)
         toolbar.addSeparator()
 
-        # Add Find Node search bar
-        toolbar.addWidget(QLabel("Find Node:"))
+        # Add Find Node search bar (use themed widgets when available)
+        try:
+            from ..theme_widgets import ThemedLabel, ThemedPushButton
+        except Exception:
+            ThemedLabel = None
+            ThemedPushButton = None
+
+        if ThemedLabel is not None:
+            toolbar.addWidget(ThemedLabel("Find Node:"))
+        else:
+            toolbar.addWidget(QLabel("Find Node:"))
+
         mw.search_box = QLineEdit()
         mw.search_box.setPlaceholderText("Search by node name...")
         mw.search_box.setMaximumWidth(200)
         mw.search_box.returnPressed.connect(mw.find_node)
         mw.search_box.textChanged.connect(mw.highlight_matching_nodes)
+        try:
+            mw.search_box.setProperty("themed", True)
+        except Exception:
+            pass
         toolbar.addWidget(mw.search_box)
 
-        find_next_btn = QPushButton("Next")
+        if ThemedPushButton is not None:
+            find_next_btn = ThemedPushButton("Next")
+        else:
+            find_next_btn = QPushButton("Next")
         find_next_btn.clicked.connect(mw.find_next_node)
+        try:
+            find_next_btn.setProperty("themed", True)
+            find_next_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            find_next_btn.setMouseTracking(True)
+        except Exception:
+            pass
         find_next_btn.setMaximumWidth(60)
         toolbar.addWidget(find_next_btn)
 
@@ -231,15 +259,102 @@ class MenuToolbarController:
         # Rebuild Graph toolbar button removed from top toolbar — use Control Panel button
         # Add a small toolbar button for Add Selected to Plot
         # Keep this separate from the control panel's add_to_plot_btn to avoid overwriting it
-        mw.toolbar_add_to_plot_btn = QPushButton("add to plot")
+        try:
+            from ..theme_widgets import ThemedPushButton, ThemedToolButton
+        except Exception:
+            ThemedPushButton = None
+            ThemedToolButton = None
+
+        # Prefer tool-button for toolbar placement (matches native toolbar behavior)
+        if ThemedToolButton is not None:
+            mw.toolbar_add_to_plot_btn = ThemedToolButton()
+            mw.toolbar_add_to_plot_btn.setText("add to plot")
+        elif ThemedPushButton is not None:
+            mw.toolbar_add_to_plot_btn = ThemedPushButton("add to plot")
+        else:
+            mw.toolbar_add_to_plot_btn = QPushButton("add to plot")
+        try:
+            mw.toolbar_add_to_plot_btn.setProperty("themed", True)
+            mw.toolbar_add_to_plot_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            mw.toolbar_add_to_plot_btn.setMouseTracking(True)
+            # Ensure toolbar buttons are not styled flat by QToolBar defaults
+            try:
+                mw.toolbar_add_to_plot_btn.setFlat(False)
+            except Exception:
+                pass
+
+            # Apply an inline style matching the control panel buttons for exact parity
+            try:
+                from ..theme import get_theme_manager
+
+                tm = get_theme_manager()
+                bg = tm.get_color("button_bg").name()
+                txt = tm.get_color("text").name()
+                hover = tm.get_color("button_hover").name()
+                hover_border = tm.get_color("button_hover_border").name()
+                radius = tm.theme.get("button_border_radius", "3px")
+                # Choose selector based on widget type
+                sel = (
+                    "QToolButton"
+                    if hasattr(mw.toolbar_add_to_plot_btn, "setArrowType")
+                    else "QPushButton"
+                )
+                ss = (
+                    f"{sel} {{ background-color: {bg}; color: {txt}; border: 1px solid transparent; padding: 6px 8px; border-radius: {radius}; }} "
+                    f"{sel}:hover {{ background-color: {hover}; border: 1px solid {hover_border}; color: white; }}"
+                )
+                mw.toolbar_add_to_plot_btn.setStyleSheet(ss)
+            except Exception:
+                pass
+        except Exception:
+            pass
         mw.toolbar_add_to_plot_btn.setToolTip(
             "Add currently selected nodes to the plot window"
         )
         mw.toolbar_add_to_plot_btn.clicked.connect(mw.add_selected_to_plot)
         mw.toolbar_add_to_plot_btn.setMaximumWidth(140)
+        try:
+            # Prefer a compact fixed height in toolbars to avoid stretching in vertical toolbars
+            mw.toolbar_add_to_plot_btn.setFixedHeight(28)
+            from PyQt6.QtWidgets import QSizePolicy
+
+            mw.toolbar_add_to_plot_btn.setSizePolicy(
+                QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+            )
+        except Exception:
+            pass
+
+        # Ensure it has an objectName so we can target it reliably in QSS
+        try:
+            mw.toolbar_add_to_plot_btn.setObjectName("toolbar_add_to_plot_btn")
+        except Exception:
+            pass
+
         # Put the add-to-plot button in its own section
         toolbar.addSeparator()
         toolbar.addWidget(mw.toolbar_add_to_plot_btn)
+
+        # Apply inline style using the object selector to ensure exact parity
+        try:
+            from ..theme import get_theme_manager
+
+            tm = get_theme_manager()
+            bg = tm.get_color("button_bg").name()
+            txt = tm.get_color("text").name()
+            hover = tm.get_color("button_hover").name()
+            hover_border = tm.get_color("button_hover_border").name()
+            radius = tm.theme.get("button_border_radius", "3px")
+            # Do not apply inline styles here; toolbar button should follow global themed QSS.
+            # Inline styling was removed to keep styles canonical and driven by ThemeManager.
+            pass
+        except Exception:
+            pass
+
+        try:
+            # Set cursor again after adding to toolbar in case platform/toolkit overrides it
+            mw.toolbar_add_to_plot_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        except Exception:
+            pass
 
     def create_status_bar(self):
         """Create status bar."""
