@@ -149,6 +149,98 @@ def train_graph_mlp(X, y, epochs=80, itersPerEpoch=4, mlp=None):
     return mlp, full, scalers
 
 
+def train_graph_mlp_with_mse_history(
+    X, y, epochs=80, itersPerEpoch=4, mlp=None, learning_rate=0.001
+):
+    """Train an MLPGraph and return per-iteration and per-epoch MSE history.
+
+    This function builds the full graph with BackpropGraph using the provided
+    `learning_rate`, executes training (fills error buffers), and then computes
+    MSE per-iteration using the error buffers (matching XOR experiment).
+
+    Returns: (mlp, full, scalers, mse_iter, mse_epoch)
+    """
+    import numpy as _np
+
+    # Build or prepare mlp and scalers
+    if mlp is None:
+        mlp, scalers = build_graph_mlp(X, y)
+    else:
+        # infer scalers from provided data
+        X0 = _np.array(X[0])
+        X1 = _np.array(X[1])
+        y0 = _np.array(y[0])
+        scalers = dict(
+            x0_mean=X0.mean(),
+            x0_std=X0.std() or 1.0,
+            x1_mean=X1.mean(),
+            x1_std=X1.std() or 1.0,
+            y_mean=y0.mean(),
+            y_std=y0.std() or 1.0,
+        )
+        Xn0 = ((X0 - scalers["x0_mean"]) / scalers["x0_std"]).tolist()
+        Xn1 = ((X1 - scalers["x1_mean"]) / scalers["x1_std"]).tolist()
+        yn0 = (((y0 - scalers["y_mean"]) / scalers["y_std"])).tolist()
+        mlp.LoadData([Xn0, Xn1], [yn0])
+
+    # Build Backprop with requested learning rate
+    backprop = BackpropGraph(mlp, learningRate=learning_rate)
+    backprop.BuildBackprop()
+
+    from ComputationalGraphs.Core.Graph import Graph
+
+    full = Graph()
+    for node in mlp.nodes:
+        full.AddNode(node)
+    for node in backprop.nodes:
+        full.AddNode(node)
+
+    # Create error buffers and MSE nodes for tracking
+    totalIterations = epochs * itersPerEpoch
+    mlp.CreateErrorBuffers(bufferSize=totalIterations, mse_buffer_size=itersPerEpoch)
+    for eb in mlp.errorBuffers:
+        if eb not in full.nodes:
+            full.AddNode(eb)
+    for mse in mlp.mseNodes:
+        if mse not in full.nodes:
+            full.AddNode(mse)
+
+    full.starting_nodes = [inp[0] for inp in mlp.inputLayer] + mlp.labelLayer
+    full.UpdateAdjacencyMatrix()
+
+    proc = GraphProcessor(full, verbose=False)
+    proc.ComputeGraph(totalIterations + 1)
+
+    # Compute MSE per-iteration from error buffers (square and average across outputs)
+    mse_iter = []
+    if getattr(mlp, "errorBuffers", None):
+        for i in range(totalIterations):
+            mse_val = 0.0
+            for eb in mlp.errorBuffers:
+                mse_val += (eb.buffer[i]) ** 2
+            mse_val /= len(mlp.errorBuffers)
+            mse_iter.append(float(mse_val))
+    else:
+        # fallback
+        mse_iter = [float(m.value) for m in getattr(mlp, "mseNodes", [])]
+        if len(mse_iter) == 1:
+            mse_iter = mse_iter * totalIterations
+        mse_iter = mse_iter[:totalIterations]
+
+    # Aggregate into per-epoch MSE
+    mse_epoch = []
+    for e in range(epochs):
+        start = e * itersPerEpoch
+        end = start + itersPerEpoch
+        chunk = mse_iter[start:end]
+        if len(chunk) == 0:
+            mse_epoch.append(float(0.0))
+        else:
+            mse_epoch.append(float(_np.mean(chunk)))
+
+    return mlp, full, scalers, mse_iter, mse_epoch
+
+
 def build_hybrid_from_trained_mlp(mlpGraph, setpoint=22.0):
     # Build a Graph that uses the trained mlpGraph nodes and attaches FIS
     from ComputationalGraphs.Core.Graph import Graph
@@ -618,6 +710,16 @@ def run_compare():
             "Initial copy - Layer %s max weight diff: %s", layer_idx, diff_init
         )
 
+    # Check biases initial copy (if present)
+    if getattr(mlp_graph, "biasLayers", None) and classic.use_bias:
+        for b_idx, biasRow in enumerate(mlp_graph.biasLayers):
+            bvals = np.array([b.value for b in biasRow])
+            cb = classic.biases[b_idx][0]
+            b_diff_init = np.max(np.abs(bvals - cb))
+            logger.debug(
+                "Initial copy - Layer %s max bias diff: %s", b_idx, b_diff_init
+            )
+
     # Now train both from the same starting point
     mlp_graph, full_graph, scalers = train_graph_mlp(
         X_train, y_train, epochs=80, itersPerEpoch=4, mlp=mlp_graph
@@ -675,6 +777,16 @@ def run_compare():
         use_bias=True,
     )
     copy_weights_to_classic(mlp_graph, classic_copy)
+
+    # Verify biases copied into classic_copy (post-training copy parity)
+    if getattr(mlp_graph, "biasLayers", None) and classic_copy.use_bias:
+        for b_idx, biasRow in enumerate(mlp_graph.biasLayers):
+            bvals = np.array([b.value for b in biasRow])
+            cb = classic_copy.biases[b_idx][0]
+            b_diff = np.max(np.abs(bvals - cb))
+            logger.debug(
+                "Post-training copy - Layer %s max bias diff: %s", b_idx, b_diff
+            )
 
     # Verify predictions align on a small test subset (normalized appropriately)
     Xtest_pair = list(zip(X_test[0][:50], X_test[1][:50]))
