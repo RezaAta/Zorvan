@@ -83,10 +83,19 @@ if PYQT_AVAILABLE:
             self._viewmodel = viewmodel
             # Defer binding to allow subclasses to finish initialization
             # (they may set attributes used by _bind_viewmodel).
-            # Scheduling with QTimer.singleShot(0, ...) runs after the
-            # current call stack returns and before the next event loop
-            # iteration, providing a safe place to call abstract hooks.
-            QTimer.singleShot(0, self._bind_viewmodel)
+            # If the viewmodel is already initialized, bind immediately so
+            # Views created after ViewModel.initialize() take effect
+            # synchronously (useful for tests that don't pump the event loop).
+            if hasattr(self, "_viewmodel") and self._viewmodel.is_initialized():
+                # Synchronous bind when ViewModel is already initialized
+                try:
+                    self._bind_viewmodel()
+                except Exception:
+                    # Avoid failing construction due to binding errors
+                    pass
+            else:
+                # Schedule binding to occur after current call stack
+                QTimer.singleShot(0, self._bind_viewmodel)
 
         @abstractmethod
         def _bind_viewmodel(self) -> None:

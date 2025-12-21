@@ -218,7 +218,26 @@ class EdgeItem(QGraphicsPathItem):
         except Exception:
             view = None
 
-        # Emit canvas-level signal if available so UI can update other components
+        # Remove record from parent view's edge list to avoid races when listeners
+        # consult `view.edge_items` during updates.
+        try:
+            if view and hasattr(view, "edge_items") and self in view.edge_items:
+                try:
+                    view.edge_items.remove(self)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Unregister from nodes and remove from the scene
+        self.source_node.remove_edge(self)
+        self.target_node.remove_edge(self)
+
+        if self.scene():
+            self.scene().removeItem(self)
+
+        # Emit canvas-level signal after actual removal so listeners observe the
+        # canvas in a consistent state (edge removed from `edge_items`).
         try:
             if view and hasattr(view, "edge_removed"):
                 try:
@@ -227,9 +246,3 @@ class EdgeItem(QGraphicsPathItem):
                     pass
         except Exception:
             pass
-
-        self.source_node.remove_edge(self)
-        self.target_node.remove_edge(self)
-
-        if self.scene():
-            self.scene().removeItem(self)

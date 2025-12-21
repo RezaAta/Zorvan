@@ -19,14 +19,18 @@ class InitializableContainerNode(ContainerNode):
         value: float = 0.0,
         init_low: float = -1.0,
         init_high: float = 1.0,
+        init_mean: float = 0.0,
+        init_std: float = 1.0,
         init_method: str = "uniform",
         initializer: Optional[Initializer] = None,
     ):
         # Keep underlying ContainerNode behavior
         super().__init__(name=name, value=value)
-        # Initialization params
+        # Initialization params (support both uniform and normal methods)
         self.init_low = init_low
         self.init_high = init_high
+        self.init_mean = init_mean
+        self.init_std = init_std
         self.init_method = init_method
         # optional initializer object
         self.initializer = initializer
@@ -44,6 +48,13 @@ class InitializableContainerNode(ContainerNode):
                 self.value = random.uniform(self.init_low, self.init_high)
         elif self.init_method == "uniform":
             self.value = random.uniform(self.init_low, self.init_high)
+        elif self.init_method == "normal":
+            # Use normal distribution with configured mean/std
+            try:
+                self.value = random.normalvariate(self.init_mean, self.init_std)
+            except Exception:
+                # fall back to uniform if something goes wrong
+                self.value = random.uniform(self.init_low, self.init_high)
         else:
             # fallback to uniform if unknown method
             self.value = random.uniform(self.init_low, self.init_high)

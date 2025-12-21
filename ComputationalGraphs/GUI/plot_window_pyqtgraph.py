@@ -279,11 +279,16 @@ class PlotWindowPG(QWidget):
         # Keep references to current plot data and visibility state
         saved_data = self.data.copy()
         saved_nodes = list(self.nodes)
-        saved_visibility = {
-            node: (item.checkState() == Qt.CheckState.Checked)
-            for node in self.nodes
-            for item in []
-        }
+        # Preserve visibility state by inspecting the visibility_list items
+        try:
+            saved_visibility = {}
+            for i in range(self.visibility_list.count()):
+                item = self.visibility_list.item(i)
+                node = item.data(Qt.ItemDataRole.UserRole)
+                checked = item.checkState() == Qt.CheckState.Checked
+                saved_visibility[node] = checked
+        except Exception:
+            saved_visibility = {node: True for node in self.nodes}
 
         # Remove old widget from layout and delete
         try:
@@ -293,8 +298,33 @@ class PlotWindowPG(QWidget):
             pass
 
         # Create new plot_widget and insert at the top of the layout
-        self.plot_widget = pg.PlotWidget()
-        # Use white background and grid similar to initial setup
+        # Creating a PlotWidget may fail when using OpenGL on some systems; try a safe fallback
+        try:
+            self.plot_widget = pg.PlotWidget()
+        except Exception:
+            # If creation failed and OpenGL was enabled, try disabling OpenGL and retry
+            try:
+                pg.setConfigOptions(useOpenGL=False, useQOpenGLWidget=False)
+            except Exception:
+                try:
+                    pg.setConfigOptions(useOpenGL=False)
+                except Exception:
+                    pass
+            # Ensure the checkbox reflects the disabled state without emitting signals
+            try:
+                self.use_opengl_check.blockSignals(True)
+                self.use_opengl_check.setChecked(False)
+                self.use_opengl_check.blockSignals(False)
+            except Exception:
+                pass
+            # Retry widget creation
+            try:
+                self.plot_widget = pg.PlotWidget()
+            except Exception:
+                # Give up gracefully: create a minimal QWidget placeholder
+                self.plot_widget = QWidget()
+
+        # Use white background and grid similar to initial setup if plot_widget supports it
         try:
             self.plot_widget.setBackground("w")
         except Exception:
@@ -302,10 +332,24 @@ class PlotWindowPG(QWidget):
                 self.plot_widget.setBackground((255, 255, 255))
             except Exception:
                 pass
-        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_widget.setLabel("bottom", "Iteration")
-        self.plot_widget.setLabel("left", "Value")
-        self.main_layout.insertWidget(0, self.plot_widget)
+        try:
+            self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
+        except Exception:
+            pass
+        try:
+            self.plot_widget.setLabel("bottom", "Iteration")
+            self.plot_widget.setLabel("left", "Value")
+        except Exception:
+            pass
+
+        # Insert the new widget at the top of the layout if layout supports it
+        try:
+            self.main_layout.insertWidget(0, self.plot_widget)
+        except Exception:
+            try:
+                self.setLayout(self.main_layout)
+            except Exception:
+                pass
 
         # Setup plot and add existing curves back
         self._setup_plot()
@@ -313,11 +357,23 @@ class PlotWindowPG(QWidget):
         for node in saved_nodes:
             if node in saved_data:
                 self.data[node] = saved_data[node]
-        # Re-set data for each curve
+        # Re-set data for each curve and restore visibility
         for node, curve in list(self.curves.items()):
             ys = self.data.get(node, [])
             xs = list(range(len(ys)))
-            curve.setData(xs, ys, antialias=self.antialias_check.isChecked())
+            try:
+                curve.setData(xs, ys, antialias=self.antialias_check.isChecked())
+            except Exception:
+                try:
+                    curve.setData(xs, ys)
+                except Exception:
+                    pass
+            # Restore visibility
+            try:
+                if node in saved_visibility and not saved_visibility.get(node, True):
+                    self.curves[node].setVisible(False)
+            except Exception:
+                pass
 
     def _generate_unique_legend_label(self, base_label, existing_names):
         """Return a unique label based on base_label, modifying existing_names in-place.

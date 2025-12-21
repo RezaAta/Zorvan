@@ -35,7 +35,7 @@ from ..viewmodels.base import BaseViewModel
 if PYQT_AVAILABLE:
     from .base import BaseView
 
-    class PlotConfigView(BaseView, QDialog):
+    class PlotConfigView(QDialog, BaseView):
         """
         PyQt6 dialog for plot configuration.
 
@@ -68,11 +68,27 @@ if PYQT_AVAILABLE:
             """
             QDialog.__init__(self, parent)
             BaseView.__init__(self, viewmodel, parent)
+            # Backwards compatible attribute expected by tests
+            self.viewmodel = viewmodel
             self.setWindowTitle("Configure Plot")
             self.setModal(True)
             self.resize(400, 500)
             self._setup_ui()
             self._connect_signals()
+
+        def _bind_viewmodel(self):
+            """Bind view to PlotConfigViewModel observables and initialize UI state."""
+            try:
+                # Populate and sync UI with viewmodel
+                self._populate_node_list()
+                self._update_selection_label()
+                # Sync max iterations control
+                try:
+                    self.max_iter_spin.setValue(self.viewmodel.get_max_iterations())
+                except Exception:
+                    pass
+            except Exception:
+                pass
 
         def _setup_ui(self):
             """Create and layout the UI widgets."""
@@ -86,9 +102,14 @@ if PYQT_AVAILABLE:
             self.filter_combo.addItem("All Nodes", "all")
             self.filter_combo.addItem("Mother Graph Only", "mother")
 
-            # Add subgraphs
-            for subgraph_name in self.viewmodel.get_subgraph_names():
-                self.filter_combo.addItem(f"SubGraph: {subgraph_name}", subgraph_name)
+            # Add subgraphs (use getter to avoid relying on attribute name)
+            try:
+                for subgraph_name in self.get_viewmodel().get_subgraph_names():
+                    self.filter_combo.addItem(
+                        f"SubGraph: {subgraph_name}", subgraph_name
+                    )
+            except Exception:
+                pass
 
             self.filter_combo.currentIndexChanged.connect(self._on_filter_changed)
             filter_layout.addWidget(self.filter_combo)
@@ -126,7 +147,7 @@ if PYQT_AVAILABLE:
             self.max_iter_spin = QSpinBox()
             self.max_iter_spin.setMinimum(10)
             self.max_iter_spin.setMaximum(100000)
-            self.max_iter_spin.setValue(self.viewmodel.get_max_iterations())
+            self.max_iter_spin.setValue(self.get_viewmodel().get_max_iterations())
             self.max_iter_spin.setSingleStep(10)
             self.max_iter_spin.valueChanged.connect(self._on_max_iter_changed)
             iter_layout.addWidget(self.max_iter_spin)
@@ -151,21 +172,29 @@ if PYQT_AVAILABLE:
 
         def _connect_signals(self):
             """Connect ViewModel signals to View updates."""
-            # Observe ViewModel changes
-            self.viewmodel.nodes_changed.observe(self._on_nodes_changed)
-            self.viewmodel.selection_changed.observe(self._on_selection_changed)
-            self.viewmodel.filter_changed.observe(self._on_filter_updated)
+            # Observe ViewModel changes (use getter to access viewmodel)
+            vm = self.get_viewmodel()
+            # Use BaseViewModel.observe_property to watch property counters
+            vm.observe_property(
+                "nodes_changed", lambda old, new: self._on_nodes_changed(new)
+            )
+            vm.observe_property(
+                "selection_changed", lambda old, new: self._on_selection_changed(new)
+            )
+            vm.observe_property(
+                "filter_changed", lambda old, new: self._on_filter_updated(new)
+            )
 
         def _populate_node_list(self):
             """Populate node list with checkboxes."""
             self.node_list.clear()
 
-            for node_info in self.viewmodel.get_filtered_nodes():
+            for node_info in self.get_viewmodel().get_filtered_nodes():
                 item = QListWidgetItem(node_info.name)
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
 
                 # Set checked state from viewmodel
-                if self.viewmodel.is_node_selected(node_info.name):
+                if self.get_viewmodel().is_node_selected(node_info.name):
                     item.setCheckState(Qt.CheckState.Checked)
                 else:
                     item.setCheckState(Qt.CheckState.Unchecked)
@@ -184,27 +213,27 @@ if PYQT_AVAILABLE:
         def _on_filter_changed(self, index: int):
             """Handle filter combo box change."""
             filter_mode = self.filter_combo.itemData(index)
-            self.viewmodel.set_filter(filter_mode)
+            self.get_viewmodel().set_filter(filter_mode)
 
         def _on_item_checked(self, item: QListWidgetItem):
             """Handle node checkbox state change."""
             node_name = item.data(Qt.ItemDataRole.UserRole)
             if item.checkState() == Qt.CheckState.Checked:
-                self.viewmodel.select_node(node_name)
+                self.get_viewmodel().select_node(node_name)
             else:
-                self.viewmodel.deselect_node(node_name)
+                self.get_viewmodel().deselect_node(node_name)
 
         def _on_select_all(self):
             """Handle select all button click."""
-            self.viewmodel.select_all_visible()
+            self.get_viewmodel().select_all_visible()
 
         def _on_select_none(self):
             """Handle select none button click."""
-            self.viewmodel.deselect_all()
+            self.get_viewmodel().deselect_all()
 
         def _on_max_iter_changed(self, value: int):
             """Handle max iterations spin box change."""
-            self.viewmodel.set_max_iterations(value)
+            self.get_viewmodel().set_max_iterations(value)
 
         def _on_nodes_changed(self, _):
             """Handle nodes changed in ViewModel."""
@@ -219,7 +248,7 @@ if PYQT_AVAILABLE:
                 item = self.node_list.item(i)
                 node_name = item.data(Qt.ItemDataRole.UserRole)
 
-                if self.viewmodel.is_node_selected(node_name):
+                if self.get_viewmodel().is_node_selected(node_name):
                     item.setCheckState(Qt.CheckState.Checked)
                 else:
                     item.setCheckState(Qt.CheckState.Unchecked)
@@ -235,7 +264,7 @@ if PYQT_AVAILABLE:
 
         def _update_selection_label(self):
             """Update selection count label."""
-            count = self.viewmodel.get_selection_count()
+            count = self.get_viewmodel().get_selection_count()
             self.selection_label.setText(f"Selected: {count} nodes")
 
 else:

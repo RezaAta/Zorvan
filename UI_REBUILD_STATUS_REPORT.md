@@ -1,7 +1,7 @@
 # UI Rebuild Status Report & Implementation Summary
 
-**Date:** 2025-12-19  
-**Branch:** `copilot/start-ui-rebuild-implementation`  
+**Date:** 2025-12-19
+**Branch:** `copilot/start-ui-rebuild-implementation`
 **Status:** ✅ Phase 4 Complete - Ready for Phase 5
 
 ---
@@ -38,6 +38,10 @@ The canvas is the most complex component of the GUI (originally 2,606 lines of c
 4. **Wrote comprehensive tests** for all interaction features
 5. **Updated documentation** to reflect completion
 
+### CI Update
+
+- ✅ **GUI Tests on PRs**: The CI workflow (`.github/workflows/ci.yml`) now runs GUI tests on pull requests and main branches using `QT_QPA_PLATFORM=offscreen` to support headless execution.
+
 ### Key Deliverables
 
 #### 1. Canvas Interaction Features (Stage 2)
@@ -47,13 +51,13 @@ The canvas is the most complex component of the GUI (originally 2,606 lines of c
   - Rubber band selection (drag rectangle)
   - Select all with Ctrl+A
   - Visual feedback (yellow highlight)
-  
+
 - ✅ **Node Dragging**
   - Drag-and-drop nodes
   - Multiple selected nodes move together
   - Connected edges update automatically
   - Smooth visual feedback
-  
+
 - ✅ **Keyboard Shortcuts**
   - Ctrl+A: Select all nodes
   - Escape: Deselect all
@@ -237,7 +241,7 @@ command1.mergeWith(command2)  # Consolidates consecutive moves
    - Execution statistics
    - Real-time updates
 
-**Estimated Time:** 2-3 weeks  
+**Estimated Time:** 2-3 weeks
 **Value:** Achieves 100% feature parity with legacy GUI
 
 ---
@@ -331,11 +335,11 @@ However, this is premature - better to complete features first.
 
 ### What We Achieved
 
-✅ **Completed Phase 4** - The most complex component (canvas) successfully migrated  
-✅ **267 tests passing** - Comprehensive test coverage maintained  
-✅ **58% code reduction** - Better architecture with less code  
-✅ **Ahead of schedule** - 25-35x faster than estimated  
-✅ **Zero breakage** - Existing GUI continues working unchanged  
+✅ **Completed Phase 4** - The most complex component (canvas) successfully migrated
+✅ **267 tests passing** - Comprehensive test coverage maintained
+✅ **58% code reduction** - Better architecture with less code
+✅ **Ahead of schedule** - 25-35x faster than estimated
+✅ **Zero breakage** - Existing GUI continues working unchanged
 
 ### Current State
 
@@ -383,7 +387,7 @@ For questions or concerns about:
 
 ---
 
-**Status:** ✅ Ready for Review & Merge  
-**Next Phase:** Phase 5 - Remaining Features  
-**Estimated Completion:** 2-3 weeks  
+**Status:** ✅ Ready for Review & Merge
+**Next Phase:** Phase 5 - Remaining Features
+**Estimated Completion:** 2-3 weeks
 **Project Health:** Excellent 🟢

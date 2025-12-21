@@ -10,12 +10,16 @@ from __future__ import annotations
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
     QDockWidget,
     QLabel,
     QListWidget,
+    QProgressBar,
     QPushButton,
     QScrollArea,
     QSlider,
+    QSpinBox,
     QToolButton,
 )
 

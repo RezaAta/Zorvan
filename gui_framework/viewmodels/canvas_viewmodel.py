@@ -108,6 +108,11 @@ class CanvasViewModel(BaseViewModel):
         print("[CanvasViewModel] Initialized")
         if self._graph:
             self.load_graph(self._graph)
+        # Mark as initialized for frameworks/tests that may call initialize() directly
+        try:
+            self._mark_initialized()
+        except Exception:
+            pass
 
     def cleanup(self):
         """Called when View is closed."""

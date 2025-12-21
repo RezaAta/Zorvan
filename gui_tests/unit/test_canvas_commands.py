@@ -11,7 +11,7 @@ from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
 
 class MockNode:
     """Mock computational graph node for testing."""
-    
+
     def __init__(self, name, x=0, y=0):
         self.name = name
         self.x = x
@@ -21,7 +21,7 @@ class MockNode:
 
 class MockGraph:
     """Mock computational graph for testing."""
-    
+
     def __init__(self):
         self.nodes = []
 
@@ -30,13 +30,13 @@ class MockGraph:
 def viewmodel():
     """Create a CanvasViewModel with a simple graph."""
     graph = MockGraph()
-    
+
     node_a = MockNode("A", 0, 0)
     node_b = MockNode("B", 100, 0)
     node_c = MockNode("C", 50, 100)
-    
+
     graph.nodes = [node_a, node_b, node_c]
-    
+
     vm = CanvasViewModel(graph)
     vm.initialize()
     return vm
@@ -44,138 +44,145 @@ def viewmodel():
 
 class TestMoveNodesCommand:
     """Test MoveNodesCommand for undo/redo of node movements."""
-    
+
     def test_move_command_stores_positions(self, viewmodel):
         """Test that move command stores old and new positions."""
         from gui_framework.commands import MoveNodesCommand
-        
-        positions = {
-            "A": (0, 0, 50, 50),
-            "B": (100, 0, 150, 50)
-        }
-        
+
+        positions = {"A": (0, 0, 50, 50), "B": (100, 0, 150, 50)}
+
         command = MoveNodesCommand(viewmodel, positions)
-        
+
         assert command.positions == positions
         assert command.viewmodel == viewmodel
-    
+
     def test_move_command_redo(self, viewmodel):
         """Test that redo moves nodes to new positions."""
         from gui_framework.commands import MoveNodesCommand
-        
-        positions = {
-            "A": (0, 0, 50, 50)
-        }
-        
+
+        positions = {"A": (0, 0, 50, 50)}
+
         command = MoveNodesCommand(viewmodel, positions)
         command.redo()
-        
+
         node_a = viewmodel.get_node("A")
         assert node_a.x == 50
         assert node_a.y == 50
-    
+
     def test_move_command_undo(self, viewmodel):
         """Test that undo moves nodes back to old positions."""
         from gui_framework.commands import MoveNodesCommand
-        
-        positions = {
-            "A": (0, 0, 50, 50)
-        }
-        
+
+        positions = {"A": (0, 0, 50, 50)}
+
         command = MoveNodesCommand(viewmodel, positions)
         command.redo()
-        
+
         assert viewmodel.get_node("A").x == 50
-        
+
         command.undo()
-        
+
         assert viewmodel.get_node("A").x == 0
         assert viewmodel.get_node("A").y == 0
-    
+
     def test_move_command_multiple_nodes(self, viewmodel):
         """Test moving multiple nodes at once."""
         from gui_framework.commands import MoveNodesCommand
-        
+
         positions = {
             "A": (0, 0, 10, 10),
             "B": (100, 0, 110, 10),
-            "C": (50, 100, 60, 110)
+            "C": (50, 100, 60, 110),
         }
-        
+
         command = MoveNodesCommand(viewmodel, positions)
         command.redo()
-        
+
         assert viewmodel.get_node("A").x == 10
         assert viewmodel.get_node("B").x == 110
         assert viewmodel.get_node("C").x == 60
-        
+
         command.undo()
-        
+
         assert viewmodel.get_node("A").x == 0
         assert viewmodel.get_node("B").x == 100
         assert viewmodel.get_node("C").x == 50
-    
+
     def test_move_command_merge(self, viewmodel):
         """Test that consecutive moves of same nodes can merge."""
         from gui_framework.commands import MoveNodesCommand
-        
+
         # First move
         command1 = MoveNodesCommand(viewmodel, {"A": (0, 0, 10, 10)})
-        
+
         # Second move of same node
         command2 = MoveNodesCommand(viewmodel, {"A": (10, 10, 20, 20)})
-        
+
         # Merge should succeed
         assert command1.mergeWith(command2) is True
-        
+
         # Command1 should now have the final position
         assert command1.positions["A"] == (0, 0, 20, 20)
-    
+
     def test_move_command_merge_different_nodes(self, viewmodel):
         """Test that moves of different nodes don't merge."""
         from gui_framework.commands import MoveNodesCommand
-        
+
         command1 = MoveNodesCommand(viewmodel, {"A": (0, 0, 10, 10)})
         command2 = MoveNodesCommand(viewmodel, {"B": (100, 0, 110, 10)})
-        
+
         # Merge should fail (different nodes)
         assert command1.mergeWith(command2) is False
 
 
 class TestDeleteItemsCommand:
-    """Test DeleteItemsCommand (placeholder for Stage 3)."""
-    
+    """Tests for DeleteItemsCommand behavior (Stage 3 - MVVM canvas)."""
+
     def test_delete_command_creation(self, viewmodel):
         """Test creating a delete command."""
         from gui_framework.commands import DeleteItemsCommand
-        
+
         command = DeleteItemsCommand(viewmodel, ["A", "B"], ["edge1"])
-        
+
         assert command.node_ids == ["A", "B"]
         assert command.edge_ids == ["edge1"]
         assert command.viewmodel == viewmodel
-    
-    def test_delete_command_redo_placeholder(self, viewmodel):
-        """Test that delete redo is a placeholder (doesn't crash)."""
+
+    def test_delete_command_redo_deletes_node_and_edge(self, viewmodel):
+        """Redo should remove nodes and edges from viewmodel and graph."""
         from gui_framework.commands import DeleteItemsCommand
-        
-        command = DeleteItemsCommand(viewmodel, ["A"])
-        
-        # Should not crash (placeholder implementation)
-        command.redo()
-        
-        # Nodes should still exist (placeholder doesn't actually delete)
+
+        # Setup: ensure A exists
         assert viewmodel.get_node("A") is not None
-    
-    def test_delete_command_undo_placeholder(self, viewmodel):
-        """Test that delete undo is a placeholder (doesn't crash)."""
-        from gui_framework.commands import DeleteItemsCommand
-        
+
         command = DeleteItemsCommand(viewmodel, ["A"])
         command.redo()
-        
-        # Should not crash (placeholder implementation)
+
+        # Node should be removed from render state
+        assert viewmodel.get_node("A") is None
+
+        # If Graph present, node object should be removed from graph too
+        if hasattr(viewmodel, "_graph") and viewmodel._graph is not None:
+            exists = any(
+                getattr(n, "name", None) == "A" for n in viewmodel._graph.nodes
+            )
+            assert not exists
+
+    def test_delete_command_undo_restores_node_and_edge(self, viewmodel):
+        """Undo should restore previously deleted nodes and edges."""
+        from gui_framework.commands import DeleteItemsCommand
+
+        command = DeleteItemsCommand(viewmodel, ["B"])
+        command.redo()
+
+        assert viewmodel.get_node("B") is None
+
+        # Undo should restore
         command.undo()
-        
-        # Nodes should still exist (placeholder doesn't actually delete)
-        assert viewmodel.get_node("A") is not None
+        assert viewmodel.get_node("B") is not None
+
+        if hasattr(viewmodel, "_graph") and viewmodel._graph is not None:
+            exists = any(
+                getattr(n, "name", None) == "B" for n in viewmodel._graph.nodes
+            )
+            assert exists

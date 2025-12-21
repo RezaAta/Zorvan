@@ -191,3 +191,50 @@ class NodeEditingController:
 
         node_item = node_items[0]
         self.edit_node(node_item)
+
+    def inspect_selected_node(self):
+        """Open inspector dialog for selected node (read/write properties)."""
+        from gui_framework.viewmodels.dialogs.node_properties_viewmodel import (
+            NodePropertiesViewModel,
+        )
+        from gui_framework.views.dialogs.node_properties_dialog import (
+            NodePropertiesDialog,
+        )
+
+        from ..node_item import NodeItem
+
+        mw = self.main_window
+        selected = mw.canvas.scene.selectedItems()
+        node_items = [item for item in selected if isinstance(item, NodeItem)]
+
+        if not node_items:
+            QMessageBox.information(
+                mw, "No Selection", "Please select a node to inspect."
+            )
+            return
+
+        node_item = node_items[0]
+        node_obj = node_item.node
+
+        vm = NodePropertiesViewModel()
+        vm.load_from_node(node_obj)
+        dialog = NodePropertiesDialog(vm, mw, target_node=node_obj)
+        if dialog.exec():
+            # Apply changes back to node object (final accept)
+            vm.apply_to_node(node_obj)
+            # Update visuals
+            try:
+                node_item.set_label_text(node_obj.name)
+            except Exception:
+                try:
+                    node_item.label.setPlainText(node_obj.name)
+                except Exception:
+                    pass
+            try:
+                node_item.update_value_display()
+            except Exception:
+                pass
+            try:
+                mw.status_bar.showMessage(f"Node '{node_obj.name}' inspected/updated")
+            except Exception:
+                pass

@@ -711,7 +711,25 @@ class GraphRunner(QObject):
         # Resume background execution if controller present
         if self._exec_controller is not None:
             try:
-                # Use controller API
+                # If the previous controller was stopped (stop_event set) the worker
+                # thread was terminated (e.g., during a graph rebuild). In that case,
+                # restart execution by starting additional steps equal to remaining
+                # iterations. This ensures `resume()` actually restarts processing
+                # after a `set_graph()` call.
+                if (
+                    hasattr(self._exec_controller, "stop_event")
+                    and self._exec_controller.stop_event.is_set()
+                ):
+                    remaining = max(0, self.max_steps - self.current_step)
+                    if remaining > 0:
+                        try:
+                            # Use start_additional to run the remaining iterations
+                            self.start_additional(remaining)
+                        except Exception:
+                            pass
+                        return
+
+                # Otherwise just clear pause
                 if hasattr(self._exec_controller, "resume"):
                     self._exec_controller.resume()
                 elif hasattr(self._exec_controller, "pause_event"):

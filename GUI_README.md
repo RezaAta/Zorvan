@@ -208,6 +208,19 @@ Support genetic algorithm implementations:
 Feel free to extend the GUI with additional features or node types by:
 1. Adding node types to `node_registry.py`
 2. Implementing instantiation in `graph_canvas.py` dropEvent
+## Headless GUI tests (CI)  ✅
+
+- The CI now runs the GUI test job on pull requests and main branches using the `gui-tests` job in `.github/workflows/ci.yml`.
+- The job uses an offscreen Qt platform; to run GUI tests locally in headless mode:
+
+  ```bash
+  # Linux: install Xvfb then:
+  export QT_QPA_PLATFORM=offscreen
+  xvfb-run -a python -m pytest gui_tests/integration -q
+  ```
+
+- A quick fast smoke test file `gui_tests/integration/test_gui_smoke.py` verifies the `MainWindow` can be constructed in offscreen mode.
+
 3. Adding type-specific editors in `node_editor_dialog.py`
 
 ---

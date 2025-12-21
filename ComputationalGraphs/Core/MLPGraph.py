@@ -28,8 +28,12 @@ class MLPGraph(Graph):
         outputLayerType=LinearNode,
         initializer=None,
         add_bias=True,
+        use_bias=None,  # Backwards-compatible alias for add_bias
     ):
         super().__init__()
+        # Backwards compatibility: if caller provided `use_bias`, prefer it
+        if use_bias is not None:
+            add_bias = use_bias
         self.numInputs = numInputs
         self.numOutputs = numOutputs
         self.numHiddenLayers = numHiddenLayers

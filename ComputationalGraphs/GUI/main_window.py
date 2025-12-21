@@ -558,10 +558,14 @@ class MainWindow(QMainWindow):
         """Open editor for the selected node. Delegated to NodeEditingController."""
         self.node_editing_controller.edit_selected_node()
 
+    def inspect_selected_node(self):
+        """Open inspector for the selected node. Delegated to NodeEditingController."""
+        self.node_editing_controller.inspect_selected_node()
+
     def show_preferences(self):
         """Show color/theme preferences dialog."""
         try:
-            from .color_preferences import ColorPreferencesDialog
+            from gui_framework.views.color_preferences import ColorPreferencesDialog
 
             dlg = ColorPreferencesDialog(self)
             dlg.exec()
@@ -1067,6 +1071,10 @@ class MainWindow(QMainWindow):
     def _show_backprop_dialog(self):
         """Show dialog to add backpropagation to existing MLP. Delegated to DialogController."""
         self.dialog_controller.show_backprop_dialog()
+
+    def _show_new_graph_dialog(self):
+        """Show dialog to create a new graph. Delegated to DialogController."""
+        self.dialog_controller.show_new_graph_dialog()
 
     def _visualize_graph_on_canvas(self, graph: Graph):
         """Visualize a graph object on the canvas. Delegated to GraphBuilderController."""

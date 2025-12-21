@@ -70,6 +70,11 @@ class MenuToolbarController:
         mw.edit_node_action.setShortcut(QKeySequence("Ctrl+E"))
         mw.edit_node_action.triggered.connect(mw.edit_selected_node)
 
+        mw.inspect_node_action = QAction("&Inspect Node...", mw)
+        mw.inspect_node_action.setShortcut(QKeySequence("Ctrl+I"))
+        mw.inspect_node_action.setStatusTip("Open node inspector for selected node")
+        mw.inspect_node_action.triggered.connect(mw.inspect_selected_node)
+
         # Copy / Cut / Paste actions for canvas
         mw.copy_action = QAction("&Copy", mw)
         mw.copy_action.setShortcut(QKeySequence.StandardKey.Copy)
@@ -158,6 +163,14 @@ class MenuToolbarController:
         backprop_action.setStatusTip("Add backpropagation training to current MLP")
         backprop_action.triggered.connect(mw._show_backprop_dialog)
         tools_menu.addAction(backprop_action)
+
+        # Create New Graph (dialog-driven)
+        create_graph_action = QAction("Create &New Graph...", mw)
+        create_graph_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
+        create_graph_action.setStatusTip("Create a new graph via dialog")
+        create_graph_action.triggered.connect(mw._show_new_graph_dialog)
+        tools_menu.addAction(create_graph_action)
+
         tools_menu.addSeparator()
         # Add rebuild action to Tools
         tools_menu.addAction(mw.rebuild_action)

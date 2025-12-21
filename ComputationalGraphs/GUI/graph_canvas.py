@@ -848,11 +848,10 @@ class GraphCanvas(QGraphicsView):
                     except Exception:
                         continue
 
-                    # Emit removal signal to listeners
-                    try:
-                        self.edge_removed.emit(src, tgt)
-                    except Exception:
-                        pass
+                    # Note: The edge will emit canvas-level removal signals itself when
+                    # removed; avoid emitting here early to prevent race conditions where
+                    # listeners see the visual edge still present in `self.edge_items`.
+                    # (EdgeItem.remove is responsible for emitting `edge_removed`.)
 
                     # Disconnect in authoritative graph if available
                     try:
@@ -2341,7 +2340,14 @@ class GraphCanvas(QGraphicsView):
 
     def _update_scene_rect(self):
         """Update scene rect to encompass all nodes with padding."""
+        # If there are no nodes, reset to the default scene rect to avoid
+        # shrinking the canvas below the intended minimum.
         if not self.node_items:
+            try:
+                self.scene.setSceneRect(self.default_scene_rect)
+            except Exception:
+                # Fallback: ensure scene rect is at least the initial default
+                self.scene.setSceneRect(-2000, -2000, 4000, 4000)
             return
 
         # Find bounds of all nodes

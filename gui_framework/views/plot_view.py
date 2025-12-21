@@ -94,6 +94,8 @@ if PYQT_AVAILABLE:
                 parent: Parent Qt widget
             """
             super().__init__(viewmodel, parent)
+            # Backwards compatibility: expose 'viewmodel' attribute
+            self.viewmodel = viewmodel
             self.setWindowTitle("Node Values Plot")
             self.resize(900, 600)
 
@@ -105,8 +107,28 @@ if PYQT_AVAILABLE:
             self._line_items = {}  # node_name -> plot item
 
             self._setup_ui()
+            # Connect signals after UI is setup
             self._connect_signals()
             self._initialize_backend()
+
+        def _initialize_backend(self):
+            """Initialize the view backend from the viewmodel."""
+            backend = self.get_viewmodel().get_backend()
+            self._switch_backend(backend)
+
+        def _connect_signals(self):
+            """Connect ViewModel signals to View updates."""
+            vm = self.get_viewmodel()
+            # Observe counters via BaseViewModel.observe_property
+            vm.observe_property(
+                "data_updated", lambda old, new: self._on_data_updated(new)
+            )
+            vm.observe_property(
+                "nodes_changed", lambda old, new: self._on_nodes_changed(new)
+            )
+            vm.observe_property(
+                "backend_changed", lambda old, new: self._on_backend_updated(new)
+            )
 
         def _setup_ui(self):
             """Create and layout the UI widgets."""
@@ -164,59 +186,21 @@ if PYQT_AVAILABLE:
             self.status_label = QLabel("Ready")
             layout.addWidget(self.status_label)
 
-        def _connect_signals(self):
-            """Connect ViewModel signals to View updates."""
-            self.viewmodel.data_updated.observe(self._on_data_updated)
-            self.viewmodel.nodes_changed.observe(self._on_nodes_changed)
-            self.viewmodel.backend_changed.observe(self._on_backend_updated)
-
-        def _initialize_backend(self):
-            """Initialize the current backend."""
-            backend = self.viewmodel.get_backend()
-            self._switch_backend(backend)
-
-        def _switch_backend(self, backend: str):
-            """Switch to a different plotting backend.
-
-            Args:
-                backend: Backend to switch to ('matplotlib' or 'pyqtgraph')
-            """
-            # Clear existing plot widget
-            if self.plot_widget:
-                self.plot_container_layout.removeWidget(self.plot_widget)
-                self.plot_widget.deleteLater()
-                self.plot_widget = None
-                self.matplotlib_canvas = None
-                self.matplotlib_axes = None
-                self.pyqtgraph_plot = None
-                self._line_items.clear()
-
-            # Create new backend
-            if backend == "matplotlib" and MATPLOTLIB_AVAILABLE:
-                self._create_matplotlib_backend()
-            elif backend == "pyqtgraph" and PYQTGRAPH_AVAILABLE:
-                self._create_pyqtgraph_backend()
-            else:
-                self.status_label.setText(f"Backend '{backend}' not available")
-                return
-
-            # Repopulate with existing data
-            self._refresh_plot()
-
-        def _create_matplotlib_backend(self):
-            """Create Matplotlib backend."""
-            figure = Figure(figsize=(8, 6))
-            self.matplotlib_axes = figure.add_subplot(111)
-            self.matplotlib_axes.set_xlabel("Iteration")
-            self.matplotlib_axes.set_ylabel("Value")
-            self.matplotlib_axes.set_title("Node Values Over Time")
-            self.matplotlib_axes.grid(True, alpha=0.3)
-
-            self.matplotlib_canvas = FigureCanvas(figure)
-            self.plot_widget = self.matplotlib_canvas
-            self.plot_container_layout.addWidget(self.plot_widget)
-
-            self.status_label.setText("Matplotlib backend active")
+        def _bind_viewmodel(self):
+            """Bind view to PlotViewModel observables and initialize UI state."""
+            try:
+                # Ensure node list and plot reflect current ViewModel
+                self._update_node_list()
+                # Set backend combo to current backend
+                backend = self.get_viewmodel().get_backend()
+                for i in range(self.backend_combo.count()):
+                    if self.backend_combo.itemData(i) == backend:
+                        self.backend_combo.setCurrentIndex(i)
+                        break
+                # Initialize plot content
+                self._refresh_plot()
+            except Exception:
+                pass
 
         def _create_pyqtgraph_backend(self):
             """Create PyQtGraph backend."""
@@ -240,12 +224,78 @@ if PYQT_AVAILABLE:
 
             self.status_label.setText("PyQtGraph backend active")
 
+        def _create_matplotlib_backend(self):
+            """Create Matplotlib backend."""
+            # Create Figure and Canvas
+            self.matplotlib_canvas = FigureCanvas(Figure(figsize=(5, 4)))
+            self.matplotlib_axes = self.matplotlib_canvas.figure.add_subplot(111)
+
+            self.plot_widget = self.matplotlib_canvas
+            self.plot_container_layout.addWidget(self.plot_widget)
+
+            # Configure axes
+            self.matplotlib_axes.set_xlabel("Iteration")
+            self.matplotlib_axes.set_ylabel("Value")
+            self.matplotlib_axes.set_title("Node Values Over Time")
+            self.matplotlib_axes.grid(True, alpha=0.3)
+
+            try:
+                self.matplotlib_canvas.draw()
+            except Exception:
+                pass
+
+            self.status_label.setText("Matplotlib backend active")
+
+        def _switch_backend(self, backend: str):
+            """Switch between available plotting backends.
+
+            This will remove the existing plot widget (if any) and create the
+            requested backend widget.
+            """
+            # Remove existing widget if present
+            if getattr(self, "plot_widget", None):
+                try:
+                    self.plot_container_layout.removeWidget(self.plot_widget)
+                except Exception:
+                    pass
+                try:
+                    self.plot_widget.setParent(None)
+                except Exception:
+                    pass
+
+                # Clear references
+                self.plot_widget = None
+                self.pyqtgraph_plot = None
+                self.matplotlib_canvas = None
+                self.matplotlib_axes = None
+                self._line_items.clear()
+
+            # Create selected backend
+            if backend == "matplotlib":
+                if not MATPLOTLIB_AVAILABLE:
+                    self.status_label.setText("Matplotlib not available")
+                else:
+                    self._create_matplotlib_backend()
+            elif backend == "pyqtgraph":
+                if not PYQTGRAPH_AVAILABLE:
+                    self.status_label.setText("PyQtGraph not available")
+                else:
+                    self._create_pyqtgraph_backend()
+            else:
+                self.status_label.setText("Unknown backend")
+
+            # Refresh plot content for new backend
+            try:
+                self._refresh_plot()
+            except Exception:
+                pass
+
         def _refresh_plot(self):
             """Refresh plot with all current data."""
             self._clear_plot()
 
             # Redraw all nodes
-            all_data = self.viewmodel.get_all_plot_data()
+            all_data = self.get_viewmodel().get_all_plot_data()
             for node_name, data_points in all_data.items():
                 if data_points:
                     self._plot_node_data(node_name, data_points)
@@ -279,7 +329,7 @@ if PYQT_AVAILABLE:
 
             iterations = [p.iteration for p in data_points]
             values = [p.value for p in data_points]
-            color = self.viewmodel.get_node_color(node_name)
+            color = self.get_viewmodel().get_node_color(node_name)
 
             if self.matplotlib_axes:
                 (line,) = self.matplotlib_axes.plot(
@@ -299,18 +349,18 @@ if PYQT_AVAILABLE:
         def _update_node_list(self):
             """Update the node list widget."""
             self.node_list_widget.clear()
-            for node_name in self.viewmodel.get_plotted_nodes():
+            for node_name in self.get_viewmodel().get_plotted_nodes():
                 self.node_list_widget.addItem(node_name)
 
         def _on_backend_changed(self, index: int):
             """Handle backend combo box change."""
             backend = self.backend_combo.itemData(index)
-            if backend and backend != self.viewmodel.get_backend():
-                self.viewmodel.set_backend(backend)
+            if backend and backend != self.get_viewmodel().get_backend():
+                self.get_viewmodel().set_backend(backend)
 
         def _on_backend_updated(self, _):
             """Handle backend changed in ViewModel."""
-            backend = self.viewmodel.get_backend()
+            backend = self.get_viewmodel().get_backend()
             self._switch_backend(backend)
 
         def _on_data_updated(self, _):
@@ -323,14 +373,14 @@ if PYQT_AVAILABLE:
 
         def _on_clear_clicked(self):
             """Handle clear button click."""
-            self.viewmodel.clear_data()
+            self.get_viewmodel().clear_data()
 
         def _on_remove_node_clicked(self):
             """Handle remove node button click."""
             current_item = self.node_list_widget.currentItem()
             if current_item:
                 node_name = current_item.text()
-                self.viewmodel.remove_node(node_name)
+                self.get_viewmodel().remove_node(node_name)
 
         def update_plot(self):
             """Manual update method for external calls."""

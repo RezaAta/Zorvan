@@ -107,6 +107,46 @@ class DialogController:
             builder: Function that builds and returns the example graph
             name: Display name of the example
         """
+
+    def show_new_graph_dialog(self):
+        """Show dialog to create a new graph."""
+        from ComputationalGraphs.Core.Graph import Graph
+
+        from ..viewmodels.dialogs.new_graph_viewmodel import NewGraphViewModel
+        from ..views.dialogs.new_graph_dialog import NewGraphDialog
+
+        vm = NewGraphViewModel()
+        dialog = NewGraphDialog(vm, self.main_window)
+        if dialog.exec():
+            # Create a simple Graph instance from viewmodel
+            created = vm.get_created_graph() or vm.create_graph()
+            g = Graph()
+            try:
+                g.name = created.get("name", "NewGraph")
+            except Exception:
+                try:
+                    g.name = created["name"]
+                except Exception:
+                    g.name = "NewGraph"
+
+            # Clear current canvas and set graph
+            try:
+                self.main_window.canvas.scene.clear()
+                self.main_window.canvas.node_items.clear()
+                self.main_window.canvas.edge_items.clear()
+            except Exception:
+                pass
+
+            self.main_window.set_graph(g)
+            try:
+                self.main_window._visualize_graph_on_canvas(g)
+            except Exception:
+                pass
+
+            try:
+                self.main_window.status_bar.showMessage("New graph created")
+            except Exception:
+                pass
         import time
 
         try:
