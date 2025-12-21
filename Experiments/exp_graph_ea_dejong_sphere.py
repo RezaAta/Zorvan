@@ -1,24 +1,11 @@
-# Backwards-compatible shim to re-export run_graph_ea from Experiments/exp_graph_ea_dejong_sphere.py
+# Moved from ComputationalGraphs/Tests/EATests/TestingOnDejongSphereFunction.py
+# Renamed to Experiments/exp_graph_ea_dejong_sphere.py
 
-import importlib.util
-import os
+"""
+Graph-based EA running on DeJong Sphere Function.
+"""
 
-HERE = os.path.dirname(__file__)
-TARGET = os.path.join(
-    HERE, "..", "..", "..", "Experiments", "exp_graph_ea_dejong_sphere.py"
-)
-TARGET = os.path.normpath(TARGET)
-
-if os.path.exists(TARGET):
-    spec = importlib.util.spec_from_file_location("exp_graph_ea_dejong_sphere", TARGET)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    run_graph_ea = getattr(module, "run_graph_ea")
-    print(
-        "Warning: TestingOnDejongSphereFunction.py has moved to Experiments/exp_graph_ea_dejong_sphere.py"
-    )
-else:
-    raise ImportError("Missing Experiments/exp_graph_ea_dejong_sphere.py")
+import matplotlib.pyplot as plt
 
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
@@ -79,8 +66,7 @@ def run_graph_ea(
         "Tournament",
         tournamentSize=3,
         populationSize=pop_size,
-        num_selections=pop_size
-        - num_elites,  # Select fewer to make room for elite individual(s)
+        num_selections=pop_size - num_elites,
     )
     tournamentNode.AddPreNode(populationBuffer)
     tournamentNode.AddPreNode(fitnessNode)
@@ -129,12 +115,6 @@ def run_graph_ea(
     )
 
     # Calculate total iterations
-    # The graph has inherent delays:
-    # 1. Network length (longest path through nodes): ~8 nodes
-    # 2. Tournament selection delay: outputs (pop_size - num_elites) candidates sequentially
-    # 3. Population streaming: pop_size iterations to stream through population node
-    #
-    # Formula per generation: network_length + pop_size + (pop_size - num_elites)
     network_length = 8  # Longest path through the graph
     tournament_candidates = pop_size - num_elites
     iterations_per_generation = network_length + pop_size + tournament_candidates
@@ -154,21 +134,14 @@ def run_graph_ea(
     elite_individuals = elitismNode.elite_individuals
     elite_fitnesses = elitismNode.elite_fitnesses
 
-    # Get current best from final generation
     best_fitness = elite_fitnesses[0] if elite_fitnesses else float("inf")
     best_individual = elite_individuals[0] if elite_individuals else None
 
-    # Extract fitness history from elite collector buffer
-    # The elite collector has been gathering best individuals from each generation
-    # ElitismNode returns a list of elites, so we need to extract the first one
     fitness_history = []
     for elite_list in eliteCollector.buffer:
         if elite_list is not None and isinstance(elite_list, list):
-            # elite_list is [elite1, elite2, ...] where each elite is a genome
-            # Get the first elite (best one)
             if len(elite_list) > 0 and isinstance(elite_list[0], list):
-                elite = elite_list[0]  # First elite from this generation
-                # Calculate its fitness
+                elite = elite_list[0]
                 fitness = sum(gene**2 for gene in elite)
                 fitness_history.append(fitness)
 
@@ -180,27 +153,49 @@ def run_graph_ea(
     return best_individual, best_fitness, fitness_history
 
 
-# Backwards-compatible shim to re-export run_graph_ea from Experiments/exp_graph_ea_dejong_sphere.py
+if __name__ == "__main__":
+    pop_size = 50
+    genome_length = 5
+    generations = 100
+    num_elites = 1
 
-import importlib.util
-import os
-
-HERE = os.path.dirname(__file__)
-TARGET = os.path.join(
-    HERE, "..", "..", "..", "Experiments", "exp_graph_ea_dejong_sphere.py"
-)
-TARGET = os.path.normpath(TARGET)
-
-if os.path.exists(TARGET):
-    spec = importlib.util.spec_from_file_location("exp_graph_ea_dejong_sphere", TARGET)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    run_graph_ea = getattr(module, "run_graph_ea")
-    # Deprecation warning for interactive use
     print(
-        "Warning: TestingOnDejongSphereFunction.py has moved to Experiments/exp_graph_ea_dejong_sphere.py"
+        f"Running Computational Graph EA: DeJong Sphere, {num_elites} elite(s), {generations} gen, {pop_size} pop"
     )
-else:
-    raise ImportError("Missing Experiments/exp_graph_ea_dejong_sphere.py")
+    print("=" * 70)
 
-# No __main__ interactive plotting here — run the Experiments script directly for plotting/CLI behavior.
+    best_solution, best_fitness, fitness_history = run_graph_ea(
+        pop_size=pop_size,
+        genome_length=genome_length,
+        generations=generations,
+        num_elites=num_elites,
+        verbose=True,
+    )
+
+    print("=" * 70)
+    print(f"Best solution: {best_solution}")
+    print(f"Best fitness: {best_fitness:.6f}")
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(
+        range(1, len(fitness_history) + 1),
+        fitness_history,
+        "g-",
+        linewidth=2,
+        label="Best Fitness",
+    )
+    plt.xlabel("Generation", fontsize=12)
+    plt.ylabel("Fitness (Lower is Better)", fontsize=12)
+    plt.yscale("log")
+    plt.title(
+        f"Graph EA - DeJong Sphere, {num_elites} Elite, {generations} Gen, {pop_size} Pop\nBest: {best_fitness:.6f}",
+        fontsize=12,
+    )
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+
+    filename = f"Graph_DeJong_Sphere_{num_elites}Elite_{generations}Gen_{pop_size}Pop_Best{best_fitness:.6f}.png"
+    plt.savefig(filename, dpi=150)
+    print(f"Plot saved as: {filename}")
+    plt.show()

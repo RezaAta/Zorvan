@@ -9,10 +9,10 @@ Quick run commands (PowerShell):
 python run_gui.py
 
 # Run a small XOR test
-python ClassicMLPTestOnXOR.py
+python Examples/exp_xor_classic_mlp.py
 
 # Compare three approaches (benchmark)
-python CompareThreeApproaches.py
+python Experiments/exp_compare_three_approaches.py
 ```
 
 Important files to inspect when debugging or changing behavior:
@@ -31,7 +31,8 @@ Coding and edit guidelines for assistants:
 - Do not change buffer size formulas or synchronization timing without running tests and understanding the effect.
 - When touching forward-processing code, ensure source nodes and `ContainerNode`s are marked processed for the first pass (see `PrepareForForwardProcessing`).
 - Use existing naming conventions for weights (e.g., `W_x0H0N1`) when accessing/setting node values programmatically.
-- Run small tests after edits: `ClassicMLPTestOnXOR.py` and `CompareThreeApproaches.py` are quick sanity checks.
+- Run small tests after edits: `Examples/exp_xor_classic_mlp.py` and `Experiments/exp_compare_three_approaches.py` are quick sanity checks.
+- Naming convention: prefix experiment/demo scripts with `exp_` (e.g., `exp_xor_example.py`) so they are easy to find and not picked up by `pytest`.
 
 What to do before making larger changes:
 - Propose design changes in an issue or PR description and get confirmation before implementing core execution-model edits.

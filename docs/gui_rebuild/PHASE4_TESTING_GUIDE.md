@@ -20,7 +20,7 @@ This guide explains how to test the complete Canvas Migration implementation (St
 
 ### ✅ Manual Test Application
 - Interactive GUI for visual testing
-- **Command**: `python test_canvas_view.py`
+- **Command**: `python Examples/exp_canvas_view.py`
 
 ---
 
@@ -99,7 +99,7 @@ The manual test application provides interactive testing of all features.
 
 **Run test application:**
 ```bash
-python test_canvas_view.py
+python Examples/exp_canvas_view.py
 ```
 
 **What to test:**
@@ -181,12 +181,12 @@ Expected: 52 passed in ~0.15s ✅
 
 **Visual verification:**
 ```bash
-python test_canvas_view.py
+python Examples/exp_canvas_view.py
 ```
 Expected: Interactive GUI with all features working ✅
 
 ---
 
-**Status**: All 52 unit tests passing, Stage 3 complete ✅  
-**Last Updated**: 2025-12-19  
+**Status**: All 52 unit tests passing, Stage 3 complete ✅
+**Last Updated**: 2025-12-19
 **Phase 4 Progress**: 100% (All 3 stages complete)

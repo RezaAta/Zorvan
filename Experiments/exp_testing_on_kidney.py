@@ -1,4 +1,5 @@
-import time
+# Moved from ComputationalGraphs/Tests/MLPTests/TestingOnKidney.py
+# Renamed to Experiments/exp_testing_on_kidney.py
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -59,14 +60,13 @@ mlpGraph = MLPGraph(
 )
 mlpGraph.BuildMLP()
 
-backprop_graph = BackpropGraph(mlpGraph, learningRate=0.00001)
+backprop_graph = BackpropGraph(mlpGraph, learningRate=0.0002)
 backprop_graph.BuildBackprop()
 
 # Load Training Data into the MLP
 mlpGraph.LoadData(
     X_train, y_train
 )  # Inputs must also be transposed and converted to lists
-
 
 # Combine MLP and Backpropagation graphs into a complete graph
 fullMLPGraph = Graph()
@@ -88,7 +88,7 @@ mlpProcessor.ComputeGraphSingleThread(networkLength)
 
 # Training
 fakeBatchSize = 1
-epochs = 500
+epochs = 1000
 numberOfIterationsInEpochs = len(X_train[0])
 totalIterations = epochs * numberOfIterationsInEpochs * fakeBatchSize
 MSEOverEpochs = []
@@ -102,18 +102,9 @@ if hasattr(mlpGraph, "mseNodes"):
         if mse not in fullMLPGraph.nodes:
             fullMLPGraph.AddNode(mse)
 
-print(f"\nTotal nodes: {len(fullMLPGraph.nodes)}")
-print(f"Training iterations: {totalIterations + networkLength + 1}")
-print("Starting training...\n")
-start_time = time.time()
-fullGraphProcessor.ComputeGraph(
+fullGraphProcessor.ComputeGraphSingleThread(
     totalIterations + networkLength + 1
 )  # +2 is for the error buffers
-training_time = time.time() - start_time
-print(f"Training completed in {training_time:.2f}s")
-print(
-    f"Iterations per second: {(totalIterations + networkLength + 1) / training_time:.0f}"
-)
 
 # Calculate the MSE over epochs
 for i in range(totalIterations):
@@ -126,7 +117,6 @@ for i in range(totalIterations):
 MSEOverEpochs = np.array(MSEOverEpochs)
 newMSEOverEpochs = MSEOverEpochs.reshape(-1, fakeBatchSize * numberOfIterationsInEpochs)
 newMSEOverEpochs = np.mean(newMSEOverEpochs, axis=1)
-
 
 # Plotting Error Over Epochs
 plt.plot(range(len(newMSEOverEpochs)), newMSEOverEpochs, label="Mean Squared Error")
@@ -143,7 +133,7 @@ predictionBuffers = mlpGraph.predictionBuffers
 testingEpochs = (
     len(X_test[0]) + networkLength
 )  # Extra epochs to flush forward the network
-mlpProcessor.ComputeGraph(testingEpochs)
+mlpProcessor.ComputeGraphSingleThread(testingEpochs)
 
 # Collect predictions
 predictionValues = []
@@ -153,7 +143,7 @@ for predictionBuffer in predictionBuffers:
 # Convert to NumPy array and reshape
 predictionValues = np.array(predictionValues)
 
-
+backprop_graph.DisplayGraph()
 # Calculate Mean Absolute Error (MAE)
 mae = np.mean(np.abs(np.array(y_test).flatten() - predictionValues.flatten()))
 print(f"Mean Absolute Error on Test Set: {mae:.4f}")

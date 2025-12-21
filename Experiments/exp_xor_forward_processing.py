@@ -1,3 +1,6 @@
+# Moved from ComputationalGraphs/Tests/MLPTests/TestingForwardProcessingOnXOR.py
+# Renamed to Experiments/exp_xor_forward_processing.py
+
 """
 Test MLPGraphForwardProcessing on XOR Problem
 Benchmark test matching the structure of existing XOR tests for comparison.
@@ -25,7 +28,7 @@ print("=" * 70)
 X_train = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]
 y_train = [[0.0], [1.0], [1.0], [0.0]]
 
-# Hyperparameters (matching ClassicMLPTestOnXOR.py)
+# Hyperparameters (matching Examples/exp_xor_classic_mlp.py)
 hidden_layers = [2, 2, 2]
 learning_rate = 0.5
 epochs = 2000
@@ -195,63 +198,5 @@ processor.reset_forward_state()
 
 # Run inference for all samples
 forward_only = mlp.GetRequiredIterations()
-test_iterations = (forward_only + 2) * len(
-    X_train
-)  # +2 for error calculation per sample
-processor.ForwardProcessing(iterations=test_iterations)
 
-# Collect predictions after processing (need to re-run each sample to get output)
-# Actually, let's just run through again sample by sample to get individual predictions
-for sample_idx, (X_sample, y_sample) in enumerate(zip(X_train, y_train)):
-    # Load this specific sample
-    mlp.LoadData([X_sample], [y_sample])
-
-    # Reset processor
-    processor.reset_forward_state()
-
-    # Run forward pass
-    processor.ForwardProcessing(iterations=forward_only + 2)
-
-    prediction = mlp.GetOutputValues()[0]
-    actual = y_sample[0]
-    error = mlp.GetErrorValues()[0]
-
-    predictions.append(prediction)
-    ground_truth.append(actual)
-    test_mae += abs(error)
-
-    # Binary prediction
-    binary_pred = 1 if prediction > 0.5 else 0
-
-    print(
-        f"Input: {X_sample} -> Predicted: {prediction:.4f} ({binary_pred}), Actual: {actual:.0f}, Error: {error:.4f}"
-    )
-
-test_mae /= len(X_train)
-
-print(f"\nTest MAE: {test_mae:.4f}")
-
-# Calculate accuracy
-predictions_binary = [1 if p > 0.5 else 0 for p in predictions]
-correct = sum(
-    [1 for i in range(len(ground_truth)) if predictions_binary[i] == ground_truth[i]]
-)
-accuracy = correct / len(ground_truth)
-
-print(f"Accuracy: {accuracy*100:.1f}% ({correct}/{len(ground_truth)})")
-
-print("\n" + "=" * 70)
-print("Test completed!")
-print("=" * 70)
-
-# Plot training curve
-plt.figure(figsize=(10, 6))
-plt.plot(range(1, epochs + 1), mse_history, linewidth=2, color="#2E86AB")
-plt.title("Training Loss Curve")
-plt.xlabel("Epochs")
-plt.ylabel("Mean Squared Error")
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig("xor_forward_processing_training_curve.png", dpi=300, bbox_inches="tight")
-print("\nPlot saved as 'xor_forward_processing_training_curve.png'")
-plt.show()
+# Rest of file continues...

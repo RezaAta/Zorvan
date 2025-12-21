@@ -1,6 +1,11 @@
+# Moved from ComputationalGraphs/Tests/MLPTests/TestingOnDiabetes.py
+# Renamed to Experiments/exp_testing_on_diabetes.py
+
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.datasets import fetch_california_housing
+from sklearn.datasets import load_diabetes
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
@@ -8,12 +13,11 @@ from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
 from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
 from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 
 # Load Diabetes Dataset
-data = fetch_california_housing()
+data = load_diabetes()
 inputData = data.data  # Features
 targetData = data.target  # Target reshaped to 2D
 
@@ -54,10 +58,8 @@ mlpGraph = MLPGraph(
     numOutputs=1,
     numHiddenLayers=3,
     hiddenLayerSizes=[8, 4, 2],
-    activationFunction=SigmoidNode,  # Use ReLU activation for hidden layers
-    outputLayerType=LinearNode,
+    activationFunction=SigmoidNode,
 )
-
 mlpGraph.BuildMLP()
 
 backprop_graph = BackpropGraph(mlpGraph, learningRate=0.00001)
@@ -67,7 +69,6 @@ backprop_graph.BuildBackprop()
 mlpGraph.LoadData(
     X_train, y_train
 )  # Inputs must also be transposed and converted to lists
-
 
 # Combine MLP and Backpropagation graphs into a complete graph
 fullMLPGraph = Graph()
@@ -89,7 +90,7 @@ mlpProcessor.ComputeGraphSingleThread(networkLength)
 
 # Training
 fakeBatchSize = 1
-epochs = 50
+epochs = 500
 numberOfIterationsInEpochs = len(X_train[0])
 totalIterations = epochs * numberOfIterationsInEpochs * fakeBatchSize
 MSEOverEpochs = []
@@ -103,9 +104,18 @@ if hasattr(mlpGraph, "mseNodes"):
         if mse not in fullMLPGraph.nodes:
             fullMLPGraph.AddNode(mse)
 
-fullGraphProcessor.ComputeGraphSingleThread(
+print(f"\nTotal nodes: {len(fullMLPGraph.nodes)}")
+print(f"Training iterations: {totalIterations + networkLength + 1}")
+print("Starting training...\n")
+start_time = time.time()
+fullGraphProcessor.ComputeGraph(
     totalIterations + networkLength + 1
 )  # +2 is for the error buffers
+training_time = time.time() - start_time
+print(f"Training completed in {training_time:.2f}s")
+print(
+    f"Iterations per second: {(totalIterations + networkLength + 1) / training_time:.0f}"
+)
 
 # Calculate the MSE over epochs
 for i in range(totalIterations):
@@ -118,7 +128,6 @@ for i in range(totalIterations):
 MSEOverEpochs = np.array(MSEOverEpochs)
 newMSEOverEpochs = MSEOverEpochs.reshape(-1, fakeBatchSize * numberOfIterationsInEpochs)
 newMSEOverEpochs = np.mean(newMSEOverEpochs, axis=1)
-
 
 # Plotting Error Over Epochs
 plt.plot(range(len(newMSEOverEpochs)), newMSEOverEpochs, label="Mean Squared Error")
@@ -135,7 +144,7 @@ predictionBuffers = mlpGraph.predictionBuffers
 testingEpochs = (
     len(X_test[0]) + networkLength
 )  # Extra epochs to flush forward the network
-mlpProcessor.ComputeGraphSingleThread(testingEpochs)
+mlpProcessor.ComputeGraph(testingEpochs)
 
 # Collect predictions
 predictionValues = []
@@ -144,7 +153,6 @@ for predictionBuffer in predictionBuffers:
 
 # Convert to NumPy array and reshape
 predictionValues = np.array(predictionValues)
-
 
 # Calculate Mean Absolute Error (MAE)
 mae = np.mean(np.abs(np.array(y_test).flatten() - predictionValues.flatten()))

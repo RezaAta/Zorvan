@@ -9,8 +9,8 @@ ComputationalGraphs is a repository for implementing computational graph archite
 python run_gui.py
 
 # Run examples
-python CompareThreeApproaches.py
-python ClassicMLPTestOnXOR.py
+python Experiments/exp_compare_three_approaches.py
+python Examples/exp_xor_classic_mlp.py
 ```
 
 ## 📚 Documentation

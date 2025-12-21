@@ -10,7 +10,7 @@ These concise rules help AI coding agents make productive, correct edits in this
     .\scripts\bootstrap.ps1
     ```
   - Run GUI: `python run_gui.py`
-  - Quick tests: `python ClassicMLPTestOnXOR.py`, `python CompareThreeApproaches.py`
+  - Quick tests: `python Examples/exp_xor_classic_mlp.py`, `python Experiments/exp_compare_three_approaches.py`
   - Full test suite: `pytest -q`
 
 - Big picture: Node-centric computational graphs. Nodes are active actors; Graphs orchestrate nodes.
@@ -203,13 +203,13 @@ Iteration 3: b processes with updated value from a
 
 ```powershell
 # Classic MLP (no graphs)
-python ClassicMLPTestOnXOR.py
+python Examples/exp_xor_classic_mlp.py
 
 # Graph-based approaches
-python CompareThreeApproaches.py  # Benchmarks all 3 modes
+python Experiments/exp_compare_three_approaches.py  # Benchmarks all 3 modes
 
 # Forward processing examples
-python CompareForwardVsClassic.py
+python Experiments/exp_compare_forward_vs_classic.py
 
 # Branch processing fix verification
 python test_branch_processing_fix.py

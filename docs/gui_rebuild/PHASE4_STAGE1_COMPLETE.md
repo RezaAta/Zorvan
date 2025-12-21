@@ -71,7 +71,7 @@ Tests for CanvasView rendering:
 **Note:** Tests require display libraries (libEGL, Xvfb) for headless execution. Currently skipped in CI but available for manual testing.
 
 ### Manual Test Application
-**File:** `test_canvas_view.py` (141 LOC)
+**File:** `Examples/exp_canvas_view.py` (141 LOC)
 
 Interactive test application for visual verification:
 - Displays a 4-node graph
@@ -80,7 +80,7 @@ Interactive test application for visual verification:
 - Test active node highlighting
 - Demonstrates all Stage 1 features
 
-**Usage:** `python test_canvas_view.py`
+**Usage:** `python Examples/exp_canvas_view.py`
 
 ## Architecture Highlights
 
@@ -198,19 +198,19 @@ When all stages are complete, integration will involve:
 | `gui_framework/views/canvas_view.py` | 423 | View rendering | ✅ Complete |
 | `gui_tests/unit/test_canvas_viewmodel.py` | 399 | Unit tests | ✅ 34/34 passing |
 | `gui_tests/integration/test_canvas_rendering.py` | 282 | Integration tests | ⚠️ 15 created, need libs |
-| `test_canvas_view.py` | 141 | Manual test app | ✅ Complete |
+| `Examples/exp_canvas_view.py` | 141 | Manual test app | ✅ Complete |
 | **Total** | **1,578** | **Stage 1 code** | **✅ Complete** |
 
 ## Success Metrics
 
-✅ **ViewModel:** 333 LOC of pure Python logic  
-✅ **View:** 423 LOC of PyQt6 rendering  
-✅ **Unit Tests:** 34 tests, 100% passing, 0.07s execution  
-✅ **Integration Tests:** 15 tests created (pending CI setup)  
-✅ **Manual Testing:** Test app available  
-✅ **Zero Breaking Changes:** Completely independent  
-✅ **Architecture:** Clean MVVM separation  
-✅ **Testability:** Pure Python ViewModel easy to test  
+✅ **ViewModel:** 333 LOC of pure Python logic
+✅ **View:** 423 LOC of PyQt6 rendering
+✅ **Unit Tests:** 34 tests, 100% passing, 0.07s execution
+✅ **Integration Tests:** 15 tests created (pending CI setup)
+✅ **Manual Testing:** Test app available
+✅ **Zero Breaking Changes:** Completely independent
+✅ **Architecture:** Clean MVVM separation
+✅ **Testability:** Pure Python ViewModel easy to test
 
 ## Conclusion
 
@@ -220,7 +220,7 @@ Stage 1 (Rendering) is **complete and validated**. The CanvasViewModel and Canva
 
 ---
 
-**Date:** 2025-12-19  
-**Status:** Stage 1 COMPLETE ✅  
-**Next:** Stage 2 (Interaction)  
+**Date:** 2025-12-19
+**Status:** Stage 1 COMPLETE ✅
+**Next:** Stage 2 (Interaction)
 **Overall Phase 4 Progress:** ~33% (1 of 3 stages complete)

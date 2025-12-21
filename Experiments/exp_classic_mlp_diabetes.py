@@ -1,12 +1,22 @@
 """
-This module has been archived and removed from the active workspace files.
-Archived copy: Deprecated/ArchivedExperiments/ClassicMLPTestOnHousePricePredictionAli.py
-Runnable version: Experiments/exp_house_price_prediction_ali.py
-Archived on: 2025-12-21
+Classic MLP Diabetes experiment (TF based)
+Moved from: ClassicMLPTestOnDiabetes.py
 """
 
-# This file intentionally contains no runtime code to avoid side effects during import.
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+from sklearn.datasets import load_diabetes
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import SGD
 
+# Load Diabetes Dataset
+data = load_diabetes()
+X = data.data  # Features
+y = data.target  # Target reshaped to 2D
 
 # Detect and remove outliers using IQR
 q1 = np.percentile(y, 25, axis=0)  # First quartile

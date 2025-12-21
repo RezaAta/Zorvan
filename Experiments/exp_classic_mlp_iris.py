@@ -1,12 +1,19 @@
 """
-This module has been archived and removed from the active workspace files.
-Archived copy: Deprecated/ArchivedExperiments/ClassicMLPTestOnIris.py
-Runnable version: Experiments/exp_classic_mlp_iris.py
-Archived on: 2025-12-21
+Classic MLP Iris experiment
+Moved from: ClassicMLPTestOnIris.py
 """
 
-# This file intentionally contains no runtime code to avoid side effects during import.
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+# Load the Iris dataset
+iris = load_iris()
+X = iris.data  # Features
+y = iris.target.reshape(-1, 1)  # Labels as column vector
 
 # Normalize features
 scaler = StandardScaler()
@@ -133,7 +140,7 @@ errors = mlp.train(X_train, y_train, epochs=100)
 # Plot the error over epochs
 plt.plot(range(len(errors)), errors)
 plt.title("Error over Epochs for Iris (Classic MLP)")
-plt.xlabel("Epoch")
+plt.xlabel("Epochs")
 plt.ylabel("Mean Squared Error")
 plt.show()
 

@@ -1,6 +1,6 @@
 """
-Comparison test: Classic MLP vs Concurrent Computational Graph MLP on XOR problem
-Using exact configuration from TestingOnXOR.py
+Comparison: Classic MLP vs Concurrent Computational Graph MLP on XOR problem
+(This file was moved from `ComputationalGraphs/Tests/MLPTests/test_xor_classic_vs_concurrent.py`)
 """
 
 import random

@@ -1,12 +1,22 @@
 """
-This module has been archived and removed from the active workspace files.
-Archived copy: Deprecated/ArchivedExperiments/ClassicMLPTestOnHousePricePredictionAli.py
-Runnable version: Experiments/exp_house_price_prediction_ali.py
-Archived on: 2025-12-21
+House price experiment (Ali version)
+Moved from: ClassicMLPTestOnHousePricePredictionAli.py
 """
 
-# This file intentionally contains no runtime code to avoid side effects during import.
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+from sklearn.datasets import fetch_california_housing
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import SGD
 
+# Load dataset
+data = fetch_california_housing()
+X = data.data  # Features
+y = data.target  # Target reshaped to 2D
 
 # Detect and remove outliers using IQR
 q1 = np.percentile(y, 25, axis=0)  # First quartile
@@ -57,11 +67,11 @@ model = Sequential(
     ]
 )
 
-# Compile the model with SGD optimizer (no momentum, similar to your code)
-optimizer = SGD(learning_rate=0.00001)  # Same behavior as your custom backprop
+# Compile the model with SGD optimizer
+optimizer = SGD(learning_rate=0.00001)
 model.compile(optimizer=optimizer, loss="mse", metrics=["mae"])
 
-# Train the model (without validation data)
+# Train the model
 history = model.fit(X_train, y_train, epochs=500, batch_size=1)
 
 # Evaluate the model on the test set

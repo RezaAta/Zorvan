@@ -1,16 +1,38 @@
 """
-This module has been archived and removed from the active workspace files.
-Archived copy: Deprecated/ArchivedExperiments/ClassicFuzzySystemOnFanControlProblem.py
-Runnable version: Experiments/exp_fuzzy_fan_control.py
-Archived on: 2025-12-21
+Fuzzy Fan Control demo (membership function plots)
+Moved from: ClassicFuzzySystemOnFanControlProblem.py
 """
 
-# This file intentionally contains no runtime code to avoid side effects during import.
+import matplotlib.pyplot as plt
+import numpy as np
 
-# The implementation of piecewise_linear has been moved to:
-#   Experiments/exp_fuzzy_fan_control.py
-# Archived copy: Deprecated/ArchivedExperiments/ClassicFuzzySystemOnFanControlProblem.py
-# No runtime behavior remains in this file.
+
+def piecewise_linear(x, xs, mus):
+    """
+    General piecewise‐linear membership function.
+    - xs: strictly increasing list of breakpoints [x0, x1, …, xn]
+    - mus: corresponding membership values [mu0, mu1, …, mun]
+    Returns 0.0 for x < x0 or x > xn;
+    returns mui if x == xi;
+    otherwise linearly interpolates between the two enclosing knots.
+    """
+    x = float(x)
+    xs = np.array(xs, dtype=float)
+    mus = np.array(mus, dtype=float)
+
+    if x < xs[0] or x > xs[-1]:
+        return 0.0
+
+    exact_idx = np.where(np.isclose(xs, x))[0]
+    if exact_idx.size > 0:
+        return float(mus[exact_idx[0]])
+
+    pos = np.searchsorted(xs, x)
+    i0 = pos - 1
+    i1 = pos
+    x0, x1 = xs[i0], xs[i1]
+    mu0, mu1 = mus[i0], mus[i1]
+    return float(mu0 + (mu1 - mu0) * (x - x0) / (x1 - x0))
 
 
 def compute_fanspeed(temperature, humidity):

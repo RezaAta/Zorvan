@@ -1,12 +1,20 @@
 """
-This module has been archived and removed from the active workspace files.
-Archived copy: Deprecated/ArchivedExperiments/ClassicMLPTestOnHousePricePrediction.py
-Runnable version: Experiments/exp_classic_mlp_house_price.py
-Archived on: 2025-12-21
+Classic MLP House Price experiment
+Moved from: ClassicMLPTestOnHousePricePrediction.py
 """
 
-# This file intentionally contains no runtime code to avoid side effects during import.
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.datasets import fetch_california_housing
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
 
+from ClassicMLP import ClassicMLP
+
+# Load California Housing Dataset
+data = fetch_california_housing()
+X = data.data
+y = data.target.reshape(-1, 1)  # Ensure target is 2D
 
 # Normalize features using MinMaxScaler (scaled to [0, 1])
 scaler = MinMaxScaler()

@@ -1,17 +1,10 @@
-"""
-3-Way Performance Comparison on Diabetes Dataset:
-1. Classic (Pure NumPy - NO computational graphs)
-2. Default Computational Graph (BufferNodes + temporal delays)
-3. Forward Processing (New computational graph - NO buffers, NO delays)
-"""
+# Deprecated: moved to Experiments/exp_compare_diabetes.py
+import sys
 
-import time
-
-import numpy as np
-from sklearn.datasets import load_diabetes
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-
+print("This script has moved to Experiments/exp_compare_diabetes.py.")
+print("Run it with: python Experiments/exp_compare_diabetes.py")
+# Exit to avoid accidental execution as a pytest test
+sys.exit(0)
 from ClassicMLP import ClassicMLP
 from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
 from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (

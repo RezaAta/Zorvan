@@ -1,10 +1,30 @@
-# Deprecated: moved to Experiments/exp_compare_forward_vs_classic.py
-import sys
+# Moved from CompareForwardVsClassic.py — renamed to Experiments/exp_compare_forward_vs_classic.py
+# Purpose: Controlled comparison script: Forward Processing vs Classic MLP
 
-print("This script has moved to Experiments/exp_compare_forward_vs_classic.py.")
-print("Run it with: python Experiments/exp_compare_forward_vs_classic.py")
-# Exit to avoid accidental execution as a pytest test
-sys.exit(0)
+"""
+Controlled comparison: Forward Processing vs Classic MLP
+Both start with IDENTICAL weights to ensure fair comparison.
+"""
+
+import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from ClassicMLP import ClassicMLP
+from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
+    BackpropGraphForwardProcessing,
+)
+from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
+from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+
+print("=" * 70)
+print("CONTROLLED COMPARISON: Forward Processing vs Classic MLP")
+print("Both implementations start with IDENTICAL weights")
+print("=" * 70)
+
 # XOR dataset
 X_train = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]
 y_train = [[0.0], [1.0], [1.0], [0.0]]
@@ -380,10 +400,3 @@ plt.ylabel("Absolute MSE Difference")
 plt.title("MSE Difference: |Forward - Classic|")
 plt.yscale("log")
 plt.grid(True, alpha=0.3, which="both")
-
-plt.tight_layout()
-plt.savefig(
-    "forward_vs_classic_controlled_comparison.png", dpi=300, bbox_inches="tight"
-)
-print("\nPlot saved as 'forward_vs_classic_controlled_comparison.png'")
-plt.show()

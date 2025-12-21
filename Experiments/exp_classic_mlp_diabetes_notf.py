@@ -1,12 +1,20 @@
 """
-This module has been archived and removed from the active workspace files.
-Archived copy: Deprecated/ArchivedExperiments/ClassicMLPTestOnDiabetes-NoTF.py
-Runnable version: Experiments/exp_classic_mlp_diabetes_notf.py
-Archived on: 2025-12-21
+Classic MLP Diabetes (no TensorFlow) experiment
+Moved from: ClassicMLPTestOnDiabetes-NoTF.py
 """
 
-# This file intentionally contains no runtime code to avoid side effects during import.
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.datasets import load_diabetes
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
+from ClassicMLP import ClassicMLP
+
+# Load Diabetes Dataset
+data = load_diabetes()
+X = data.data
+y = data.target.reshape(-1, 1)
 
 # Detect and remove outliers using IQR
 q1 = np.percentile(y, 25, axis=0)  # First quartile

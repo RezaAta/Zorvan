@@ -1,6 +1,6 @@
 # Phase 5 Plot Windows - Current Status & Visual Testing
 
-**Date:** 2025-12-19  
+**Date:** 2025-12-19
 **Status:** ViewModels Complete, Views In Progress
 
 ---
@@ -106,7 +106,7 @@ python demo_new_gui.py
 
 ### Option 2: Canvas Visual Test
 ```bash
-python test_canvas_view.py
+python Examples/exp_canvas_view.py
 ```
 
 **What You'll See:**
@@ -193,7 +193,7 @@ git log --oneline -10
 python -m pytest gui_tests/unit/ -v | grep "passed"
 ```
 
-**Current:** 314 tests passing  
+**Current:** 314 tests passing
 **After Views:** ~350+ tests (integration tests for Views)
 
 ---
@@ -208,7 +208,7 @@ python -m pytest gui_tests/unit/ -v | grep "passed"
 
 **To See UI Now:**
 - Run `demo_new_gui.py` for existing components
-- Run `test_canvas_view.py` for Phase 4 canvas
+- Run `Examples/exp_canvas_view.py` for Phase 4 canvas
 
 **To See Plot Windows:**
 - Wait ~3 hours for View components

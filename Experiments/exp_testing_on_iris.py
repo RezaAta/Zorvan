@@ -1,3 +1,6 @@
+# Moved from ComputationalGraphs/Tests/MLPTests/TestingOnIris.py
+# Renamed to Experiments/exp_testing_on_iris.py
+
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.datasets import load_iris
@@ -83,31 +86,3 @@ plt.xlabel("Epoch")
 plt.ylabel("MSE")
 plt.legend()
 plt.show()
-
-# Step 5: Evaluate the network
-# Use the MLP graph for predictions
-mlp_processor = GraphProcessor(mlpGraph, max_workers=16, verbose=False)
-mlpGraph.LoadData(X_test.T.tolist(), y_test.T.tolist())  # Load test data into the graph
-mlp_processor.ComputeGraph(networkLength)  # Warm up for valid values
-
-# Gather predictions
-predictions = []
-actuals = []
-for i in range(len(X_test)):
-    mlp_processor.ComputeGraph(1)
-    prediction = [outputNode.value for _, outputNode in mlpGraph.outputLayer]
-    predictions.append(prediction)
-    actuals.append(y_test[i])
-
-# Convert predictions and actuals for metric calculation
-predicted_classes = np.argmax(predictions, axis=1)
-actual_classes = np.argmax(actuals, axis=1)
-
-# Compute metrics
-from sklearn.metrics import f1_score, precision_score, recall_score
-
-precision = precision_score(actual_classes, predicted_classes, average="weighted")
-recall = recall_score(actual_classes, predicted_classes, average="weighted")
-f1 = f1_score(actual_classes, predicted_classes, average="weighted")
-
-print(f"Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1:.4f}")

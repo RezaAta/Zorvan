@@ -48,7 +48,7 @@ pytest -q
 
 ### Experiments
 
-If you are running experiments (comparisons, benchmarks, or exploratory scientific runs), place them under `Experiments/` or `Examples/` and follow the guidance in `EXPERIMENTS.md`. Avoid naming experiment files with `test_` prefixes to prevent accidental collection by `pytest`.
+If you are running experiments (comparisons, benchmarks, or exploratory scientific runs), place them under `Experiments/` or `Examples/` and follow the guidance in `EXPERIMENTS.md`. Prefer prefixing experiment filenames with `exp_` (e.g., `exp_my_experiment.py`) and avoid `test_` prefixes to prevent accidental collection by `pytest`.
 
 ## Pre-commit and Local Checks
 

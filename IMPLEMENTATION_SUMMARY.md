@@ -1,7 +1,7 @@
 # Phase 5 Plot Windows - Implementation Complete Summary
 
-**Date:** 2025-12-19  
-**Status:** ViewModels Complete, Ready for View Integration  
+**Date:** 2025-12-19
+**Status:** ViewModels Complete, Ready for View Integration
 **Progress:** 67% → 70% (Phase 5.1 Plot Windows ViewModels done)
 
 ---
@@ -120,7 +120,7 @@ python demo_new_gui.py
 
 ### Demo 2: Canvas Visual Test
 ```bash
-python test_canvas_view.py
+python Examples/exp_canvas_view.py
 ```
 
 **What You'll See:**
@@ -310,7 +310,7 @@ Given the excellent progress (314 tests, 75% of project complete, solid architec
 - ✅ Phase 4 Complete: Canvas Migration (all stages)
 - ✅ Phase 5.1 Complete: Plot Windows ViewModels
 - ✅ 314 tests passing (58 new Plot ViewModel tests)
-- ✅ Visual demos available (demo_new_gui.py, test_canvas_view.py)
+- ✅ Visual demos available (demo_new_gui.py, Examples/exp_canvas_view.py)
 
 **What's Next:**
 - 🔄 Phase 5.2: Plot Windows Views (PlotView, PlotViewPyQtGraph, PlotConfigView)

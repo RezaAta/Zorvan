@@ -1,10 +1,43 @@
-# Deprecated: moved to Experiments/exp_compare_three_approaches.py
-import sys
+# Moved from CompareThreeApproaches.py — renamed to Experiments/exp_compare_three_approaches.py
+# Purpose: Benchmark script comparing Classic, Default Graph, and Forward Processing on XOR
 
-print("This script has moved to Experiments/exp_compare_three_approaches.py.")
-print("Run it with: python Experiments/exp_compare_three_approaches.py")
-# Exit to avoid accidental execution as a pytest test
-sys.exit(0)
+"""
+3-Way Performance Comparison on XOR Dataset:
+1. Classic (Pure NumPy - NO computational graphs)
+2. Default Computational Graph (BufferNodes + temporal delays)
+3. Forward Processing (New computational graph - NO buffers, NO delays)
+"""
+
+import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from ClassicMLP import ClassicMLP
+from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
+from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
+    BackpropGraphForwardProcessing,
+)
+from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Core.MLPGraph import MLPGraph
+from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
+from ComputationalGraphs.Nodes.LinearNode import LinearNode
+from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+
+print("=" * 80)
+print("3-WAY PERFORMANCE COMPARISON")
+print("=" * 80)
+
+# XOR dataset
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+y = np.array([[0], [1], [1], [0]])
+
+# Configuration
+hidden_layers = [4]
+learning_rate = 0.5
+epochs = 100  # Reduced for faster comparison
+
 # ============================================================================
 # 1. CLASSIC MLP (Pure NumPy - NO computational graphs)
 # ============================================================================
