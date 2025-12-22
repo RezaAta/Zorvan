@@ -11,9 +11,11 @@ from gui_framework.viewmodels.base import BaseViewModel
 
 
 class ExamplesLoaderViewModel(BaseViewModel):
-    def __init__(self, search_paths: List[str] = None):
+    def __init__(self, search_paths: List[str] = None, repository=None):
         super().__init__()
         self.search_paths = search_paths or ["Examples", "ComputationalGraphs/Examples"]
+        # Optional ExamplesRepository for programmatic examples
+        self.repository = repository
 
     def initialize(self):
         self._mark_initialized()
@@ -22,12 +24,18 @@ class ExamplesLoaderViewModel(BaseViewModel):
         pass
 
     def list_examples(self) -> Dict[str, Tuple[str, str]]:
-        """Return mapping example_name -> (absolute_path, short_description).
+        """Return mapping example_name -> (absolute_path-or-name, short_description).
 
-        The short_description is taken from the top-level module docstring or
-        the first non-empty comment line.
+        If a repository is provided, prefer programmatic examples (builder functions).
+        Otherwise, scan configured search paths for python example files.
         """
         results: Dict[str, Tuple[str, str]] = {}
+
+        if self.repository is not None:
+            # Repository provides builder callables and descriptions. We return the name and description.
+            for name, (builder, desc) in self.repository.list_examples().items():
+                results[name] = (name, desc)
+            return results
 
         for sp in self.search_paths:
             p = Path(sp)
@@ -40,6 +48,41 @@ class ExamplesLoaderViewModel(BaseViewModel):
                     results[name] = (str(child.resolve()), desc)
 
         return results
+
+    def list_examples_by_category(self) -> dict:
+        """Return mapping category_name -> list of (name, description).
+
+        Prefers repository categories if available; otherwise organizes filesystem examples
+        under a single 'Examples' category.
+        """
+        if self.repository is not None:
+            try:
+                cats = self.repository.list_examples_by_category()
+                # Normalize to name -> [(name, desc, builder)] -> we only need (name, desc)
+                normalized = {}
+                for cat_name, examples in cats.items():
+                    normalized[cat_name] = [(n, d) for n, d, _ in examples]
+                return normalized
+            except Exception:
+                return {}
+
+        # Filesystem fallback
+        flat = self.list_examples()
+        if not flat:
+            return {}
+        return {"Examples": [(n, d) for n, (_, d) in flat.items()]}
+
+    def build_example(self, name: str):
+        """Build named example using the repository if available, otherwise return None.
+
+        Returns the built object or None on failure / not found.
+        """
+        if self.repository is None:
+            return None
+        try:
+            return self.repository.build(name)
+        except Exception:
+            return None
 
 
 def _read_short_description(path: Path) -> str:

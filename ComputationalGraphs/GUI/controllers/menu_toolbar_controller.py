@@ -207,6 +207,11 @@ class MenuToolbarController:
         except Exception:
             pass
         view_menu.addAction(mw.control_dock.toggleViewAction())
+        # Add Inspector toggle when available
+        try:
+            view_menu.addAction(mw.inspector_dock.toggleViewAction())
+        except Exception:
+            pass
         # Console toggle (hidden by default)
         try:
             view_menu.addAction(mw.console_dock.toggleViewAction())

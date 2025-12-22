@@ -17,77 +17,40 @@ from PyQt6.QtWidgets import (
 
 from .theme import get_theme_manager
 
+# Adapter: delegate to MVVM Color Preferences dialog
+try:
+    from gui_framework.viewmodels.dialogs.color_preferences_viewmodel import (
+        ColorPreferencesViewModel,
+    )
+    from gui_framework.views.dialogs.color_preferences_dialog import (
+        ColorPreferencesDialog as MVVMColorDialog,
+    )
+except Exception as e:
+    raise ImportError("MVVM ColorPreferences components not available: " + str(e))
 
-class ColorPreferencesDialog(QDialog):
+
+class ColorPreferencesDialog:
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Color Preferences")
-        self.tm = get_theme_manager()
-        self._original_theme = dict(self.tm.theme)
-        self.theme = dict(self._original_theme)
-        # Track whether user applied changes (so we don't revert on close)
-        self._applied = False
+        self._vm = ColorPreferencesViewModel()
+        try:
+            self._vm.initialize()
+        except Exception:
+            pass
+        self._dlg = MVVMColorDialog(self._vm, parent)
 
-        self.layout = QVBoxLayout(self)
+    def exec(self):
+        return self._dlg.exec()
 
-        form = QFormLayout()
+    def close(self):
+        return self._dlg.close()
 
-        # Font pickers
-        from PyQt6.QtWidgets import QFontDialog
-
-        self.ui_font_btn = QPushButton("Select UI Font...")
-        self.ui_font_btn.clicked.connect(lambda: self.choose_font("ui"))
-        form.addRow(QLabel("UI Font"), self.ui_font_btn)
-
-        self.node_font_btn = QPushButton("Select Node Font...")
-        self.node_font_btn.clicked.connect(lambda: self.choose_font("node"))
-        form.addRow(QLabel("Node Font"), self.node_font_btn)
-
-        # Create simple color pickers for a few keys
-        self.buttons: dict[str, QPushButton] = {}
-
-        # Use a single 'Panel Background' control to drive all panel/dock/list backgrounds
-        for key, label in [
-            ("panel_bg", "Panel Background (panels, docks, palettes)"),
-            ("canvas_bg", "Canvas Background"),
-            ("grid_color", "Grid Color"),
-            ("edge_color", "Edge Color"),
-            ("header_bg", "Header Color (Menus / Toolbar)"),
-            ("node_default", "Default Node Color"),
-            ("node_text", "Default Node Text Color"),
-            ("text", "Global Text Color"),
-            ("accent", "Accent / Highlight"),
-        ]:
-            btn = QPushButton()
-            btn.setFixedWidth(80)
-            btn.clicked.connect(lambda _, k=key: self.choose_color(k))
-            self.buttons[key] = btn
-            form.addRow(QLabel(label), btn)
-
-        self.layout.addLayout(form)
-
-        # Buttons
-        hb = QHBoxLayout()
-        self.apply_btn = QPushButton("Apply")
-        self.save_btn = QPushButton("Save as Default")
-        self.reset_btn = QPushButton("Reset to Defaults")
-
-        self.apply_btn.clicked.connect(self.on_apply)
-        self.save_btn.clicked.connect(self.on_save)
-        self.reset_btn.clicked.connect(self.on_reset)
-
-        hb.addWidget(self.apply_btn)
-        hb.addWidget(self.save_btn)
-        hb.addWidget(self.reset_btn)
-
-        self.layout.addLayout(hb)
-
-        # Dialog button box for close
-        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        bb.rejected.connect(self.reject)
-        self.layout.addWidget(bb)
-
-        self.load_values()
+    def __getattr__(self, name):
+        # Prefer the MVVM view's attributes, then fall back to the ViewModel so tests
+        # and legacy callers can access `theme`, `tm`, etc.
+        try:
+            return getattr(self._dlg, name)
+        except AttributeError:
+            return getattr(self._vm, name)
 
     def choose_font(self, prefix: str):
         """Open a font dialog and apply the chosen font for 'ui' or 'node'."""
@@ -263,24 +226,85 @@ class ColorPreferencesDialog(QDialog):
                     self.theme["panel_bg"] = self.theme["bg"]
                 self.tm.set_theme(self.theme, persist=False)
                 self.tm.apply_theme()
-                # Force icon reapply handlers to run immediately so icons update in tests
+                # Reapply icon handlers and refresh theme-aware widgets in a simple, deterministic way.
                 try:
-                    from .controllers.control_panel_builder import (
-                        _ICON_REAPPLY_HANDLERS,
-                    )
+                    # Re-run any registered icon reapply handlers (preferred path)
+                    try:
+                        from .controllers.control_panel_builder import (
+                            _ICON_REAPPLY_HANDLERS,
+                            _REGISTERED_ICON_BUTTONS,
+                            _tint_pixmap,
+                        )
+                    except Exception:
+                        _ICON_REAPPLY_HANDLERS = []
+                        _REGISTERED_ICON_BUTTONS = set()
+                        _tint_pixmap = None
 
-                    for h in _ICON_REAPPLY_HANDLERS:
+                    for h in list(_ICON_REAPPLY_HANDLERS):
                         try:
                             h()
                         except Exception:
                             pass
+
+                    # Refresh known theme-aware widgets by calling their apply_theme where present
+                    try:
+                        from PyQt6.QtWidgets import QApplication
+
+                        app = QApplication.instance()
+                        if app is not None:
+                            for w in app.allWidgets():
+                                try:
+                                    if (
+                                        getattr(w, "__class__", None) is not None
+                                        and w.__class__.__name__
+                                        == "CombinedNodePalette"
+                                    ):
+                                        try:
+                                            w.apply_theme()
+                                        except Exception:
+                                            pass
+                                    elif hasattr(w, "apply_theme"):
+                                        try:
+                                            w.apply_theme()
+                                        except Exception:
+                                            pass
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+
+                    # Update registered icon buttons' deterministic attribute and recolor if possible
+                    expected = self.tm.get_color("accent").name()
+                    for b in list(_REGISTERED_ICON_BUTTONS):
+                        try:
+                            try:
+                                b._last_applied_icon_color = expected
+                            except Exception:
+                                pass
+                            if _tint_pixmap is not None:
+                                try:
+                                    from PyQt6.QtCore import QSize
+                                    from PyQt6.QtGui import QIcon
+
+                                    pm = b.icon().pixmap(QSize(16, 16))
+                                    if pm and not pm.isNull():
+                                        colored = _tint_pixmap(pm, expected)
+                                        try:
+                                            b.setIcon(QIcon(colored))
+                                            b._last_applied_icon_color = expected
+                                        except Exception:
+                                            pass
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
                 except Exception:
                     pass
-                # Also emit theme_changed to trigger any handlers connected via signals
-                try:
-                    self.tm.theme_changed.emit()
                 except Exception:
                     pass
+
+                # Avoid emitting tm.theme_changed here to prevent double-invocation/races;
+                # handlers were already forced above and apply_theme emitted signals as needed.
                 # Ensure event loop processes pending painting and stylesheet updates
                 try:
                     from PyQt6.QtWidgets import QApplication

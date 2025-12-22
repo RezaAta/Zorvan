@@ -211,6 +211,14 @@ class MainWindow(QMainWindow):
             self.graph = new_graph
             self.graph_runner.set_graph(self.graph)
             logger.debug("MainWindow: set_graph fallback used")
+        # Examples: legacy loader + modern repository (for programmatic builders)
+        try:
+            from gui_framework.services.examples_repository import ExamplesRepository
+
+            self.examples_repository = ExamplesRepository()
+        except Exception:
+            self.examples_repository = None
+
         self.examples_loader = ExamplesLoader()
         logger.debug("MainWindow: ExamplesLoader created")
 
@@ -380,6 +388,41 @@ class MainWindow(QMainWindow):
                 self.graph_runner.set_graph(graph)
         except Exception:
             pass
+
+        # Ensure CanvasViewModel is available and in sync for the Inspector
+        try:
+            from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
+
+            # Create or update canvas viewmodel to reflect new graph
+            if not hasattr(self, "canvas_vm") or self.canvas_vm is None:
+                self.canvas_vm = CanvasViewModel(graph)
+                try:
+                    self.canvas_vm.initialize()
+                except Exception:
+                    pass
+            else:
+                try:
+                    self.canvas_vm.load_graph(graph)
+                except Exception:
+                    # Recreate if load_graph fails
+                    try:
+                        self.canvas_vm = CanvasViewModel(graph)
+                        self.canvas_vm.initialize()
+                    except Exception:
+                        pass
+
+            # Connect selection synchronization (single-time only)
+            try:
+                if not getattr(self, "_inspector_selection_connected", False):
+                    self.canvas.scene.selectionChanged.connect(
+                        lambda: self._on_canvas_selection_changed()
+                    )
+                    self._inspector_selection_connected = True
+            except Exception:
+                pass
+        except Exception:
+            pass
+
         # Update displayed starting/stopping nodes
         try:
             self.update_starting_nodes_display()
@@ -441,8 +484,78 @@ class MainWindow(QMainWindow):
             self.combined_palette = None
             self.palette = None
 
+        # Ensure create custom node action is handled regardless of palette implementation
+        try:
+
+            def _open_custom_node_dialog():
+                # Try MVVM-based adapter first, fallback to legacy dialog
+                try:
+                    from ComputationalGraphs.GUI.custom_node_dialog_adapter import (
+                        CustomNodeDialogAdapter,
+                    )
+
+                    # Pass a minimal "node-like" object to the adapter
+                    class _NodeLike:
+                        pass
+
+                    dlg = CustomNodeDialogAdapter(_NodeLike(), parent=self)
+                    dlg.exec()
+                    return
+                except Exception:
+                    pass
+
+                try:
+                    from ComputationalGraphs.GUI.custom_node_dialog import (
+                        CustomNodeDialog,
+                    )
+
+                    dlg = CustomNodeDialog(parent=self)
+                    dlg.exec()
+                except Exception:
+                    pass
+
+            # If palette implements the adapter-style handler registration, use it
+            try:
+                if self.combined_palette is not None and hasattr(
+                    self.combined_palette, "add_create_handler"
+                ):
+                    try:
+                        self.combined_palette.add_create_handler(
+                            _open_custom_node_dialog
+                        )
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+            # Otherwise, hook into visible create button(s) on the palette
+            try:
+                pal = self.combined_palette or self.palette
+                if pal is not None:
+                    if hasattr(pal, "create_btn"):
+                        try:
+                            pal.create_btn.clicked.connect(_open_custom_node_dialog)
+                        except Exception:
+                            pass
+                    if hasattr(pal, "create_custom_button"):
+                        try:
+                            pal.create_custom_button.clicked.connect(
+                                _open_custom_node_dialog
+                            )
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+        except Exception:
+            pass
+
         # Right dock - Controls
         self.create_control_panel()
+        # Inspector panel (dock) - node properties
+        try:
+            self.create_inspector_panel()
+        except Exception:
+            pass
         # Bottom dock - Console for verbose/debug output
         self.create_console_panel()
 
@@ -469,6 +582,116 @@ class MainWindow(QMainWindow):
     def create_console_panel(self):
         """Create console panel. Delegated to ConsoleController."""
         self.console_controller.create_console_panel()
+
+    def _on_canvas_selection_changed(self):
+        """Sync selection from GraphCanvas to CanvasViewModel so Inspector updates."""
+        try:
+            if not hasattr(self, "canvas_vm") or self.canvas_vm is None:
+                return
+            # Pick first selected node item
+            selected = [
+                it for it in self.canvas.scene.selectedItems() if hasattr(it, "node")
+            ]
+            if not selected:
+                try:
+                    self.canvas_vm.clear_selection()
+                except Exception:
+                    pass
+                # Clear inspector view
+                try:
+                    if (
+                        hasattr(self, "inspector_pane")
+                        and self.inspector_pane is not None
+                    ):
+                        try:
+                            self.inspector_pane.get_viewmodel()._load_properties_for(
+                                None
+                            )
+                        except Exception:
+                            try:
+                                self.inspector_pane.get_viewmodel().properties_changed += (
+                                    1
+                                )
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+                return
+            first = selected[0]
+            try:
+                node_id = getattr(first.node, "name", None)
+                if node_id:
+                    try:
+                        self.canvas_vm.select_node(node_id)
+                    except Exception:
+                        pass
+                    # Force-inspector refresh in case selection->render state mapping isn't fully synchronized
+                    try:
+                        if (
+                            hasattr(self, "inspector_pane")
+                            and self.inspector_pane is not None
+                        ):
+                            try:
+                                # Call internal loader for immediate update (deterministic for UI)
+                                self.inspector_pane.get_viewmodel()._load_properties_for(
+                                    node_id
+                                )
+                            except Exception:
+                                # Fallback: bump properties_changed to trigger view update
+                                try:
+                                    self.inspector_pane.get_viewmodel().properties_changed += (
+                                        1
+                                    )
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def create_inspector_panel(self):
+        """Create a dockable Inspector that binds to CanvasViewModel."""
+        try:
+            from PyQt6.QtCore import Qt
+            from PyQt6.QtWidgets import QDockWidget
+
+            from .inspector_pane import InspectorPane
+
+            # Ensure canvas_vm exists
+            if not hasattr(self, "canvas_vm") or self.canvas_vm is None:
+                from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
+
+                self.canvas_vm = CanvasViewModel(self.graph)
+                try:
+                    self.canvas_vm.initialize()
+                except Exception:
+                    pass
+
+            pane = InspectorPane(self.canvas_vm, self)
+            # Keep a reference so we can directly refresh the inspector when selection changes
+            self.inspector_pane = pane
+            dock = QDockWidget("Inspector", self)
+            dock.setAllowedAreas(
+                Qt.DockWidgetArea.RightDockWidgetArea
+                | Qt.DockWidgetArea.LeftDockWidgetArea
+            )
+            dock.setWidget(pane.widget())
+            # Create dock but keep it hidden/closed by default (user may open from View menu)
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+            dock.hide()
+            self.inspector_dock = dock
+        except Exception as e:
+            # Fail silently but log if possible
+            try:
+                import logging
+
+                logging.getLogger(__name__).exception(
+                    "Failed to create inspector panel: %s", e
+                )
+            except Exception:
+                pass
 
     def write_to_console(self, message: str, verbose_only: bool = False):
         """Write to console. Delegated to ConsoleController."""
@@ -565,7 +788,9 @@ class MainWindow(QMainWindow):
     def show_preferences(self):
         """Show color/theme preferences dialog."""
         try:
-            from gui_framework.views.color_preferences import ColorPreferencesDialog
+            # Use the ComputationalGraphs adapter which delegates to the MVVM dialog
+            # and exposes the full set of controls (fonts, accent, node colors, etc.).
+            from .color_preferences import ColorPreferencesDialog
 
             dlg = ColorPreferencesDialog(self)
             dlg.exec()

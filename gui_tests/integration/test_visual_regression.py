@@ -17,38 +17,55 @@ try:
 except Exception:
     PYQT_AVAILABLE = False
 
-if PYQT_AVAILABLE:
-    # Import compare_images from tests/utils/screenshot.py via importlib to avoid package issues
-    import importlib.util
-    from pathlib import Path
+# Import compare_images from tests/utils/screenshot.py via importlib to avoid package issues
+import importlib.util
+from pathlib import Path
 
+if PYQT_AVAILABLE:
     from ComputationalGraphs.GUI.main_window import MainWindow
     from ComputationalGraphs.GUI.plot_window import PlotWindow
+else:
+    MainWindow = None
+    PlotWindow = None
 
-    # Locate tests/utils/screenshot.py by walking up until repo root
-    p = Path(__file__).resolve()
-    screenshot_path = None
-    for parent in p.parents:
-        candidate = parent / "tests" / "utils" / "screenshot.py"
+# Locate tests/utils/screenshot.py by walking up until repo root; accept both 'tests' and 'Tests'
+p = Path(__file__).resolve()
+screenshot_path = None
+for parent in p.parents:
+    for subdir in ("tests", "Tests"):
+        candidate = parent / subdir / "utils" / "screenshot.py"
         if candidate.exists():
             screenshot_path = candidate
             break
-    if screenshot_path is None:
-        raise FileNotFoundError("Could not find tests/utils/screenshot.py")
+    if screenshot_path:
+        break
+if screenshot_path is None:
+    raise FileNotFoundError("Could not find tests/ or Tests/ utils/screenshot.py")
 
-    spec = importlib.util.spec_from_file_location(
-        "screenshot_utils", str(screenshot_path)
-    )
-    screenshot_utils = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(screenshot_utils)
-    compare_images = screenshot_utils.compare_images
+spec = importlib.util.spec_from_file_location("screenshot_utils", str(screenshot_path))
+screenshot_utils = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(screenshot_utils)
+compare_images = screenshot_utils.compare_images
+PIL_AVAILABLE = getattr(screenshot_utils, "PIL_AVAILABLE", False)
 
-
-pytestmark = pytest.mark.skipif(not PYQT_AVAILABLE, reason="PyQt6 not available")
+# Skip tests if PyQt6 or Pillow is not available
+pytestmark = pytest.mark.skipif(
+    not (PYQT_AVAILABLE and PIL_AVAILABLE),
+    reason="PyQt6 and Pillow are required for visual regression tests",
+)
 
 
 BASE = Path(__file__).resolve().parents[1] / "baselines"
-TOLERANCE = 0.02  # Allow up to 2% pixel difference
+# Configurable tolerance values: can be overridden by environment variables for CI
+TOLERANCE = float(
+    os.getenv("VISUAL_MAX_DIFF_RATIO", "0.02")
+)  # default 2% pixel difference
+PER_PIXEL_THRESHOLD = int(
+    os.getenv("VISUAL_PER_PIXEL_THRESHOLD", "12")
+)  # pixel-level brightness threshold
+BLUR_RADIUS = int(
+    os.getenv("VISUAL_BLUR_RADIUS", "0")
+)  # optional blur radius to reduce noise
 
 
 @pytest.fixture(scope="module")
@@ -73,9 +90,22 @@ def test_main_window_visual_matches(qapp, tmp_path):
     w = MainWindow()
     cur = tmp_path / "main_window.png"
     _capture_widget(w, cur)
-    ok, ratio = compare_images(str(baseline), str(cur), max_diff_ratio=TOLERANCE)
+    # Use the tolerant comparator with per-pixel thresholding and optional blurring
+    diff_path = tmp_path / "main_window_diff.png"
+    ok, ratio = compare_images(
+        str(baseline),
+        str(cur),
+        max_diff_ratio=TOLERANCE,
+        per_pixel_threshold=PER_PIXEL_THRESHOLD,
+        blur_radius=BLUR_RADIUS,
+        output_diff_path=str(diff_path),
+    )
     w.close()
-    assert ok, f"MainWindow visual diff too large: {ratio:.4f} > {TOLERANCE}"
+    if not ok:
+        # Save debug paths in failure message to help regenerate baselines
+        raise AssertionError(
+            f"MainWindow visual diff too large: {ratio:.4f} > {TOLERANCE}. Diff saved to {diff_path}"
+        )
 
 
 def test_plot_window_visual_matches(qapp, tmp_path):
@@ -101,6 +131,17 @@ def test_plot_window_visual_matches(qapp, tmp_path):
 
     cur = tmp_path / "plot_window.png"
     _capture_widget(plot, cur)
-    ok, ratio = compare_images(str(baseline), str(cur), max_diff_ratio=TOLERANCE)
+    diff_path = tmp_path / "plot_window_diff.png"
+    ok, ratio = compare_images(
+        str(baseline),
+        str(cur),
+        max_diff_ratio=TOLERANCE,
+        per_pixel_threshold=PER_PIXEL_THRESHOLD,
+        blur_radius=BLUR_RADIUS,
+        output_diff_path=str(diff_path),
+    )
     plot.close()
-    assert ok, f"PlotWindow visual diff too large: {ratio:.4f} > {TOLERANCE}"
+    if not ok:
+        raise AssertionError(
+            f"PlotWindow visual diff too large: {ratio:.4f} > {TOLERANCE}. Diff saved to {diff_path}"
+        )

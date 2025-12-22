@@ -1,74 +1,33 @@
-from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtWidgets import (
-    QDialog,
-    QHBoxLayout,
-    QLabel,
-    QListWidget,
-    QListWidgetItem,
-    QPushButton,
-    QSizePolicy,
-    QToolButton,
-    QVBoxLayout,
-    QWidget,
-)
+# Adapter for MVVM PredecessorsDialog (delegates to gui_framework implementation)
+try:
+    from gui_framework.viewmodels.dialogs.predecessors_viewmodel import (
+        PredecessorsViewModel,
+    )
+    from gui_framework.views.dialogs.predecessors_dialog import (
+        PredecessorsDialog as MVVMPredecessorsDialog,
+    )
+except Exception:
+    MVVMPredecessorsDialog = None
 
 
-class PredecessorsDialog(QDialog):
-    """Dialog showing a node's predecessors with option to disconnect them."""
+class PredecessorsDialog:
+    """Legacy import adapter that delegates to MVVM-based dialog when available."""
 
     def __init__(self, node_item, canvas, parent=None):
-        super().__init__(parent)
-        self.node_item = node_item
-        self.canvas = canvas
-        self.graph = getattr(canvas, "graph", None)
-        self.setWindowTitle(f"Predecessors of {node_item.node.name}")
-        self.resize(300, 400)
+        if MVVMPredecessorsDialog is None:
+            raise ImportError("Predecessors MVVM components not available")
+        vm = PredecessorsViewModel(node_item=node_item, canvas=canvas)
+        vm.initialize()
+        self._dlg = MVVMPredecessorsDialog(vm, parent)
 
-        layout = QVBoxLayout(self)
-        layout.setSpacing(8)
-        self.list_widget = QListWidget()
-        self.list_widget.setSpacing(6)
-        self.list_widget.setUniformItemSizes(False)
-        self.list_widget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
-        )
-        layout.addWidget(self.list_widget)
+    def exec(self):
+        return self._dlg.exec()
 
-        # Close/Refresh buttons
-        btn_layout = QHBoxLayout()
-        refresh_btn = QPushButton("Refresh")
-        try:
-            refresh_btn.setProperty("themed", True)
-            refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            refresh_btn.setMouseTracking(True)
-        except Exception:
-            pass
-        refresh_btn.clicked.connect(self.populate)
-        btn_layout.addWidget(refresh_btn)
-        close_btn = QPushButton("Close")
-        try:
-            close_btn.setProperty("themed", True)
-            close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            close_btn.setMouseTracking(True)
-        except Exception:
-            pass
-        close_btn.clicked.connect(self.accept)
-        btn_layout.addWidget(close_btn)
-        layout.addLayout(btn_layout)
+    def close(self):
+        return self._dlg.close()
 
-        self.populate()
-        # prefer a reasonable default width to avoid cramped labels
-        self.setMinimumWidth(380)
-        # prefer minimum height for a couple of rows; will expand with content
-        self.setMinimumHeight(120)
-        # Listen for canvas-level edge changes so the dialog can refresh in real time
-        try:
-            if hasattr(self.canvas, "edge_removed"):
-                self.canvas.edge_removed.connect(self._on_canvas_edge_changed)
-            if hasattr(self.canvas, "edge_created"):
-                self.canvas.edge_created.connect(self._on_canvas_edge_changed)
-        except Exception:
-            pass
+    def __getattr__(self, name):
+        return getattr(self._dlg, name)
 
     def populate(self):
         self.list_widget.clear()

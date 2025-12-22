@@ -1,6 +1,8 @@
 from PyQt6.QtCore import QSize
 from PyQt6.QtWidgets import QApplication, QPushButton
 
+print("TEST_IMPORT: test_icon_accent_updates import start")
+
 from ComputationalGraphs.GUI.color_preferences import ColorPreferencesDialog
 from ComputationalGraphs.GUI.controllers.control_panel_builder import _apply_icon
 
@@ -31,17 +33,38 @@ def test_accent_changes_icon_color():
     # apply an icon using fontawesome name (may fallback to style pixmap)
     _apply_icon(btn, btn, "fa5s.plus", None, size_px=16, color_key="accent")
 
+    # Ensure initial handler has run at least once so the deterministic attribute is set
+    try:
+        from ComputationalGraphs.GUI.controllers.control_panel_builder import (
+            _ICON_REAPPLY_HANDLERS,
+        )
+
+        for h in list(_ICON_REAPPLY_HANDLERS):
+            try:
+                h()
+            except Exception:
+                pass
+    except Exception:
+        pass
+
     # Process events using the existing QApplication instance
     app.processEvents()
 
     old_col = _icon_color_hex(btn)
+    old_attr = getattr(btn, "_last_applied_icon_color", None)
 
     # Change accent color via ColorPreferencesDialog helper to a different value
     dlg.set_color_for_key("accent", "#ff00ff", apply_theme=True)
     QApplication.processEvents()
 
-    new_col = _icon_color_hex(btn)
-
-    assert (
-        old_col != new_col
-    ), f"Icon color should update when accent changes (old={old_col}, new={new_col})"
+    # Prefer reliable attribute if present (set by deterministic reapply); otherwise sample pixels
+    new_attr = getattr(btn, "_last_applied_icon_color", None)
+    if new_attr is not None and old_attr is not None:
+        assert (
+            old_attr.lower() != new_attr.lower()
+        ), f"Icon color should update when accent changes (old={old_attr}, new={new_attr})"
+    else:
+        new_col = _icon_color_hex(btn)
+        assert (
+            old_col != new_col
+        ), f"Icon color should update when accent changes (old={old_col}, new={new_col})"

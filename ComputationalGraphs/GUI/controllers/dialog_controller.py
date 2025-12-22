@@ -87,7 +87,31 @@ class DialogController:
             )
 
     def populate_examples_menu(self, menu):
-        """Populate the examples menu with categories."""
+        """Populate the examples menu with categories. Prefer repository-provided examples when available."""
+        # If examples_repository present, use its categorized view
+        repo = getattr(self.main_window, "examples_repository", None)
+        if repo is not None:
+            try:
+                cats = repo.list_examples_by_category()
+                if cats:
+                    for cat_name, examples in cats.items():
+                        category_menu = menu.addMenu(cat_name)
+                        for name, desc, builder in examples:
+                            action = QAction(name, self.main_window)
+                            action.setStatusTip(desc)
+                            # Use repository.build wrapper so repository can control building and error handling
+                            action.triggered.connect(
+                                lambda checked, repo=repo, n=name: self.load_example(
+                                    lambda: repo.build(n), n
+                                )
+                            )
+                            category_menu.addAction(action)
+                    return
+            except Exception:
+                # Fall back to legacy examples loader on error
+                pass
+
+        # Legacy fallback: use ExamplesLoader categories
         for category in self.main_window.examples_loader.get_categories():
             category_menu = menu.addMenu(category.name)
             category_menu.setToolTip(category.description)
@@ -100,6 +124,18 @@ class DialogController:
                 )
                 category_menu.addAction(action)
 
+        # Add action to save current layout for the last loaded example
+        try:
+            save_action = QAction("Save Current Layout", self.main_window)
+            save_action.setStatusTip(
+                "Save current canvas positions for the last loaded example"
+            )
+            save_action.triggered.connect(lambda: self.save_current_example_layout())
+            menu.addSeparator()
+            menu.addAction(save_action)
+        except Exception:
+            pass
+
     def load_example(self, builder: Callable, name: str):
         """Load an example graph.
 
@@ -107,58 +143,63 @@ class DialogController:
             builder: Function that builds and returns the example graph
             name: Display name of the example
         """
-
-    def show_new_graph_dialog(self):
-        """Show dialog to create a new graph."""
-        from ComputationalGraphs.Core.Graph import Graph
-
-        from ..viewmodels.dialogs.new_graph_viewmodel import NewGraphViewModel
-        from ..views.dialogs.new_graph_dialog import NewGraphDialog
-
-        vm = NewGraphViewModel()
-        dialog = NewGraphDialog(vm, self.main_window)
-        if dialog.exec():
-            # Create a simple Graph instance from viewmodel
-            created = vm.get_created_graph() or vm.create_graph()
-            g = Graph()
-            try:
-                g.name = created.get("name", "NewGraph")
-            except Exception:
-                try:
-                    g.name = created["name"]
-                except Exception:
-                    g.name = "NewGraph"
-
-            # Clear current canvas and set graph
-            try:
-                self.main_window.canvas.scene.clear()
-                self.main_window.canvas.node_items.clear()
-                self.main_window.canvas.edge_items.clear()
-            except Exception:
-                pass
-
-            self.main_window.set_graph(g)
-            try:
-                self.main_window._visualize_graph_on_canvas(g)
-            except Exception:
-                pass
-
-            try:
-                self.main_window.status_bar.showMessage("New graph created")
-            except Exception:
-                pass
         import time
 
         try:
             # Build the example graph (log timing to help identify where GUI may freeze)
             build_t0 = time.time()
-            self.main_window.status_bar.showMessage(f"Building example: {name}...")
+            try:
+                self.main_window.status_bar.showMessage(f"Building example: {name}...")
+            except Exception:
+                pass
             print(f"[GUI] Starting builder for example: {name}")
             example_graph = builder()
+            # Defensive check: if builder returns None, surface friendly error and abort
+            if example_graph is None:
+                try:
+                    self.main_window.status_bar.showMessage(
+                        f"Failed to build example: {name} (builder returned None)"
+                    )
+                except Exception:
+                    pass
+                try:
+                    QMessageBox.warning(
+                        self.main_window,
+                        "Error Loading Example",
+                        f"Builder for example '{name}' returned no graph.",
+                    )
+                except Exception:
+                    pass
+                return
             build_t1 = time.time()
             print(
                 f"[GUI] Builder complete for example: {name} (duration: {build_t1 - build_t0:.3f}s)"
             )
+
+            # Apply any saved layout metadata to the freshly built graph before visualization
+            try:
+                repo = getattr(self.main_window, "examples_repository", None)
+                if repo is not None:
+                    layout = repo.load_layout(name)
+                    if layout:
+                        # layout: {node_id: {"gui_pos": [x,y], "gui_color": ..., ...}}
+                        for node in example_graph.nodes:
+                            node_layout = layout.get(getattr(node, "id", None))
+                            if node_layout:
+                                if "gui_pos" in node_layout:
+                                    node.gui_pos = tuple(node_layout["gui_pos"])
+                                if "gui_color" in node_layout:
+                                    node.gui_color = node_layout["gui_color"]
+                                if "gui_radius" in node_layout:
+                                    node.gui_radius = node_layout["gui_radius"]
+                                if "gui_label" in node_layout:
+                                    node.gui_label = node_layout["gui_label"]
+                                if "gui_label_color" in node_layout:
+                                    node.gui_label_color = node_layout[
+                                        "gui_label_color"
+                                    ]
+            except Exception:
+                pass
             try:
                 self.main_window.status_bar.showMessage(
                     f"Building example: {name} done ({len(example_graph.nodes)} nodes)"
@@ -167,9 +208,12 @@ class DialogController:
                 pass
 
             # Clear current canvas
-            self.main_window.canvas.scene.clear()
-            self.main_window.canvas.node_items.clear()
-            self.main_window.canvas.edge_items.clear()
+            try:
+                self.main_window.canvas.scene.clear()
+                self.main_window.canvas.node_items.clear()
+                self.main_window.canvas.edge_items.clear()
+            except Exception:
+                pass
 
             # Load the new graph and synchronize canvas and runner
             self.main_window.set_graph(example_graph)
@@ -178,24 +222,39 @@ class DialogController:
 
             # Visualize the graph on canvas (log timing)
             vis_t0 = time.time()
-            self.main_window.status_bar.showMessage(
-                f"Applying layout and visualizing example: {name}..."
-            )
+            try:
+                self.main_window.status_bar.showMessage(
+                    f"Applying layout and visualizing example: {name}..."
+                )
+            except Exception:
+                pass
             print(
                 f"[GUI] Visualizing example: {name} - starting visualization with {len(example_graph.nodes)} nodes"
             )
-            self.main_window._visualize_graph_on_canvas(example_graph)
+            try:
+                self.main_window._visualize_graph_on_canvas(example_graph)
+            except Exception:
+                pass
             vis_t1 = time.time()
             print(
                 f"[GUI] Visualization complete for example: {name} (duration: {vis_t1 - vis_t0:.3f}s)"
             )
-            self.main_window.status_bar.showMessage(
-                f"Loaded example: {name} (build {build_t1 - build_t0:.3f}s, vis {vis_t1 - vis_t0:.3f}s)"
-            )
+            try:
+                self.main_window.status_bar.showMessage(
+                    f"Loaded example: {name} (build {build_t1 - build_t0:.3f}s, vis {vis_t1 - vis_t0:.3f}s)"
+                )
+            except Exception:
+                pass
 
             # Update starting nodes display
-            self.main_window.update_starting_nodes_display()
-            self.main_window.update_stopping_nodes_display()
+            try:
+                self.main_window.update_starting_nodes_display()
+            except Exception:
+                pass
+            try:
+                self.main_window.update_stopping_nodes_display()
+            except Exception:
+                pass
 
             # Check if this is an MLP example and apply MLP layout automatically
             is_mlp_example = any(
@@ -217,11 +276,22 @@ class DialogController:
                 except Exception as e:
                     print(f"[GUI] Failed to apply Tree layout: {e}")
 
-            self.main_window.status_bar.showMessage(f"Loaded example: {name}")
+            try:
+                self.main_window.status_bar.showMessage(f"Loaded example: {name}")
+            except Exception:
+                pass
+
+            # Record last loaded example name to enable saving layout
+            try:
+                self.main_window.last_loaded_example_name = name
+            except Exception:
+                pass
 
             # --- SYNC: Rebuild canonical graph map and ensure canvas items are bound ---
-            self._sync_graph_after_load()
-
+            try:
+                self._sync_graph_after_load()
+            except Exception:
+                pass
         except Exception as e:
             import traceback
 
@@ -230,11 +300,84 @@ class DialogController:
             print(f"ERROR loading example '{name}':")
             print(full_error)
             print(f"{'='*60}\n")
-            QMessageBox.critical(
-                self.main_window,
-                "Error Loading Example",
-                f"Failed to load example '{name}':\n{str(e)}\n\nSee console for full traceback.",
-            )
+            try:
+                QMessageBox.critical(
+                    self.main_window,
+                    "Error Loading Example",
+                    f"Failed to load example '{name}':\n{str(e)}\n\nSee console for full traceback.",
+                )
+            except Exception:
+                pass
+
+    def save_current_example_layout(self):
+        """Save current canvas/node layout for the last loaded example name using ExamplesRepository."""
+        try:
+            repo = getattr(self.main_window, "examples_repository", None)
+            name = getattr(self.main_window, "last_loaded_example_name", None)
+            if repo is None or not name:
+                QMessageBox.warning(
+                    self.main_window,
+                    "Save Layout",
+                    "No example loaded or repository unavailable.",
+                )
+                return False
+
+            graph = getattr(self.main_window, "graph", None)
+            canvas = getattr(self.main_window, "canvas", None)
+            if graph is None or canvas is None:
+                QMessageBox.warning(
+                    self.main_window,
+                    "Save Layout",
+                    "No graph/canvas available to save layout from.",
+                )
+                return False
+
+            layout = {}
+            for node in graph.nodes:
+                nid = getattr(node, "id", None)
+                if nid is None:
+                    continue
+                node_item = canvas.node_items.get(node)
+                if node_item is None:
+                    continue
+                # Collect attributes
+                pos = (node_item.pos().x(), node_item.pos().y())
+                entry = {"gui_pos": pos}
+                manual_color = getattr(node_item, "manual_color", None)
+                if manual_color is not None:
+                    try:
+                        entry["gui_color"] = manual_color.name()
+                    except Exception:
+                        pass
+                if getattr(node_item, "radius", None) is not None:
+                    entry["gui_radius"] = node_item.radius
+                try:
+                    entry["gui_label"] = node_item.label.toPlainText()
+                except Exception:
+                    pass
+                try:
+                    entry["gui_label_color"] = node_item.label.defaultTextColor().name()
+                except Exception:
+                    pass
+                layout[nid] = entry
+
+            ok = repo.save_layout(name, layout)
+            if ok:
+                try:
+                    self.main_window.status_bar.showMessage(
+                        f"Saved layout for example: {name}"
+                    )
+                except Exception:
+                    pass
+            else:
+                QMessageBox.warning(
+                    self.main_window,
+                    "Save Layout",
+                    "Failed to save layout to repository.",
+                )
+            return ok
+        except Exception:
+            return False
 
     def _sync_graph_after_load(self):
         """Rebuild canonical graph map and ensure canvas items are bound after loading."""

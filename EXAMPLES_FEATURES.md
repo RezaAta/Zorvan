@@ -6,6 +6,8 @@ Successfully added Examples menu and MLP/Backpropagation automation tools to you
 ## New Files Created
 
 ### 1. `examples_loader.py`
+
+- Layout persistence: Examples can now save & restore GUI layouts (node positions, colors, sizes, and labels) using `ExamplesRepository`. The GUI provides a "Save Current Layout" action in the Examples menu to persist the current canvas positions for the last loaded example. Layouts are stored in `.examples_layouts.json` by default and are used automatically when loading examples to restore visuals.
 - **Purpose**: Manages example graph templates
 - **Features**:
   - Organized categories: Basic, Neural Networks, Fuzzy Systems, Evolutionary Algorithms

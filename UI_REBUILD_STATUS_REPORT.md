@@ -10,6 +10,8 @@
 
 The GUI rebuild project is **making excellent progress** and ahead of schedule. **Phase 4 Canvas Migration is now complete**, bringing the project to 67% completion (4 of 6 phases done).
 
+**Important policy:** The *new UI replaces the legacy GUI* and will be the single maintained interface going forward. The legacy GUI is deprecated and will be removed from the repository once feature parity and core fixes are verified. We will not maintain two concurrent functional UIs.
+
 ### Current Status at a Glance
 
 | Phase | Status | Tests | Progress |
@@ -28,7 +30,7 @@ The GUI rebuild project is **making excellent progress** and ahead of schedule. 
 
 ## What Was Accomplished Today
 
-### Phase 4 Canvas Migration - ALL STAGES COMPLETE ✅
+4. **Phase 4 Canvas Migration - ALL STAGES COMPLETE ✅**
 
 The canvas is the most complex component of the GUI (originally 2,606 lines of code). We successfully:
 
@@ -235,13 +237,12 @@ command1.mergeWith(command2)  # Consolidates consecutive moves
    - Load/preview functionality
    - Integration with file I/O
 
-5. **Inspector Panels** (~2-3 days)
-   - Node properties panel
-   - Graph information panel
-   - Execution statistics
-   - Real-time updates
+5. **Inspector Panels (IN-PROGRESS / Docked)**n   - Node properties panel (docked Inspector implemented)
+   - Graph information panel (planned)
+   - Execution statistics (planned)
+   - Real-time updates via CanvasViewModel
 
-**Estimated Time:** 2-3 weeks
+**Estimated Time Remaining for Phase 5:** 1-2 weeks (remaining items + CI hardening)
 **Value:** Achieves 100% feature parity with legacy GUI
 
 ---

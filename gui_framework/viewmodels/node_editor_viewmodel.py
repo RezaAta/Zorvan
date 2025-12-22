@@ -30,17 +30,62 @@ class NodeEditorViewModel(BaseViewModel):
         self._node = node
         self.node_id = getattr(node, "name", str(node))
         self._props = {}
-        for attr in dir(node):
-            if attr.startswith("__"):
-                continue
-            if attr in ("predecessors",):
-                continue
+
+        # Allow nodes to explicitly declare editable properties
+        editable = getattr(node, "editable_properties", None)
+        if editable is not None:
             try:
-                val = getattr(node, attr)
-                if not callable(val):
-                    self._props[attr] = val
+                for name in editable:
+                    try:
+                        self._props[name] = getattr(node, name)
+                    except Exception:
+                        pass
             except Exception:
                 pass
+        else:
+            # Conservative automatic discovery: include only simple, non-private attributes
+            for attr in dir(node):
+                if attr.startswith("_"):
+                    continue
+                if attr in ("predecessors", "successors", "graph"):
+                    continue
+                try:
+                    val = getattr(node, attr)
+                    if callable(val):
+                        continue
+                    # Accept simple types only to avoid exposing complex runtime state
+                    if isinstance(val, (int, float, bool, str, list, tuple)):
+                        self._props[attr] = val
+                except Exception:
+                    pass
+
+        # Actions: nodes may provide editor_actions dict or expose known helper methods
+        self._actions = {}
+        try:
+            explicit = getattr(node, "editor_actions", None)
+            if isinstance(explicit, dict):
+                for label, handler in explicit.items():
+                    try:
+                        if isinstance(handler, str) and hasattr(node, handler):
+                            self._actions[label] = getattr(node, handler)
+                        elif callable(handler):
+                            self._actions[label] = handler
+                    except Exception:
+                        pass
+            else:
+                # Common helper method names to expose
+                for name in (
+                    "regenerate_population",
+                    "get_population_stats",
+                    "reinitialize",
+                    "reinitialize_weight",
+                    "randomize",
+                ):
+                    if hasattr(node, name) and callable(getattr(node, name)):
+                        self._actions[name] = getattr(node, name)
+        except Exception:
+            self._actions = {}
+
         self.properties_changed += 1
 
     def get_properties(self) -> Dict[str, Any]:
@@ -56,3 +101,17 @@ class NodeEditorViewModel(BaseViewModel):
             return True
         except Exception:
             return False
+
+    def get_actions(self):
+        try:
+            return dict(self._actions)
+        except Exception:
+            return {}
+
+    def call_action(self, name: str):
+        try:
+            if name in self._actions:
+                return self._actions[name]()
+        except Exception:
+            pass
+        return None

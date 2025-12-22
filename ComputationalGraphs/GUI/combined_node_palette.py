@@ -286,9 +286,14 @@ class CombinedNodePalette(QDockWidget, ThemeMixin):
 
     def __init__(self, parent=None):
         super().__init__("Combined Node Palette", parent)
-        # Initialize ThemeMixin to subscribe to theme changes
+        # Initialize ThemeMixin to subscribe to theme changes and ensure we apply theme immediately
         try:
             ThemeMixin.__init__(self)
+        except Exception:
+            pass
+        # Ensure an initial theme application (some environments may set theme after construction)
+        try:
+            self.apply_theme()
         except Exception:
             pass
 
@@ -392,10 +397,17 @@ class CombinedNodePalette(QDockWidget, ThemeMixin):
         # Stretch at the end
         self.scroll_layout.addStretch()
 
+        # Ensure theme is applied after nodes are constructed so node widgets
+        # repaint with the correct colors even when ThemeManager applied earlier
+        try:
+            self.apply_theme()
+        except Exception:
+            pass
+
         # Description popup (hidden until needed)
         self._description_popup = None
-        # Cached theme colors
-        self._theme_colors = {}
+        # Cached theme colors (populated by apply_theme)
+        # self._theme_colors will be set when apply_theme runs
 
     def apply_theme(self):
         """Apply theme colors to headers, content and node widgets."""
@@ -466,20 +478,30 @@ class CombinedNodePalette(QDockWidget, ThemeMixin):
                 pass
             try:
                 # Use background color from theme; remove border for a cleaner grid look
-                panel.content.setStyleSheet(
-                    f"QWidget {{ background: {list_bg.name()}; }}"
-                )
-            except Exception:
-                pass
+                try:
+                    if hasattr(list_bg, "name"):
+                        list_bg_str = list_bg.name()
+                    else:
+                        try:
+                            list_bg_str = str(list_bg)
+                        except Exception:
+                            list_bg_str = "#313335"
 
-        # Style description popup if present
-        if getattr(self, "_description_popup", None) is not None:
-            try:
-                bg = tm.get_color("panel_bg", "#3c3f41").name()
-                text = tm.get_color("text", "#ffffff").name()
-                self._description_popup.setStyleSheet(
-                    f"QLabel {{ background: {bg}; color: {text}; padding: 6px; border-radius: 6px; }}"
-                )
+                    # Apply both widget-scoped selector and direct background style to maximize
+                    # compatibility with different Qt stylesheet parsers in tests/CI.
+                    panel.content.setStyleSheet(
+                        f"QWidget {{ background: {list_bg_str}; }}"
+                    )
+                    if not panel.content.styleSheet():
+                        panel.content.setStyleSheet(f"background: {list_bg_str};")
+
+                    # Record the last applied list_bg for debugging/tests
+                    try:
+                        panel.content._last_list_bg = list_bg_str
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
             except Exception:
                 pass
 

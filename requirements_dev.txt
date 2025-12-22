@@ -4,5 +4,6 @@ black
 isort
 ruff
 pytest
+pytest-qt
 codecov
 coverage

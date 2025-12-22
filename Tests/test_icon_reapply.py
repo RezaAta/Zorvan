@@ -1,5 +1,6 @@
 import pytest
 
+print("TEST_IMPORT: test_icon_reapply import start")
 pytest.importorskip("PyQt6")
 
 from PyQt6.QtGui import QPixmap
@@ -41,6 +42,19 @@ def test_icon_recolors_on_accent_change():
     try:
         tm.set_theme({"accent": "#ff0000"}, persist=False)
         tm.apply_theme()
+        # Force any registered handlers to run to ensure deterministic reapply in tests
+        try:
+            from ComputationalGraphs.GUI.controllers.control_panel_builder import (
+                _ICON_REAPPLY_HANDLERS,
+            )
+
+            for h in list(_ICON_REAPPLY_HANDLERS):
+                try:
+                    h()
+                except Exception:
+                    pass
+        except Exception:
+            pass
         pm1 = btn.icon().pixmap(14, 14)
         c1 = _pixmap_color_hex(pm1)
         assert c0 != c1

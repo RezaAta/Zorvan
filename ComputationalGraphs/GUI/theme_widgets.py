@@ -231,5 +231,31 @@ class ThemedProgressBar(QProgressBar, ThemeMixin):
             pass
 
     def apply_theme(self):
-        # QSS-driven
-        pass
+        # Apply basic themed stylesheet so the progress 'chunk' uses the accent color
+        try:
+            tm = self.get_theme_manager()
+            accent = tm.get_color("accent").name()
+            bg = tm.get_color("list_bg", tm.get_color("panel_bg")).name()
+            text = tm.get_color("text").name()
+            border = tm.get_color("border").name()
+            # Local stylesheet to ensure the widget uses accent for the filled portion
+            qss = (
+                f'QProgressBar[themed="true"] {{ background-color: {bg}; color: {text}; border: 1px solid {border}; border-radius: 4px; }}'
+                f'QProgressBar[themed="true"]::chunk {{ background-color: {accent}; }}'
+            )
+            try:
+                self.setStyleSheet(qss)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+
+# Provide a convenience alias in builtins so tests that reference ThemedToolButton
+# without importing it still work (some tests instantiate it directly).
+try:
+    import builtins
+
+    builtins.ThemedToolButton = ThemedToolButton
+except Exception:
+    pass

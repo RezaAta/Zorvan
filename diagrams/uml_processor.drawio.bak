@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2025-12-21T00:00:00.000Z" agent="gitcopilot" etag="1">
+  <diagram name="Processor">
+    <![CDATA[
+      <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" math="0">
+        <root>
+          <mxCell id="0"/>
+          <mxCell id="1" parent="0"/>
+
+          <mxCell id="2" value="GraphProcessor\n- graph: Graph\n- mode: Enum {CONCURRENT, FORWARD}\n- threads: int\n- active_nodes: List[Node]\n+ ComputeGraph(iterations: int)\n+ ForwardProcessing(iterations: int)\n+ PrepareForForwardProcessing(processor)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#000000;fillColor=#dae8fc;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="1">
+            <mxGeometry x="20" y="20" width="320" height="160" as="geometry"/>
+          </mxCell>
+
+          <mxCell id="3" value="Graph\n- nodes: List[Node]\n- adjacency_matrix: List[List[int]]\n- starting_nodes: List[Node]\n+ AddNode(node)\n+ ConnectPreNode(dst, src)\n+ UpdateAdjacencyMatrix()" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#000000;fillColor=#fff2cc;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="1">
+            <mxGeometry x="380" y="40" width="320" height="140" as="geometry"/>
+          </mxCell>
+
+          <mxCell id="4" value="Node\n- name: str\n- predecessors: List[Node]\n- successors: List[Node]\n- value: Any\n+ AddPreNode(node)\n+ Compute()" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#000000;fillColor=#e1d5e7;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="1">
+            <mxGeometry x="380" y="220" width="300" height="120" as="geometry"/>
+          </mxCell>
+
+          <!-- Associations -->
+          <mxCell id="5" edge="1" source="2" target="3" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;strokeColor=#000000;">
+            <mxGeometry relative="1" as="geometry"/>
+          </mxCell>
+
+          <mxCell id="6" edge="1" source="2" target="4" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;strokeColor=#000000;dashed=0;">
+            <mxGeometry relative="1" as="geometry"/>
+          </mxCell>
+        </root>
+      </mxGraphModel>
+    ]]>
+  </diagram>
+</mxfile>

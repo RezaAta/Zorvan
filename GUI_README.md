@@ -205,6 +205,14 @@ Support genetic algorithm implementations:
 
 ## Contributing
 
+The project follows a focused rebuild policy prioritizing feature parity and stability over new features. The **new UI replaces the legacy GUI** — the legacy UI is deprecated and will be removed once parity is verified.
+
+**Development workflow (solo-developer mode):**
+- This repository is currently maintained by a single developer; the workflow is simplified: commit directly to the main branch after verifying the local test suite and updating relevant documentation. There is no requirement to open PRs for personal branches during this period. Ensure changes include tests and documentation updates where applicable.
+
+**Fixes-first policy:**
+- Do not add new features until all critical feature parity items (preferences, examples loader, icons, inspector, plotting dialogs, and layout behavior) are restored and tested.
+
 Feel free to extend the GUI with additional features or node types by:
 1. Adding node types to `node_registry.py`
 2. Implementing instantiation in `graph_canvas.py` dropEvent

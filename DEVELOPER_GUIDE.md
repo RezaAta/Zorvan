@@ -63,7 +63,7 @@ pre-commit run --all-files
 3. Implement minimal changes to satisfy tests.
 4. Run tests and `pre-commit` hooks locally.
 5. Use `git cz` to create structured commits; split logical changes into separate commits.
-6. Push the branch and open a PR with a short TL;DR message and the checklist completed.
+5. Push the branch and ensure local CI/test smoke-runs succeed; since this repository is maintained in a solo-developer mode, opening a PR is optional and not required for day-to-day fixes—commit directly after tests and documentation are updated.
 
 ### Experiments vs Tests
 
@@ -76,14 +76,15 @@ See `Tests/templates/` for test template skeletons.
 
 ## Solo Developer Branching Guidance
 
-If you are primarily working alone on this repository, you can adopt the following simplified branching strategy:
+This repository supports a solo-developer workflow focused on rapid iteration for bug fixes and migration work. The updated policy is:
 
-- Use the current branch (e.g., `PyQTUI`) for tiny changes such as typos, small documentation updates, or single-line code fixes.
-- For feature work, large refactors, or experimental changes, create a new topic branch with a descriptive name.
-- Keep commits focused and small. When merging large work into `PyQTUI` or `main`, consider squashing the topic branch or rebasing and cleaning up commit history.
-- Delete branches once they are merged to keep the repository tidy. If you need to preserve a branch as an archive for reference, consider pushing it to `origin/<name>` with a clear note in the PR body.
+- The **new UI replaces the legacy UI** and we prioritize restoring feature parity and fixing regressions over adding new features.
+- For small fixes (bugs, docs, tests), you may commit directly to the primary working branch after verifying tests and updating docs — **PRs are optional and not required** for solo work.
+- For larger, risky refactors or experimental work, create a topic branch with a descriptive name and keep changes small and well-tested; when ready, merge into the main branch following your normal commit hygiene.
+- Keep commits focused and small; squash or rebase large topic branches before merging to keep history readable.
+- Delete topic branches once merged to keep the repository tidy; if you need to preserve a branch for reference, push it with a clear note.
 
-This gives you the conveniences of a single-branch workflow for quick edits while preserving the safety and structure of branching for larger changes.
+This gives you the convenience of a single-developer workflow where speed and stability are primary, while still encouraging tests and clear documentation for each change.
 
 ## CI and Checks
 

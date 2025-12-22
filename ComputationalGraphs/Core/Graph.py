@@ -1,4 +1,6 @@
 import logging
+import random
+import uuid
 
 from graphviz import Digraph
 
@@ -13,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class Graph:
-    def __init__(self):
+    def __init__(self, name: str = None):
+        # Core data structures
         self.nodes = []  # List to hold nodes
         self.adjacencyMatrix = []  # Adjacency matrix for node connections
         self.idToNodeDictionary = {}  # Map node ids to node objects
@@ -22,6 +25,16 @@ class Graph:
         # Each item in the list represents the set of nodes to process at a single iteration.
         # Accepts Node objects, node ids (strings), or node indices (ints).
         self.manual_processing_sequence = None
+
+        # Multi-graph identity and subgraph bookkeeping
+        self.graph_id = uuid.uuid4().hex
+        self.graph_name = name if name is not None else "Default Graph"
+        self.graph_color = (
+            "#4ECDC4"  # default color; serializers/tests expect a hex string
+        )
+        self.is_mother_graph = False
+        self.parent_graph = None
+        self.sub_graphs = []
 
         # Counters for the first naming convention
         self.abstract_counter = 1
@@ -303,6 +316,138 @@ class Graph:
                     newNode.value = oldNode.value
         except Exception:
             pass
+
+    # ------------------------
+    # Sub-graph / Multi-graph API
+    # ------------------------
+    def set_as_mother_graph(self):
+        """Mark this graph as a mother graph (top-level)."""
+        self.is_mother_graph = True
+
+    def create_subgraph_from_nodes(self, nodes, name: str = None):
+        """Create a sub-graph that groups the provided nodes.
+
+        The nodes must already belong to this graph. Returns the created subgraph
+        (a new Graph instance) or None if `nodes` is empty. Duplicate sub-graphs
+        (same node id set) are rejected.
+        """
+        if not nodes:
+            return None
+
+        # Ensure all nodes are part of this graph
+        for n in nodes:
+            if n not in self.nodes:
+                raise ValueError("not in this graph")
+
+        node_id_set = set(getattr(n, "id", None) for n in nodes)
+        # Prevent duplicate sub-graphs
+        for sg in self.sub_graphs:
+            if set(getattr(n, "id", None) for n in sg.nodes) == node_id_set:
+                raise ValueError("identical nodes already exists")
+
+        # Create subgraph
+        sub = Graph(name=name)
+        sub.parent_graph = self
+        sub.nodes = list(nodes)
+
+        # Assign subgraph id on nodes (simple single-subgraph support)
+        for n in sub.nodes:
+            try:
+                n.sub_graph_id = sub.graph_id
+            except Exception:
+                pass
+
+        # Detect starting nodes for the subgraph
+        subs = set(sub.nodes)
+        sub.starting_nodes = [
+            n
+            for n in sub.nodes
+            if not any(p in subs for p in getattr(n, "predecessors", []))
+        ]
+
+        self.sub_graphs.append(sub)
+        return sub
+
+    def remove_subgraph(self, subgraph):
+        """Remove subgraph from this mother graph.
+
+        Returns True if removed, False if not found.
+        """
+        if subgraph not in self.sub_graphs:
+            return False
+        self.sub_graphs.remove(subgraph)
+        for n in subgraph.nodes:
+            if getattr(n, "sub_graph_id", None) == subgraph.graph_id:
+                try:
+                    delattr(n, "sub_graph_id")
+                except Exception:
+                    try:
+                        n.sub_graph_id = None
+                    except Exception:
+                        pass
+        subgraph.parent_graph = None
+        return True
+
+    def get_all_subgraphs(self):
+        return list(self.sub_graphs)
+
+    def find_subgraph_by_id(self, graph_id):
+        for sg in self.sub_graphs:
+            if sg.graph_id == graph_id:
+                return sg
+        return None
+
+    def find_subgraph_by_name(self, name: str):
+        for sg in self.sub_graphs:
+            if sg.graph_name == name:
+                return sg
+        return None
+
+    def get_node_subgraphs(self, node):
+        return [sg for sg in self.sub_graphs if node in sg.nodes]
+
+    def get_subgraph_metadata(self):
+        """Return a serializable metadata dictionary for this subgraph."""
+        return {
+            "graph_id": getattr(self, "graph_id", None),
+            "graph_name": getattr(self, "graph_name", None),
+            "graph_color": getattr(self, "graph_color", None),
+            "node_ids": [getattr(n, "id", None) for n in getattr(self, "nodes", [])],
+        }
+
+    def restore_subgraph_from_metadata(self, meta: dict, id_map: dict):
+        """Restore a subgraph from serialized metadata and id->node map.
+
+        Returns the restored subgraph or None on failure.
+        """
+        node_ids = meta.get("node_ids", [])
+        nodes = [id_map.get(i) for i in node_ids if i in id_map]
+        if not nodes:
+            return None
+
+        sub = Graph(name=meta.get("graph_name"))
+        sub.graph_id = meta.get("graph_id", sub.graph_id)
+        sub.graph_color = meta.get("graph_color", sub.graph_color)
+        sub.nodes = nodes
+        sub.parent_graph = self
+
+        # Assign subgraph id on nodes
+        for n in sub.nodes:
+            try:
+                n.sub_graph_id = sub.graph_id
+            except Exception:
+                pass
+
+        # Detect starting nodes
+        subs = set(sub.nodes)
+        sub.starting_nodes = [
+            n
+            for n in sub.nodes
+            if not any(p in subs for p in getattr(n, "predecessors", []))
+        ]
+
+        self.sub_graphs.append(sub)
+        return sub
 
     def CompressNodes(self, nodes):
         """
