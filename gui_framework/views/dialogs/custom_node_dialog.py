@@ -363,6 +363,24 @@ if PYQT_AVAILABLE:
                     self, "Error Saving Custom Node", f"Failed to save custom node: {e}"
                 )
                 return
+
+            # On success, show a confirmation including the library path when possible
+            try:
+                from ComputationalGraphs.GUI.custom_node_manager import (
+                    get_custom_node_manager,
+                )
+
+                mgr = get_custom_node_manager()
+                lib_path = getattr(mgr, "library_path", None)
+                if lib_path:
+                    from PyQt6.QtWidgets import QMessageBox
+
+                    QMessageBox.information(
+                        self, "Saved Custom Node", f"Custom node saved to {lib_path}"
+                    )
+            except Exception:
+                pass
+
             # success - close
             try:
                 self.accept()

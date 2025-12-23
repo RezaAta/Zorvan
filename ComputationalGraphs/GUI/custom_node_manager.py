@@ -58,18 +58,39 @@ class CustomNodeDefinition:
         Returns:
             None if valid, error message string if invalid.
         """
+        # Normalize code using dedent to be generous with user formatting
+        import textwrap
+
+        code = textwrap.dedent(self.operation_code or "").strip("\n")
         # Build the full function code to compile
         input_params = ", ".join(f"input{i+1}" for i in range(self.input_count))
+        lines = code.split("\n") if code else ["pass"]
         full_code = f"def _test_operation(self, {input_params}):\n"
-        # Indent each line of operation code
-        for line in self.operation_code.split("\n"):
-            full_code += f"    {line}\n"
+        for line in lines:
+            full_code += f"    {line.rstrip()}\n"
 
         try:
             compile(full_code, "<custom_node>", "exec")
             return None
         except SyntaxError as e:
-            return f"Syntax error at line {e.lineno}: {e.msg}"
+            # Provide a helpful snippet with a caret pointing to the error line
+            err_line = e.lineno or 0
+            snippet = []
+            fc_lines = full_code.split("\n")
+            start = max(0, err_line - 2)
+            end = min(len(fc_lines), err_line + 1)
+            for i in range(start, end):
+                prefix = f"{i+1}: "
+                snippet.append(prefix + fc_lines[i])
+                if i + 1 == err_line:
+                    # Add caret indicator
+                    caret_pos = (
+                        getattr(e, "offset", 0) - 1 if getattr(e, "offset", None) else 0
+                    )
+                    marker = " " * (len(prefix) + caret_pos) + "^"
+                    snippet.append(marker)
+            snippet_text = "\n".join(snippet)
+            return f"Syntax error at line {e.lineno}: {e.msg}\n\n{snippet_text}"
 
 
 class CustomNodeManager:
@@ -95,6 +116,31 @@ class CustomNodeManager:
         self.library_path = library_path or self.DEFAULT_LIBRARY_FILE
         self._definitions: Dict[str, CustomNodeDefinition] = {}
         self._generated_classes: Dict[str, Type] = {}
+        # Listeners called when definitions change (add/remove)
+        self._listeners: List[callable] = []
+
+    def add_listener(self, fn: callable):
+        """Register a listener that will be called (fn()) when definitions change."""
+        try:
+            if fn not in self._listeners:
+                self._listeners.append(fn)
+        except Exception:
+            pass
+
+    def remove_listener(self, fn: callable):
+        """Unregister a previously-registered listener."""
+        try:
+            if fn in self._listeners:
+                self._listeners.remove(fn)
+        except Exception:
+            pass
+
+    def _notify_listeners(self):
+        for fn in list(self._listeners):
+            try:
+                fn()
+            except Exception:
+                pass
 
     @property
     def definitions(self) -> Dict[str, CustomNodeDefinition]:
@@ -136,10 +182,53 @@ class CustomNodeManager:
         self._definitions[definition.type_name] = definition
         # Regenerate class
         self._generate_class(definition)
+        # Register the new type with the node factory so it is available immediately
+        try:
+            from . import node_factory
+
+            try:
+                node_factory.register_node_type(
+                    node_type=definition.type_name,
+                    module_path="__custom__",
+                    class_name=definition.type_name,
+                    default_kwargs={},
+                    name_prefix=definition.type_name.replace("Node", "") or "Custom",
+                )
+            except Exception:
+                # If registration fails, log and continue - class is still generated
+                import logging
+
+                logging.getLogger(__name__).exception(
+                    "Failed to register custom node type %s with factory",
+                    definition.type_name,
+                )
+        except Exception:
+            # node_factory not available - not fatal
+            pass
+
+        # Persist to disk and notify listeners that definitions changed
+        try:
+            ok = self.save_library()
+            if not ok:
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "Could not persist custom nodes library to %s", self.library_path
+                )
+                raise IOError(
+                    f"Failed to save custom node library to {self.library_path}"
+                )
+        except Exception:
+            # If saving fails, raise to notify callers so UI can show an error
+            raise
+        try:
+            self._notify_listeners()
+        except Exception:
+            pass
         return True
 
     def remove_definition(self, type_name: str) -> bool:
-        """Remove a custom node definition.
+        """Remove a custom node definition and persist the change.
 
         Args:
             type_name: The type name to remove
@@ -156,6 +245,28 @@ class CustomNodeManager:
                 from . import node_factory
 
                 node_factory.unregister_node_type(type_name)
+            except Exception:
+                pass
+
+            # Persist change to disk and notify listeners
+            try:
+                ok = self.save_library()
+                if not ok:
+                    import logging
+
+                    logging.getLogger(__name__).warning(
+                        "Could not persist custom nodes library to %s",
+                        self.library_path,
+                    )
+                    raise IOError(
+                        f"Failed to save custom node library to {self.library_path}"
+                    )
+            except Exception:
+                # If saving fails, raise so callers (UI) can show an error
+                raise
+
+            try:
+                self._notify_listeners()
             except Exception:
                 pass
             return True
@@ -184,6 +295,8 @@ class CustomNodeManager:
         Returns:
             The generated class
         """
+        import textwrap
+
         # Build input parameters string
         input_params = ", ".join(f"input{i+1}" for i in range(definition.input_count))
 
@@ -214,6 +327,12 @@ class CustomNodeManager:
                 # Safely quote strings, leave other values as-is
                 custom_props_init += f"        self.{prop_name} = {prop_default}\n"
 
+        # Normalize and indent operation code safely
+        op_code = textwrap.dedent(definition.operation_code or "").rstrip()
+        if not op_code:
+            op_code = "pass"
+        indented_op = self._indent_code(op_code, 8)
+
         # Build the class code
         class_code = f'''
 class {definition.type_name}(BasicNode):
@@ -231,7 +350,7 @@ class {definition.type_name}(BasicNode):
         self.forcedBatchProcessing = {definition.forced_batch_processing}
 {custom_props_init}
     def Operation(self, {input_params}):
-{self._indent_code(definition.operation_code, 8)}
+{indented_op}
 
     def IsValidInput(self, inp):
         return {valid_check_code}
@@ -248,6 +367,25 @@ class {definition.type_name}(BasicNode):
             cls = namespace[definition.type_name]
             self._generated_classes[definition.type_name] = cls
             return cls
+        except SyntaxError as e:
+            # Provide helpful context about the generated code and error
+            fc_lines = class_code.split("\n")
+            err_line = e.lineno or 0
+            start = max(0, err_line - 3)
+            end = min(len(fc_lines), err_line + 2)
+            snippet = []
+            for i in range(start, end):
+                prefix = f"{i+1}: "
+                snippet.append(prefix + fc_lines[i])
+                if i + 1 == err_line:
+                    caret_pos = (
+                        getattr(e, "offset", 0) - 1 if getattr(e, "offset", None) else 0
+                    )
+                    snippet.append(" " * (len(prefix) + caret_pos) + "^")
+            snippet_text = "\n".join(snippet)
+            raise ValueError(
+                f"Failed to generate class for {definition.type_name}: Syntax error at generated line {e.lineno}: {e.msg}\n\n{snippet_text}"
+            )
         except Exception as e:
             raise ValueError(
                 f"Failed to generate class for {definition.type_name}: {e}"

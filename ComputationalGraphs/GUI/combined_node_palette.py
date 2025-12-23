@@ -79,6 +79,11 @@ class NodeItemWidget(QWidget, ThemeMixin):
         # Make focusable for keyboard navigation
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        # Allow context menu events via right-click
+        try:
+            self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
+        except Exception:
+            pass
 
         # Fixed size similar to canvas node diameter
         self.setFixedSize(self.NODE_DIAMETER, self.NODE_DIAMETER)
@@ -199,12 +204,103 @@ class NodeItemWidget(QWidget, ThemeMixin):
     def mousePressEvent(self, event):
         # Give keyboard focus when clicked
         self.setFocus()
-        # Initiate drag with node type
-        drag = QDrag(self)
-        mime = QMimeData()
-        mime.setText(self.node_type)
-        drag.setMimeData(mime)
-        drag.exec(Qt.DropAction.CopyAction)
+        # Only start drag on left mouse button; allow right-click to open context menu
+        try:
+            from PyQt6.QtCore import Qt as _Qt
+
+            is_left = event.button() == _Qt.MouseButton.LeftButton
+        except Exception:
+            is_left = True
+
+        if is_left:
+            # Initiate drag with node type
+            drag = QDrag(self)
+            mime = QMimeData()
+            mime.setText(self.node_type)
+            drag.setMimeData(mime)
+            drag.exec(Qt.DropAction.CopyAction)
+        else:
+            # Delegate to base handler for non-left buttons so contextMenuEvent runs
+            try:
+                super().mousePressEvent(event)
+            except Exception:
+                pass
+
+    def mouseReleaseEvent(self, event):
+        """Treat right-button mouse release as an explicit context menu trigger.
+
+        This bypasses platform/parent interception and shows the menu anchored
+        to the widget for consistent behavior across environments.
+        """
+        try:
+            from PyQt6.QtCore import Qt as _Qt
+
+            if event.button() == _Qt.MouseButton.RightButton:
+                try:
+                    self.show_custom_context_menu()
+                except Exception:
+                    pass
+                return
+        except Exception:
+            pass
+        try:
+            super().mouseReleaseEvent(event)
+        except Exception:
+            pass
+
+    def contextMenuEvent(self, event):
+        # Delegate to the helper that builds and shows the menu anchored to the widget
+        try:
+            self.show_custom_context_menu()
+        except Exception:
+            pass
+
+    def show_custom_context_menu(self):
+        """Build and show the Edit/Delete context menu for custom nodes (if applicable)."""
+        from PyQt6.QtWidgets import QMenu
+
+        palette = self._find_palette()
+        if palette is None:
+            return
+        try:
+            from ComputationalGraphs.GUI.custom_node_manager import (
+                get_custom_node_manager,
+            )
+
+            manager = get_custom_node_manager()
+            if self.node_type not in manager.get_type_names():
+                return
+        except Exception:
+            return
+
+        try:
+            menu = QMenu(self)
+            try:
+                from PyQt6.QtWidgets import QAction
+            except Exception:
+                from PyQt6.QtGui import QAction
+            edit_action = QAction("Edit Custom Node", menu)
+            delete_action = QAction("Delete Custom Node", menu)
+            menu.addAction(edit_action)
+            menu.addAction(delete_action)
+
+            edit_action.triggered.connect(
+                lambda: palette._edit_custom_node(self.node_type)
+            )
+            delete_action.triggered.connect(
+                lambda: palette._delete_custom_node(self.node_type)
+            )
+
+            # Show the menu anchored to the center of the widget for reliability
+            try:
+                pos = self.mapToGlobal(self.rect().center())
+            except Exception:
+                from PyQt6.QtGui import QCursor
+
+                pos = QCursor.pos()
+            menu.exec(pos)
+        except Exception:
+            pass
 
 
 class CategoryPanel(QWidget):
@@ -408,6 +504,160 @@ class CombinedNodePalette(QDockWidget, ThemeMixin):
         self._description_popup = None
         # Cached theme colors (populated by apply_theme)
         # self._theme_colors will be set when apply_theme runs
+
+        # Register for runtime updates when custom nodes change so the UI
+        # can reflect newly-created definitions immediately.
+        try:
+            from .custom_node_manager import get_custom_node_manager
+
+            mgr = get_custom_node_manager()
+            try:
+                mgr.add_listener(self._on_custom_nodes_changed)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _on_custom_nodes_changed(self):
+        """Callback invoked when custom node definitions change; refresh UI."""
+        try:
+            self.refresh_custom_nodes()
+        except Exception:
+            pass
+
+    def refresh_custom_nodes(self):
+        """Refresh only the "Custom Nodes" category from the registry.
+
+        This avoids rebuilding the whole palette and preserves current expand/collapse
+        state for other categories.
+        """
+        try:
+            from .node_registry import get_node_categories
+
+            categories = get_node_categories()
+            custom = categories.get("Custom Nodes", {}).get("nodes", [])
+        except Exception:
+            custom = []
+
+        # Remove stale custom node widgets from our index
+        try:
+            self._node_widgets = [
+                t for t in self._node_widgets if t[1] != "Custom Nodes"
+            ]
+        except Exception:
+            pass
+
+        # If there are no custom nodes, remove the panel if present
+        if not custom:
+            try:
+                if "Custom Nodes" in self._category_panels:
+                    panel = self._category_panels.pop("Custom Nodes")
+                    try:
+                        panel.deleteLater()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            return
+
+        # Ensure the panel exists (create and insert before final stretch if needed)
+        if "Custom Nodes" not in self._category_panels:
+            try:
+                panel = CategoryPanel("Custom Nodes", "User-defined custom nodes", self)
+                panel.header.setChecked(False)
+                panel.on_toggled(False)
+                # Insert before the final stretch so it appears at the end of the list
+                try:
+                    self.scroll_layout.insertWidget(
+                        self.scroll_layout.count() - 1, panel
+                    )
+                except Exception:
+                    self.scroll_layout.addWidget(panel)
+                self._category_panels["Custom Nodes"] = panel
+            except Exception:
+                return
+        else:
+            panel = self._category_panels["Custom Nodes"]
+            # Clear existing widgets in grid
+            try:
+                while panel.content_layout.count():
+                    item = panel.content_layout.takeAt(0)
+                    w = item.widget()
+                    if w is not None:
+                        try:
+                            w.deleteLater()
+                        except Exception:
+                            w.setParent(None)
+            except Exception:
+                pass
+
+        # Populate new widgets
+        cols = 3
+        row = 0
+        col = 0
+        for node_type, display_name, desc in custom:
+            try:
+                w = NodeItemWidget(node_type, display_name, desc, self)
+                panel.add_node_widget(w, row, col)
+                self._node_widgets.append((w, "Custom Nodes", display_name.lower()))
+                col += 1
+                if col >= cols:
+                    col = 0
+                    row += 1
+            except Exception:
+                pass
+
+        # Ensure theme is applied to the new widgets
+        try:
+            self.apply_theme()
+        except Exception:
+            pass
+
+    def _edit_custom_node(self, node_type: str):
+        """Open edit dialog for a custom node type and save changes."""
+        try:
+            from ComputationalGraphs.GUI.custom_node_dialog import CustomNodeDialog
+            from ComputationalGraphs.GUI.custom_node_manager import (
+                get_custom_node_manager,
+            )
+
+            manager = get_custom_node_manager()
+            definition = manager.get_definition(node_type)
+            if definition is None:
+                return
+            dialog = CustomNodeDialog(parent=self, existing_definition=definition)
+            if dialog.exec():
+                new_def = dialog.definition
+                # If type name changed, remove the old definition first
+                if new_def.type_name != node_type:
+                    try:
+                        manager.remove_definition(node_type)
+                    except Exception:
+                        pass
+                manager.add_definition(new_def)
+        except Exception:
+            pass
+
+    def _delete_custom_node(self, node_type: str):
+        """Delete a custom node after user confirmation."""
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+
+            from ComputationalGraphs.GUI.custom_node_manager import (
+                get_custom_node_manager,
+            )
+
+            reply = QMessageBox.question(
+                self,
+                "Delete Custom Node",
+                f"Are you sure you want to delete custom node '{node_type}'?\nThis will NOT remove any existing nodes of this type from open graphs.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                manager = get_custom_node_manager()
+                manager.remove_definition(node_type)
+        except Exception:
+            pass
 
     def apply_theme(self):
         """Apply theme colors to headers, content and node widgets."""
