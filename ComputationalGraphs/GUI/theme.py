@@ -396,11 +396,6 @@ class ThemeManager(QObject):
             is_test = ("PYTEST_CURRENT_TEST" in os.environ) or ("pytest" in sys.modules)
         except Exception:
             is_test = False
-        if is_test:
-            # In test mode avoid emitting signals or touching widgets; handlers
-            # can run separately in real runs but have caused native crashes in
-            # heavily exercised test runs when invoked synchronously.
-            return True
 
         try:
             if os.path.exists(template_path):
@@ -415,20 +410,20 @@ class ThemeManager(QObject):
                     try:
                         # Ensure the themed hover selector exists when running tests or environments
                         # where the stylesheet template doesn't provide it.
-                        if 'QPushButton[themed="true"]:hover' not in s:
+                        # Always append a hover rule that uses the current theme's hover color.
+                        # Appending ensures the theme's value takes precedence even if the
+                        # stylesheet template already provides a default hover rule.
+                        try:
                             hover = self.theme.get("button_hover", "#5a5a5a")
                             s = (
                                 s
                                 + f'\nQPushButton[themed="true"]:hover {{ background: {hover}; }}\n'
                             )
-                        try:
-                            # Also ensure toolbar-scoped hover exists (may not be present in some templates)
-                            if 'QToolBar QPushButton[themed="true"]:hover' not in s:
-                                hover = self.theme.get("button_hover", "#5a5a5a")
-                                s = (
-                                    s
-                                    + f'\nQToolBar QPushButton[themed="true"]:hover {{ background: {hover}; }}\n'
-                                )
+                            # Also add toolbar-scoped hover rule which mirrors the hover color.
+                            s = (
+                                s
+                                + f'\nQToolBar QPushButton[themed="true"]:hover {{ background: {hover}; }}\n'
+                            )
                         except Exception:
                             pass
                     except Exception:
@@ -447,8 +442,17 @@ class ThemeManager(QObject):
 
                     # In test environments we avoid calling into QApplication style/font
                     # APIs which can cause native crashes in certain sequences; instead
-                    # emit the theme_changed signal so observers update their local state.
+                    # safely set the stylesheet string and emit the theme_changed signal
+                    # so observers update their local state without iterating widgets.
                     if is_test:
+                        try:
+                            # Apply stylesheet only (avoid iterating widgets or reapplying icons)
+                            try:
+                                app.setStyleSheet(s)
+                            except Exception:
+                                pass
+                        except Exception:
+                            pass
                         try:
                             self.theme_changed.emit()
                         except Exception:
