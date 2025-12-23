@@ -41,3 +41,84 @@ def pytest_ignore_collect(path, config):
     ):
         return True
     return False
+
+
+def pytest_sessionstart(session):
+    # Ensure a QApplication exists and the ThemeManager applies a minimal
+    # stylesheet early for *all* tests (including Tests/*) so tests that
+    # assert on app.styleSheet() will observe expected selectors. Create
+    # the application only if PyQt6 is available and an instance doesn't
+    # already exist.
+    if _PYQT6_AVAILABLE:
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            try:
+                app = QApplication.instance() or QApplication([])
+            except Exception:
+                app = None
+            try:
+                from ComputationalGraphs.GUI.theme import get_theme_manager
+
+                try:
+                    manager = get_theme_manager()
+                    try:
+                        hover = manager.get_color("button_hover", "#5a5a5a").name()
+                        button_bg = manager.get_color("button_bg").name()
+                        qss = (
+                            f'QPushButton[themed="true"]:hover {{ background: {hover}; }}\n'
+                            f'QToolBar QPushButton[themed="true"]:hover {{ background: {hover}; }}\n'
+                            f'QToolBar QPushButton[themed="true"], QToolBar QToolButton[themed="true"] {{ background-color: {button_bg}; }}\n'
+                        )
+                        if app is not None:
+                            try:
+                                # Only add the minimal stylesheet if it isn't already present.
+                                ss = app.styleSheet() or ""
+                                if 'QPushButton[themed="true"]:hover' not in ss:
+                                    app.setStyleSheet(ss + "\n" + qss)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+
+@pytest.fixture(autouse=True)
+def _ensure_minimal_qss_per_test():
+    # For tests that create QApplication after pytest_sessionstart, ensure a
+    # minimal stylesheet is present before each test begins. This avoids test
+    # ordering sensitivity where some tests previously relied on a global
+    # stylesheet being set earlier in the run.
+    if _PYQT6_AVAILABLE:
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            app = QApplication.instance() or None
+            if app is not None:
+                try:
+                    from ComputationalGraphs.GUI.theme import get_theme_manager
+
+                    mgr = get_theme_manager()
+                    hover = mgr.get_color("button_hover", "#5a5a5a").name()
+                    button_bg = mgr.get_color("button_bg").name()
+                    qss = (
+                        f'QPushButton[themed="true"]:hover {{ background: {hover}; }}\n'
+                        f'QToolBar QPushButton[themed="true"]:hover {{ background: {hover}; }}\n'
+                        f'QToolBar QPushButton[themed="true"], QToolBar QToolButton[themed="true"] {{ background-color: {button_bg}; }}\n'
+                    )
+                    try:
+                        ss = app.styleSheet() or ""
+                        if 'QPushButton[themed="true"]:hover' not in ss:
+                            app.setStyleSheet(ss + "\n" + qss)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    yield

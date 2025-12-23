@@ -3,10 +3,11 @@ QGraphicsView-based canvas for displaying and editing the computational graph.
 """
 
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QColorDialog,
     QGraphicsItem,
+    QGraphicsPixmapItem,
     QGraphicsRectItem,
     QGraphicsScene,
     QGraphicsSimpleTextItem,
@@ -22,7 +23,7 @@ class SubgraphControlButton(QGraphicsRectItem):
     """
     Clickable icon button for subgraph control (Remove, Select All, Color).
 
-    Uses emoji icons for compact display.
+    Uses emoji icons or FontAwesome identifiers (e.g. 'fa5s.trash') for compact display; if the icon string starts with 'fa', qtawesome is used when available.
     """
 
     def __init__(self, icon, callback, tooltip="", parent=None):
@@ -42,17 +43,43 @@ class SubgraphControlButton(QGraphicsRectItem):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setToolTip(tooltip)
 
-        # Create icon label
-        self._text_item = QGraphicsSimpleTextItem(icon, self)
-        font = QFont()
-        font.setPointSize(12)
-        self._text_item.setFont(font)
+        self._text_item = None
+        self._pixmap_item = None
+        self._use_fa = False
 
-        # Center icon in button
-        text_rect = self._text_item.boundingRect()
-        text_x = (self.button_size - text_rect.width()) / 2
-        text_y = (self.button_size - text_rect.height()) / 2
-        self._text_item.setPos(text_x, text_y)
+        # If icon looks like a FontAwesome identifier (e.g., 'fa5s.trash'), try to render via qtawesome
+        if isinstance(icon, str) and icon.startswith("fa"):
+            try:
+                import qtawesome as qta
+
+                # request a pixmap slightly smaller than button size
+                pm = qta.icon(icon, color="#333333").pixmap(
+                    self.button_size - 8, self.button_size - 8
+                )
+                if pm and not pm.isNull():
+                    self._pixmap_item = QGraphicsPixmapItem(QPixmap(pm), self)
+                    pm_rect = self._pixmap_item.boundingRect()
+                    px = (self.button_size - pm_rect.width()) / 2
+                    py = (self.button_size - pm_rect.height()) / 2
+                    self._pixmap_item.setPos(px, py)
+                    self._use_fa = True
+            except Exception:
+                # fallback to text label below
+                self._pixmap_item = None
+                self._use_fa = False
+
+        if not self._use_fa:
+            # Create icon label (text or emoji)
+            self._text_item = QGraphicsSimpleTextItem(icon, self)
+            font = QFont()
+            font.setPointSize(12)
+            self._text_item.setFont(font)
+
+            # Center icon in button
+            text_rect = self._text_item.boundingRect()
+            text_x = (self.button_size - text_rect.width()) / 2
+            text_y = (self.button_size - text_rect.height()) / 2
+            self._text_item.setPos(text_x, text_y)
 
         self._update_appearance()
 
@@ -64,7 +91,14 @@ class SubgraphControlButton(QGraphicsRectItem):
         else:
             self.setBrush(QBrush(QColor(255, 255, 255, 120)))
             self.setPen(QPen(QColor(180, 180, 180), 1))
-        self._text_item.setBrush(QBrush(QColor(50, 50, 50)))
+        if self._text_item is not None:
+            self._text_item.setBrush(QBrush(QColor(50, 50, 50)))
+        elif self._pixmap_item is not None:
+            # For pixmap-based icons, we keep the pixmap as-is; hover background is enough
+            try:
+                self._pixmap_item.setOpacity(1.0)
+            except Exception:
+                pass
 
     def hoverEnterEvent(self, event):
         self._hovered = True
@@ -752,7 +786,7 @@ class GraphCanvas(QGraphicsView):
                 return lambda: self.select_nodes_in_subgraph(sg)
 
             select_btn = SubgraphControlButton(
-                "All", make_select_callback(), "Select All Nodes"
+                "fa5s.list", make_select_callback(), "Select All Nodes"
             )
             select_btn.setPos(button_x, button_y)
             self.scene.addItem(select_btn)
@@ -774,7 +808,7 @@ class GraphCanvas(QGraphicsView):
                 return remove_subgraph
 
             remove_btn = SubgraphControlButton(
-                "Remove", make_remove_callback(), "Remove Sub-Graph"
+                "fa5s.trash", make_remove_callback(), "Remove Sub-Graph"
             )
             remove_btn.setPos(button_x + 26, button_y)  # Next to Select All
             self.scene.addItem(remove_btn)
@@ -796,7 +830,7 @@ class GraphCanvas(QGraphicsView):
                 return change_color
 
             color_btn = SubgraphControlButton(
-                "Color", make_color_callback(), "Change Color"
+                "fa5s.palette", make_color_callback(), "Change Color"
             )
             color_btn.setPos(button_x + 52, button_y)  # Next to Remove
             self.scene.addItem(color_btn)

@@ -406,6 +406,41 @@ class Graph:
     def get_node_subgraphs(self, node):
         return [sg for sg in self.sub_graphs if node in sg.nodes]
 
+    def set_subgraph_color(self, subgraph_or_id, color_hex: str):
+        """Set the color of a subgraph.
+
+        Accepts either a subgraph object or a subgraph id (string). Returns True if
+        the color was applied, False if not found or invalid input.
+        """
+        if subgraph_or_id is None:
+            return False
+
+        # Resolve subgraph by id or object
+        sg = None
+        try:
+            if isinstance(subgraph_or_id, str):
+                sg = self.find_subgraph_by_id(subgraph_or_id)
+            else:
+                # Assume it's a subgraph-like object
+                if subgraph_or_id in self.sub_graphs:
+                    sg = subgraph_or_id
+                else:
+                    # Try matching by graph_id attribute
+                    gid = getattr(subgraph_or_id, "graph_id", None)
+                    if gid is not None:
+                        sg = self.find_subgraph_by_id(gid)
+        except Exception:
+            return False
+
+        if sg is None:
+            return False
+
+        try:
+            sg.graph_color = color_hex
+            return True
+        except Exception:
+            return False
+
     def get_subgraph_metadata(self):
         """Return a serializable metadata dictionary for this subgraph."""
         return {

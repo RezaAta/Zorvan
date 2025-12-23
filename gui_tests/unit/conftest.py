@@ -12,6 +12,17 @@ try:
     @pytest.fixture(scope="session", autouse=True)
     def _global_qapp():
         app = QApplication.instance() or QApplication([])
+        # Ensure a ThemeManager exists and applies a minimal stylesheet in test
+        # mode so tests that check app.styleSheet() observe expected rules.
+        try:
+            from ComputationalGraphs.GUI.theme import get_theme_manager
+
+            try:
+                get_theme_manager()
+            except Exception:
+                pass
+        except Exception:
+            pass
         yield app
         # deliberately do not quit the app here to avoid tearing down Qt during
         # the test session. Let the process exit cleanly at the end of the run.
