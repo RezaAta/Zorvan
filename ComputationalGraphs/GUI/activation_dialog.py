@@ -30,7 +30,44 @@ class ActivationDialog:
         return self._dlg.selected()
 
     def close(self):
-        return self._dlg.close()
+        # Close the underlying dialog and schedule it for deletion. This helps
+        # prevent lingering Qt objects across test boundaries which can cause
+        # intermittent native crashes on Windows when many GUI tests run.
+        try:
+            self._dlg.close()
+        except Exception:
+            pass
+        try:
+            # Break parent chain first to reduce cross-references
+            try:
+                self._dlg.setParent(None)
+            except Exception:
+                pass
+            try:
+                self._dlg.deleteLater()
+            except Exception:
+                pass
+            # Remove our reference and force a GC to free underlying C++ objects
+            try:
+                self._dlg = None
+            except Exception:
+                pass
+            try:
+                import gc
+
+                gc.collect()
+            except Exception:
+                pass
+            # Process events to let deleteLater complete
+            try:
+                from PyQt6.QtWidgets import QApplication
+
+                QApplication.processEvents()
+            except Exception:
+                pass
+        except Exception:
+            pass
+        return None
 
     def __getattr__(self, name):
         return getattr(self._dlg, name)

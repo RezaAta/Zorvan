@@ -99,6 +99,63 @@ if PYQT_AVAILABLE:
             vm: ColorPreferencesViewModel = self.get_viewmodel()
             vm.observe_property("theme_changed", lambda o, n: self._render_from_vm())
 
+        def reject(self):
+            # Ensure viewmodel cleanup and safe teardown to avoid lingering Qt
+            # objects that may be processed asynchronously by the event loop.
+            try:
+                vm: ColorPreferencesViewModel = self.get_viewmodel()
+                try:
+                    vm.cleanup()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            try:
+                super().reject()
+            except Exception:
+                pass
+            try:
+                self.setParent(None)
+                self.deleteLater()
+                import gc
+
+                gc.collect()
+                from PyQt6.QtWidgets import QApplication
+
+                app = QApplication.instance()
+                if app is not None:
+                    app.processEvents()
+            except Exception:
+                pass
+
+        def close(self):
+            # Mirror reject behavior when closed programmatically
+            try:
+                vm: ColorPreferencesViewModel = self.get_viewmodel()
+                try:
+                    vm.cleanup()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            try:
+                super().close()
+            except Exception:
+                pass
+            try:
+                self.setParent(None)
+                self.deleteLater()
+                import gc
+
+                gc.collect()
+                from PyQt6.QtWidgets import QApplication
+
+                app = QApplication.instance()
+                if app is not None:
+                    app.processEvents()
+            except Exception:
+                pass
+
         def _render_from_vm(self):
             vm: ColorPreferencesViewModel = self.get_viewmodel()
             try:

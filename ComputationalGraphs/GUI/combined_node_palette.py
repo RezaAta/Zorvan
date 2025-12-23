@@ -298,7 +298,10 @@ class NodeItemWidget(QWidget, ThemeMixin):
                 from PyQt6.QtGui import QCursor
 
                 pos = QCursor.pos()
-            menu.exec(pos)
+            # Use non-blocking popup() instead of blocking exec() to avoid nested
+            # modal loops and potential stability issues when multiple GUI tests
+            # run in the same pytest process.
+            menu.popup(pos)
         except Exception:
             pass
 
