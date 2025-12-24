@@ -17,4 +17,5 @@ All notable changes to this project will be documented in this file.
 	 - Grid display and snapping are toggleable from the Visualization panel. Grid rendering is optimized to draw only the visible area.
 
 - GUI: Introduced `ThemeMixin` helper to centralize theme application and simplify widget updates; migrated `NodePalette` to use `ThemeMixin` and added `Tests/test_node_palette_theme.py` to verify theme updates.
+- Core: Removed unused `computationTime` and `computationStructure` helpers from node classes and related setter methods to simplify node internals; added `ComputationalGraphs/Tests/test_basicnode_cleanup.py` to assert no external dependency on these helpers.
 (End of changes)
