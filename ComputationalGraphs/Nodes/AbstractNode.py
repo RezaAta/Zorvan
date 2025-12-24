@@ -37,7 +37,8 @@ class AbstractNode(Node):
 
         # External predecessors will be set by Graph.abstract_nodes()
         # Do NOT set internal nodes as predecessors (that was a bug)
-        self.computationalType = "complex"
+        # Standardize on 'computationType' (used by BasicNode/CompressedNode)
+        self.computationType = "complex"
 
         # Value is a list of all internal node values
         self.value = [node.value for node in self.listOfNodes]

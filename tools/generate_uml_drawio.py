@@ -158,7 +158,7 @@ def build_node_hierarchy_diagram():
 
     # AbstractNode
     a_id = next_id("n")
-    a_attrs = ["listOfNodes", "computationalType", "value: list"]
+    a_attrs = ["listOfNodes", "computationType", "value: list"]
     a_methods = ["Operation(*inputs)", "UpdateValues()", "ProcessBatch()"]
     a_cell = class_cell(a_id, 40, 220, "AbstractNode", a_attrs, a_methods)
 

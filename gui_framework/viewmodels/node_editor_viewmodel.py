@@ -59,6 +59,56 @@ class NodeEditorViewModel(BaseViewModel):
                 except Exception:
                     pass
 
+        # Provide a read-only 'type' property exposing the node's class name
+        try:
+            self._props["type"] = type(node).__name__
+        except Exception:
+            pass
+
+        # Additional read-only details shown in 'More details' panel
+        try:
+            gp = getattr(node, "gui_pos", None)
+            # Format gui_pos as "x: <x>, y: <y>" when possible
+            formatted_gp = None
+            if gp is not None:
+                try:
+                    if isinstance(gp, (list, tuple)) and len(gp) == 2:
+                        formatted_gp = f"x: {gp[0]}, y: {gp[1]}"
+                    elif isinstance(gp, dict) and "x" in gp and "y" in gp:
+                        formatted_gp = f"x: {gp['x']}, y: {gp['y']}"
+                    elif hasattr(gp, "x") and hasattr(gp, "y"):
+                        # Try call-style (e.g., QPoint)
+                        try:
+                            formatted_gp = f"x: {gp.x()}, y: {gp.y()}"
+                        except Exception:
+                            formatted_gp = (
+                                f"x: {getattr(gp, 'x', '')}, y: {getattr(gp, 'y', '')}"
+                            )
+                    else:
+                        formatted_gp = str(gp)
+                except Exception:
+                    formatted_gp = str(gp)
+            self._props["gui_pos"] = formatted_gp
+        except Exception:
+            pass
+        try:
+            # Expose computation type under a consistent key
+            self._props["computationType"] = getattr(node, "computationType", None)
+        except Exception:
+            pass
+        try:
+            self._props["batchSize"] = getattr(node, "batchSize", None)
+        except Exception:
+            pass
+        try:
+            self._props["id"] = getattr(node, "id", None)
+        except Exception:
+            pass
+        try:
+            self._props["inputCount"] = getattr(node, "inputCount", None)
+        except Exception:
+            pass
+
         # Actions: nodes may provide editor_actions dict or expose known helper methods
         self._actions = {}
         try:

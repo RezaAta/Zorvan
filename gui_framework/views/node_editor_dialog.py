@@ -146,7 +146,7 @@ if HAS_PYQT:
             # Add placeholder widgets (updated when properties change)
             self._more_widgets_keys = [
                 "gui_pos",
-                "computationalType",
+                "computationType",
                 "batchSize",
                 "id",
                 "inputCount",
@@ -246,7 +246,8 @@ if HAS_PYQT:
                         "forcedBatchProcessing",
                         "type",
                         "gui_pos",
-                        "computationalType",
+                        # Exclude the more-details 'computationType' key (renamed from computationalType)
+                        "computationType",
                         "batchSize",
                         "id",
                         "inputCount",
