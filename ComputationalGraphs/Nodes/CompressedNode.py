@@ -40,30 +40,9 @@ class CompressedNode(Node):
         """Return the last node in the chain (exit point for outputs)."""
         return self.listOfNodes[-1] if self.listOfNodes else None
 
-    def SetComputationStructure(self):
-        """
-        Generate a string representing the computation structure.
-        Structure is the concatenation of all node ids in the list.
-        """
-        if self.listOfNodes:
-            self.computationStructure = "->".join(
-                getattr(node, "id", node.name) for node in self.listOfNodes
-            )
-        else:
-            self.computationStructure = self.id
+    # SetComputationStructure removed - unused by current serialization/UI flows.
 
-    def UpdateComputationTime(self):
-        """
-        Update the computation time of the CompressedNode.
-        Sum of all contained nodes' times (sequential execution).
-        """
-        if self.listOfNodes:
-            self.computationTime = sum(
-                getattr(node, "computationTime", 1) for node in self.listOfNodes
-            )
-        else:
-            self.computationTime = 1
-
+    # UpdateComputationTime removed - was unused; re-add with tests if needed for profiling.
     def Operation(self, *inputs):
         """
         Execute all contained nodes sequentially in chain order.

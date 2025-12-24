@@ -47,17 +47,7 @@ class AbstractNode(Node):
         """Alias for listOfNodes for compatibility."""
         return self.listOfNodes
 
-    def SetComputationStructure(self):
-        """
-        Generate a string representing the computation structure.
-        Structure is represented as (node1, node2, ...) - comma-separated.
-        This contrasts with CompressedNode which uses -> for sequential chains.
-        """
-        if self.listOfNodes:
-            node_ids = [getattr(node, "id", node.name) for node in self.listOfNodes]
-            self.computationStructure = f"({', '.join(node_ids)})"
-        else:
-            self.computationStructure = getattr(self, "id", self.name)
+    # SetComputationStructure removed - was unused. Reintroduce only if serialization/UI needs it.
 
     def UpdateValues(self):
         """Update the AbstractNode's value list from all internal nodes."""
@@ -66,17 +56,7 @@ class AbstractNode(Node):
                 node.UpdateValues()
         self.value = [node.value for node in self.listOfNodes]
 
-    def UpdateComputationTime(self):
-        """
-        Update the computation time of the AbstractNode.
-        Since nodes execute in parallel, time is the MAX of all internal nodes.
-        """
-        if self.listOfNodes:
-            self.computationTime = max(
-                getattr(node, "computationTime", 1) for node in self.listOfNodes
-            )
-        else:
-            self.computationTime = 1
+    # UpdateComputationTime removed - no external callers. Reintroduce with tests if profiling is required.
 
     def Operation(self, *inputs):
         """

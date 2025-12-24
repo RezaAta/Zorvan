@@ -15,13 +15,7 @@ class BasicNode(Node, ABC):  # Inherits from both Node and ABC
     def ResetValue(self):
         self.value = 0
 
-    def SetComputationStructure(self):
-        self.computationStructure = (
-            self.id
-        )  # If no nodes are present, return an empty string
-
-    def UpdateComputationTime(self):
-        self.computationTime = 1
+    # Computation-structure/time helpers removed (unused). If needed later, reintroduce with tests.
 
     @abstractmethod
     def Operation(self, inputs):
