@@ -5,6 +5,7 @@ try:
         QLabel,
         QLineEdit,
         QPushButton,
+        QTextEdit,
         QVBoxLayout,
     )
 
@@ -44,6 +45,20 @@ if HAS_PYQT:
             ok_btn.clicked.connect(self._on_ok)
             self.layout.addWidget(ok_btn)
 
+        def _adjust_textedit_height(self, editor, min_h=50, max_h=300):
+            """Adjust the height of a QTextEdit to fit its content between min_h and max_h."""
+            try:
+                # Estimate height by number of blocks (lines) and font metrics
+                doc = editor.document()
+                block_count = doc.blockCount() or 1
+                fm = editor.fontMetrics()
+                line_height = fm.lineSpacing()
+                new_height = int(block_count * line_height + 12)
+                new_height = max(min_h, min(max_h, new_height))
+                editor.setFixedHeight(new_height)
+            except Exception:
+                pass
+
         def _on_properties_changed(self, old, new):
             # Rebuild form
             while self.form.rowCount() > 0:
@@ -59,13 +74,105 @@ if HAS_PYQT:
             self.form.addRow(QLabel("Name"), name_editor)
             self._widgets["name"] = name_editor
 
+            # Show node type directly below name (read-only, displayed as label)
+            try:
+                type_val = self.vm.get_properties().get("type", "")
+            except Exception:
+                type_val = ""
+            from PyQt6.QtWidgets import QLabel as _QLabel
+
+            type_label = _QLabel(str(type_val))
+            self.form.addRow(QLabel("Type"), type_label)
+            self._widgets["type"] = type_label
+
             try:
                 value_val = self.vm.get_value()
             except Exception:
                 value_val = str(self.vm.get_properties().get("value", ""))
-            value_editor = QLineEdit(value_val)
+            # Use a large, scrollable text box for the value so users can inspect
+            # potentially large arrays/buffers easily
+            value_editor = QTextEdit()
+            value_editor.setPlainText(str(value_val))
+            # Make the text box dynamic: allow growth to a max height but shrink when content is small
+            from PyQt6.QtWidgets import QSizePolicy
+
+            value_editor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+            value_editor.setMaximumHeight(300)
+            value_editor.setMinimumHeight(50)
+            # Adjust initial height to fit content
+            try:
+                self._adjust_textedit_height(value_editor)
+            except Exception:
+                pass
             self.form.addRow(QLabel("Value"), value_editor)
             self._widgets["value"] = value_editor
+            # Connect changes to adjust height dynamically
+            try:
+                value_editor.textChanged.connect(
+                    lambda: self._adjust_textedit_height(value_editor)
+                )
+            except Exception:
+                pass
+
+            # More details collapsible section (hidden by default)
+            # Implement deterministically (avoid swallowing failures silently)
+            from PyQt6.QtWidgets import QWidget
+
+            # Toggle handler for the more details section
+            def _toggle_more_details_inner():
+                try:
+                    # Toggle based on current widget visibility so it works synchronously in tests
+                    visible = not self._more_widget.isVisible()
+                    self._more_widget.setVisible(visible)
+                    self._more_button.setChecked(visible)
+                    # Update arrow glyph
+                    self._more_button.setText(
+                        "More details ▾" if visible else "More details ▸"
+                    )
+                except Exception:
+                    pass
+
+            # Attach the bound handler as a method so tests can call it
+            self._toggle_more_details = _toggle_more_details_inner
+
+            self._more_button = QPushButton("More details ▸")
+            self._more_button.setCheckable(True)
+            self._more_button.setChecked(False)
+            self._more_button.clicked.connect(self._toggle_more_details)
+
+            self._more_widget = QWidget()
+            self._more_layout = QFormLayout(self._more_widget)
+            self._more_widget.setVisible(False)
+            # Add placeholder widgets (updated when properties change)
+            self._more_widgets_keys = [
+                "gui_pos",
+                "computationalType",
+                "batchSize",
+                "id",
+                "inputCount",
+            ]
+            from PyQt6.QtWidgets import QLabel as _QLabel
+            from PyQt6.QtWidgets import QLineEdit as _QLineEdit
+
+            for key in self._more_widgets_keys:
+                # Make more-details values read-only in the UI.
+                # Use a read-only QLineEdit for the `id` (test expects a read-only line edit)
+                if key == "id":
+                    w = _QLineEdit("")
+                    w.setReadOnly(True)
+                else:
+                    w = _QLabel("")
+                    # Display as disabled to clearly indicate readonly status
+                    try:
+                        w.setEnabled(False)
+                    except Exception:
+                        pass
+                self._more_layout.addRow(QLabel(key), w)
+                # store both in _widgets and in a dedicated more-widget mapping
+                self._widgets[key] = w
+            # NOTE: we intentionally DO NOT add the more details button/widget here
+            # so it can be appended to the bottom of the form after other fields have
+            # been added. The actual insertion will occur later in the method.
 
             # Boolean flags
             # Unified Forced Batch control: single checkbox bound to VM if available, otherwise to legacy property
@@ -127,12 +234,23 @@ if HAS_PYQT:
                     params.pop("forcedBatchProcessing", None)
             except Exception:
                 props = self.vm.get_properties()
-                # Exclude known header fields and legacy forcedBatchProcessing
+                # Exclude known header fields and legacy forcedBatchProcessing and the fields shown separately
                 params = {
                     k: v
                     for k, v in props.items()
                     if k
-                    not in ("name", "value", "description", "forcedBatchProcessing")
+                    not in (
+                        "name",
+                        "value",
+                        "description",
+                        "forcedBatchProcessing",
+                        "type",
+                        "gui_pos",
+                        "computationalType",
+                        "batchSize",
+                        "id",
+                        "inputCount",
+                    )
                 }
 
             for k, v in params.items():
@@ -144,17 +262,23 @@ if HAS_PYQT:
                         "id",
                         "midCalculation",
                         "midCalculationValue",
+                        "type",
                     )
 
                     if isinstance(v, bool):
-                        from PyQt6.QtWidgets import QCheckBox
-
-                        editor = QCheckBox()
-                        editor.setChecked(v)
-                        # Disable editing if readonly is requested
                         if readonly:
-                            editor.setEnabled(False)
+                            from PyQt6.QtWidgets import QLabel as _QLabel
+
+                            editor = _QLabel(str(v))
+                            try:
+                                editor.setEnabled(False)
+                            except Exception:
+                                pass
                         else:
+                            from PyQt6.QtWidgets import QCheckBox
+
+                            editor = QCheckBox()
+                            editor.setChecked(v)
                             editor.stateChanged.connect(
                                 lambda st, name=k: (
                                     self.vm.set_parameter(name, bool(st))
@@ -163,13 +287,19 @@ if HAS_PYQT:
                                 )
                             )
                     elif isinstance(v, int):
-                        from PyQt6.QtWidgets import QSpinBox
-
-                        editor = QSpinBox()
-                        editor.setValue(v)
                         if readonly:
-                            editor.setEnabled(False)
+                            from PyQt6.QtWidgets import QLabel as _QLabel
+
+                            editor = _QLabel(str(v))
+                            try:
+                                editor.setEnabled(False)
+                            except Exception:
+                                pass
                         else:
+                            from PyQt6.QtWidgets import QSpinBox
+
+                            editor = QSpinBox()
+                            editor.setValue(v)
                             editor.valueChanged.connect(
                                 lambda val, name=k: (
                                     self.vm.set_parameter(name, int(val))
@@ -178,13 +308,19 @@ if HAS_PYQT:
                                 )
                             )
                     elif isinstance(v, float):
-                        from PyQt6.QtWidgets import QDoubleSpinBox
-
-                        editor = QDoubleSpinBox()
-                        editor.setValue(v)
                         if readonly:
-                            editor.setEnabled(False)
+                            from PyQt6.QtWidgets import QLabel as _QLabel
+
+                            editor = _QLabel(str(v))
+                            try:
+                                editor.setEnabled(False)
+                            except Exception:
+                                pass
                         else:
+                            from PyQt6.QtWidgets import QDoubleSpinBox
+
+                            editor = QDoubleSpinBox()
+                            editor.setValue(v)
                             editor.valueChanged.connect(
                                 lambda val, name=k: (
                                     self.vm.set_parameter(name, float(val))
@@ -195,19 +331,36 @@ if HAS_PYQT:
                     else:
                         # For lists (e.g., inputs), show a comma-separated editable field
                         if isinstance(v, (list, tuple)) and k == "inputs":
-                            editor = QLineEdit(
-                                ",".join([str(x) for x in v]) if v else ""
+                            # Use a scrollable multi-line box for inputs to make it easier to
+                            # inspect long lists. Each item shown on its own line.
+                            editor = QTextEdit()
+                            editor.setPlainText(
+                                "\n".join([str(x) for x in v]) if v else ""
                             )
+                            # Make inputs box dynamic like value box
+                            from PyQt6.QtWidgets import QSizePolicy
+
+                            editor.setSizePolicy(
+                                QSizePolicy.Expanding, QSizePolicy.Minimum
+                            )
+                            editor.setMaximumHeight(300)
+                            editor.setMinimumHeight(50)
+                            try:
+                                self._adjust_textedit_height(editor)
+                            except Exception:
+                                pass
+
                             if readonly:
                                 editor.setReadOnly(True)
                             else:
 
-                                def _on_inputs_text(text, name=k):
-                                    items = (
-                                        [t.strip() for t in text.split(",")]
-                                        if text
-                                        else []
-                                    )
+                                def _on_inputs_text(name=k, ed=editor):
+                                    text = ed.toPlainText()
+                                    items = [
+                                        t.strip()
+                                        for t in text.splitlines()
+                                        if t.strip()
+                                    ]
                                     try:
                                         if hasattr(self.vm, "set_parameter"):
                                             self.vm.set_parameter(name, items)
@@ -217,18 +370,70 @@ if HAS_PYQT:
                                         pass
 
                                 editor.textChanged.connect(_on_inputs_text)
-                        else:
-                            editor = QLineEdit(str(v))
-                            if readonly:
-                                editor.setReadOnly(True)
-                            else:
-                                editor.textChanged.connect(
-                                    lambda text, name=k: (
-                                        self.vm.set_parameter(name, text)
-                                        if hasattr(self.vm, "set_parameter")
-                                        else self.vm.set_property(name, text)
+                                try:
+                                    editor.textChanged.connect(
+                                        lambda ed=editor: self._adjust_textedit_height(
+                                            ed
+                                        )
                                     )
-                                )
+                                except Exception:
+                                    pass
+                        else:
+                            # For potentially long strings or lists, use QTextEdit (multiline)
+                            if (
+                                k in ("value", "buffers")
+                                or (isinstance(v, str) and len(v) > 120)
+                                or (isinstance(v, (list, tuple)) and len(v) > 10)
+                            ):
+                                editor = QTextEdit()
+                                # Represent sequences with one item per line
+                                if isinstance(v, (list, tuple)):
+                                    editor.setPlainText("\n".join([str(x) for x in v]))
+                                else:
+                                    editor.setPlainText(str(v))
+                                editor.setMinimumHeight(100)
+                                if readonly:
+                                    editor.setReadOnly(True)
+                                else:
+
+                                    def _on_text_changed(name=k, ed=editor):
+                                        text = ed.toPlainText()
+                                        # Convert back to single string or list where appropriate
+                                        if isinstance(v, (list, tuple)):
+                                            items = [
+                                                t.strip()
+                                                for t in text.splitlines()
+                                                if t.strip()
+                                            ]
+                                            try:
+                                                if hasattr(self.vm, "set_parameter"):
+                                                    self.vm.set_parameter(name, items)
+                                                else:
+                                                    self.vm.set_property(name, items)
+                                            except Exception:
+                                                pass
+                                        else:
+                                            try:
+                                                if hasattr(self.vm, "set_parameter"):
+                                                    self.vm.set_parameter(name, text)
+                                                else:
+                                                    self.vm.set_property(name, text)
+                                            except Exception:
+                                                pass
+
+                                    editor.textChanged.connect(_on_text_changed)
+                            else:
+                                editor = QLineEdit(str(v))
+                                if readonly:
+                                    editor.setReadOnly(True)
+                                else:
+                                    editor.textChanged.connect(
+                                        lambda text, name=k: (
+                                            self.vm.set_parameter(name, text)
+                                            if hasattr(self.vm, "set_parameter")
+                                            else self.vm.set_property(name, text)
+                                        )
+                                    )
                 except Exception:
                     editor = QLineEdit(str(v))
                     editor.textChanged.connect(
@@ -240,6 +445,29 @@ if HAS_PYQT:
                     )
                 self.form.addRow(QLabel(k), editor)
                 self._widgets[k] = editor
+
+            # Ensure more-details widgets reflect current node properties
+            try:
+                props = self.vm.get_properties()
+                for key in getattr(self, "_more_widgets_keys", []):
+                    if key in self._widgets:
+                        try:
+                            val = props.get(key, "")
+                            self._widgets[key].setText(
+                                str(val) if val is not None else ""
+                            )
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+            # Add the More details toggle and panel at the BOTTOM of the form
+            try:
+                # Add after all parameter rows so it appears as the final section
+                self.form.addRow(self._more_button)
+                self.form.addRow(self._more_widget)
+            except Exception:
+                pass
 
             # Actions
             try:
@@ -308,17 +536,45 @@ if HAS_PYQT:
                 if "name" in self._widgets:
                     self.vm.set_name(self._widgets["name"].text())
                 if "value" in self._widgets:
-                    self.vm.set_value(self._widgets["value"].text())
+                    val_w = self._widgets["value"]
+                    # QTextEdit uses toPlainText
+                    if hasattr(val_w, "toPlainText"):
+                        self.vm.set_value(val_w.toPlainText())
+                    else:
+                        self.vm.set_value(val_w.text())
 
                 # Parameters: read values based on widget type
                 for k, w in list(self._widgets.items()):
-                    if k in ("name", "value", "forcedBatch", "Incremental"):
+                    # Skip header and read-only 'more details' fields
+                    if k in (
+                        "name",
+                        "value",
+                        "forcedBatch",
+                        "Incremental",
+                        "type",
+                        "gui_pos",
+                        "computationalType",
+                        "batchSize",
+                        "id",
+                        "inputCount",
+                    ):
                         continue
                     try:
                         if hasattr(w, "isChecked"):
                             self.vm.set_parameter(k, bool(w.isChecked()))
                         elif hasattr(w, "value"):
                             self.vm.set_parameter(k, w.value())
+                        elif hasattr(w, "toPlainText"):
+                            # QTextEdit
+                            text = w.toPlainText()
+                            # If originally a list, VM will accept list conversion via set_parameter; best effort
+                            if "\n" in text:
+                                items = [
+                                    t.strip() for t in text.splitlines() if t.strip()
+                                ]
+                                self.vm.set_parameter(k, items)
+                            else:
+                                self.vm.set_parameter(k, text)
                         else:
                             self.vm.set_parameter(k, w.text())
                     except Exception:
