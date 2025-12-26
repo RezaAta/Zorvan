@@ -85,11 +85,20 @@ class GraphLayoutController:
                 try:
                     if hasattr(mw, "ann_colors_check"):
                         mw.ann_colors_check.setChecked(True)
+                        # Also explicitly apply ANN colors to cover the case where the
+                        # checkbox was already checked and stateChanged won't fire.
+                        try:
+                            mw.canvas.apply_ann_colors()
+                        except Exception:
+                            pass
                     else:
                         mw.canvas.apply_ann_colors()
                 except Exception:
                     # Fallback: directly apply ANN colors
-                    mw.canvas.apply_ann_colors()
+                    try:
+                        mw.canvas.apply_ann_colors()
+                    except Exception:
+                        pass
 
             mw.status_bar.showMessage(
                 f"Applied {layout_type} layout to {len(positions)} nodes"

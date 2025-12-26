@@ -1,0 +1,91 @@
+digraph {
+	rankdir=LR
+	Tempreature [label="Tempreature
+(DisplayNode)
+44"]
+	Humidity [label="Humidity
+(DisplayNode)
+80"]
+	"hot tempreature" [label="hot tempreature
+(PiecewiseLinearNode)
+0.975"]
+	"cold tempreature" [label="cold tempreature
+(PiecewiseLinearNode)
+0.025000000000000022"]
+	"high humidity" [label="high humidity
+(PiecewiseLinearNode)
+1.0"]
+	"low humidity" [label="low humidity
+(PiecewiseLinearNode)
+0.0"]
+	"hot and high" [label="hot and high
+(MinNode)
+0.975"]
+	"hot and low" [label="hot and low
+(MinNode)
+0.0"]
+	"cold and high" [label="cold and high
+(MinNode)
+0.025000000000000022"]
+	"cold and low" [label="cold and low
+(MinNode)
+0.0"]
+	"hot and low or cold and high" [label="hot and low or cold and high
+(MaxNode)
+0.025000000000000022"]
+	"High Speed" [label="High Speed
+(DisplayNode)
+100"]
+	"Moderate Speed" [label="Moderate Speed
+(DisplayNode)
+50"]
+	"Low Speed" [label="Low Speed
+(DisplayNode)
+25"]
+	aH [label="aH
+(MultiplicationNode)
+97.5"]
+	aM [label="aM
+(MultiplicationNode)
+1.250000000000001"]
+	aL [label="aL
+(MultiplicationNode)
+0.0"]
+	Numerator [label="Numerator
+(AdditionNode)
+98.75"]
+	Denominator [label="Denominator
+(AdditionNode)
+1.0"]
+	Fanspeed [label="Fanspeed
+(DivisionNode)
+98.75"]
+	Tempreature -> "hot tempreature"
+	Tempreature -> "cold tempreature"
+	Humidity -> "high humidity"
+	Humidity -> "low humidity"
+	"hot tempreature" -> "hot and high"
+	"hot tempreature" -> "hot and low"
+	"cold tempreature" -> "cold and high"
+	"cold tempreature" -> "cold and low"
+	"high humidity" -> "hot and high"
+	"high humidity" -> "cold and high"
+	"low humidity" -> "hot and low"
+	"low humidity" -> "cold and low"
+	"hot and high" -> aH
+	"hot and high" -> Denominator
+	"hot and low" -> "hot and low or cold and high"
+	"cold and high" -> "hot and low or cold and high"
+	"cold and low" -> aL
+	"cold and low" -> Denominator
+	"hot and low or cold and high" -> aM
+	"hot and low or cold and high" -> Denominator
+	"High Speed" -> aH
+	"Moderate Speed" -> aM
+	"Low Speed" -> aL
+	aH -> Numerator
+	aM -> Numerator
+	aL -> Numerator
+	Numerator -> Fanspeed
+	Denominator -> Fanspeed
+}

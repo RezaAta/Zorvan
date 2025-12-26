@@ -5,6 +5,8 @@ MLP Generator Dialog (new MVVM view) - minimal dialog that uses
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
     QDialog,
     QFormLayout,
     QHBoxLayout,
@@ -58,6 +60,39 @@ class MLPGeneratorDialog(QDialog):
         self.num_outputs.setValue(1)
         form.addRow("Number of outputs:", self.num_outputs)
 
+        # Activation options
+        self.global_activation = QComboBox()
+        self.global_activation.addItems(["Sigmoid", "ReLU", "Tanh", "Linear"])
+        self.global_activation.setCurrentText("Sigmoid")
+        form.addRow("Hidden activation:", self.global_activation)
+
+        # Output activation selection
+        self.output_activation = QComboBox()
+        self.output_activation.addItems(["Linear", "Sigmoid", "ReLU", "Tanh"])
+        self.output_activation.setCurrentText("Linear")
+        form.addRow("Output activation:", self.output_activation)
+
+        self.per_layer_checkbox = QCheckBox("Per-layer activations")
+        self.per_layer_checkbox.stateChanged.connect(
+            lambda _: self._toggle_per_layer_selectors(self.num_hidden_layers.value())
+        )
+        form.addRow(self.per_layer_checkbox)
+
+        # Container for per-layer activation selectors (one combobox per hidden layer)
+        self.per_layer_selectors_widget = QWidget()
+        self.per_layer_selectors_layout = QVBoxLayout(self.per_layer_selectors_widget)
+        self.per_layer_selectors_layout.setContentsMargins(0, 0, 0, 0)
+        self.per_layer_label = QLabel("Per-layer activations:")
+        form.addRow(self.per_layer_label, self.per_layer_selectors_widget)
+        # hide label and widget by default
+        self.per_layer_label.setVisible(False)
+        self.per_layer_selectors_widget.setVisible(False)
+
+        # Bias toggle
+        self.bias_checkbox = QCheckBox("Include bias nodes")
+        self.bias_checkbox.setChecked(True)
+        form.addRow(self.bias_checkbox)
+
         layout.addLayout(form)
 
         # Buttons
@@ -74,7 +109,10 @@ class MLPGeneratorDialog(QDialog):
 
         # Initialize hidden size controls
         self._hidden_spinboxes = []
+        self._per_layer_combos = []
         self._update_hidden_sizes(self.num_hidden_layers.value())
+        # Per-layer selectors hidden by default
+        self._toggle_per_layer_selectors(self.num_hidden_layers.value())
 
     def _update_hidden_sizes(self, count: int):
         # Clear widgets
@@ -93,18 +131,70 @@ class MLPGeneratorDialog(QDialog):
             self.hidden_sizes_layout.addWidget(sb)
             self._hidden_spinboxes.append(sb)
 
+        # Update per-layer activation selectors to match count
+        # Clear existing combos
+        for cb in list(self._per_layer_combos):
+            try:
+                cb.deleteLater()
+            except Exception:
+                pass
+        self._per_layer_combos = []
+
+        for i in range(count):
+            combo = QComboBox()
+            combo.addItems(["Sigmoid", "ReLU", "Tanh", "Linear"])
+            combo.setCurrentText("Sigmoid")
+            combo.setEditable(False)
+            combo.setToolTip(f"Activation for layer {i+1}")
+            combo.setVisible(self.per_layer_checkbox.isChecked())
+            self.per_layer_selectors_layout.addWidget(combo)
+            self._per_layer_combos.append(combo)
+
+    def _toggle_per_layer_selectors(self, count: int):
+        # Ensure per-layer combo widgets exist and show/hide based on checkbox
+        visible = self.per_layer_checkbox.isChecked()
+        # Toggle label and container visibility
+        try:
+            self.per_layer_label.setVisible(visible)
+            self.per_layer_selectors_widget.setVisible(visible)
+        except Exception:
+            pass
+        for i, cb in enumerate(self._per_layer_combos):
+            cb.setVisible(visible)
+
     def _on_generate(self):
         # Read parameters
         num_inputs = int(self.num_inputs.value())
         hidden_layers = [int(sb.value()) for sb in self._hidden_spinboxes]
         num_outputs = int(self.num_outputs.value())
 
+        # Activation selection: per-layer or global
+        if self.per_layer_checkbox.isChecked():
+            activations = [str(cb.currentText()) for cb in self._per_layer_combos]
+        else:
+            activations = str(self.global_activation.currentText())
+
+        bias = bool(self.bias_checkbox.isChecked())
+        output_activation = str(self.output_activation.currentText())
+
         try:
-            g = self._vm.generate(num_inputs, hidden_layers, num_outputs)
+            g = self._vm.generate(
+                num_inputs,
+                hidden_layers,
+                num_outputs,
+                activations=activations,
+                bias=bias,
+                output_activation=output_activation,
+            )
+            # Keep generated graph object
             self._generated_graph = g
             self.accept()
         except Exception as e:
-            # Simple failure handling - reject and set generated graph to None
+            # Log exception for debugging and reject dialog
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.exception("Failed to generate MLP graph: %s", e)
             self._generated_graph = None
             self.reject()
 

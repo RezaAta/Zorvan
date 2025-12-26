@@ -194,6 +194,12 @@ _NODE_REGISTRY: Dict[str, tuple] = {
         {},
         "Linear'",
     ),
+    "ElitismNode": (
+        "ComputationalGraphs.Nodes.ElitismNode",
+        "ElitismNode",
+        {"population_size": 100, "num_elites": 1},
+        "Elitism",
+    ),
     # Utility nodes
     "DisplayNode": (
         "ComputationalGraphs.Nodes.DisplayNode",
@@ -273,8 +279,23 @@ def create_node(node_type: str, name_hint: Optional[str] = None):
     _, _, default_kwargs, name_prefix = _NODE_REGISTRY[node_type]
     base_name = name_hint or "Node"
 
-    # Build kwargs with name
-    kwargs = {"name": f"{name_prefix}_{base_name}"}
+    # Normalize base_name: trim whitespace and remove common 'Node' suffix so that
+    # class-derived hints like 'ElitismNode' become 'Elitism' and avoid
+    # duplicate names such as 'Elitism_ElitismNode'.
+    try:
+        base_name = base_name.strip()
+        if base_name.endswith("Node"):
+            base_name = base_name[: -len("Node")]
+    except Exception:
+        pass
+
+    # Build kwargs with name. If the provided name_hint already includes the
+    # prefix (e.g., 'Elitism' or 'Elitism_1'), use it directly to avoid names like
+    # 'Elitism_Elitism' or 'Elitism_Elitism_1'. Otherwise, prefix the base_name.
+    if base_name == name_prefix or base_name.startswith(f"{name_prefix}_"):
+        kwargs = {"name": f"{base_name}"}
+    else:
+        kwargs = {"name": f"{name_prefix}_{base_name}"}
     kwargs.update(default_kwargs)
 
     try:

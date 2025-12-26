@@ -36,10 +36,19 @@ def test_mlp_dialog_adapter_constructs_and_generates(qapp):
         # Dialog may not expose internals; that's fine - we just check API
         pass
 
-    # get_graph should exist and either return None or a Graph
+    # get_graph should exist and return a Core.Graph-compatible object
     try:
         g = dlg.get_graph()
     except Exception:
         pytest.fail("get_graph() raised an exception")
+
+    # The adapter should return a Graph with Core API (AddNode etc.)
+    try:
+        from ComputationalGraphs.Core.Graph import Graph as CoreGraph
+
+        assert isinstance(g, CoreGraph)
+    except Exception:
+        # Fallback: ensure AddNode method exists
+        assert hasattr(g, "AddNode") or hasattr(g, "nodes")
 
     dlg.close()

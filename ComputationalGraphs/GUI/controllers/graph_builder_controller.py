@@ -122,6 +122,18 @@ class GraphBuilderController:
                 )
                 raise
 
+            # If ANN coloring is enabled in the main window preferences, ensure ANN colors
+            # are applied now that node items exist (covers the case where the ANN checkbox
+            # is already checked and setting it again would not emit stateChanged).
+            try:
+                if getattr(self.main_window, "ann_colors_enabled", False):
+                    try:
+                        self.canvas.apply_ann_colors()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
             t5 = time.time()
             if self._is_verbose():
                 print(

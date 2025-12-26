@@ -1,4 +1,5 @@
 try:
+    from PyQt6.QtCore import QTimer
     from PyQt6.QtWidgets import (
         QDialog,
         QFormLayout,
@@ -12,6 +13,8 @@ try:
     HAS_PYQT = True
 except Exception:
     HAS_PYQT = False
+
+import logging
 
 from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
 
@@ -30,14 +33,40 @@ if HAS_PYQT:
             # Container for action buttons (node-specific helpers)
             self._action_buttons = {}
 
-            vm.observe_property("properties_changed", self._on_properties_changed)
+            # Use a debounced scheduler for rebuilds to avoid multiple queued rebuilds
+            # which can delete widgets while they're still in use by external callers.
+            self._rebuild_scheduled = False
+
+            def _schedule_rebuild():
+                # Avoid scheduling if already pending
+                if getattr(self, "_rebuild_scheduled", False):
+                    return
+                self._rebuild_scheduled = True
+                try:
+                    QTimer.singleShot(0, _run_rebuild)
+                except Exception:
+                    # Fall back to immediate call (tests may run without full Qt event loop)
+                    _run_rebuild()
+
+            def _run_rebuild():
+                self._rebuild_scheduled = False
+                try:
+                    self._on_properties_changed(None, None)
+                except Exception:
+                    pass
+
+            vm.observe_property(
+                "properties_changed", lambda old, new: _schedule_rebuild()
+            )
+            # Perform an initial synchronous build so tests can access widgets immediately
+            # (we also schedule a second deferred rebuild just in case actions register later).
             self._on_properties_changed(None, None)
             try:
                 # Schedule a second refresh on the next event loop turn to catch any
                 # actions that may have been registered after VM initialization.
                 from PyQt6.QtCore import QTimer
 
-                QTimer.singleShot(0, lambda: self._on_properties_changed(None, None))
+                QTimer.singleShot(0, lambda: _schedule_rebuild())
             except Exception:
                 pass
 
@@ -61,16 +90,54 @@ if HAS_PYQT:
 
         def _on_properties_changed(self, old, new):
             # Rebuild form
+            # Preserve current widget textual values so user edits are not lost on refresh
+            prev_values = {}
+            for k, w in list(self._widgets.items()):
+                try:
+                    if hasattr(w, "toPlainText"):
+                        prev_values[k] = w.toPlainText()
+                    elif hasattr(w, "text"):
+                        prev_values[k] = w.text()
+                    elif hasattr(w, "value"):
+                        prev_values[k] = str(w.value())
+                    elif hasattr(w, "isChecked"):
+                        prev_values[k] = str(w.isChecked())
+                except Exception:
+                    pass
+
+            # Save previous widgets so we can reuse them in-place when possible.
+            prev_widgets = dict(self._widgets)
+
+            # Detach previous widgets from their parents so they are not deleted when
+            # the layout is cleared. This keeps Python references alive for external
+            # callers that may still hold references (e.g., tests using widget.stepBy()).
+            for w in list(prev_widgets.values()):
+                try:
+                    w.setParent(None)
+                except Exception:
+                    pass
+
             while self.form.rowCount() > 0:
                 self.form.removeRow(0)
-            self._widgets.clear()
+            # Do not delete existing widget objects — reuse them where appropriate
+            self._widgets = {}
 
             # Basic fields (support both older and newer VM APIs)
             try:
                 name_val = self.vm.get_name()
             except Exception:
                 name_val = self.vm.get_properties().get("name", "")
-            name_editor = QLineEdit(name_val)
+            name_initial = prev_values.get("name", name_val)
+            # Reuse existing name editor if present
+            prev_name = prev_widgets.get("name")
+            if prev_name is not None and hasattr(prev_name, "setText"):
+                try:
+                    name_editor = prev_name
+                    name_editor.setText(name_initial)
+                except Exception:
+                    name_editor = QLineEdit(name_initial)
+            else:
+                name_editor = QLineEdit(name_initial)
             self.form.addRow(QLabel("Name"), name_editor)
             self._widgets["name"] = name_editor
 
@@ -81,7 +148,15 @@ if HAS_PYQT:
                 type_val = ""
             from PyQt6.QtWidgets import QLabel as _QLabel
 
-            type_label = _QLabel(str(type_val))
+            prev_type = prev_widgets.get("type")
+            if prev_type is not None and hasattr(prev_type, "setText"):
+                try:
+                    type_label = prev_type
+                    type_label.setText(str(type_val))
+                except Exception:
+                    type_label = _QLabel(str(type_val))
+            else:
+                type_label = _QLabel(str(type_val))
             self.form.addRow(QLabel("Type"), type_label)
             self._widgets["type"] = type_label
 
@@ -91,18 +166,59 @@ if HAS_PYQT:
                 value_val = str(self.vm.get_properties().get("value", ""))
             # Use a large, scrollable text box for the value so users can inspect
             # potentially large arrays/buffers easily
-            value_editor = QTextEdit()
-            value_editor.setPlainText(str(value_val))
+            prev_value_widget = prev_widgets.get("value")
+            value_editor = None
+            if prev_value_widget is not None and hasattr(
+                prev_value_widget, "setPlainText"
+            ):
+                try:
+                    # Try to reuse the widget, but be robust against deleted underlying C++ object
+                    prev_value_widget.blockSignals(True)
+                    prev_value_widget.setPlainText(
+                        prev_values.get("value", str(value_val))
+                    )
+                    try:
+                        prev_value_widget.blockSignals(False)
+                    except Exception:
+                        pass
+                    # Quick sanity check that the widget is still valid
+                    try:
+                        _ = prev_value_widget.isVisible()
+                        value_editor = prev_value_widget
+                    except Exception:
+                        value_editor = None
+                except Exception:
+                    # Reuse failed, fall back to creating a fresh widget
+                    value_editor = None
+            if value_editor is None:
+                value_editor = QTextEdit()
+                value_editor.setPlainText(prev_values.get("value", str(value_val)))
             # Make the text box dynamic: allow growth to a max height but shrink when content is small
             from PyQt6.QtWidgets import QSizePolicy
 
-            value_editor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-            value_editor.setMaximumHeight(300)
-            value_editor.setMinimumHeight(50)
-            # Adjust initial height to fit content
+            expanding_policy = getattr(QSizePolicy, "Expanding", None)
+            if expanding_policy is None and hasattr(QSizePolicy, "Policy"):
+                try:
+                    expanding_policy = QSizePolicy.Policy.Expanding
+                except Exception:
+                    expanding_policy = 0
+            min_policy = getattr(QSizePolicy, "Minimum", None)
+            if min_policy is None and hasattr(QSizePolicy, "Policy"):
+                try:
+                    min_policy = QSizePolicy.Policy.Minimum
+                except Exception:
+                    min_policy = 0
             try:
-                self._adjust_textedit_height(value_editor)
+                value_editor.setSizePolicy(expanding_policy, min_policy)
+                value_editor.setMaximumHeight(300)
+                value_editor.setMinimumHeight(50)
+                # Adjust initial height to fit content
+                try:
+                    self._adjust_textedit_height(value_editor)
+                except Exception:
+                    pass
             except Exception:
+                # Widget may have been deleted asynchronously — ignore and continue
                 pass
             self.form.addRow(QLabel("Value"), value_editor)
             self._widgets["value"] = value_editor
@@ -278,15 +394,50 @@ if HAS_PYQT:
                         else:
                             from PyQt6.QtWidgets import QCheckBox
 
-                            editor = QCheckBox()
-                            editor.setChecked(v)
-                            editor.stateChanged.connect(
-                                lambda st, name=k: (
-                                    self.vm.set_parameter(name, bool(st))
-                                    if hasattr(self.vm, "set_parameter")
-                                    else self.vm.set_property(name, bool(st))
+                            # Try to reuse an existing checkbox widget to avoid deleting active widgets
+                            prev_widget = prev_widgets.get(k)
+                            if isinstance(prev_widget, QCheckBox):
+                                editor = prev_widget
+                                pv = prev_values.get(k)
+                                try:
+                                    editor.blockSignals(True)
+                                    if pv is not None:
+                                        editor.setChecked(
+                                            str(pv).lower() in ("true", "1", "yes")
+                                        )
+                                    else:
+                                        editor.setChecked(v)
+                                except Exception:
+                                    editor.setChecked(v)
+                                finally:
+                                    try:
+                                        editor.blockSignals(False)
+                                    except Exception:
+                                        pass
+                            else:
+                                editor = QCheckBox()
+                                # Preserve previous user input when available
+                                pv = prev_values.get(k)
+                                try:
+                                    if pv is not None:
+                                        editor.setChecked(
+                                            str(pv).lower() in ("true", "1", "yes")
+                                        )
+                                    else:
+                                        editor.setChecked(v)
+                                except Exception:
+                                    editor.setChecked(v)
+                                # Use singleShot to defer setting parameters to avoid reentrant UI rebuilds
+                                editor.stateChanged.connect(
+                                    lambda st, name=k: QTimer.singleShot(
+                                        0,
+                                        lambda st=st, name=name: (
+                                            self.vm.set_parameter(name, bool(st))
+                                            if hasattr(self.vm, "set_parameter")
+                                            else self.vm.set_property(name, bool(st))
+                                        ),
+                                    )
                                 )
-                            )
                     elif isinstance(v, int):
                         if readonly:
                             from PyQt6.QtWidgets import QLabel as _QLabel
@@ -299,15 +450,45 @@ if HAS_PYQT:
                         else:
                             from PyQt6.QtWidgets import QSpinBox
 
-                            editor = QSpinBox()
-                            editor.setValue(v)
-                            editor.valueChanged.connect(
-                                lambda val, name=k: (
-                                    self.vm.set_parameter(name, int(val))
-                                    if hasattr(self.vm, "set_parameter")
-                                    else self.vm.set_property(name, int(val))
+                            # Reuse an existing QSpinBox where possible to avoid deleting active widgets
+                            prev_widget = prev_widgets.get(k)
+                            if isinstance(prev_widget, QSpinBox):
+                                editor = prev_widget
+                                pv = prev_values.get(k)
+                                try:
+                                    editor.blockSignals(True)
+                                    if pv is not None:
+                                        editor.setValue(int(pv))
+                                    else:
+                                        editor.setValue(v)
+                                except Exception:
+                                    editor.setValue(v)
+                                finally:
+                                    try:
+                                        editor.blockSignals(False)
+                                    except Exception:
+                                        pass
+                            else:
+                                editor = QSpinBox()
+                                pv = prev_values.get(k)
+                                try:
+                                    if pv is not None:
+                                        editor.setValue(int(pv))
+                                    else:
+                                        editor.setValue(v)
+                                except Exception:
+                                    editor.setValue(v)
+                                # Defer parameter update to avoid reentrant UI rebuilds while handling widget events
+                                editor.valueChanged.connect(
+                                    lambda val, name=k: QTimer.singleShot(
+                                        0,
+                                        lambda val=val, name=name: (
+                                            self.vm.set_parameter(name, int(val))
+                                            if hasattr(self.vm, "set_parameter")
+                                            else self.vm.set_property(name, int(val))
+                                        ),
+                                    )
                                 )
-                            )
                     elif isinstance(v, float):
                         if readonly:
                             from PyQt6.QtWidgets import QLabel as _QLabel
@@ -320,35 +501,85 @@ if HAS_PYQT:
                         else:
                             from PyQt6.QtWidgets import QDoubleSpinBox
 
-                            editor = QDoubleSpinBox()
-                            editor.setValue(v)
-                            editor.valueChanged.connect(
-                                lambda val, name=k: (
-                                    self.vm.set_parameter(name, float(val))
-                                    if hasattr(self.vm, "set_parameter")
-                                    else self.vm.set_property(name, float(val))
+                            # Reuse existing QDoubleSpinBox when safe to avoid deleting active widgets
+                            prev_widget = prev_widgets.get(k)
+                            if isinstance(prev_widget, QDoubleSpinBox):
+                                editor = prev_widget
+                                pv = prev_values.get(k)
+                                try:
+                                    editor.blockSignals(True)
+                                    if pv is not None:
+                                        editor.setValue(float(pv))
+                                    else:
+                                        editor.setValue(v)
+                                except Exception:
+                                    editor.setValue(v)
+                                finally:
+                                    try:
+                                        editor.blockSignals(False)
+                                    except Exception:
+                                        pass
+                            else:
+                                editor = QDoubleSpinBox()
+                                pv = prev_values.get(k)
+                                try:
+                                    if pv is not None:
+                                        editor.setValue(float(pv))
+                                    else:
+                                        editor.setValue(v)
+                                except Exception:
+                                    editor.setValue(v)
+                                # Defer parameter update to avoid reentrant UI rebuilds while handling widget events
+                                editor.valueChanged.connect(
+                                    lambda val, name=k: QTimer.singleShot(
+                                        0,
+                                        lambda val=val, name=name: (
+                                            self.vm.set_parameter(name, float(val))
+                                            if hasattr(self.vm, "set_parameter")
+                                            else self.vm.set_property(name, float(val))
+                                        ),
+                                    )
                                 )
-                            )
                     else:
                         # For lists (e.g., inputs), show a comma-separated editable field
                         if isinstance(v, (list, tuple)) and k == "inputs":
                             # Use a scrollable multi-line box for inputs to make it easier to
                             # inspect long lists. Each item shown on its own line.
                             editor = QTextEdit()
-                            editor.setPlainText(
-                                "\n".join([str(x) for x in v]) if v else ""
-                            )
+                            pv = prev_values.get(k)
+                            if pv is not None:
+                                editor.setPlainText(pv)
+                            else:
+                                editor.setPlainText(
+                                    "\n".join([str(x) for x in v]) if v else ""
+                                )
                             # Make inputs box dynamic like value box
                             from PyQt6.QtWidgets import QSizePolicy
 
-                            editor.setSizePolicy(
-                                QSizePolicy.Expanding, QSizePolicy.Minimum
-                            )
-                            editor.setMaximumHeight(300)
-                            editor.setMinimumHeight(50)
+                            expanding_policy = getattr(QSizePolicy, "Expanding", None)
+                            if expanding_policy is None and hasattr(
+                                QSizePolicy, "Policy"
+                            ):
+                                try:
+                                    expanding_policy = QSizePolicy.Policy.Expanding
+                                except Exception:
+                                    expanding_policy = 0
+                            min_policy = getattr(QSizePolicy, "Minimum", None)
+                            if min_policy is None and hasattr(QSizePolicy, "Policy"):
+                                try:
+                                    min_policy = QSizePolicy.Policy.Minimum
+                                except Exception:
+                                    min_policy = 0
                             try:
-                                self._adjust_textedit_height(editor)
+                                editor.setSizePolicy(expanding_policy, min_policy)
+                                editor.setMaximumHeight(300)
+                                editor.setMinimumHeight(50)
+                                try:
+                                    self._adjust_textedit_height(editor)
+                                except Exception:
+                                    pass
                             except Exception:
+                                # Widget may have been deleted asynchronously — ignore
                                 pass
 
                             if readonly:
@@ -388,10 +619,16 @@ if HAS_PYQT:
                             ):
                                 editor = QTextEdit()
                                 # Represent sequences with one item per line
-                                if isinstance(v, (list, tuple)):
-                                    editor.setPlainText("\n".join([str(x) for x in v]))
+                                pv = prev_values.get(k)
+                                if pv is not None:
+                                    editor.setPlainText(pv)
                                 else:
-                                    editor.setPlainText(str(v))
+                                    if isinstance(v, (list, tuple)):
+                                        editor.setPlainText(
+                                            "\n".join([str(x) for x in v])
+                                        )
+                                    else:
+                                        editor.setPlainText(str(v))
                                 editor.setMinimumHeight(100)
                                 if readonly:
                                     editor.setReadOnly(True)
@@ -424,7 +661,8 @@ if HAS_PYQT:
 
                                     editor.textChanged.connect(_on_text_changed)
                             else:
-                                editor = QLineEdit(str(v))
+                                pv = prev_values.get(k)
+                                editor = QLineEdit(pv if pv is not None else str(v))
                                 if readonly:
                                     editor.setReadOnly(True)
                                 else:
@@ -584,7 +822,7 @@ if HAS_PYQT:
                 # Call VM apply
                 self.vm.apply_to_node()
             except Exception:
-                pass
+                logging.exception("Error applying node editor changes")
             super().accept()
 
 else:

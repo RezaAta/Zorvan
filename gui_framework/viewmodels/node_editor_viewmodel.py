@@ -3,6 +3,7 @@ Node Editor ViewModel: provides an editable representation of a node's propertie
 for use in dialogs. Pure Python and testable.
 """
 
+import ast
 from typing import Any, Dict, Optional
 
 from gui_framework.viewmodels.base import BaseViewModel, ObservableProperty
@@ -165,3 +166,66 @@ class NodeEditorViewModel(BaseViewModel):
         except Exception:
             pass
         return None
+
+    # Compatibility helpers expected by MVVM dialogs
+    def get_name(self) -> str:
+        return self._props.get("name", self.node_id)
+
+    def set_name(self, name: str) -> bool:
+        return self.set_property("name", name)
+
+    def get_value(self):
+        return self._props.get("value", "")
+
+    def set_value(self, value) -> bool:
+        """Set the node's value from either a Python object or a string representation.
+        If a string is provided, attempt safe literal parsing with ast.literal_eval.
+        """
+        try:
+            # If value is a string, attempt to parse literal (safe)
+            if isinstance(value, str):
+                try:
+                    parsed = ast.literal_eval(value)
+                except Exception:
+                    # Treat as raw string if parsing fails
+                    parsed = value
+            else:
+                parsed = value
+            return self.set_property("value", parsed)
+        except Exception:
+            return False
+
+    def get_parameters(self) -> dict:
+        # Return parameter-like properties (exclude header fields)
+        excluded = {
+            "name",
+            "value",
+            "description",
+            "forcedBatchProcessing",
+            "type",
+            "gui_pos",
+            "computationType",
+            "batchSize",
+            "id",
+            "inputCount",
+        }
+        return {k: v for k, v in self._props.items() if k not in excluded}
+
+    def set_parameter(self, name: str, value) -> bool:
+        return self.set_property(name, value)
+
+    def apply_to_node(self) -> bool:
+        # NodeEditorDialog expects this to exist; properties are already applied in set_property
+        return True
+
+    def get_forced_batch(self):
+        return self._props.get("forcedBatchProcessing", None)
+
+    def set_forced_batch(self, val: bool) -> bool:
+        return self.set_property("forcedBatchProcessing", bool(val))
+
+    def get_incremental(self) -> bool:
+        return bool(self._props.get("incremental", False))
+
+    def set_incremental(self, val: bool) -> bool:
+        return self.set_property("incremental", bool(val))

@@ -435,6 +435,23 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
+        # Reapply visualization overlays/preferences for the new graph
+        try:
+            # If ANN coloring is enabled, ensure canvas applies ANN colors for the new nodes
+            if getattr(self, "ann_colors_enabled", False):
+                try:
+                    self.visualization_controller.canvas.apply_ann_colors()
+                except Exception:
+                    pass
+            # If colorize-by-value is enabled, re-detect range and update visuals
+            elif getattr(self, "colorize_enabled", False):
+                try:
+                    self.visualization_controller.auto_detect_range()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
     def init_ui(self):
         """Initialize the UI components."""
         # Central widget - Graph Canvas

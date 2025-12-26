@@ -1,6 +1,8 @@
+import base64
 import inspect
 import subprocess
 import xml.etree.ElementTree as ET
+import zlib
 
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Nodes import *
@@ -326,12 +328,57 @@ class DrawioIO:
                     },
                 )
                 ET.SubElement(edge, "mxGeometry", {"relative": "1", "as": "geometry"})
+        # For draw.io compatibility, compress the inner mxGraphModel and place as text inside <diagram>
+        try:
+            model_str = ET.tostring(model, encoding="utf-8")
+            # Use raw deflate (no zlib header) which is what draw.io expects in practice
+            comp = zlib.compressobj(level=9, wbits=-15)
+            compressed_raw = comp.compress(model_str) + comp.flush()
+            compressed = base64.b64encode(compressed_raw).decode("ascii")
+            # Remove nested elements from diagram and store compressed text
+            for child in list(diagram):
+                if child is model:
+                    diagram.remove(child)
+                else:
+                    diagram.remove(child)
+            diagram.text = compressed
+        except Exception:
+            # If compression fails, fall back to uncompressed nested XML (legacy)
+            pass
         ET.ElementTree(mxfile).write(filename, encoding="utf-8", xml_declaration=True)
 
     @staticmethod
     def load(filename: str) -> Graph:
         tree = ET.parse(filename)
-        root = tree.getroot().find(".//root")
+        mxroot = tree.getroot()
+        # Try compressed diagram text first (common draw.io format)
+        diagram = mxroot.find("diagram")
+        model = None
+        if diagram is not None and diagram.text and diagram.text.strip():
+            data = diagram.text.strip()
+            try:
+                raw = base64.b64decode(data)
+                decompressed = None
+                # Try zlib-wrapped first, then raw deflate
+                try:
+                    decompressed = zlib.decompress(raw)
+                except Exception:
+                    try:
+                        decompressed = zlib.decompress(raw, -15)
+                    except Exception:
+                        decompressed = None
+                if decompressed is not None:
+                    model = ET.fromstring(decompressed)
+                else:
+                    # fallback to nested mxGraphModel element
+                    model = diagram.find("mxGraphModel")
+            except Exception:
+                model = diagram.find("mxGraphModel")
+        if model is None:
+            model = mxroot.find(".//mxGraphModel")
+        if model is None:
+            raise ValueError("No mxGraphModel found in Draw.io file")
+        root = model.find("root")
         graph = Graph()
         id_map = {}
         for obj in root.findall("object"):
@@ -348,7 +395,7 @@ class DrawioIO:
                 elif k == "NodeValue":
                     node.value = float(v)
                 else:
-                    if v.lower() in ("true", "false"):
+                    if isinstance(v, str) and v.lower() in ("true", "false"):
                         val = v.lower() == "true"
                     else:
                         try:
