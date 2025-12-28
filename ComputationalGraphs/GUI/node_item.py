@@ -592,9 +592,60 @@ class NodeItem(QGraphicsEllipseItem):
             from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
 
             menu = QMenu()
+            # Debug: log context menu invocation instead of printing directly
+            try:
+                import logging
+
+                logging.getLogger(__name__).debug(
+                    "contextMenuEvent for node: %s",
+                    getattr(self.node, "name", str(self.node)),
+                )
+            except Exception:
+                pass
             # View predecessors menu item
             view_pred_action = menu.addAction("View Predecessors")
             replace_action = menu.addAction("Replace Node...")
+            # Quick self-loop action (always visible so right-click works even when node not selected)
+            # Determine if any selected node has a self-loop
+            scene = self.scene()
+            canvas = getattr(self, "canvas", None)
+            selected = scene.selectedItems() if scene else []
+            node_items = (
+                [item for item in selected if isinstance(item, NodeItem)]
+                if scene
+                else []
+            )
+            if not node_items:
+                node_items = [self]
+            has_self = False
+            if canvas and hasattr(canvas, "edge_items"):
+                for item in node_items:
+                    if any(
+                        getattr(edge, "source_node", None) == item
+                        and getattr(edge, "target_node", None) == item
+                        for edge in canvas.edge_items
+                    ):
+                        has_self = True
+                        break
+            if has_self:
+                connect_self_action = menu.addAction("Disconnect from Self")
+                connect_self_action.setToolTip(
+                    "Remove the self-loop (edge from node to itself) for each selected node or the clicked node"
+                )
+            else:
+                connect_self_action = menu.addAction("Connect to Self")
+                connect_self_action.setToolTip(
+                    "Create a self-loop (edge from node to itself) for each selected node or the clicked node"
+                )
+            # For debugging: ensure QAction selection path is captured by printing when the action is triggered
+            try:
+                # Connect the QAction to a toggle handler that recomputes state at trigger time
+                connect_self_action.triggered.connect(
+                    lambda checked=False: self._toggle_self_connection()
+                )
+            except Exception:
+                pass
+
             menu.addSeparator()
             swallow_action = menu.addAction("Swallow Node")
             swallow_action.setToolTip(
@@ -779,7 +830,106 @@ class NodeItem(QGraphicsEllipseItem):
                 change_subgraph_color_action and action == change_subgraph_color_action
             ):
                 self._change_subgraph_color()
+            elif connect_self_action and action == connect_self_action:
+                # Toggle self-loop: recompute state at trigger time and perform toggle
+                try:
+                    import logging
 
+                    logger = logging.getLogger(__name__)
+                    sel = scene.selectedItems() if scene else []
+                    sel_count = len([s for s in sel if isinstance(s, NodeItem)])
+                    logger.debug(
+                        "Connect-to-self menu action invoked; selected_count=%d",
+                        sel_count,
+                    )
+                    # Use toggle handler to recompute and perform action
+                    self._toggle_self_connection()
+                    logger.debug(
+                        "Connect-to-self action completed; edges_now=%d",
+                        len(getattr(canvas, "edge_items", [])),
+                    )
+                except Exception:
+                    import logging
+
+                    logging.getLogger(__name__).exception(
+                        "Connect-to-self action error"
+                    )
+        except Exception:
+            pass
+
+    def _disconnect_selection_from_self(self):
+        """Remove self-loop edges for all selected nodes (or the clicked node if none selected)."""
+        try:
+            canvas = getattr(self, "canvas", None)
+            if canvas is None:
+                return
+            scene = self.scene()
+            if not scene:
+                return
+            selected = scene.selectedItems()
+            node_items = [item for item in selected if isinstance(item, NodeItem)]
+            if not node_items:
+                self.scene().clearSelection()
+                self.setSelected(True)
+                node_items = [self]
+            for item in node_items:
+                # Find and remove the self-loop edge visually and in the graph
+                to_remove = [
+                    edge
+                    for edge in getattr(canvas, "edge_items", [])
+                    if getattr(edge, "source_node", None) == item
+                    and getattr(edge, "target_node", None) == item
+                ]
+                for edge in to_remove:
+                    try:
+                        edge.remove()
+                        if edge in canvas.edge_items:
+                            canvas.edge_items.remove(edge)
+                        # Also disconnect in the graph if possible
+                        graph = getattr(canvas, "graph", None)
+                        if graph:
+                            graph.DisconnectPreNode(item.node, item.node)
+                    except Exception:
+                        pass
+                # Refresh visuals for this node and the canvas so overlay updates
+                try:
+                    item.update()
+                except Exception:
+                    pass
+            # After processing selection, refresh scene/viewport
+            try:
+                if hasattr(canvas, "viewport") and canvas.viewport():
+                    canvas.viewport().update()
+                if hasattr(canvas, "scene") and canvas.scene:
+                    canvas.scene.update()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _toggle_self_connection(self):
+        """Recompute selection state and toggle self-loop connect/disconnect accordingly."""
+        try:
+            scene = self.scene()
+            canvas = getattr(self, "canvas", None)
+            if not scene or not canvas:
+                return
+            selected = scene.selectedItems()
+            node_items = [item for item in selected if isinstance(item, NodeItem)]
+            if not node_items:
+                node_items = [self]
+            has_self = any(
+                any(
+                    getattr(edge, "source_node", None) == item
+                    and getattr(edge, "target_node", None) == item
+                    for edge in canvas.edge_items
+                )
+                for item in node_items
+            )
+            if has_self:
+                self._disconnect_selection_from_self()
+            else:
+                self._connect_selection_to_self()
         except Exception:
             pass
 
@@ -982,6 +1132,132 @@ class NodeItem(QGraphicsEllipseItem):
         except Exception:
             pass
 
+    def _connect_selection_to_self(self):
+        """Create self-loop edges for all selected nodes (or the clicked node if none selected).
+
+        Adds runtime diagnostics and shows a status message so the user can see whether
+        the operation succeeded. Falls back to direct edge creation if the undo stack
+        or graph path doesn't create an edge.
+        """
+        try:
+            import logging
+
+            from PyQt6.QtWidgets import QMessageBox
+
+            logger = logging.getLogger(__name__)
+
+            canvas = getattr(self, "canvas", None)
+            if canvas is None:
+                logger.debug("_connect_selection_to_self: no canvas on NodeItem")
+                # Cannot proceed without canvas
+                return
+
+            scene = self.scene()
+            if not scene:
+                logger.debug("_connect_selection_to_self: no scene available")
+                # Cannot proceed without scene
+                return
+
+            selected = scene.selectedItems()
+            node_items = [item for item in selected if isinstance(item, NodeItem)]
+
+            # If nothing is selected, apply to this node only
+            if not node_items:
+                # Select this node so behavior is consistent with other context actions
+                self.scene().clearSelection()
+                self.setSelected(True)
+                node_items = [self]
+
+            nodes = [item.node for item in node_items]
+
+            # Record initial edge count so we can detect if edges were created
+            initial_edges = len(getattr(canvas, "edge_items", []))
+
+            # Try to create edges via the undo-aware helper
+            for node in nodes:
+                try:
+                    if hasattr(canvas, "add_edge_with_undo"):
+                        canvas.add_edge_with_undo(node, node)
+                    else:
+                        # Fallback direct creation
+                        canvas.add_edge_item(node, node)
+                except Exception as e:
+                    logger.exception("Error while adding self-edge for %r: %s", node, e)
+
+            # If no edges appeared, try a more direct fallback and inform the user
+            final_edges = len(getattr(canvas, "edge_items", []))
+            created = max(0, final_edges - initial_edges)
+
+            if created == 0:
+                # Attempt direct addition and report back
+                logger.debug(
+                    "_connect_selection_to_self: no edges created via undo helper, trying direct add_item"
+                )
+                for node in nodes:
+                    try:
+                        res = None
+                        if hasattr(canvas, "add_edge_item"):
+                            res = canvas.add_edge_item(node, node)
+                        if not res:
+                            logger.debug(
+                                "Direct add_edge_item returned None for %r", node
+                            )
+                    except Exception:
+                        logger.exception("Direct fallback failed for %r", node)
+
+                final_edges2 = len(getattr(canvas, "edge_items", []))
+                created = max(0, final_edges2 - initial_edges)
+
+            # Compose a detailed diagnostic message and show it to the user
+            try:
+                target_names = [getattr(n, "name", str(n)) for n in nodes]
+                final_edges_count = len(getattr(canvas, "edge_items", []))
+                msg_lines = [
+                    f"Requested nodes: {len(nodes)}",
+                    f"Targets: {', '.join(target_names) if target_names else 'none'}",
+                    f"add_edge_with_undo present: {hasattr(canvas, 'add_edge_with_undo')}",
+                    f"Initial edges: {initial_edges}",
+                    f"Final edges: {final_edges_count}",
+                    f"Created self-loops: {max(0, final_edges_count - initial_edges)}",
+                ]
+
+                msg = "\n".join(msg_lines)
+
+                try:
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.debug("Connect-to-self result: %s", msg.replace("\n", " | "))
+                    # Show a transient status message if a parent window is available
+                    try:
+                        parent = getattr(canvas, "_parent_window", None)
+                        if parent is not None and hasattr(parent, "statusBar"):
+                            try:
+                                parent.statusBar().showMessage(
+                                    f"Connect to Self: {created} self-loop(s) created",
+                                    3000,
+                                )
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+            except Exception:
+                # Don't let messaging errors stop the flow
+                pass
+
+        except Exception:
+            # Keep context-menu silent in release, but log in debug
+            try:
+                import logging
+
+                logging.getLogger(__name__).exception(
+                    "_connect_selection_to_self: unexpected error"
+                )
+            except Exception:
+                pass
+
     def _rename_subgraph(self):
         """Rename the sub-graph that this node belongs to."""
         try:
@@ -1108,6 +1384,43 @@ class NodeItem(QGraphicsEllipseItem):
             painter.drawEllipse(
                 -self.radius, -self.radius, self.radius * 2, self.radius * 2
             )
+
+        # Draw a small self-loop icon if this node has a self-edge
+        try:
+            canvas = getattr(self, "canvas", None)
+            if canvas and hasattr(canvas, "edge_items"):
+                # Check if this node has a self-loop edge
+                has_self_edge = any(
+                    getattr(edge, "source_node", None) == self
+                    and getattr(edge, "target_node", None) == self
+                    for edge in canvas.edge_items
+                )
+                if has_self_edge:
+                    # Draw a small loop icon (circle with arrow) at bottom right
+                    r = self.radius
+                    icon_size = 12
+                    x = r - icon_size + 4
+                    y = r - icon_size + 4
+                    # Draw a small circle
+                    painter.setPen(QPen(QColor(80, 80, 200), 2))
+                    painter.setBrush(QBrush(QColor(180, 180, 255, 180)))
+                    painter.drawEllipse(x, y, icon_size, icon_size)
+                    # Draw a small arrow (arc with head)
+                    painter.setPen(QPen(QColor(40, 40, 120), 2))
+                    # Arc: start at 45deg, span 270deg (PyQt uses 1/16 deg units)
+                    painter.drawArc(
+                        x + 2, y + 2, icon_size - 4, icon_size - 4, 45 * 16, 270 * 16
+                    )
+                    # Arrow head
+                    from PyQt6.QtCore import QPointF
+
+                    arrow_p1 = QPointF(x + icon_size - 2, y + icon_size - 4)
+                    arrow_p2 = QPointF(x + icon_size - 6, y + icon_size - 2)
+                    arrow_p3 = QPointF(x + icon_size - 2, y + icon_size - 2)
+                    painter.drawLine(arrow_p1, arrow_p2)
+                    painter.drawLine(arrow_p1, arrow_p3)
+        except Exception:
+            pass
 
     def set_active(self, active):
         """Set whether this node is currently active (for Forward Processing)."""
