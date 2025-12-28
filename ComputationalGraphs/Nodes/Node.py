@@ -28,6 +28,14 @@ class Node(ABC):
             if predecessor not in self.predecessors:
                 self.predecessors.append(predecessor)
 
+    def LockUserValue(self):
+        """Mark the node's value as user-set so automated resets won't overwrite it."""
+        self.user_locked_value = True
+
+    def UnlockUserValue(self):
+        """Allow automated resets to overwrite the node's value again."""
+        self.user_locked_value = False
+
     def UpdateInputs(self):
         """Update the inputs array with the valid values of predecessor nodes.
 
@@ -38,9 +46,9 @@ class Node(ABC):
         """
         self.inputs = []
         for predecessor in self.predecessors:
-            # Check if predecessor is an AbstractNode (has listOfNodes and list value)
+            # Check if predecessor is an AbstractNode (has nodes and list value)
             if (
-                hasattr(predecessor, "listOfNodes")
+                hasattr(predecessor, "nodes")
                 and isinstance(predecessor.value, list)
                 and type(predecessor).__name__ == "AbstractNode"
             ):
@@ -68,7 +76,21 @@ class Node(ABC):
                 # Check if there are enough inputs to process a batch
                 if len(self.inputs) < self.batchSize:
                     self.midCalculation = False
-                    self.value = self.midCalculationValue
+                    # Respect user-locked values: do not overwrite a user-edited value during
+                    # automatic processing unless it is explicitly unlocked.
+                    if not getattr(self, "user_locked_value", False):
+                        self.value = self.midCalculationValue
+                    else:
+                        try:
+                            import logging
+
+                            logging.getLogger(__name__).debug(
+                                "Preserving user-locked value for %s (midCalculationValue=%s)",
+                                getattr(self, "name", str(self)),
+                                getattr(self, "midCalculationValue", None),
+                            )
+                        except Exception:
+                            pass
                     break
 
                 # Process the batch
@@ -78,7 +100,19 @@ class Node(ABC):
 
                 if not self.inputs:
                     self.midCalculation = False  # Finished processing all inputs
-                    self.value = self.midCalculationValue
+                    # Respect user-locked values: do not overwrite a user-edited value
+                    if not getattr(self, "user_locked_value", False):
+                        self.value = self.midCalculationValue
+                    else:
+                        try:
+                            import logging
+
+                            logging.getLogger(__name__).debug(
+                                "Preserving user-locked value for %s (finished batch)",
+                                getattr(self, "name", str(self)),
+                            )
+                        except Exception:
+                            pass
                     break
 
             else:
@@ -96,7 +130,19 @@ class Node(ABC):
                         True  # Set mid-calculation for remaining inputs
                     )
                 else:
-                    self.value = self.midCalculationValue
+                    # Respect user edits: do not overwrite a user-locked value
+                    if not getattr(self, "user_locked_value", False):
+                        self.value = self.midCalculationValue
+                    else:
+                        try:
+                            import logging
+
+                            logging.getLogger(__name__).debug(
+                                "Preserving user-locked value for %s (single batch)",
+                                getattr(self, "name", str(self)),
+                            )
+                        except Exception:
+                            pass
                     break
 
             # Break if not forcing batch processing

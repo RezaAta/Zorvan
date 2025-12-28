@@ -121,6 +121,18 @@ class GraphRunner(QObject):
             # forward-processing cycles and updates correctly.
 
         # Capture initial snapshot after graph setup
+        # Flush Qt event loop to process any deferred parameter updates (singleShot)
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app is not None:
+                try:
+                    app.processEvents()
+                except Exception:
+                    pass
+        except Exception:
+            pass
         self.save_graph_snapshot()
 
     def save_graph_snapshot(self):
@@ -130,6 +142,19 @@ class GraphRunner(QObject):
         values so the graph can be restored to this state later without affecting
         the iteration counter.
         """
+        # Ensure any pending UI-triggered updates run before we capture state
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app is not None:
+                try:
+                    app.processEvents()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         if not self.graph:
             self._graph_snapshot = None
             return
@@ -176,8 +201,9 @@ class GraphRunner(QObject):
             snapshot[node_id] = node_state
 
             # Recursively save internal nodes for AbstractNode/CompressedNode
-            if hasattr(node, "listOfNodes"):
-                for internal_node in node.listOfNodes:
+            internal_nodes = getattr(node, "nodes", [])
+            if internal_nodes:
+                for internal_node in internal_nodes:
                     save_node_state(internal_node)
 
         for node in self.graph.nodes:
@@ -236,8 +262,9 @@ class GraphRunner(QObject):
                 node.streamIndex = node_state["streamIndex"]
 
             # Recursively restore internal nodes for AbstractNode/CompressedNode
-            if hasattr(node, "listOfNodes"):
-                for internal_node in node.listOfNodes:
+            internal_nodes = getattr(node, "nodes", [])
+            if internal_nodes:
+                for internal_node in internal_nodes:
                     restore_node_state(internal_node)
 
         for node in self.graph.nodes:
@@ -504,6 +531,18 @@ class GraphRunner(QObject):
             return
 
         # Always take a snapshot at iteration 0 (before first processing)
+        # Flush any pending Qt events so deferred parameter updates (singleShot) can apply
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app is not None:
+                try:
+                    app.processEvents()
+                except Exception:
+                    pass
+        except Exception:
+            pass
         # This ensures restore works correctly even if graph was modified after loading
         if self.current_step == 0:
             self.save_graph_snapshot()
@@ -865,9 +904,31 @@ class GraphRunner(QObject):
         else:
             # Fallback: Reset all nodes individually
             if self.graph:
+                import logging
+                import traceback
+
+                logging.getLogger(__name__).debug(
+                    "GraphRunner.reset called (no snapshot)\n%s",
+                    "\n".join(traceback.format_stack()),
+                )
+                reset_count = 0
                 for node in self.graph.nodes:
-                    if hasattr(node, "ResetValue"):
-                        node.ResetValue()
+                    try:
+                        if hasattr(node, "ResetValue"):
+                            logging.getLogger(__name__).debug(
+                                "Resetting node %s (user_locked=%s)",
+                                getattr(node, "name", str(node)),
+                                getattr(node, "user_locked_value", False),
+                            )
+                            node.ResetValue()
+                            reset_count += 1
+                    except Exception:
+                        logging.getLogger(__name__).exception(
+                            "Error resetting node %s", getattr(node, "name", str(node))
+                        )
+                logging.getLogger(__name__).debug(
+                    "GraphRunner.reset: reset %s nodes", reset_count
+                )
 
         # Reset processor state
         self._reset_processor_state()
@@ -1154,8 +1215,9 @@ class GraphRunner(QObject):
 
             snapshot[node_id] = node_state
 
-            if hasattr(node, "listOfNodes"):
-                for internal_node in node.listOfNodes:
+            internal_nodes = getattr(node, "nodes", [])
+            if internal_nodes:
+                for internal_node in internal_nodes:
                     save_node_state(internal_node)
 
         for node in graph.nodes:
@@ -1212,8 +1274,9 @@ class GraphRunner(QObject):
             if "streamIndex" in node_state and hasattr(node, "streamIndex"):
                 node.streamIndex = node_state["streamIndex"]
 
-            if hasattr(node, "listOfNodes"):
-                for internal_node in node.listOfNodes:
+            internal_nodes = getattr(node, "nodes", [])
+            if internal_nodes:
+                for internal_node in internal_nodes:
                     restore_node_state(internal_node)
 
         for node in graph.nodes:

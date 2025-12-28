@@ -54,7 +54,13 @@ class BestFitnessTrackerNode(BasicNode):
                 self.best_fitness_history.append(best_fitness)
 
             # Reset for next generation
-            self.current_generation_fitnesses.clear()
+            if not isinstance(self.current_generation_fitnesses, list):
+                self.current_generation_fitnesses = []
+            else:
+                try:
+                    self.current_generation_fitnesses.clear()
+                except Exception:
+                    self.current_generation_fitnesses = []
             self.individuals_seen = 0
 
         # Return current best in this generation (or None if no data yet)
@@ -64,8 +70,20 @@ class BestFitnessTrackerNode(BasicNode):
 
     def ResetTracker(self):
         """Reset tracking (call between runs)."""
-        self.best_fitness_history.clear()
-        self.current_generation_fitnesses.clear()
+        if not isinstance(self.best_fitness_history, list):
+            self.best_fitness_history = []
+        else:
+            try:
+                self.best_fitness_history.clear()
+            except Exception:
+                self.best_fitness_history = []
+        if not isinstance(self.current_generation_fitnesses, list):
+            self.current_generation_fitnesses = []
+        else:
+            try:
+                self.current_generation_fitnesses.clear()
+            except Exception:
+                self.current_generation_fitnesses = []
         self.individuals_seen = 0
 
     def IsValidInput(self, inp):

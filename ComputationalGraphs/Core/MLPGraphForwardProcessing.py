@@ -615,6 +615,7 @@ class MLPGraphForwardProcessing(Graph):
         for node in self.nodes:
             # Skip weight nodes
             if "W_" not in node.name:
-                node.value = 0.0
+                if not getattr(node, "user_locked_value", False):
+                    node.value = 0.0
                 node.inputs = []
                 node.midCalculation = False

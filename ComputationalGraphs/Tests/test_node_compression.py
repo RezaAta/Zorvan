@@ -99,9 +99,9 @@ class TestCompressNodes:
         compressed = g.CompressNodes([b, c])
 
         assert isinstance(compressed, CompressedNode)
-        assert len(compressed.listOfNodes) == 2
-        assert b in compressed.listOfNodes
-        assert c in compressed.listOfNodes
+        assert len(compressed.nodes) == 2
+        assert b in compressed.nodes
+        assert c in compressed.nodes
 
     def test_compress_removes_original_nodes_from_graph(self):
         """Original nodes are removed from graph.nodes."""

@@ -41,8 +41,20 @@ class BulkTournamentNode(BasicNode):
         if len(self.selected) > 0:
             selectedCandidate = self.selected.pop()
             if len(self.selected) == 0:
-                self.population.clear()
-                self.fitnesses.clear()
+                if not isinstance(self.population, list):
+                    self.population = []
+                else:
+                    try:
+                        self.population.clear()
+                    except Exception:
+                        self.population = []
+                if not isinstance(self.fitnesses, list):
+                    self.fitnesses = []
+                else:
+                    try:
+                        self.fitnesses.clear()
+                    except Exception:
+                        self.fitnesses = []
             return selectedCandidate
         else:
             if candidate is not None and fitness is not None:

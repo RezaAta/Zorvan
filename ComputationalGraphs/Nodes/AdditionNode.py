@@ -24,6 +24,18 @@ class AdditionNode(BasicNode):
 
     def ProcessBatch(self):
         if (len(self.inputs) == 1) and (self.midCalculation is False):
-            self.value = self.Operation(0, self.inputs[0])
+            # Avoid overwriting user-edited value during automatic processing
+            if not getattr(self, "user_locked_value", False):
+                self.value = self.Operation(0, self.inputs[0])
+            else:
+                try:
+                    import logging
+
+                    logging.getLogger(__name__).debug(
+                        "Preserving user-locked value for %s in AdditionNode.ProcessBatch",
+                        getattr(self, "name", str(self)),
+                    )
+                except Exception:
+                    pass
         else:
             return super().ProcessBatch()

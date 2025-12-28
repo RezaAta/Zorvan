@@ -61,7 +61,7 @@ def _get_node_attributes(node):
     for name, val in vars(node).items():
         if name.startswith("_"):
             continue
-        if name in ("predecessors", "inputs", "listOfNodes"):
+        if name in ("predecessors", "inputs", "nodes"):
             continue
         if inspect.isroutine(val):
             continue
@@ -153,14 +153,14 @@ def save(graph: Graph, filename: str, canvas=None, compress=True):
 
         # Special handling for CompressedNode - serialize internal nodes
         if type(node).__name__ == "CompressedNode":
-            internal_nodes = getattr(node, "listOfNodes", [])
+            internal_nodes = getattr(node, "nodes", [])
             node_entry["internal_nodes"] = [
                 _serialize_internal_node(n) for n in internal_nodes
             ]
 
         # Special handling for AbstractNode - serialize internal nodes
         if type(node).__name__ == "AbstractNode":
-            internal_nodes = getattr(node, "listOfNodes", [])
+            internal_nodes = getattr(node, "nodes", [])
             node_entry["internal_nodes"] = [
                 _serialize_internal_node(n) for n in internal_nodes
             ]
@@ -411,7 +411,7 @@ def load(filename: str) -> Graph:
                         internal_nodes[i].AddPreNode(pred)
 
             # Set the internal nodes on the CompressedNode
-            node.listOfNodes = internal_nodes
+            node.nodes = internal_nodes
 
             # Also add internal nodes to id_map so edges can reference them
             for int_node in internal_nodes:
@@ -467,7 +467,7 @@ def load(filename: str) -> Graph:
                         internal_nodes[i].AddPreNode(pred)
 
             # Set the internal nodes on the AbstractNode
-            node.listOfNodes = internal_nodes
+            node.nodes = internal_nodes
 
             # Also add internal nodes to id_map so edges can reference them
             for int_node in internal_nodes:

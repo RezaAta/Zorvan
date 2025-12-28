@@ -69,8 +69,20 @@ class ElitismNode(BasicNode):
             self.elite_fitnesses = [fit for fit, _ in sorted_pairs[: self.num_elites]]
 
             # Reset for next generation
-            self.individuals_buffer.clear()
-            self.fitnesses_buffer.clear()
+            if not isinstance(self.individuals_buffer, list):
+                self.individuals_buffer = []
+            else:
+                try:
+                    self.individuals_buffer.clear()
+                except Exception:
+                    self.individuals_buffer = []
+            if not isinstance(self.fitnesses_buffer, list):
+                self.fitnesses_buffer = []
+            else:
+                try:
+                    self.fitnesses_buffer.clear()
+                except Exception:
+                    self.fitnesses_buffer = []
             self.individuals_collected = 0
 
             # Always return a list of elite individuals
@@ -82,10 +94,34 @@ class ElitismNode(BasicNode):
 
     def ResetElitism(self):
         """Reset elitism tracking (call between runs)."""
-        self.individuals_buffer.clear()
-        self.fitnesses_buffer.clear()
-        self.elite_individuals.clear()
-        self.elite_fitnesses.clear()
+        if not isinstance(self.individuals_buffer, list):
+            self.individuals_buffer = []
+        else:
+            try:
+                self.individuals_buffer.clear()
+            except Exception:
+                self.individuals_buffer = []
+        if not isinstance(self.fitnesses_buffer, list):
+            self.fitnesses_buffer = []
+        else:
+            try:
+                self.fitnesses_buffer.clear()
+            except Exception:
+                self.fitnesses_buffer = []
+        if not isinstance(self.elite_individuals, list):
+            self.elite_individuals = []
+        else:
+            try:
+                self.elite_individuals.clear()
+            except Exception:
+                self.elite_individuals = []
+        if not isinstance(self.elite_fitnesses, list):
+            self.elite_fitnesses = []
+        else:
+            try:
+                self.elite_fitnesses.clear()
+            except Exception:
+                self.elite_fitnesses = []
         self.individuals_collected = 0
 
     def GetBestFitness(self):

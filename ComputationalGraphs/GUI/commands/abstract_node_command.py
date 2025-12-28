@@ -204,7 +204,7 @@ class ExpandAbstractNodeCommand(QUndoCommand):
         self.abstract_color = getattr(node_item, "manual_color", None)
 
         # Store internal nodes for positioning after expand
-        self.internal_nodes = list(self.abstract_node.listOfNodes)
+        self.internal_nodes = list(self.abstract_node.nodes)
 
         # Store edges to/from abstract node
         self.abstract_edges = []

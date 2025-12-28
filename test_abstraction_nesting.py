@@ -288,7 +288,7 @@ class TestAbstractionNesting:
         # Abstract the compressed nodes
         abstract = graph.AbstractNodes([comp1, comp2])
         assert len(graph.nodes) == 2  # input, abstract
-        assert abstract.listOfNodes[0] is comp1 or abstract.listOfNodes[1] is comp1
+        assert abstract.nodes[0] is comp1 or abstract.nodes[1] is comp1
 
         # Expand the abstract
         restored = graph.ExpandAbstractNode(abstract)
@@ -331,8 +331,8 @@ class TestAbstractionNesting:
         assert abstract is not None
         assert len(abstract) == 2
         # Internal nodes should be preserved with their types
-        assert isinstance(abstract.listOfNodes[0], (AdditionNode, MultiplicationNode))
-        assert isinstance(abstract.listOfNodes[1], (AdditionNode, MultiplicationNode))
+        assert isinstance(abstract.nodes[0], (AdditionNode, MultiplicationNode))
+        assert isinstance(abstract.nodes[1], (AdditionNode, MultiplicationNode))
 
 
 if __name__ == "__main__":

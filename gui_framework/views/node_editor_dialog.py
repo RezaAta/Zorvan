@@ -55,9 +55,20 @@ if HAS_PYQT:
                 except Exception:
                     pass
 
-            vm.observe_property(
-                "properties_changed", lambda old, new: _schedule_rebuild()
-            )
+            # Expose schedule/rebuild helpers on self for internal use (synchronous apply)
+            self._schedule_rebuild = _schedule_rebuild
+            self._run_rebuild = _run_rebuild
+
+            def _on_props_changed_for_vm(old, new):
+                # If we are suppressing rebuilds while applying synchronously, remember
+                # a rebuild was requested and defer the actual rebuild until it's safe.
+                if getattr(self, "_suppress_rebuild", False):
+                    self._deferred_rebuild = True
+                    return
+                _schedule_rebuild()
+
+            vm.observe_property("properties_changed", _on_props_changed_for_vm)
+
             # Perform an initial synchronous build so tests can access widgets immediately
             # (we also schedule a second deferred rebuild just in case actions register later).
             self._on_properties_changed(None, None)
@@ -73,6 +84,125 @@ if HAS_PYQT:
             ok_btn = QPushButton("OK")
             ok_btn.clicked.connect(self._on_ok)
             self.layout.addWidget(ok_btn)
+
+            # Reentrancy guard for synchronous apply
+            self._suppress_rebuild = False
+            self._deferred_rebuild = False
+
+        def _set_parameter_sync(self, name, value):
+            """Set a parameter on the VM synchronously while suppressing rebuilds.
+
+            This prevents reentrant UI rebuilds while ensuring the VM/node state is updated
+            immediately so snapshots or processing won't see a stale value.
+            """
+            try:
+                self._suppress_rebuild = True
+                if hasattr(self.vm, "set_parameter"):
+                    self.vm.set_parameter(name, value)
+                else:
+                    self.vm.set_property(name, value)
+            finally:
+                self._suppress_rebuild = False
+                # If any property changes were requested while suppressed, schedule a rebuild
+                if getattr(self, "_deferred_rebuild", False):
+                    self._deferred_rebuild = False
+                    try:
+                        self._schedule_rebuild()
+                    except Exception:
+                        pass
+
+        def _sync_set_parameter(self, name, value):
+            """Apply parameter updates synchronously with reentrancy guard.
+
+            This is now the only supported behavior: immediate, guarded writes to the
+            VM/node to ensure snapshots and processing see the authoritative value
+            without creating reentrant rebuilds.
+            """
+            try:
+                self._set_parameter_sync(name, value)
+            except Exception:
+                # Fallback to direct VM call if guard fails for any reason
+                try:
+                    if hasattr(self.vm, "set_parameter"):
+                        self.vm.set_parameter(name, value)
+                    else:
+                        self.vm.set_property(name, value)
+                except Exception:
+                    logging.exception(
+                        "Failed to apply parameter %s synchronously", name
+                    )
+
+        def _refresh_canvas(self):
+            """Walk parent chain and call parent.canvas.update_node_visuals() if found.
+
+            This is defensive: it tolerates missing parents, missing canvas attributes,
+            and failures so it is safe to call from tests or offscreen environments.
+            """
+            try:
+                p = None
+                try:
+                    p = self.parent()
+                except Exception:
+                    try:
+                        p = getattr(self, "parent", None)
+                        if callable(p):
+                            p = p()
+                    except Exception:
+                        p = None
+
+                # Walk up parents trying to find a canvas with update_node_visuals()
+                while p is not None:
+                    try:
+                        canvas = getattr(p, "canvas", None)
+                        if canvas is not None and hasattr(
+                            canvas, "update_node_visuals"
+                        ):
+                            try:
+                                canvas.update_node_visuals()
+                            except Exception:
+                                pass
+                            return
+                    except Exception:
+                        pass
+
+                    try:
+                        p = p.parent()
+                    except Exception:
+                        try:
+                            p = getattr(p, "parent", None)
+                            if callable(p):
+                                p = p()
+                            else:
+                                p = None
+                        except Exception:
+                            p = None
+
+                # Fallback: search top-level widgets for a canvas and call update_node_visuals()
+                try:
+                    from PyQt6.QtWidgets import QApplication
+
+                    try:
+                        for w in QApplication.topLevelWidgets():
+                            try:
+                                canvas = getattr(w, "canvas", None)
+                                if canvas is not None and hasattr(
+                                    canvas, "update_node_visuals"
+                                ):
+                                    try:
+                                        canvas.update_node_visuals()
+                                    except Exception:
+                                        pass
+                                    return
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                except Exception:
+                    # If Qt isn't available or import fails, silently continue
+                    pass
+            except Exception:
+                # Be extremely defensive to avoid interfering with tests or UI
+                pass
 
         def _adjust_textedit_height(self, editor, min_h=50, max_h=300):
             """Adjust the height of a QTextEdit to fit its content between min_h and max_h."""
@@ -427,15 +557,10 @@ if HAS_PYQT:
                                         editor.setChecked(v)
                                 except Exception:
                                     editor.setChecked(v)
-                                # Use singleShot to defer setting parameters to avoid reentrant UI rebuilds
+                                # Apply parameter updates synchronously with a safe reentrancy guard
                                 editor.stateChanged.connect(
-                                    lambda st, name=k: QTimer.singleShot(
-                                        0,
-                                        lambda st=st, name=name: (
-                                            self.vm.set_parameter(name, bool(st))
-                                            if hasattr(self.vm, "set_parameter")
-                                            else self.vm.set_property(name, bool(st))
-                                        ),
+                                    lambda st, name=k: self._sync_set_parameter(
+                                        name, bool(st)
                                     )
                                 )
                     elif isinstance(v, int):
@@ -478,15 +603,10 @@ if HAS_PYQT:
                                         editor.setValue(v)
                                 except Exception:
                                     editor.setValue(v)
-                                # Defer parameter update to avoid reentrant UI rebuilds while handling widget events
+                                # Apply parameter updates synchronously with a safe reentrancy guard
                                 editor.valueChanged.connect(
-                                    lambda val, name=k: QTimer.singleShot(
-                                        0,
-                                        lambda val=val, name=name: (
-                                            self.vm.set_parameter(name, int(val))
-                                            if hasattr(self.vm, "set_parameter")
-                                            else self.vm.set_property(name, int(val))
-                                        ),
+                                    lambda val, name=k: self._sync_set_parameter(
+                                        name, int(val)
                                     )
                                 )
                     elif isinstance(v, float):
@@ -529,15 +649,10 @@ if HAS_PYQT:
                                         editor.setValue(v)
                                 except Exception:
                                     editor.setValue(v)
-                                # Defer parameter update to avoid reentrant UI rebuilds while handling widget events
+                                # Apply parameter updates synchronously with a safe reentrancy guard
                                 editor.valueChanged.connect(
-                                    lambda val, name=k: QTimer.singleShot(
-                                        0,
-                                        lambda val=val, name=name: (
-                                            self.vm.set_parameter(name, float(val))
-                                            if hasattr(self.vm, "set_parameter")
-                                            else self.vm.set_property(name, float(val))
-                                        ),
+                                    lambda val, name=k: self._sync_set_parameter(
+                                        name, float(val)
                                     )
                                 )
                     else:
@@ -778,9 +893,22 @@ if HAS_PYQT:
                     val_w = self._widgets["value"]
                     # QTextEdit uses toPlainText
                     if hasattr(val_w, "toPlainText"):
-                        self.vm.set_value(val_w.toPlainText())
+                        text = val_w.toPlainText()
                     else:
-                        self.vm.set_value(val_w.text())
+                        text = val_w.text()
+                    # Normalize and guard against empty input to avoid accidental clears
+                    if text is None:
+                        text = ""
+                    text = text.strip()
+                    if text != "":
+                        try:
+                            self.vm.set_value(text)
+                        except Exception:
+                            logging.exception("Failed to set node value from editor")
+                    else:
+                        logging.debug(
+                            "NodeEditorDialog: value field empty on OK; preserving existing node.value"
+                        )
 
                 # Parameters: read values based on widget type
                 for k, w in list(self._widgets.items()):
@@ -796,6 +924,10 @@ if HAS_PYQT:
                         "batchSize",
                         "id",
                         "inputCount",
+                        # Read-only runtime/internal fields — do NOT write them back on OK
+                        "midCalculation",
+                        "midCalculationValue",
+                        "user_locked_value",
                     ):
                         continue
                     try:
@@ -821,6 +953,20 @@ if HAS_PYQT:
 
                 # Call VM apply
                 self.vm.apply_to_node()
+
+                # Schedule a quick canvas refresh on the next event loop turn so changes
+                # made while running are reflected visually on the host canvas if present.
+                try:
+                    try:
+                        QTimer.singleShot(0, self._refresh_canvas)
+                    except Exception:
+                        # If scheduling fails (no event loop), try a direct call as a best-effort
+                        try:
+                            self._refresh_canvas()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
             except Exception:
                 logging.exception("Error applying node editor changes")
             super().accept()

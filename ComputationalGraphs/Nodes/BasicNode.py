@@ -13,6 +13,22 @@ class BasicNode(Node, ABC):  # Inherits from both Node and ABC
         self.computationType = "basic"  # Type of computation for the node
 
     def ResetValue(self):
+        import logging
+        import traceback
+
+        # Preserve user-edited values when flagged
+        if getattr(self, "user_locked_value", False):
+            logging.getLogger(__name__).debug(
+                "ResetValue skipped for %s because user_locked_value=True",
+                getattr(self, "name", str(self)),
+            )
+            return
+        logging.getLogger(__name__).debug(
+            "ResetValue: resetting %s (previous value=%s)\n%s",
+            getattr(self, "name", str(self)),
+            getattr(self, "value", None),
+            "\n".join(traceback.format_stack()),
+        )
         self.value = 0
 
     # Computation-structure/time helpers removed (unused). If needed later, reintroduce with tests.
@@ -24,7 +40,17 @@ class BasicNode(Node, ABC):  # Inherits from both Node and ABC
 
     def UpdateInputs(self):
         """Update the inputs array with the valid values of predecessor nodes."""
-        self.inputs.clear()  # Clear previous inputs
+        # Be defensive: if inputs was accidentally set to a non-list (e.g., a string),
+        # reset it to an empty list instead of calling .clear() on an object
+        # that may not support it.
+        if not isinstance(self.inputs, list):
+            self.inputs = []
+        else:
+            try:
+                self.inputs.clear()
+            except Exception:
+                self.inputs = []
+
         # Fetch values from predecessors and only store valid inputs
         for predecessor in self.predecessors:
             if isinstance(predecessor, AbstractNode):

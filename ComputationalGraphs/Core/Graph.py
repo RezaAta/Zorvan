@@ -563,7 +563,7 @@ class Graph:
         self.starting_nodes = new_starting
 
         # Remove the original nodes from the graph
-        # (but they remain in the CompressedNode's listOfNodes)
+        # (but they remain in the CompressedNode's nodes)
         for node in ordered:
             if node in self.nodes:
                 index = self.nodes.index(node)
@@ -771,7 +771,7 @@ class Graph:
             return None
         if compressed_node not in self.nodes:
             return None
-        if not compressed_node.listOfNodes:
+        if not compressed_node.nodes:
             return None
 
         successor_map = self.BuildSuccessorMap()
@@ -831,7 +831,7 @@ class Graph:
 
     def _decompress_pop_first(self, compressed_node, external_preds):
         """Extract the first node, keep rest compressed."""
-        if len(compressed_node.listOfNodes) <= 1:
+        if len(compressed_node.nodes) <= 1:
             # Only one node left, do full decompress
             return self._decompress_full(
                 compressed_node,
@@ -865,7 +865,7 @@ class Graph:
 
     def _decompress_pop_last(self, compressed_node, external_succs):
         """Extract the last node, keep rest compressed."""
-        if len(compressed_node.listOfNodes) <= 1:
+        if len(compressed_node.nodes) <= 1:
             return self._decompress_full(
                 compressed_node, list(compressed_node.predecessors), external_succs
             )
@@ -1217,7 +1217,7 @@ class Graph:
         self.starting_nodes = new_starting
 
         # Remove the original nodes from the graph
-        # (but they remain in the AbstractNode's listOfNodes)
+        # (but they remain in the AbstractNode's nodes)
         for node in nodes_list:
             if node in self.nodes:
                 index = self.nodes.index(node)
@@ -1249,7 +1249,7 @@ class Graph:
             return None
         if abstract_node not in self.nodes:
             return None
-        if not abstract_node.listOfNodes:
+        if not abstract_node.nodes:
             return None
 
         internal_nodes = abstract_node.get_internal_nodes()

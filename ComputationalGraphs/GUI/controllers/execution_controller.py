@@ -93,6 +93,12 @@ class ExecutionController:
             # Normal async mode - on_step_completed handles skip_visualization
             # (skips graph visuals but can still update plots per-step)
             self.graph_runner.start(max_steps)
+            # Immediately refresh visuals so user edits are visible before the worker runs
+            if not self.main_window.skip_visualization:
+                try:
+                    self.canvas.update_node_visuals(False, 0, 1)
+                except Exception:
+                    pass
             self._set_running_state()
             self.status_bar.showMessage("Executing graph...")
 

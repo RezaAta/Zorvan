@@ -26,7 +26,13 @@ class SingleInputCrossover(BasicNode):  # Inherits from both Node and ABC
                 if len(self.selectedPopulation) >= 2:
                     p1 = self.selectedPopulation[0]
                     p2 = self.selectedPopulation[1]
-                    self.selectedPopulation.clear()
+                    if not isinstance(self.selectedPopulation, list):
+                        self.selectedPopulation = []
+                    else:
+                        try:
+                            self.selectedPopulation.clear()
+                        except Exception:
+                            self.selectedPopulation = []
                     if random.random() > self.rate:
                         return [p1[:], p2[:]]
                     # Use the actual parent length, ensure it's valid

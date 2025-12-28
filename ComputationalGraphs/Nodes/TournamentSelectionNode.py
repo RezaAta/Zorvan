@@ -20,8 +20,20 @@ class TournamentSelectionNode(BasicNode):
             index = self.fitnesses.index(minFitness)
 
             winner = self.candidates[index]
-            self.candidates.clear()
-            self.fitnesses.clear()
+            if not isinstance(self.candidates, list):
+                self.candidates = []
+            else:
+                try:
+                    self.candidates.clear()
+                except Exception:
+                    self.candidates = []
+            if not isinstance(self.fitnesses, list):
+                self.fitnesses = []
+            else:
+                try:
+                    self.fitnesses.clear()
+                except Exception:
+                    self.fitnesses = []
             return winner
         else:
             return None

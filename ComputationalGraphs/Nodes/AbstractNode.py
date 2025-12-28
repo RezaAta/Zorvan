@@ -30,7 +30,7 @@ class AbstractNode(Node):
         """
         # Use list for stable ordering (serialization, display) while
         # enforcing disjointness via validation at abstraction time
-        self.listOfNodes = list(nodes) if nodes else []
+        self.nodes = list(nodes) if nodes else []
 
         # Initialize before calling super().__init__ since it may access predecessors
         super().__init__(name)
@@ -41,21 +41,18 @@ class AbstractNode(Node):
         self.computationType = "complex"
 
         # Value is a list of all internal node values
-        self.value = [node.value for node in self.listOfNodes]
+        self.value = [node.value for node in self.nodes]
 
-    @property
-    def nodes(self):
-        """Alias for listOfNodes for compatibility."""
-        return self.listOfNodes
+    # Public attribute 'nodes' stores internal node list (list)
 
     # SetComputationStructure removed - was unused. Reintroduce only if serialization/UI needs it.
 
     def UpdateValues(self):
         """Update the AbstractNode's value list from all internal nodes."""
-        for node in self.listOfNodes:
+        for node in self.nodes:
             if isinstance(node, AbstractNode):
                 node.UpdateValues()
-        self.value = [node.value for node in self.listOfNodes]
+        self.value = [node.value for node in self.nodes]
 
     # UpdateComputationTime removed - no external callers. Reintroduce with tests if profiling is required.
 
@@ -72,7 +69,7 @@ class AbstractNode(Node):
         Returns:
             A list of values from all internal nodes.
         """
-        if not self.listOfNodes:
+        if not self.nodes:
             return []
 
         # Process each node in parallel
@@ -90,7 +87,7 @@ class AbstractNode(Node):
                         node.value = result
                 return node.value
 
-            futures = [executor.submit(process_node, node) for node in self.listOfNodes]
+            futures = [executor.submit(process_node, node) for node in self.nodes]
             results = [future.result() for future in futures]
 
         self.value = results
@@ -103,7 +100,7 @@ class AbstractNode(Node):
         Since nodes in an AbstractNode are disjoint (not connected to each other),
         they can be processed simultaneously.
         """
-        if not self.listOfNodes:
+        if not self.nodes:
             return
 
         with ThreadPoolExecutor() as executor:
@@ -115,9 +112,7 @@ class AbstractNode(Node):
                     node.ProcessBatch()
                 return node.value
 
-            futures = [
-                executor.submit(batch_process_node, node) for node in self.listOfNodes
-            ]
+            futures = [executor.submit(batch_process_node, node) for node in self.nodes]
             results = [future.result() for future in futures]
 
         self.value = results
@@ -137,11 +132,11 @@ class AbstractNode(Node):
         # Propagate inputs to all internal nodes in parallel
         # Each internal node will gather from its own predecessors (which may be
         # the original external predecessors before abstraction)
-        if self.listOfNodes:
+        if self.nodes:
             with ThreadPoolExecutor() as executor:
                 futures = [
                     executor.submit(node.UpdateInputs)
-                    for node in self.listOfNodes
+                    for node in self.nodes
                     if hasattr(node, "UpdateInputs")
                 ]
                 for future in futures:
@@ -157,8 +152,8 @@ class AbstractNode(Node):
             node: The node to add. Must be disjoint from existing nodes
                   (validation should be done by caller/Graph).
         """
-        if node not in self.listOfNodes:
-            self.listOfNodes.append(node)
+        if node not in self.nodes:
+            self.nodes.append(node)
             self.UpdateValues()
 
     def remove(self, node):
@@ -171,8 +166,8 @@ class AbstractNode(Node):
         Returns:
             The removed node, or None if not found.
         """
-        if node in self.listOfNodes:
-            self.listOfNodes.remove(node)
+        if node in self.nodes:
+            self.nodes.remove(node)
             self.UpdateValues()
             return node
         return None
@@ -184,7 +179,7 @@ class AbstractNode(Node):
         Returns:
             A list of all internal nodes.
         """
-        return list(self.listOfNodes)
+        return list(self.nodes)
 
     def get_internal_nodes(self):
         """
@@ -193,16 +188,16 @@ class AbstractNode(Node):
         Returns:
             A new list containing all nodes in the abstraction.
         """
-        return list(self.listOfNodes)
+        return list(self.nodes)
 
     def __len__(self):
         """Return the number of nodes in the abstraction."""
-        return len(self.listOfNodes)
+        return len(self.nodes)
 
     def __repr__(self):
-        node_names = [getattr(n, "name", str(n)) for n in self.listOfNodes]
+        node_names = [getattr(n, "name", str(n)) for n in self.nodes]
         return f"AbstractNode({self.name}, nodes=[{', '.join(node_names)}])"
 
     def __contains__(self, node):
         """Check if a node is contained in this AbstractNode."""
-        return node in self.listOfNodes
+        return node in self.nodes

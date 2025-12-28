@@ -133,16 +133,29 @@ class NodeEditorViewModel(BaseViewModel):
         try:
             if hasattr(node, "name"):
                 node.name = self._name
-            # Try to parse the _value string into a python value if possible
+            # Try to parse the _value string into a python value if possible.
             try:
-                node.value = (
-                    eval(self._value, {})
-                    if isinstance(self._value, str) and self._value.strip() != ""
-                    else None
-                )
+                if isinstance(self._value, str) and self._value.strip() != "":
+                    try:
+                        import ast
+
+                        node.value = ast.literal_eval(self._value)
+                    except Exception:
+                        # Fallback to raw string
+                        node.value = self._value
+                    try:
+                        node.user_locked_value = True
+                    except Exception:
+                        pass
+                else:
+                    # Empty editor value: do not overwrite node.value; preserve existing value.
+                    import logging
+
+                    logging.debug(
+                        "NodeEditorDialog VM: empty _value on apply_to_node; preserving node.value"
+                    )
             except Exception:
-                # Fallback to raw string
-                node.value = self._value
+                return False
 
             if hasattr(node, "forcedBatchProcessing"):
                 node.forcedBatchProcessing = self._forced_batch

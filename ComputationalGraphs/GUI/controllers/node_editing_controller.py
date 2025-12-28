@@ -28,6 +28,29 @@ class NodeEditingController:
         from ..node_editor_dialog import NodeEditorDialog
 
         mw = self.main_window
+        import logging
+
+        # Log a snapshot of the first few node values before opening the dialog
+        try:
+            sample = [
+                (getattr(n, "name", str(n)), getattr(n, "value", None))
+                for n in getattr(node_item, "scene", lambda: None)
+                and node_item.scene().items()
+                or []
+            ]
+            # Filter Node-like objects
+            sample = [
+                (n.name, n.value)
+                for n in getattr(node_item, "node", None) and [node_item.node] or []
+            ]
+            logging.getLogger(__name__).debug(
+                "Opening NodeEditorDialog for %s; sample node values: %s",
+                getattr(node_item.node, "name", str(node_item.node)),
+                sample,
+            )
+        except Exception:
+            pass
+
         dialog = NodeEditorDialog(node_item.node, mw)
 
         if dialog.exec():
@@ -35,6 +58,17 @@ class NodeEditingController:
             # Use NodeItem helper to reset text and re-center label
             try:
                 node_item.set_label_text(node_item.node.name)
+                import logging
+
+                # Log snapshot after dialog accepted
+                try:
+                    logging.getLogger(__name__).debug(
+                        "After dialog accepted, node %s value=%s",
+                        getattr(node_item.node, "name", ""),
+                        getattr(node_item.node, "value", None),
+                    )
+                except Exception:
+                    pass
             except Exception:
                 # Fallback to old behavior if NodeItem doesn't have helper
                 node_item.label.setPlainText(node_item.node.name)

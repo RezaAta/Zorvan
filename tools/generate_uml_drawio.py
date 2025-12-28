@@ -158,13 +158,13 @@ def build_node_hierarchy_diagram():
 
     # AbstractNode
     a_id = next_id("n")
-    a_attrs = ["listOfNodes", "computationType", "value: list"]
+    a_attrs = ["nodes", "computationType", "value: list"]
     a_methods = ["Operation(*inputs)", "UpdateValues()", "ProcessBatch()"]
     a_cell = class_cell(a_id, 40, 220, "AbstractNode", a_attrs, a_methods)
 
     # CompressedNode
     c_id = next_id("n")
-    c_attrs = ["listOfNodes", "computationType"]
+    c_attrs = ["nodes", "computationType"]
     c_methods = ["Operation(*inputs)", "ProcessBatch()", "first_node/last_node"]
     c_cell = class_cell(c_id, 400, 220, "CompressedNode", c_attrs, c_methods)
 

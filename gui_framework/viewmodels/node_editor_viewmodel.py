@@ -146,8 +146,28 @@ class NodeEditorViewModel(BaseViewModel):
         if not self._node:
             return False
         try:
+            # If editor attempted to set an empty value, ignore the assignment to avoid
+            # accidentally clearing an existing numeric value. This preserves the
+            # authoritative node.value unless an explicit clear action is provided.
+            if prop_name == "value" and (value is None or value == ""):
+                # Keep internal viewmodel property consistent with the node's current value
+                self._props[prop_name] = self._props.get(
+                    prop_name, getattr(self._node, "value", None)
+                )
+                # Do not change node.value or node.user_locked_value on empty assignment
+                self.properties_changed += 1
+                return True
+
             setattr(self._node, prop_name, value)
             self._props[prop_name] = value
+            # If user set the 'value' property via the editor, treat it as an explicit edit
+            # and mark the node as user-locked so automatic resets won't overwrite it.
+            if prop_name == "value":
+                try:
+                    # Only set user_locked_value when a non-empty value was provided
+                    self._node.user_locked_value = True
+                except Exception:
+                    pass
             self.properties_changed += 1
             return True
         except Exception:

@@ -11,8 +11,15 @@ class SequencerNode(BasicNode):
         self.forcedBatchProcessing = True
 
     def ResetValue(self):
-        self.buffer.clear()
-        self.value = 0
+        if not isinstance(self.buffer, list):
+            self.buffer = []
+        else:
+            try:
+                self.buffer.clear()
+            except Exception:
+                self.buffer = []
+        if not getattr(self, "user_locked_value", False):
+            self.value = 0
 
     # This node can take multiple inputs, streamline them inside a buffer, and output them one by one in each iteration.
     def Operation(self, input):
@@ -47,5 +54,12 @@ class SequencerNode(BasicNode):
 
     def ResetBuffer(self):
         """Clear the buffer for fresh computations."""
-        self.buffer.clear()
-        self.value = None
+        if not isinstance(self.buffer, list):
+            self.buffer = []
+        else:
+            try:
+                self.buffer.clear()
+            except Exception:
+                self.buffer = []
+        if not getattr(self, "user_locked_value", False):
+            self.value = None

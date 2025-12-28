@@ -1,7 +1,7 @@
-from ..Core.Graph import Graph
-from ..Core.GraphProcessor import GraphProcessor
-from ..Nodes.AdditionNode import AdditionNode
-from ..Nodes.DisplayNode import DisplayNode
+from ComputationalGraphs.Core.Graph import Graph
+from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
+from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 
 
 # Example setup
@@ -21,3 +21,7 @@ def RunFibonacciFunction():
     processor.ComputeGraph(iterations=10)
 
     graph.DisplayGraph()
+
+
+if __name__ == "__main__":
+    RunFibonacciFunction()

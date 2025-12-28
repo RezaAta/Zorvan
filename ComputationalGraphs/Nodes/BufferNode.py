@@ -21,8 +21,15 @@ class BufferNode(BasicNode):
         self.allowNone = allowNone  # If False, None values will be discarded
 
     def ResetValue(self):
-        self.buffer.clear()
-        self.value = None
+        if not isinstance(self.buffer, list):
+            self.buffer = []
+        else:
+            try:
+                self.buffer.clear()
+            except Exception:
+                self.buffer = []
+        if not getattr(self, "user_locked_value", False):
+            self.value = None
 
     def Operation(self, input):
         """Add new input to buffer and maintain size constraint."""
@@ -77,5 +84,12 @@ class BufferNode(BasicNode):
 
     def ResetBuffer(self):
         """Clear the buffer for fresh computations."""
-        self.buffer.clear()
-        self.value = None
+        if not isinstance(self.buffer, list):
+            self.buffer = []
+        else:
+            try:
+                self.buffer.clear()
+            except Exception:
+                self.buffer = []
+        if not getattr(self, "user_locked_value", False):
+            self.value = None

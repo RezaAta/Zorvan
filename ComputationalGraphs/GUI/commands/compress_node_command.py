@@ -211,7 +211,7 @@ class DecompressNodeCommand(QUndoCommand):
         self.compressed_color = getattr(node_item, "manual_color", None)
 
         # Store internal nodes for positioning after decompress
-        self.internal_nodes = list(self.compressed_node.listOfNodes)
+        self.internal_nodes = list(self.compressed_node.nodes)
 
         # Store edges to/from compressed node
         self.compressed_edges = []
