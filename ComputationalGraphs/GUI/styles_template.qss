@@ -213,6 +213,14 @@ QToolBar {
     spacing: 3px;
 }
 
+/* Ensure toolbar toolbuttons inherit global text color so action labels match theme */
+QToolBar QToolButton, QToolBar QPushButton {
+    color: {{text}};
+}
+QToolBar QToolButton:disabled, QToolBar QPushButton:disabled {
+    color: {{muted_text}};
+}
+
 /* Collapsible section toggles (QToolButton) - provide a subtle hover highlight */
 QToolButton {
     text-align: left;

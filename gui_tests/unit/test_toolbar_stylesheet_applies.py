@@ -12,4 +12,6 @@ def test_toolbar_text_color_in_stylesheet():
     tm.apply_theme()
     ss = app.styleSheet()
     assert "QToolBar" in ss
+    # Ensure toolbar action selectors explicitly reference the text color
+    assert "QToolBar QToolButton" in ss or "QToolBar QPushButton" in ss
     assert "#123456" in ss
