@@ -208,6 +208,7 @@ QMenu::item:selected {
 
 QToolBar {
     background-color: {{header_bg}};
+    color: {{text}};
     border: 1px solid {{border}};
     spacing: 3px;
 }
