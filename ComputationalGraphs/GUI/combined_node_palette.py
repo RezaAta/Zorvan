@@ -725,7 +725,7 @@ class CombinedNodePalette(QDockWidget, ThemeMixin):
             try:
                 panel.header.setStyleSheet(
                     f"QToolButton {{ text-align: left; padding: 6px 8px; border-radius: 6px; font-weight: bold; min-height: 28px; }} "
-                    f"QToolButton:checked {{ background-color: {header_color}; color: white; }} "
+                    f"QToolButton:checked {{ background-color: {header_color}; color: {tm.get_color('text').name()}; }} "
                 )
             except Exception:
                 pass
@@ -775,8 +775,17 @@ class CombinedNodePalette(QDockWidget, ThemeMixin):
         if self._description_popup is None:
             self._description_popup = QLabel(self)
             self._description_popup.setWindowFlags(Qt.WindowType.ToolTip)
+            try:
+                from .theme import get_theme_manager
+
+                tm = get_theme_manager()
+                bg = tm.get_color("list_bg").name()
+                txt = tm.get_color("text").name()
+            except Exception:
+                bg = "#222"
+                txt = "#dcdcdc"
             self._description_popup.setStyleSheet(
-                "QLabel { background: #222; color: white; padding: 6px; border-radius: 6px; }"
+                f"QLabel {{ background: {bg}; color: {txt}; padding: 6px; border-radius: 6px; }}"
             )
             self._description_popup.setWordWrap(True)
         self._description_popup.setText(text_html)

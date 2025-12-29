@@ -90,16 +90,17 @@ class CollapsibleSection(QWidget):
 
             tm = get_theme_manager()
             header = tm.get_color("header_bg", "#239483").name()
+            txt = tm.get_color("text").name()
             self.toggle_button.setStyleSheet(
                 f"QToolButton {{ text-align: left; padding: 6px 8px; border-radius: 6px; font-weight: bold; }} "
-                f"QToolButton:checked {{ background-color: {header}; color: white; }} "
+                f"QToolButton:checked {{ background-color: {header}; color: {txt}; }} "
             )
             # update style when theme changes
             tm.theme_changed.connect(self._on_theme_changed)
         except Exception:
             self.toggle_button.setStyleSheet(
                 "QToolButton { text-align: left; padding: 6px 8px; border-radius: 6px; font-weight: bold; } "
-                "QToolButton:checked { background-color: #239483; color: white; }"
+                "QToolButton:checked { background-color: #239483; color: #dcdcdc; }"
             )
         # Ensure arrow and text align nicely and font weight is clear
         self.toggle_button.setFont(
@@ -142,9 +143,10 @@ class CollapsibleSection(QWidget):
 
             tm = get_theme_manager()
             header = tm.get_color("header_bg", "#239483").name()
+            txt = tm.get_color("text").name()
             self.toggle_button.setStyleSheet(
                 f"QToolButton {{ text-align: left; padding: 6px 8px; border-radius: 6px; font-weight: bold; }} "
-                f"QToolButton:checked {{ background-color: {header}; color: white; }} "
+                f"QToolButton:checked {{ background-color: {header}; color: {txt}; }} "
             )
         except Exception:
             pass

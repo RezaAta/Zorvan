@@ -85,7 +85,7 @@ QToolBar QPushButton[themed="true"]:hover,
 QToolBar QToolButton[themed="true"]:hover {
     background-color: {{button_hover}};
     border: 1px solid {{accent}};
-    color: white;
+    color: {{text}};
 }
 
 QPushButton:hover {
@@ -224,7 +224,7 @@ QToolButton:hover {
 }
 QToolButton:checked {
     background-color: {{header_bg}};
-    color: white;
+    color: {{text}};
 }
 
 QGraphicsView {
