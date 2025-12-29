@@ -3,11 +3,14 @@
 try:
     from PyQt6.QtGui import QColor
     from PyQt6.QtWidgets import (
+        QComboBox,
         QDialog,
         QDialogButtonBox,
         QFormLayout,
         QHBoxLayout,
+        QInputDialog,
         QLabel,
+        QMessageBox,
         QPushButton,
         QTextEdit,
         QVBoxLayout,
@@ -41,6 +44,30 @@ if PYQT_AVAILABLE:
         def _setup_ui(self):
             self.layout = QVBoxLayout(self)
             form = QFormLayout()
+
+            # Theme selection (Saved/Named themes)
+            theme_h = QHBoxLayout()
+            self.theme_label = QLabel("Selected Theme")
+            self.theme_combo = QComboBox()
+            self.save_theme_btn = QPushButton("Save Theme...")
+            self.delete_theme_btn = QPushButton("Delete Theme")
+            self.set_selected_btn = QPushButton("Set as Selected")
+            self.save_theme_btn.clicked.connect(lambda: self._on_save_theme_clicked())
+            self.delete_theme_btn.clicked.connect(
+                lambda: self._on_delete_theme_clicked()
+            )
+            self.set_selected_btn.clicked.connect(
+                lambda: self._on_set_selected_theme_clicked()
+            )
+            self.theme_combo.currentTextChanged.connect(
+                lambda name: self._on_theme_selected(name)
+            )
+            theme_h.addWidget(self.theme_label)
+            theme_h.addWidget(self.theme_combo)
+            theme_h.addWidget(self.save_theme_btn)
+            theme_h.addWidget(self.delete_theme_btn)
+            theme_h.addWidget(self.set_selected_btn)
+            self.layout.addLayout(theme_h)
 
             # Font buttons
             self.ui_font_btn = QPushButton("Select UI Font...")
@@ -98,6 +125,14 @@ if PYQT_AVAILABLE:
         def _bind_viewmodel(self):
             vm: ColorPreferencesViewModel = self.get_viewmodel()
             vm.observe_property("theme_changed", lambda o, n: self._render_from_vm())
+            vm.observe_property(
+                "themes_changed", lambda o, n: self._populate_theme_combo()
+            )
+            # Populate available named themes initially
+            try:
+                self._populate_theme_combo()
+            except Exception:
+                pass
 
         def reject(self):
             # Ensure viewmodel cleanup and safe teardown to avoid lingering Qt
@@ -191,6 +226,92 @@ if PYQT_AVAILABLE:
             font, ok = QFontDialog.getFont(current_font, self, f"Choose {prefix} font")
             if ok and font:
                 self.get_viewmodel().set_font(prefix, font, persist=False)
+
+        def _populate_theme_combo(self):
+            vm = self.get_viewmodel()
+            try:
+                names = vm.get_named_themes()
+            except Exception:
+                names = []
+            try:
+                self.theme_combo.blockSignals(True)
+            except Exception:
+                pass
+            try:
+                self.theme_combo.clear()
+            except Exception:
+                pass
+            try:
+                self.theme_combo.addItems(names)
+            except Exception:
+                pass
+            try:
+                selected = vm.get_selected_theme_name()
+                if selected and selected in names:
+                    idx = self.theme_combo.findText(selected)
+                    if idx >= 0:
+                        self.theme_combo.setCurrentIndex(idx)
+            except Exception:
+                pass
+            try:
+                self.theme_combo.blockSignals(False)
+            except Exception:
+                pass
+
+        def _on_theme_selected(self, name: str):
+            if not name:
+                return
+            try:
+                self.get_viewmodel().apply_named_theme(name, persist=False)
+                # Re-render colors from VM
+                self._render_from_vm()
+            except Exception:
+                pass
+
+        def _on_save_theme_clicked(self):
+            vm = self.get_viewmodel()
+            try:
+                name, ok = QInputDialog.getText(self, "Save Theme", "Theme name:")
+                if ok and name:
+                    vm.save_named_theme(str(name))
+                    try:
+                        self._populate_theme_combo()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        def _on_delete_theme_clicked(self):
+            try:
+                name = self.theme_combo.currentText()
+                if not name:
+                    return
+                reply = QMessageBox.question(
+                    self,
+                    "Delete Theme",
+                    f"Delete theme '{name}'?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    self.get_viewmodel().delete_named_theme(name)
+                    try:
+                        self._populate_theme_combo()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        def _on_set_selected_theme_clicked(self):
+            try:
+                name = self.theme_combo.currentText()
+                if not name:
+                    return
+                self.get_viewmodel().set_selected_theme_name(name, persist=True)
+                QMessageBox.information(
+                    self, "Selected", f"Theme '{name}' set as selected."
+                )
+            except Exception:
+                pass
 
 else:
 
