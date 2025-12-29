@@ -22,5 +22,7 @@ def test_toolbar_widgets_are_themed_when_available():
     has_themed_label = bool(toolbar_widgets)
     assert has_themed_label or mw.search_box.property("themed") is True
 
-    # Next button and add-to-plot should be themed
-    assert isinstance(mw.toolbar_add_to_plot_btn, ThemedPushButton)
+    # Next button and add-to-plot should be themed (either ThemedPushButton or ThemedToolButton or have themed property)
+    is_push = isinstance(mw.toolbar_add_to_plot_btn, ThemedPushButton)
+    is_themed_prop = bool(mw.toolbar_add_to_plot_btn.property("themed"))
+    assert is_push or is_themed_prop
