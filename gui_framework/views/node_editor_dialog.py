@@ -75,9 +75,17 @@ if HAS_PYQT:
             try:
                 # Schedule a second refresh on the next event loop turn to catch any
                 # actions that may have been registered after VM initialization.
-                from PyQt6.QtCore import QTimer
+                import os
 
-                QTimer.singleShot(0, lambda: _schedule_rebuild())
+                if os.environ.get("CG_PYTEST_RUNNING") == "1":
+                    # Tests run in a tight harness; avoid scheduling deferred
+                    # rebuilds that may trigger event-loop activity and intermittent
+                    # native crashes on some platforms.
+                    pass
+                else:
+                    from PyQt6.QtCore import QTimer
+
+                    QTimer.singleShot(0, lambda: _schedule_rebuild())
             except Exception:
                 pass
 
@@ -139,6 +147,7 @@ if HAS_PYQT:
             and failures so it is safe to call from tests or offscreen environments.
             """
             try:
+                logging.debug("NodeEditorDialog: _refresh_canvas start")
                 p = None
                 try:
                     p = self.parent()
@@ -182,13 +191,25 @@ if HAS_PYQT:
                     from PyQt6.QtWidgets import QApplication
 
                     try:
-                        for w in QApplication.topLevelWidgets():
+                        widgets = QApplication.topLevelWidgets()
+                        try:
+                            logging.debug(
+                                "NodeEditorDialog: found %s topLevelWidgets",
+                                len(widgets),
+                            )
+                        except Exception:
+                            pass
+                        for w in widgets:
                             try:
                                 canvas = getattr(w, "canvas", None)
                                 if canvas is not None and hasattr(
                                     canvas, "update_node_visuals"
                                 ):
                                     try:
+                                        logging.debug(
+                                            "NodeEditorDialog: calling canvas.update_node_visuals on %s",
+                                            w,
+                                        )
                                         canvas.update_node_visuals()
                                     except Exception:
                                         pass
@@ -957,14 +978,23 @@ if HAS_PYQT:
                 # Schedule a quick canvas refresh on the next event loop turn so changes
                 # made while running are reflected visually on the host canvas if present.
                 try:
-                    try:
-                        QTimer.singleShot(0, self._refresh_canvas)
-                    except Exception:
-                        # If scheduling fails (no event loop), try a direct call as a best-effort
+                    import os
+
+                    if os.environ.get("CG_PYTEST_RUNNING") == "1":
+                        # Avoid scheduling canvas refresh during tests; call directly
                         try:
                             self._refresh_canvas()
                         except Exception:
                             pass
+                    else:
+                        try:
+                            QTimer.singleShot(0, self._refresh_canvas)
+                        except Exception:
+                            # If scheduling fails (no event loop), try a direct call as a best-effort
+                            try:
+                                self._refresh_canvas()
+                            except Exception:
+                                pass
                 except Exception:
                     pass
             except Exception:

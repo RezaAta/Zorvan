@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import traceback
 from typing import Dict, List
 
 from PyQt6.QtCore import QObject, QSettings, pyqtSignal
@@ -756,6 +758,29 @@ class ThemeManager(QObject):
         # return early.
         is_test = _is_test_env()
 
+        # Diagnostic logging: record when apply_theme is invoked and who called it.
+        try:
+            logger = logging.getLogger(__name__)
+            logger.debug(
+                "ThemeManager.apply_theme called (is_test=%s, forced=%s, app=%s)",
+                is_test,
+                getattr(self, "_force_test_safe", False),
+                QApplication.instance() is not None,
+            )
+            # Also print to stdout for diagnostic capture in pytest runs
+            try:
+                logging.getLogger(__name__).debug(
+                    "[theme-debug] apply_theme called (is_test=%s, forced=%s, app_exists=%s)",
+                    is_test,
+                    getattr(self, "_force_test_safe", False),
+                    QApplication.instance() is not None,
+                )
+                print("".join(traceback.format_stack(limit=20)))
+            except Exception:
+                pass
+        except Exception:
+            pass
+
         try:
             if os.path.exists(template_path):
                 with open(template_path, "r", encoding="utf-8") as f:
@@ -865,6 +890,12 @@ class ThemeManager(QObject):
                         )
                     except Exception:
                         deep_apply_allowed = False
+                    try:
+                        logging.getLogger(__name__).debug(
+                            "deep_apply_allowed=%s", deep_apply_allowed
+                        )
+                    except Exception:
+                        pass
 
                     if deep_apply_allowed:
                         try:
@@ -1026,6 +1057,12 @@ class ThemeManager(QObject):
                         )
                     except Exception:
                         deep_apply_allowed = False
+                    try:
+                        logging.getLogger(__name__).debug(
+                            "deep_apply_allowed=%s", deep_apply_allowed
+                        )
+                    except Exception:
+                        pass
 
                     if deep_apply_allowed:
                         try:

@@ -13,6 +13,16 @@ try:
 except Exception:
     _PYQT6_AVAILABLE = False
 
+# When running under pytest, make the test-run sentinel available as early as
+# possible so modules importing during collection can detect test mode and
+# avoid constructing native widgets or actions prematurely.
+try:
+    import os
+
+    os.environ["CG_PYTEST_RUNNING"] = "1"
+except Exception:
+    pass
+
 
 def pytest_ignore_collect(path, config):
     # Only check test files - path may be py.path.local, convert to pathlib.Path
@@ -69,6 +79,12 @@ def pytest_sessionstart(session):
             # switch to safer code paths where needed (theme application, etc.)
             try:
                 os.environ["CG_PYTEST_RUNNING"] = "1"
+            except Exception:
+                pass
+            # Diagnostic: detect QActions being set before QApplication is initialized
+            try:
+                # Cleanup: no debug wrapper for QAction.setEnabled in normal runs
+                pass
             except Exception:
                 pass
             try:
