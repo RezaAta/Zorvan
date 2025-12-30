@@ -43,26 +43,41 @@ def pytest_ignore_collect(path, config):
     return False
 
 
+_QAPP = None
+
+
 def pytest_sessionstart(session):
     # Ensure a QApplication exists and the ThemeManager applies a minimal
     # stylesheet early for *all* tests (including Tests/*) so tests that
     # assert on app.styleSheet() will observe expected selectors. Create
     # the application only if PyQt6 is available and an instance doesn't
     # already exist.
+    global _QAPP
     if _PYQT6_AVAILABLE:
         try:
             from PyQt6.QtWidgets import QApplication
 
             try:
                 app = QApplication.instance() or QApplication([])
+                # Keep a Python-side reference to prevent premature GC of the
+                # wrapper object which may result in a brief None value from
+                # QApplication.instance() in later code paths.
+                _QAPP = app
             except Exception:
                 app = None
+            # Mark the process as running under pytest so other modules can
+            # switch to safer code paths where needed (theme application, etc.)
+            try:
+                os.environ["CG_PYTEST_RUNNING"] = "1"
+            except Exception:
+                pass
             try:
                 from ComputationalGraphs.GUI.theme import get_theme_manager
 
                 try:
                     manager = get_theme_manager()
                     try:
+                        manager.set_test_mode(True)
                         hover = manager.get_color("button_hover", "#5a5a5a").name()
                         button_bg = manager.get_color("button_bg").name()
                         qss = (

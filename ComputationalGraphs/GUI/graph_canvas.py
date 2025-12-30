@@ -223,6 +223,18 @@ class GraphCanvas(QGraphicsView):
     connection_dropped_on_empty = pyqtSignal(object, object)
 
     def __init__(self, parent=None):
+        # Defensive: ensure a QApplication is available before constructing QWidget
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            if QApplication.instance() is None:
+                try:
+                    QApplication([])
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         super().__init__(parent)
 
         self.scene = QGraphicsScene(self)
@@ -271,6 +283,16 @@ class GraphCanvas(QGraphicsView):
 
         # Grid / snap settings
         self.node_diameter = 80  # Default assumed diameter (2 * radius 40)
+
+        # Ensure a Graph instance exists for convenience in tests and headless usage
+        try:
+            if not hasattr(self, "graph") or getattr(self, "graph") is None:
+                from ComputationalGraphs.Core.Graph import Graph
+
+                self.graph = Graph()
+        except Exception:
+            # If Graph cannot be instantiated for any reason, leave as None
+            self.graph = None
         # Default to 4x4 mode (node is 4x4 cells) and snap granularity as single grid cell
         self.grid_mode = "4x4"
         self.grid_size = max(1, int(self.node_diameter / 4))

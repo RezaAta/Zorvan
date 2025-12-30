@@ -13,7 +13,11 @@ from ComputationalGraphs.Nodes.BufferNode import BufferNode
 
 
 def test_apply_node_colors_clears_ann_override():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     win = MainWindow()
 
     # Create a buffer node and add to canvas
@@ -32,7 +36,13 @@ def test_apply_node_colors_clears_ann_override():
     assert ni.manual_color is None
     assert ni.default_color == win.default_node_color
 
-    app.quit()
+    # Close window and quit app only if this test created it
+    try:
+        win.close()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()
 
 
 if __name__ == "__main__":

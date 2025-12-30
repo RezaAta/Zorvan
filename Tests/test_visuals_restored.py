@@ -16,7 +16,8 @@ from ComputationalGraphs.GUI.main_window import MainWindow
 class VisualsRestoredTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = QApplication(sys.argv)
+        # Reuse existing QApplication instance if present to avoid teardown races
+        cls.app = QApplication.instance() or QApplication(sys.argv)
 
     def test_visuals_restored(self):
         win = MainWindow()

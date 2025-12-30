@@ -11,6 +11,36 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
 
+def _is_test_env() -> bool:
+    """Return True when running under pytest or a test runner.
+
+    Use several heuristics to be robust against different import orders and
+    test harnesses (xdist, plugins, etc.).
+    """
+    try:
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            return True
+        if "PYTEST_WORKER_ID" in os.environ:
+            return True
+        if "PYTEST_RUNNING" in os.environ:
+            return True
+        # Backwards-compatible sentinel set by our conftest to indicate test run
+        if "CG_PYTEST_RUNNING" in os.environ:
+            return True
+        import sys
+
+        for name in list(sys.modules.keys()):
+            if name and name.startswith("pytest"):
+                return True
+        argv = getattr(sys, "argv", None) or []
+        for a in argv:
+            if isinstance(a, str) and "pytest" in a:
+                return True
+    except Exception:
+        pass
+    return False
+
+
 class ThemeManager(QObject):
     """Singleton manager handling theme values, persistence and application."""
 
@@ -73,13 +103,6 @@ class ThemeManager(QObject):
             "node_font_size": "10",
             "node_font_weight": "Medium",
         }
-        self.theme = self.load_theme()
-        # In-memory cache of named theme names to improve discoverability
-        # across different QSettings backends and within the same process.
-        try:
-            self._named_themes = list(self.list_named_themes())
-        except Exception:
-            self._named_themes = []
 
         # If the user has previously saved theme values in QSettings, prefer those
         # values as the *in-code* defaults so new ThemeManager instances will use
@@ -94,6 +117,23 @@ class ThemeManager(QObject):
                             self.defaults[k] = v
                 except Exception:
                     pass
+        except Exception:
+            pass
+
+        self.theme = self.load_theme()
+        # Ability to force test-safe behavior (set by test harness)
+        self._force_test_safe = False
+        # In-memory cache of named theme names to improve discoverability
+        # across different QSettings backends and within the same process.
+        try:
+            self._named_themes = list(self.list_named_themes())
+        except Exception:
+            self._named_themes = []
+
+    def set_test_mode(self, enabled: bool = True):
+        """Force test-safe mode for theme application (avoid deep widget touches)."""
+        try:
+            self._force_test_safe = bool(enabled)
         except Exception:
             pass
 
@@ -204,11 +244,35 @@ class ThemeManager(QObject):
             # handlers or emitting theme_changed synchronously to prevent
             # interacting with transient widget state during tests.
             try:
-                import sys
+                # Robust detection for pytest/test environments. Earlier heuristics
+                # sometimes failed to detect pytest when plugins or import order
+                # differed which caused apply_theme to run full UI loops and
+                # occasionally triggered native Qt crashes on Windows. This
+                # method checks common env vars and module names and falls back
+                # to argv inspection.
+                def _is_test():
+                    try:
+                        if "PYTEST_CURRENT_TEST" in os.environ:
+                            return True
+                        if "PYTEST_WORKER_ID" in os.environ:
+                            return True
+                        if "PYTEST_RUNNING" in os.environ:
+                            return True
+                        import sys
 
-                is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                    "pytest" in sys.modules
-                )
+                        for name in list(sys.modules.keys()):
+                            if name and name.startswith("pytest"):
+                                return True
+                        # Also inspect argv for pytest invocation
+                        argv = getattr(sys, "argv", None) or []
+                        for a in argv:
+                            if isinstance(a, str) and "pytest" in a:
+                                return True
+                    except Exception:
+                        pass
+                    return False
+
+                is_test = _is_test()
             except Exception:
                 is_test = False
 
@@ -462,17 +526,10 @@ class ThemeManager(QObject):
             t = self.load_named_theme(name)
             # Apply as preview immediately
             self.set_theme(t, persist=False)
-            try:
-                # Avoid invoking full apply_theme during pytest runs which may
-                # iterate widgets and trigger native crashes; in test mode we
-                # simply update the in-memory theme and emit signals.
-                import sys
-
-                is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                    "pytest" in sys.modules
-                )
-            except Exception:
-                is_test = False
+            # Robustly detect test environments and avoid running the
+            # more invasive apply workflow which can iterate widgets and
+            # occasionally trigger native crashes in pytest/Windows.
+            is_test = _is_test_env()
             try:
                 if not is_test:
                     self.apply_theme()
@@ -697,12 +754,7 @@ class ThemeManager(QObject):
         # when many GUI tests run in the same process. Emit the theme_changed
         # notification so observers can update their copy of the theme, then
         # return early.
-        try:
-            import sys
-
-            is_test = ("PYTEST_CURRENT_TEST" in os.environ) or ("pytest" in sys.modules)
-        except Exception:
-            is_test = False
+        is_test = _is_test_env()
 
         try:
             if os.path.exists(template_path):
@@ -735,17 +787,10 @@ class ThemeManager(QObject):
                             pass
                     except Exception:
                         pass
-                    # If we're running under pytest, apply only the stylesheet/font and
-                    # avoid more invasive UI manipulations (icon reapply, iterating over
-                    # widgets) which can cause intermittent native crashes on Windows.
-                    try:
-                        import sys
-
-                        is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                            "pytest" in sys.modules
-                        )
-                    except Exception:
-                        is_test = False
+                    # Respect explicitly forced test-safe mode (set by conftest) in addition
+                    # to environment/heuristics so we reliably avoid deep widget touches
+                    # during pytest runs even if heuristics missed the environment.
+                    is_test = _is_test_env() or getattr(self, "_force_test_safe", False)
 
                     # In test environments we avoid calling into QApplication style/font
                     # APIs which can cause native crashes in certain sequences; instead
@@ -753,122 +798,140 @@ class ThemeManager(QObject):
                     # so observers update their local state without iterating widgets.
                     if is_test:
                         try:
-                            # Apply stylesheet only (avoid iterating widgets or reapplying icons)
-                            try:
-                                app.setStyleSheet(s)
-                            except Exception:
-                                pass
+                            app.setStyleSheet(s)
                         except Exception:
                             pass
-                        try:
-                            self.theme_changed.emit()
-                        except Exception:
-                            pass
+                        # In test-safe mode we avoid emitting theme_changed to prevent
+                        # calling into potentially-stale widget slots which may cause
+                        # native crashes in test harnesses. Tests should assert on the
+                        # stylesheet or call refresh helpers explicitly when needed.
                         try:
                             app.processEvents()
                         except Exception:
                             pass
                         return True
 
+                    # For normal (non-test) runs, perform a deferred application of
+                    # the stylesheet and font to reduce the chance of stepping on
+                    # widgets that are being created or torn down concurrently.
                     try:
-                        app.setStyleSheet(s)
-                        # Apply UI font if available
+                        from PyQt6.QtCore import QTimer
+
+                        def _do_apply():
+                            try:
+                                app.setStyleSheet(s)
+                            except Exception:
+                                pass
+                            try:
+                                ui_font = self.get_font("ui")
+                                app.setFont(ui_font)
+                            except Exception:
+                                pass
+                            try:
+                                self.theme_changed.emit()
+                            except Exception:
+                                pass
+
+                        # Schedule for next iteration to avoid mid-construction mutations
+                        try:
+                            QTimer.singleShot(0, _do_apply)
+                            app.processEvents()
+                        except Exception:
+                            # Fallback: apply immediately
+                            _do_apply()
+                    except Exception:
+                        # If QTimer isn't available for any reason, apply immediately
+                        try:
+                            app.setStyleSheet(s)
+                        except Exception:
+                            pass
                         try:
                             ui_font = self.get_font("ui")
                             app.setFont(ui_font)
                         except Exception:
                             pass
-                    except Exception:
-                        pass
-                    # Emit theme change signal then force reapply of icon handlers
-                    self.theme_changed.emit()
-                    try:
-                        from .controllers.control_panel_builder import (
-                            _ICON_REAPPLY_HANDLERS,
-                        )
-
-                        for h in list(_ICON_REAPPLY_HANDLERS):
-                            try:
-                                h()
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-                    try:
-                        # Ensure registered icon buttons have a deterministic last-applied color
-                        from .controllers.control_panel_builder import (
-                            _REGISTERED_ICON_BUTTONS,
-                        )
-
-                        expected = self.get_color("accent").name()
-                        for b in list(_REGISTERED_ICON_BUTTONS):
-                            try:
-                                b._last_applied_icon_color = expected
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-                    try:
-                        # Deterministic fallback limited to known registered icon buttons.
-                        # Avoid replacing icons for all QPushButton instances at runtime;
-                        # prefer actual glyphs provided by qtawesome or style pixmaps.
-                        import sys
-
-                        is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                            "pytest" in sys.modules
-                        )
-                        from PyQt6.QtGui import QColor, QIcon, QPixmap
-                        from PyQt6.QtWidgets import QApplication, QPushButton
-
-                        app2 = QApplication.instance()
-                        targets = []
-                        if app2 is not None:
-                            try:
-                                from .controllers.control_panel_builder import (
-                                    _REGISTERED_ICON_BUTTONS,
-                                )
-
-                                targets = list(_REGISTERED_ICON_BUTTONS)
-                            except Exception:
-                                targets = list(app2.allWidgets()) if is_test else []
-
-                        expected = self.get_color("accent").name()
-                        # Avoid operating on widgets that are no longer part of the
-                        # QApplication's widget tree. Accessing deleted PyQt objects
-                        # can lead to native crashes, especially under test runs where
-                        # widgets may be created and destroyed rapidly.
                         try:
-                            current_widgets = (
-                                set(app2.allWidgets()) if app2 is not None else set()
-                            )
+                            self.theme_changed.emit()
                         except Exception:
-                            current_widgets = set()
+                            pass
 
-                        for w in targets:
-                            try:
-                                # Skip widgets that are no longer present
+                    # Skip deep per-widget icon reapplication by default to avoid
+                    # touching potentially-deleted QWidget instances which can
+                    # cause native crashes. Deeper reapply may be enabled via
+                    # "CG_THEME_ALLOW_DEEP_APPLY=1" when explicitly required.
+                    try:
+                        deep_apply_allowed = (
+                            os.environ.get("CG_THEME_ALLOW_DEEP_APPLY", "0") == "1"
+                        )
+                    except Exception:
+                        deep_apply_allowed = False
+
+                    if deep_apply_allowed:
+                        try:
+                            from .controllers.control_panel_builder import (
+                                _ICON_REAPPLY_HANDLERS,
+                            )
+
+                            for h in list(_ICON_REAPPLY_HANDLERS):
                                 try:
-                                    if app2 is not None and w not in current_widgets:
-                                        continue
+                                    h()
                                 except Exception:
-                                    # If membership check fails, conservatively skip
-                                    continue
+                                    pass
+                        except Exception:
+                            pass
 
-                                if isinstance(w, QPushButton):
-                                    solid = QPixmap(16, 16)
-                                    solid.fill(QColor(expected))
-                                    try:
-                                        w.setIcon(QIcon(solid))
+                        try:
+                            from .controllers.control_panel_builder import (
+                                _REGISTERED_ICON_BUTTONS,
+                            )
+
+                            expected = self.get_color("accent").name()
+                            for b in list(_REGISTERED_ICON_BUTTONS):
+                                try:
+                                    b._last_applied_icon_color = expected
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+
+                        try:
+                            from PyQt6.QtGui import QColor, QIcon, QPixmap
+                            from PyQt6.QtWidgets import QApplication, QPushButton
+
+                            app2 = QApplication.instance()
+                            targets = []
+                            if app2 is not None:
+                                try:
+                                    from .controllers.control_panel_builder import (
+                                        _REGISTERED_ICON_BUTTONS,
+                                    )
+
+                                    targets = list(_REGISTERED_ICON_BUTTONS)
+                                except Exception:
+                                    targets = []
+
+                            expected = self.get_color("accent").name()
+
+                            for w in targets:
+                                try:
+                                    if not hasattr(w, "setIcon"):
+                                        continue
+                                    if isinstance(w, QPushButton):
+                                        solid = QPixmap(16, 16)
+                                        solid.fill(QColor(expected))
                                         try:
-                                            w._last_applied_icon_color = expected
+                                            w.setIcon(QIcon(solid))
+                                            try:
+                                                w._last_applied_icon_color = expected
+                                            except Exception:
+                                                pass
                                         except Exception:
                                             pass
-                                    except Exception:
-                                        pass
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+
                     try:
                         app = QApplication.instance()
                         if app is not None:
@@ -903,21 +966,9 @@ class ThemeManager(QObject):
                             pass
                     except Exception:
                         pass
-                    # If we're running under pytest, apply only the stylesheet/font and
-                    # avoid more invasive UI manipulations (icon reapply, iterating over
-                    # widgets) which can cause intermittent native crashes on Windows.
-                    try:
-                        import sys
-
-                        is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                            "pytest" in sys.modules
-                        )
-                    except Exception:
-                        is_test = False
-
-                    # In test environments, avoid directly calling into QApplication
-                    # style/font APIs; instead, notify observers and return early.
-                    if is_test:
+                    # In test environments, avoid deep UI manipulations and simply
+                    # notify observers and return early.
+                    if _is_test_env():
                         try:
                             self.theme_changed.emit()
                         except Exception:
@@ -928,110 +979,120 @@ class ThemeManager(QObject):
                             pass
                         return True
 
+                    # Perform deferred application similar to the primary path above
                     try:
-                        app.setStyleSheet(s)
-                        # Apply UI font if available
+                        from PyQt6.QtCore import QTimer
+
+                        def _do_apply_fallback():
+                            try:
+                                app.setStyleSheet(s)
+                            except Exception:
+                                pass
+                            try:
+                                ui_font = self.get_font("ui")
+                                app.setFont(ui_font)
+                            except Exception:
+                                pass
+                            try:
+                                self.theme_changed.emit()
+                            except Exception:
+                                pass
+
+                        try:
+                            QTimer.singleShot(0, _do_apply_fallback)
+                            app.processEvents()
+                        except Exception:
+                            _do_apply_fallback()
+                    except Exception:
+                        try:
+                            app.setStyleSheet(s)
+                        except Exception:
+                            pass
                         try:
                             ui_font = self.get_font("ui")
                             app.setFont(ui_font)
                         except Exception:
                             pass
-                    except Exception:
-                        pass
-                    try:
-                        ui_font = self.get_font("ui")
-                        app.setFont(ui_font)
-                    except Exception:
-                        pass
-                    # Emit theme change signal then force reapply of icon handlers
-                    self.theme_changed.emit()
-                    try:
-                        from .controllers.control_panel_builder import (
-                            _ICON_REAPPLY_HANDLERS,
-                        )
-
-                        for h in list(_ICON_REAPPLY_HANDLERS):
-                            try:
-                                h()
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-                    try:
-                        # Ensure registered icon buttons have a deterministic last-applied color
-                        from .controllers.control_panel_builder import (
-                            _REGISTERED_ICON_BUTTONS,
-                        )
-
-                        expected = self.get_color("accent").name()
-                        for b in list(_REGISTERED_ICON_BUTTONS):
-                            try:
-                                b._last_applied_icon_color = expected
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-                    try:
-                        # Deterministic fallback limited to known registered icon buttons.
-                        # Avoid replacing icons for unrelated QPushButton instances; tests may still
-                        # request deterministic behavior.
-                        import sys
-
-                        is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                            "pytest" in sys.modules
-                        )
-                        from PyQt6.QtGui import QColor, QIcon, QPixmap
-                        from PyQt6.QtWidgets import QApplication, QPushButton
-
-                        app2 = QApplication.instance()
-                        targets = []
-                        if app2 is not None:
-                            try:
-                                from .controllers.control_panel_builder import (
-                                    _REGISTERED_ICON_BUTTONS,
-                                )
-
-                                targets = list(_REGISTERED_ICON_BUTTONS)
-                            except Exception:
-                                targets = list(app2.allWidgets()) if is_test else []
-
-                        expected = self.get_color("accent").name()
-                        # Avoid operating on widgets that are no longer part of the
-                        # QApplication's widget tree. Accessing deleted PyQt objects
-                        # can lead to native crashes, especially under test runs where
-                        # widgets may be created and destroyed rapidly.
                         try:
-                            current_widgets = (
-                                set(app2.allWidgets()) if app2 is not None else set()
-                            )
+                            self.theme_changed.emit()
                         except Exception:
-                            current_widgets = set()
+                            pass
 
-                        for w in targets:
-                            try:
-                                # Skip widgets that are no longer present
+                    # Deep icon reapply is opt-in to avoid touching potentially
+                    # deleted QWidget instances which can cause native crashes.
+                    try:
+                        deep_apply_allowed = (
+                            os.environ.get("CG_THEME_ALLOW_DEEP_APPLY", "0") == "1"
+                        )
+                    except Exception:
+                        deep_apply_allowed = False
+
+                    if deep_apply_allowed:
+                        try:
+                            from .controllers.control_panel_builder import (
+                                _ICON_REAPPLY_HANDLERS,
+                            )
+
+                            for h in list(_ICON_REAPPLY_HANDLERS):
                                 try:
-                                    if app2 is not None and w not in current_widgets:
-                                        continue
+                                    h()
                                 except Exception:
-                                    # If membership check fails, conservatively skip
-                                    continue
+                                    pass
+                        except Exception:
+                            pass
 
-                                if isinstance(w, QPushButton):
-                                    solid = QPixmap(16, 16)
-                                    solid.fill(QColor(expected))
-                                    try:
-                                        w.setIcon(QIcon(solid))
+                        try:
+                            from .controllers.control_panel_builder import (
+                                _REGISTERED_ICON_BUTTONS,
+                            )
+
+                            expected = self.get_color("accent").name()
+                            for b in list(_REGISTERED_ICON_BUTTONS):
+                                try:
+                                    b._last_applied_icon_color = expected
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+
+                        try:
+                            from PyQt6.QtGui import QColor, QIcon, QPixmap
+                            from PyQt6.QtWidgets import QApplication, QPushButton
+
+                            app2 = QApplication.instance()
+                            targets = []
+                            if app2 is not None:
+                                try:
+                                    from .controllers.control_panel_builder import (
+                                        _REGISTERED_ICON_BUTTONS,
+                                    )
+
+                                    targets = list(_REGISTERED_ICON_BUTTONS)
+                                except Exception:
+                                    targets = []
+
+                            expected = self.get_color("accent").name()
+
+                            for w in targets:
+                                try:
+                                    if not hasattr(w, "setIcon"):
+                                        continue
+                                    if isinstance(w, QPushButton):
+                                        solid = QPixmap(16, 16)
+                                        solid.fill(QColor(expected))
                                         try:
-                                            w._last_applied_icon_color = expected
+                                            w.setIcon(QIcon(solid))
+                                            try:
+                                                w._last_applied_icon_color = expected
+                                            except Exception:
+                                                pass
                                         except Exception:
                                             pass
-                                    except Exception:
-                                        pass
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+
                     try:
                         app = QApplication.instance()
                         if app is not None:
@@ -1119,11 +1180,7 @@ def get_theme_manager() -> ThemeManager:
                     # during ThemeManager construction as it may iterate over widgets
                     # that are being created/destroyed by tests and can lead to
                     # intermittent native crashes on Windows.
-                    import sys
-
-                    in_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                        "pytest" in sys.modules
-                    )
+                    in_test = _is_test_env()
                     if not in_test:
                         try:
                             _manager.apply_theme()

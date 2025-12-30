@@ -13,7 +13,11 @@ from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 
 
 def run_test():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     # Create a buffer node and a sigmoid node
     buf = BufferNode(name="Buff_T", size=3)
     sig = SigmoidNode(name="Sig_T")
@@ -32,8 +36,9 @@ def run_test():
     except Exception as e:
         print("ERROR: update_value_display raised exception:", type(e), e)
 
-    # Quit application
-    app.quit()
+    # Quit application if we created it
+    if created_app:
+        app.quit()
 
 
 if __name__ == "__main__":

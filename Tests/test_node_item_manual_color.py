@@ -14,7 +14,11 @@ from ComputationalGraphs.Nodes.BufferNode import BufferNode
 
 
 def test_manual_color_init_and_ann_apply():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     canvas = GraphCanvas()
 
     # Create a BufferNode and a NodeItem
@@ -62,5 +66,6 @@ def test_manual_color_init_and_ann_apply():
     assert ni.manual_color is None
     assert ni2.manual_color is None
 
-    # Quit application
-    app.quit()
+    # Quit application if this test created it
+    if created_app:
+        app.quit()

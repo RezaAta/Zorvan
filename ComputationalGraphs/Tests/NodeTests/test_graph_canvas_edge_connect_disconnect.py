@@ -20,7 +20,12 @@ from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 
 
 def test_graph_canvas_connect_disconnect():
-    app = QApplication(sys.argv)
+    _app = QApplication.instance()
+    need_created = False
+    if _app is None:
+        _app = QApplication(sys.argv)
+        need_created = True
+    app = _app
     g = Graph()
     ds = DataStreamNode(name="ds", data=[10, 20, 30])
     disp = DisplayNode(name="disp")
@@ -50,11 +55,17 @@ def test_graph_canvas_connect_disconnect():
     assert ds in buff.predecessors
 
     # Clean up
-    app.quit()
+    if need_created:
+        app.quit()
 
 
 def test_gui_rewire_buffer_after_replace():
-    app = QApplication(sys.argv)
+    _app = QApplication.instance()
+    need_created = False
+    if _app is None:
+        _app = QApplication(sys.argv)
+        need_created = True
+    app = _app
     g = Graph()
     # data stream has values [5,6,7]
     ds = DataStreamNode(name="ds", data=[5, 6, 7])
@@ -90,7 +101,12 @@ def test_gui_rewire_buffer_after_replace():
 
 
 def test_predecessors_dialog_disconnect():
-    app = QApplication(sys.argv)
+    _app = QApplication.instance()
+    need_created = False
+    if _app is None:
+        _app = QApplication(sys.argv)
+        need_created = True
+    app = _app
     window = MainWindow()
     g = window.graph
     ds = DataStreamNode(name="ds", data=[1, 2, 3])
@@ -115,11 +131,17 @@ def test_predecessors_dialog_disconnect():
     # Pred list must update
     assert disp not in buff.predecessors
 
-    app.quit()
+    if need_created:
+        app.quit()
 
 
 def test_predecessors_dialog_updates_on_external_delete():
-    app = QApplication(sys.argv)
+    _app = QApplication.instance()
+    need_created = False
+    if _app is None:
+        _app = QApplication(sys.argv)
+        need_created = True
+    app = _app
     window = MainWindow()
     g = window.graph
     # nodes
@@ -149,7 +171,12 @@ def test_predecessors_dialog_updates_on_external_delete():
 
 
 def test_predecessors_dialog_disconnect():
-    app = QApplication(sys.argv)
+    _app = QApplication.instance()
+    need_created = False
+    if _app is None:
+        _app = QApplication(sys.argv)
+        need_created = True
+    app = _app
     g = Graph()
     ds = DataStreamNode(name="ds", data=[1, 2, 3])
     disp = DisplayNode(name="disp")
@@ -174,14 +201,20 @@ def test_predecessors_dialog_disconnect():
     dlg.disconnect_pred(disp)
     assert disp not in buff.predecessors
 
-    app.quit()
+    if need_created:
+        app.quit()
 
 
 def test_rebuild_graph_syncs_canvas_and_graph():
     """Test that rebuild_graph results in the canvas.graph being synchronized with window.graph
     and that connect/disconnect operations apply to the authoritative graph object.
     """
-    app = QApplication(sys.argv)
+    _app = QApplication.instance()
+    need_created = False
+    if _app is None:
+        _app = QApplication(sys.argv)
+        need_created = True
+    app = _app
     window = MainWindow()
 
     # Create nodes that haven't been added to the window.graph
@@ -211,7 +244,12 @@ def test_rebuild_graph_syncs_canvas_and_graph():
 
 
 def test_graph_canvas_replace_node_item():
-    app = QApplication(sys.argv)
+    _app = QApplication.instance()
+    need_created = False
+    if _app is None:
+        _app = QApplication(sys.argv)
+        need_created = True
+    app = _app
     g = Graph()
     ds = DataStreamNode(name="ds", data=[1, 2, 3])
     add = AdditionNode(name="add")
@@ -241,7 +279,12 @@ def test_graph_canvas_replace_node_item():
 
 
 def test_replace_dialog_search_does_not_crash():
-    app = QApplication(sys.argv)
+    _app = QApplication.instance()
+    need_created = False
+    if _app is None:
+        _app = QApplication(sys.argv)
+        need_created = True
+    app = _app
     # Construct dialog and simulate typing
     dlg = ReplaceNodeDialog()
     # Set a search text to activate filtering

@@ -14,7 +14,11 @@ from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 
 
 def test_create_node_and_connect_on_drop(monkeypatch):
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     mw = MainWindow()
 
     # Build graph with one addition node
@@ -66,11 +70,20 @@ def test_create_node_and_connect_on_drop(monkeypatch):
         for e in mw.canvas.edge_items
     )
 
-    app.quit()
+    try:
+        mw.close()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()
 
 
 def test_drop_create_cancelled_does_not_create(monkeypatch):
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     mw = MainWindow()
 
     g = mw.graph
@@ -100,11 +113,20 @@ def test_drop_create_cancelled_does_not_create(monkeypatch):
 
     assert len(mw.canvas.node_items) == initial_node_count
 
-    app.quit()
+    try:
+        mw.close()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()
 
 
 def test_create_node_and_connect_from_selected_multiple_nodes(monkeypatch):
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     mw = MainWindow()
 
     # Build graph with two addition nodes
@@ -158,4 +180,9 @@ def test_create_node_and_connect_from_selected_multiple_nodes(monkeypatch):
     }
     assert n1 in sources and n2 in sources
 
-    app.quit()
+    try:
+        mw.close()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()

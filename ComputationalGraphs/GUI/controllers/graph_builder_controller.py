@@ -250,6 +250,15 @@ class GraphBuilderController:
                             qcol = QColor(gui_col)
                             node_item.manual_color = qcol
                             node_item.color = qcol
+                            # Also set label color to match manual color so saving preserves label color
+                            try:
+                                if (
+                                    hasattr(node_item, "label")
+                                    and node_item.label is not None
+                                ):
+                                    node_item.label.setDefaultTextColor(qcol)
+                            except Exception:
+                                pass
                             node_item.update()
                         except Exception:
                             pass

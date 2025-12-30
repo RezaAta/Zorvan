@@ -11,7 +11,13 @@ from ComputationalGraphs.GUI.main_window import MainWindow
 
 
 def test_ann_and_colorize_mutual_exclusion():
-    app = QApplication(sys.argv)
+    # Use existing QApplication if present to avoid creating multiple instances
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
+
     win = MainWindow()
     # Show window so child widgets can be visible for visibility checks
     win.show()
@@ -64,7 +70,8 @@ def test_ann_and_colorize_mutual_exclusion():
     assert last_widget is not None
 
     # Clean up
-    app.quit()
+    if created_app:
+        app.quit()
 
 
 if __name__ == "__main__":

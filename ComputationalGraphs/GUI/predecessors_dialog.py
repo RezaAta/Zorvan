@@ -16,6 +16,24 @@ class PredecessorsDialog:
     def __init__(self, node_item, canvas, parent=None):
         if MVVMPredecessorsDialog is None:
             raise ImportError("Predecessors MVVM components not available")
+        # Keep references locally so legacy adapter methods can access them
+        self.node_item = node_item
+        self.canvas = canvas
+        self.graph = getattr(canvas, "graph", None)
+        # Connect to canvas signals so the dialog updates when edges are created/removed
+        try:
+            if hasattr(self.canvas, "edge_removed"):
+                try:
+                    self.canvas.edge_removed.connect(self._on_canvas_edge_changed)
+                except Exception:
+                    pass
+            if hasattr(self.canvas, "edge_created"):
+                try:
+                    self.canvas.edge_created.connect(self._on_canvas_edge_changed)
+                except Exception:
+                    pass
+        except Exception:
+            pass
         vm = PredecessorsViewModel(node_item=node_item, canvas=canvas)
         vm.initialize()
         self._dlg = MVVMPredecessorsDialog(vm, parent)

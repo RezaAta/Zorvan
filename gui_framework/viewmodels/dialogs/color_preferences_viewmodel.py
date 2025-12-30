@@ -2,7 +2,7 @@
 
 from typing import Dict, List
 
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from ComputationalGraphs.GUI.theme import _is_test_env, get_theme_manager
 from gui_framework.viewmodels.base import BaseViewModel, ObservableProperty
 
 
@@ -75,15 +75,7 @@ class ColorPreferencesViewModel(BaseViewModel):
                 # Avoid calling the full apply_theme under pytest to minimize
                 # interaction with the running QApplication which can cause
                 # intermittent native crashes in combination with other tests.
-                try:
-                    import sys
-
-                    is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                        "pytest" in sys.modules
-                    )
-                except Exception:
-                    is_test = False
-                if not is_test:
+                if not _is_test_env():
                     self.tm.apply_theme()
                 else:
                     # In test mode do not emit ThemeManager.theme_changed to avoid
@@ -112,15 +104,7 @@ class ColorPreferencesViewModel(BaseViewModel):
             elif "bg" in self.theme:
                 self.theme["panel_bg"] = self.theme["bg"]
             self.tm.set_theme(self.theme, persist=False)
-            try:
-                import sys
-
-                is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                    "pytest" in sys.modules
-                )
-            except Exception:
-                is_test = False
-            if not is_test:
+            if not _is_test_env():
                 self.tm.apply_theme()
             else:
                 # Skip emitting ThemeManager.signal during tests
@@ -136,15 +120,7 @@ class ColorPreferencesViewModel(BaseViewModel):
             elif "bg" in self.theme:
                 self.theme["panel_bg"] = self.theme["bg"]
             self.tm.set_theme(self.theme, persist=True)
-            try:
-                import sys
-
-                is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                    "pytest" in sys.modules
-                )
-            except Exception:
-                is_test = False
-            if not is_test:
+            if not _is_test_env():
                 self.tm.apply_theme()
             else:
                 # Skip emitting ThemeManager.signal during tests
@@ -158,15 +134,7 @@ class ColorPreferencesViewModel(BaseViewModel):
             self.theme = dict(self.tm.defaults)
             # Apply defaults immediately
             self.tm.set_theme(self.theme, persist=False)
-            try:
-                import sys
-
-                is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                    "pytest" in sys.modules
-                )
-            except Exception:
-                is_test = False
-            if not is_test:
+            if not _is_test_env():
                 self.tm.apply_theme()
             else:
                 # Skip emitting ThemeManager.signal during tests
@@ -201,15 +169,7 @@ class ColorPreferencesViewModel(BaseViewModel):
             self.theme = t
             # Apply preview immediately (don't persist root keys here)
             self.tm.set_theme(self.theme, persist=False)
-            try:
-                import sys
-
-                is_test = ("PYTEST_CURRENT_TEST" in os.environ) or (
-                    "pytest" in sys.modules
-                )
-            except Exception:
-                is_test = False
-            if not is_test:
+            if not _is_test_env():
                 self.tm.apply_theme()
             else:
                 # Skip emitting ThemeManager.theme_changed during tests

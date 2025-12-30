@@ -13,7 +13,11 @@ from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 
 
 def test_auto_expand_to_nodes_add_and_remove():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     canvas = GraphCanvas()
     # Default rect should match the default_scene_rect
     default_rect = canvas.default_scene_rect
@@ -50,11 +54,20 @@ def test_auto_expand_to_nodes_add_and_remove():
     assert abs(center_before.x() - center_after.x()) < 0.01
     assert abs(center_before.y() - center_after.y()) < 0.01
 
-    app.quit()
+    try:
+        canvas.close()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()
 
 
 def test_click_does_not_recenter():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     canvas = GraphCanvas()
     canvas.resize(800, 600)
     canvas.show()
@@ -94,4 +107,9 @@ def test_click_does_not_recenter():
     assert abs(center_before.x() - center_after2.x()) < 1e-3
     assert abs(center_before.y() - center_after2.y()) < 1e-3
 
-    app.quit()
+    try:
+        canvas.close()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()

@@ -305,7 +305,18 @@ class MainWindow(QMainWindow):
 
             tm = get_theme_manager()
             try:
-                tm.apply_theme()
+                # Defer actual application until after initialization to avoid
+                # interacting with widgets that are still being constructed.
+                try:
+                    from PyQt6.QtCore import QTimer
+
+                    QTimer.singleShot(0, tm.apply_theme)
+                except Exception:
+                    # Fall back to immediate application when QTimer isn't available
+                    try:
+                        tm.apply_theme()
+                    except Exception:
+                        pass
             except Exception:
                 pass
         except Exception:

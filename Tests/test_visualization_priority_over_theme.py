@@ -14,7 +14,11 @@ from ComputationalGraphs.Nodes.BufferNode import BufferNode
 
 
 def test_user_applied_node_color_persists_across_theme_change():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     win = MainWindow()
 
     # Create a buffer node and add to canvas
@@ -40,11 +44,16 @@ def test_user_applied_node_color_persists_across_theme_change():
     # User-applied node color should remain (visualization priority)
     assert ni.default_color == win.default_node_color
 
-    app.quit()
+    if created_app:
+        app.quit()
 
 
 def test_ann_colors_persist_when_theme_changes():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     win = MainWindow()
 
     # Create a buffer node which should map to a gold/yellow ANN color
@@ -67,7 +76,8 @@ def test_ann_colors_persist_when_theme_changes():
     # ANN manual color should persist despite theme change
     assert ni.manual_color is not None
 
-    app.quit()
+    if created_app:
+        app.quit()
 
 
 if __name__ == "__main__":

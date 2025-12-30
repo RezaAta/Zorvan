@@ -13,7 +13,12 @@ from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
 
 
 def test_replace_multiple_selected_nodes(monkeypatch):
-    app = QApplication(sys.argv)
+    _app = QApplication.instance()
+    need_created = False
+    if _app is None:
+        _app = QApplication(sys.argv)
+        need_created = True
+    app = _app
     mw = MainWindow()
 
     # Build graph with two addition nodes
@@ -57,7 +62,8 @@ def test_replace_multiple_selected_nodes(monkeypatch):
         == "Replaced 2 node(s) with type 'MultiplicationNode'"
     )
 
-    app.quit()
+    if need_created:
+        app.quit()
 
 
 def test_replace_single_shows_node_editor(monkeypatch):
@@ -114,4 +120,10 @@ def test_replace_single_shows_node_editor(monkeypatch):
         mw.status_bar.currentMessage() == "Replaced node with type 'MultiplicationNode'"
     )
 
-    app.quit()
+    # Only quit the QApplication if this test created it
+    _app = QApplication.instance()
+    if _app is not None and _app == app:
+        try:
+            _app.quit()
+        except Exception:
+            pass

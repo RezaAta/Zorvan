@@ -12,7 +12,11 @@ from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
 
 
 def test_copy_paste_nodes():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     canvas = GraphCanvas()
     # Create two nodes and an edge between them
     n1 = DisplayNode(name="d1")
@@ -37,11 +41,23 @@ def test_copy_paste_nodes():
     pasted_nodes = [item.node for item in canvas.scene.selectedItems()]
     assert all("_copy" in n.name for n in pasted_nodes)
     assert len(canvas.edge_items) >= pre_edge_count + 1
-    app.quit()
+    # Clean up
+    try:
+        canvas.scene.clear()
+        canvas.node_items.clear()
+        canvas.edge_items.clear()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()
 
 
 def test_cut_paste_nodes():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     canvas = GraphCanvas()
     n1 = DisplayNode(name="d1")
     n2 = DisplayNode(name="d2")
@@ -60,11 +76,22 @@ def test_cut_paste_nodes():
     assert len(canvas.node_items) == pre_node_count
     # After pasting from cut, new nodes should be selected
     assert len(canvas.scene.selectedItems()) == 2
-    app.quit()
+    try:
+        canvas.scene.clear()
+        canvas.node_items.clear()
+        canvas.edge_items.clear()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()
 
 
 def test_start_connection_sets_mode_and_highlights():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     canvas = GraphCanvas()
     n1 = DisplayNode(name="d1")
     n2 = DisplayNode(name="d2")
@@ -80,11 +107,22 @@ def test_start_connection_sets_mode_and_highlights():
     assert any(
         e for e in canvas.edge_items if e.source_node == ni1 and e.target_node == ni2
     )
-    app.quit()
+    try:
+        canvas.scene.clear()
+        canvas.node_items.clear()
+        canvas.edge_items.clear()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()
 
 
 def test_remove_selected_items_removes_multiple():
-    app = QApplication(sys.argv)
+    created_app = False
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     canvas = GraphCanvas()
     nodes = [DisplayNode(name=f"d{i}") for i in range(3)]
     items = [canvas.add_node_item(n, i * 20, i * 20) for i, n in enumerate(nodes)]
@@ -93,4 +131,11 @@ def test_remove_selected_items_removes_multiple():
         it.setSelected(True)
     canvas.remove_selected_items()
     assert len(canvas.node_items) == 0
-    app.quit()
+    try:
+        canvas.scene.clear()
+        canvas.node_items.clear()
+        canvas.edge_items.clear()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()
