@@ -2,6 +2,10 @@ import random
 
 from ComputationalGraphs.Nodes.BasicNode import BasicNode
 
+# Debugging counters (incremented when tournaments are executed)
+TOURNAMENTS_RUN = 0
+TOURNAMENTS_EXECUTIONS = 0  # counts how many times the inner selection loop runs
+
 
 class BulkTournamentNode(BasicNode):
     def __init__(
@@ -38,6 +42,7 @@ class BulkTournamentNode(BasicNode):
         self.batchSize = 2
 
     def Operation(self, candidate, fitness):
+        global TOURNAMENTS_RUN, TOURNAMENTS_EXECUTIONS
         if len(self.selected) > 0:
             selectedCandidate = self.selected.pop()
             if len(self.selected) == 0:
@@ -65,12 +70,30 @@ class BulkTournamentNode(BasicNode):
                 # Perform tournament selection for num_selections individuals
                 self.selected = []
                 for _ in range(self.num_selections):
+                    TOURNAMENTS_RUN += 1
                     candidates = random.sample(
                         list(zip(self.population, self.fitnesses)), self.tournamentSize
                     )
                     winner = min(candidates, key=lambda x: x[1])[0]
                     self.selected.append(winner)
 
+                # If we produced an odd number of winners, run one more tournament
+                # to make pairing easier for crossover nodes (ensures even count).
+                if len(self.selected) % 2 == 1:
+                    TOURNAMENTS_RUN += 1
+                    candidates = random.sample(
+                        list(zip(self.population, self.fitnesses)), self.tournamentSize
+                    )
+                    winner = min(candidates, key=lambda x: x[1])[0]
+                    self.selected.append(winner)
+
+                # Randomize the ordering of winners to avoid pairing bias
+                try:
+                    random.shuffle(self.selected)
+                except Exception:
+                    pass
+
+                TOURNAMENTS_EXECUTIONS += 1
                 return self.selected[-1]
             return None
 

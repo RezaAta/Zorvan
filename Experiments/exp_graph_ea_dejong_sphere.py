@@ -21,7 +21,14 @@ from ComputationalGraphs.Nodes.SingleInputCrossover import SingleInputCrossover
 
 
 def run_graph_ea(
-    pop_size=50, genome_length=5, generations=100, num_elites=1, verbose=True
+    pop_size=50,
+    genome_length=5,
+    generations=100,
+    num_elites=1,
+    verbose=True,
+    initial_population=None,
+    return_population=False,
+    debug_return_initial=False,
 ):
     """
     Run the computational graph EA using the exact same structure as the GUI example.
@@ -31,15 +38,26 @@ def run_graph_ea(
     # Build the graph - EXACT same structure as GUI example
     graph = Graph()
 
-    # Population node - auto-generates initial population
-    populationNode = PopulationNode(
-        name="Population",
-        size=pop_size,
-        genome_length=genome_length,
-        lower_bound=-5.12,
-        upper_bound=5.12,
-        auto_generate=True,
-    )
+    # Population node - use supplied initial_population when provided, otherwise auto-generate
+    if initial_population is not None:
+        populationNode = PopulationNode(
+            name="Population",
+            data=initial_population,
+            size=pop_size,
+            genome_length=genome_length,
+            lower_bound=-5.12,
+            upper_bound=5.12,
+            auto_generate=False,
+        )
+    else:
+        populationNode = PopulationNode(
+            name="Population",
+            size=pop_size,
+            genome_length=genome_length,
+            lower_bound=-5.12,
+            upper_bound=5.12,
+            auto_generate=True,
+        )
 
     # Population buffer (size 1 to stream individuals)
     populationBuffer = BufferNode("Pop_Buffer", size=1)
@@ -125,6 +143,13 @@ def run_graph_ea(
             f"Running Graph EA: {generations} generations x {pop_size} population = {total_iterations} iterations"
         )
 
+    # Optionally capture the initial population buffer for debugging
+    if debug_return_initial:
+        try:
+            initial_pop_snapshot = list(populationNode.buffer)
+        except Exception:
+            initial_pop_snapshot = None
+
     # Run graph
     graphProcessor = GraphProcessor(graph=graph)
     graphProcessor.verbose = False
@@ -149,6 +174,39 @@ def run_graph_ea(
         print(f"Best fitness in final generation: {best_fitness:.6f}")
         print(f"Fitness history length: {len(fitness_history)} generations tracked")
         print(f"Final best fitness: {best_fitness:.6f}")
+
+    # Optionally return final population buffer for diagnostics
+    if return_population and debug_return_initial:
+        try:
+            final_pop = populationNode.buffer[
+                :
+            ]  # snapshot of current population buffer
+        except Exception:
+            final_pop = None
+        return (
+            best_individual,
+            best_fitness,
+            fitness_history,
+            final_pop,
+            initial_pop_snapshot,
+        )
+    elif return_population:
+        try:
+            final_pop = populationNode.buffer[
+                :
+            ]  # snapshot of current population buffer
+        except Exception:
+            final_pop = None
+        return best_individual, best_fitness, fitness_history, final_pop
+
+    if debug_return_initial:
+        return (
+            best_individual,
+            best_fitness,
+            fitness_history,
+            None,
+            initial_pop_snapshot,
+        )
 
     return best_individual, best_fitness, fitness_history
 

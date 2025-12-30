@@ -6,7 +6,9 @@ import os
 import sys
 
 HERE = os.path.dirname(__file__)
-TARGET = os.path.join(HERE, "..", "..", "..", "Experiments", "exp_ea_dejong_sphere.py")
+# Experiments/ is located at repository root (a sibling of this file's directory),
+# so use a direct relative path instead of climbing up three levels.
+TARGET = os.path.join(HERE, "Experiments", "exp_ea_dejong_sphere.py")
 TARGET = os.path.normpath(TARGET)
 
 if os.path.exists(TARGET):
