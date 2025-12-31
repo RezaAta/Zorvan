@@ -140,7 +140,15 @@ class MLPGraph(Graph):
                 for weightNode in weightNodeList:
                     weightNodes.add(weightNode)
 
-        # Get nodes to reset by removing weight nodes
+        # Also exclude bias nodes from being reset (biases are trainable parameters)
+        try:
+            for biasLayer in getattr(self, "biasLayers", []):
+                for bnode in biasLayer:
+                    weightNodes.add(bnode)
+        except Exception:
+            pass
+
+        # Get nodes to reset by removing weight and bias nodes
         nodesToReset = allNodes - weightNodes
 
         # Reset all nodes in nodesToReset
@@ -159,6 +167,20 @@ class MLPGraph(Graph):
         self.ResetWeightInputs()
         self.LoadData(xTest, yTest)
         self._MountPredictionBuffers(predictionSize=len(xTest[0]))
+
+        # Detach any backprop/predecessor nodes from bias ContainerNodes so that
+        # test-time forward processing does not modify trained biases. Backprop
+        # nodes (e.g., dB_*) are often added as predecessors to bias nodes by
+        # BackpropGraph, but they are not part of this MLPGraph's node list.
+        # Remove any predecessor that is not present in this graph's node set.
+        try:
+            for biasLayer in getattr(self, "biasLayers", []):
+                for bnode in biasLayer:
+                    bnode.predecessors = [
+                        p for p in bnode.predecessors if p in self.nodes
+                    ]
+        except Exception:
+            pass
 
     def CreateErrorBuffers(self, bufferSize, mse_buffer_size=None):
         # If CreateErrorBuffers has been called before, remove previously added

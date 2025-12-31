@@ -41,11 +41,11 @@ X_test = scaler_X.transform(X_test)
 mlp = ClassicMLP(
     input_size=X_train.shape[1],
     output_size=1,
-    hidden_layers=[8, 4, 2],
+    hidden_layers=[10],
     hidden_activation="sigmoid",
     output_activation="linear",
     learning_rate=0.00001,
-    use_bias=False,
+    use_bias=True,
 )
 mse_history = mlp.train(X_train, y_train, epochs=500, batch_size=1)
 

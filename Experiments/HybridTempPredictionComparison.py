@@ -665,8 +665,8 @@ def run_compare():
     # split train/test
     n = len(X[0])
     idx = np.arange(n)
-    np.random.seed(1)
-    np.random.shuffle(idx)
+    # NOTE: preserve ordering (no shuffle) for deterministic, repeatable experiments
+    # If random splits are desired, replace with a seeded shuffle here.
     train_idx = idx[: int(0.8 * n)]
     test_idx = idx[int(0.8 * n) :]
 
@@ -976,8 +976,8 @@ def run_compare_once(master_seed=None, verbose=False):
     # split train/test
     n = len(X[0])
     idx = np.arange(n)
-    np.random.seed(1)
-    np.random.shuffle(idx)
+    # NOTE: preserve ordering (no shuffle) for deterministic, repeatable experiments
+    # If random splits are desired, replace with a seeded shuffle here.
     train_idx = idx[: int(0.8 * n)]
     test_idx = idx[int(0.8 * n) :]
 

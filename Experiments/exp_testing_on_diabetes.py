@@ -56,13 +56,14 @@ X_test = X_test.T.tolist()
 mlpGraph = MLPGraph(
     numInputs=len(X_train),
     numOutputs=1,
-    numHiddenLayers=3,
-    hiddenLayerSizes=[8, 4, 2],
+    numHiddenLayers=1,
+    hiddenLayerSizes=[10],
     activationFunction=SigmoidNode,
+    use_bias=True,
 )
 mlpGraph.BuildMLP()
 
-backprop_graph = BackpropGraph(mlpGraph, learningRate=0.00001)
+backprop_graph = BackpropGraph(mlpGraph, learningRate=0.0001)
 backprop_graph.BuildBackprop()
 
 # Load Training Data into the MLP
@@ -81,8 +82,8 @@ for node in backprop_graph.nodes:
 mlpGraph.UpdateAdjacencyMatrix()
 
 # Initialize Graph Processors
-mlpProcessor = GraphProcessor(mlpGraph, max_workers=32, verbose=False)
-fullGraphProcessor = GraphProcessor(fullMLPGraph, max_workers=32, verbose=False)
+mlpProcessor = GraphProcessor(mlpGraph, max_workers=1, verbose=False)
+fullGraphProcessor = GraphProcessor(fullMLPGraph, max_workers=1, verbose=False)
 
 # Network warmup
 networkLength = 3 * (len(mlpGraph.hiddenLayers) + 1)
@@ -90,7 +91,7 @@ mlpProcessor.ComputeGraphSingleThread(networkLength)
 
 # Training
 fakeBatchSize = 1
-epochs = 500
+epochs = 50
 numberOfIterationsInEpochs = len(X_train[0])
 totalIterations = epochs * numberOfIterationsInEpochs * fakeBatchSize
 MSEOverEpochs = []
@@ -108,7 +109,7 @@ print(f"\nTotal nodes: {len(fullMLPGraph.nodes)}")
 print(f"Training iterations: {totalIterations + networkLength + 1}")
 print("Starting training...\n")
 start_time = time.time()
-fullGraphProcessor.ComputeGraph(
+fullGraphProcessor.ComputeGraphSingleThread(
     totalIterations + networkLength + 1
 )  # +2 is for the error buffers
 training_time = time.time() - start_time
@@ -144,7 +145,7 @@ predictionBuffers = mlpGraph.predictionBuffers
 testingEpochs = (
     len(X_test[0]) + networkLength
 )  # Extra epochs to flush forward the network
-mlpProcessor.ComputeGraph(testingEpochs)
+mlpProcessor.ComputeGraphSingleThread(testingEpochs)
 
 # Collect predictions
 predictionValues = []
