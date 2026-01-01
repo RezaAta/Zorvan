@@ -55,7 +55,10 @@ class NodeEditorViewModel(BaseViewModel):
                     if callable(val):
                         continue
                     # Accept simple types only to avoid exposing complex runtime state
-                    if isinstance(val, (int, float, bool, str, list, tuple)):
+                    # Accept simple types and lightweight containers so they can be
+                    # edited in the dialog. This includes dicts which are used by
+                    # some nodes for small configs.
+                    if isinstance(val, (int, float, bool, str, list, tuple, dict)):
                         self._props[attr] = val
                 except Exception:
                     pass
@@ -200,8 +203,23 @@ class NodeEditorViewModel(BaseViewModel):
     def set_value(self, value) -> bool:
         """Set the node's value from either a Python object or a string representation.
         If a string is provided, attempt safe literal parsing with ast.literal_eval.
+
+        Special case: an empty string is treated as a request to *clear* the user-locked
+        flag (unlock the node) while preserving the node's stored numeric value.
         """
         try:
+            # Clearing value should unlock a user-locked node without changing its
+            # stored numeric value.
+            if isinstance(value, str) and value == "":
+                try:
+                    self._node.user_locked_value = False
+                except Exception:
+                    pass
+                # Keep the viewmodel in sync with the node's current value
+                self._props["value"] = getattr(self._node, "value", "")
+                self.properties_changed += 1
+                return True
+
             # If value is a string, attempt to parse literal (safe)
             if isinstance(value, str):
                 try:
@@ -232,6 +250,36 @@ class NodeEditorViewModel(BaseViewModel):
         return {k: v for k, v in self._props.items() if k not in excluded}
 
     def set_parameter(self, name: str, value) -> bool:
+        """Set a parameter on the node.
+
+        If the original parameter value was a list or tuple and the editor passed a
+        string (from a QLineEdit), attempt to parse it safely into a list using
+        ast.literal_eval. If parsing fails, fall back to comma-splitting and
+        attempt to literal-evaluate each item.
+        """
+        # If this property was previously a list/tuple, try to convert string
+        # representations back to a list to preserve type expectations in node code.
+        orig = self._props.get(name, None)
+        if isinstance(orig, (list, tuple)) and isinstance(value, str):
+            # Try safe literal eval first
+            try:
+                parsed = ast.literal_eval(value)
+                if isinstance(parsed, (list, tuple)):
+                    return self.set_property(name, list(parsed))
+            except Exception:
+                # Fall through to comma-split fallback
+                pass
+
+            # Fallback: split on commas and attempt to parse each item
+            parts = [p.strip() for p in value.split(",") if p.strip() != ""]
+            parsed_parts = []
+            for p in parts:
+                try:
+                    parsed_parts.append(ast.literal_eval(p))
+                except Exception:
+                    parsed_parts.append(p)
+            return self.set_property(name, parsed_parts)
+
         return self.set_property(name, value)
 
     def apply_to_node(self) -> bool:

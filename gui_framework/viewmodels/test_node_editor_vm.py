@@ -36,3 +36,29 @@ def test_editable_parameters_whitelist():
     assert "data" in props
     assert "_hidden" not in props
     assert "callable_attr" not in props
+
+
+def test_set_parameter_parses_list_strings():
+    class Dummy:
+        def __init__(self):
+            self.name = "d"
+            self.values = [1, 2]
+
+    d = Dummy()
+    vm = NodeEditorViewModel(d)
+    vm.initialize()
+
+    props = vm.get_properties()
+    assert isinstance(props.get("values"), list)
+
+    # Bracket style
+    assert vm.set_parameter("values", "[3, 4]")
+    assert d.values == [3, 4]
+
+    # Comma-split style with numeric items
+    assert vm.set_parameter("values", "5,6,7")
+    assert d.values == [5, 6, 7]
+
+    # Comma-split style with string items
+    assert vm.set_parameter("values", "a, b, c")
+    assert d.values == ["a", "b", "c"]

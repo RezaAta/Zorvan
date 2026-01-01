@@ -60,12 +60,11 @@ if HAS_PYQT:
             self._run_rebuild = _run_rebuild
 
             def _on_props_changed_for_vm(old, new):
-                # If we are suppressing rebuilds while applying synchronously, remember
-                # a rebuild was requested and defer the actual rebuild until it's safe.
-                if getattr(self, "_suppress_rebuild", False):
-                    self._deferred_rebuild = True
-                    return
-                _schedule_rebuild()
+                # DISABLED: Do NOT auto-rebuild UI on property changes.
+                # This was causing force-updates on every keystroke because
+                # set_property() increments properties_changed which triggered rebuilds.
+                # UI should only rebuild on explicit refresh (e.g., after action).
+                pass
 
             vm.observe_property("properties_changed", _on_props_changed_for_vm)
 
@@ -96,6 +95,8 @@ if HAS_PYQT:
             # Reentrancy guard for synchronous apply
             self._suppress_rebuild = False
             self._deferred_rebuild = False
+            # When True, _on_properties_changed ignores prev_values and reads fresh from node
+            self._force_fresh_values = False
 
         def _set_parameter_sync(self, name, value):
             """Set a parameter on the VM synchronously while suppressing rebuilds.
@@ -242,19 +243,23 @@ if HAS_PYQT:
         def _on_properties_changed(self, old, new):
             # Rebuild form
             # Preserve current widget textual values so user edits are not lost on refresh
+            # UNLESS _force_fresh_values is True (after actions like regenerate_population)
             prev_values = {}
-            for k, w in list(self._widgets.items()):
-                try:
-                    if hasattr(w, "toPlainText"):
-                        prev_values[k] = w.toPlainText()
-                    elif hasattr(w, "text"):
-                        prev_values[k] = w.text()
-                    elif hasattr(w, "value"):
-                        prev_values[k] = str(w.value())
-                    elif hasattr(w, "isChecked"):
-                        prev_values[k] = str(w.isChecked())
-                except Exception:
-                    pass
+            if not getattr(self, "_force_fresh_values", False):
+                for k, w in list(self._widgets.items()):
+                    try:
+                        if hasattr(w, "toPlainText"):
+                            prev_values[k] = w.toPlainText()
+                        elif hasattr(w, "text"):
+                            prev_values[k] = w.text()
+                        elif hasattr(w, "value"):
+                            prev_values[k] = str(w.value())
+                        elif hasattr(w, "isChecked"):
+                            prev_values[k] = str(w.isChecked())
+                    except Exception:
+                        pass
+            # Reset the flag after use
+            self._force_fresh_values = False
 
             # Save previous widgets so we can reuse them in-place when possible.
             prev_widgets = dict(self._widgets)
@@ -721,23 +726,8 @@ if HAS_PYQT:
                             if readonly:
                                 editor.setReadOnly(True)
                             else:
-
-                                def _on_inputs_text(name=k, ed=editor):
-                                    text = ed.toPlainText()
-                                    items = [
-                                        t.strip()
-                                        for t in text.splitlines()
-                                        if t.strip()
-                                    ]
-                                    try:
-                                        if hasattr(self.vm, "set_parameter"):
-                                            self.vm.set_parameter(name, items)
-                                        else:
-                                            self.vm.set_property(name, items)
-                                    except Exception:
-                                        pass
-
-                                editor.textChanged.connect(_on_inputs_text)
+                                # Do NOT connect textChanged - updates happen on OK only
+                                # Just connect height adjustment
                                 try:
                                     editor.textChanged.connect(
                                         lambda ed=editor: self._adjust_textedit_height(
@@ -748,8 +738,9 @@ if HAS_PYQT:
                                     pass
                         else:
                             # For potentially long strings or lists, use QTextEdit (multiline)
+                            # Also include 'buffer' and 'data' fields
                             if (
-                                k in ("value", "buffers")
+                                k in ("value", "buffers", "buffer", "data")
                                 or (isinstance(v, str) and len(v) > 120)
                                 or (isinstance(v, (list, tuple)) and len(v) > 10)
                             ):
@@ -765,59 +756,29 @@ if HAS_PYQT:
                                         )
                                     else:
                                         editor.setPlainText(str(v))
-                                editor.setMinimumHeight(100)
+                                # Larger minimum height for buffer/data fields with many values
+                                if (
+                                    k in ("buffer", "data", "buffers")
+                                    and isinstance(v, (list, tuple))
+                                    and len(v) > 5
+                                ):
+                                    editor.setMinimumHeight(200)
+                                    editor.setMaximumHeight(400)
+                                else:
+                                    editor.setMinimumHeight(100)
                                 if readonly:
                                     editor.setReadOnly(True)
-                                else:
-
-                                    def _on_text_changed(name=k, ed=editor):
-                                        text = ed.toPlainText()
-                                        # Convert back to single string or list where appropriate
-                                        if isinstance(v, (list, tuple)):
-                                            items = [
-                                                t.strip()
-                                                for t in text.splitlines()
-                                                if t.strip()
-                                            ]
-                                            try:
-                                                if hasattr(self.vm, "set_parameter"):
-                                                    self.vm.set_parameter(name, items)
-                                                else:
-                                                    self.vm.set_property(name, items)
-                                            except Exception:
-                                                pass
-                                        else:
-                                            try:
-                                                if hasattr(self.vm, "set_parameter"):
-                                                    self.vm.set_parameter(name, text)
-                                                else:
-                                                    self.vm.set_property(name, text)
-                                            except Exception:
-                                                pass
-
-                                    editor.textChanged.connect(_on_text_changed)
+                                # Do NOT connect textChanged for list/buffer fields
+                                # Updates happen on OK only to avoid force-updating on each keystroke
                             else:
                                 pv = prev_values.get(k)
                                 editor = QLineEdit(pv if pv is not None else str(v))
                                 if readonly:
                                     editor.setReadOnly(True)
-                                else:
-                                    editor.textChanged.connect(
-                                        lambda text, name=k: (
-                                            self.vm.set_parameter(name, text)
-                                            if hasattr(self.vm, "set_parameter")
-                                            else self.vm.set_property(name, text)
-                                        )
-                                    )
+                                # Do NOT connect textChanged - updates happen on OK only
                 except Exception:
                     editor = QLineEdit(str(v))
-                    editor.textChanged.connect(
-                        lambda text, name=k: (
-                            self.vm.set_parameter(name, text)
-                            if hasattr(self.vm, "set_parameter")
-                            else self.vm.set_property(name, text)
-                        )
-                    )
+                    # Do NOT connect textChanged - updates happen on OK only
                 self.form.addRow(QLabel(k), editor)
                 self._widgets[k] = editor
 
@@ -902,6 +863,17 @@ if HAS_PYQT:
 
                     text = "\n".join([f"{k}: {v}" for k, v in res.items()])
                     QMessageBox.information(self, f"{name} result", text)
+
+                # After action (e.g., regenerate_population), reload node properties
+                # and FORCE fresh values from node (ignore cached prev_values)
+                try:
+                    if hasattr(self.vm, "load_node") and hasattr(self.vm, "_node"):
+                        self.vm.load_node(self.vm._node)
+                    # Force UI to read fresh values from node, not cached widget text
+                    self._force_fresh_values = True
+                    self._on_properties_changed(None, None)
+                except Exception:
+                    pass
             except Exception:
                 pass
 

@@ -72,6 +72,12 @@ class FileIOController:
             self.main_window.set_graph(Graph())
             self.main_window.graph_runner.reset()
 
+            # Trigger "Reset All" to ensure clean state for new graph
+            try:
+                self.main_window.reset_graph()
+            except Exception:
+                pass
+
             self.status_bar.showMessage("New graph created")
 
     def open_graph(self):
