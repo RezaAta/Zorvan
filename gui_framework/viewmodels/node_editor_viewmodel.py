@@ -6,6 +6,7 @@ for use in dialogs. Pure Python and testable.
 import ast
 from typing import Any, Dict, Optional
 
+from ComputationalGraphs.Nodes.computation_type import to_value
 from gui_framework.viewmodels.base import BaseViewModel, ObservableProperty
 
 
@@ -96,8 +97,14 @@ class NodeEditorViewModel(BaseViewModel):
         except Exception:
             pass
         try:
-            # Expose computation type under a consistent key
-            self._props["computationType"] = getattr(node, "computationType", None)
+            # Expose computation type under a consistent key (string for UI)
+            raw_ct = getattr(node, "computationType", None)
+            try:
+                self._props["computationType"] = (
+                    to_value(raw_ct) if raw_ct is not None else None
+                )
+            except Exception:
+                self._props["computationType"] = str(raw_ct)
         except Exception:
             pass
         try:

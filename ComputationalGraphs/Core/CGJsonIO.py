@@ -2,6 +2,7 @@ import inspect
 import json
 import os
 import zipfile
+from enum import Enum as _Enum
 from typing import Any, Dict
 
 import numpy as np
@@ -17,6 +18,9 @@ def _serialize_value(v):
     # Primitive types
     if _is_primitive(v):
         return v
+    # Enum members: serialize as their string value for compatibility
+    if isinstance(v, _Enum):
+        return v.value
     # Numpy arrays
     if isinstance(v, np.ndarray):
         return {
@@ -359,6 +363,14 @@ def load(filename: str) -> Graph:
         for ak, av in attrs.items():
             try:
                 parsed_val = _deserialize_value(av)
+                # Convert legacy computationType strings to Enum members for runtime
+                if ak == "computationType":
+                    try:
+                        from ComputationalGraphs.Nodes.computation_type import to_enum
+
+                        parsed_val = to_enum(parsed_val)
+                    except Exception:
+                        pass
                 setattr(node, ak, parsed_val)
             except Exception:
                 # skip non-settable attributes
@@ -394,7 +406,17 @@ def load(filename: str) -> Graph:
                 # Set attributes
                 for ak, av in int_n.get("attrs", {}).items():
                     try:
-                        setattr(int_node, ak, _deserialize_value(av))
+                        parsed_val = _deserialize_value(av)
+                        if ak == "computationType":
+                            try:
+                                from ComputationalGraphs.Nodes.computation_type import (
+                                    to_enum,
+                                )
+
+                                parsed_val = to_enum(parsed_val)
+                            except Exception:
+                                pass
+                        setattr(int_node, ak, parsed_val)
                     except Exception:
                         continue
 
@@ -448,7 +470,17 @@ def load(filename: str) -> Graph:
                 # Set attributes
                 for ak, av in int_n.get("attrs", {}).items():
                     try:
-                        setattr(int_node, ak, _deserialize_value(av))
+                        parsed_val = _deserialize_value(av)
+                        if ak == "computationType":
+                            try:
+                                from ComputationalGraphs.Nodes.computation_type import (
+                                    to_enum,
+                                )
+
+                                parsed_val = to_enum(parsed_val)
+                            except Exception:
+                                pass
+                        setattr(int_node, ak, parsed_val)
                     except Exception:
                         continue
 

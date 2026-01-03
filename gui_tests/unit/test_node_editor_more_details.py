@@ -63,6 +63,11 @@ def test_more_details_panel_and_type_position(qtbot):
 
     # Values match the node (gui_pos is formatted)
     assert dlg._widgets["gui_pos"].text() == "x: 10, y: 20"
-    assert dlg._widgets["computationType"].text() == str(node.computationType)
+    # Support both legacy string and new Enum-backed computationType
+    from ComputationalGraphs.Nodes.computation_type import to_value
+
+    assert dlg._widgets["computationType"].text() == to_value(
+        getattr(node, "computationType", "")
+    )
     assert dlg._widgets["batchSize"].text() == str(node.batchSize)
     assert dlg._widgets["inputCount"].text() == str(node.inputCount)

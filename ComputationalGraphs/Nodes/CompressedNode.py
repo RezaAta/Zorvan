@@ -1,3 +1,4 @@
+from ComputationalGraphs.Nodes.computation_type import ComputationType
 from ComputationalGraphs.Nodes.Node import Node
 
 
@@ -28,7 +29,7 @@ class CompressedNode(Node):
         # Set initial value from the last node if available
         self.value = self.nodes[-1].value if self.nodes else 0
         super().__init__(name)
-        self.computationType = "complex"
+        self.computationType = ComputationType.COMPLEX
 
     @property
     def first_node(self):
@@ -139,24 +140,6 @@ class CompressedNode(Node):
         self.inputs = [
             pred.value for pred in self.predecessors if hasattr(pred, "value")
         ]
-
-    def extend_front(self, node):
-        """
-        Add a node to the front of the chain (new entry point).
-
-        Args:
-            node: The node to add at the beginning.
-        """
-        self.nodes.insert(0, node)
-
-    def extend_back(self, node):
-        """
-        Add a node to the back of the chain (new exit point).
-
-        Args:
-            node: The node to add at the end.
-        """
-        self.nodes.append(node)
 
     def pop_front(self):
         """

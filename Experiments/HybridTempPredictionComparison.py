@@ -9,6 +9,7 @@ Steps:
 - Print comparison metrics and plot a single episode
 """
 
+import csv
 import logging
 import math
 import time
@@ -1067,8 +1068,14 @@ def run_compare_once(master_seed=None, verbose=False):
     return results
 
 
-def run_compare_multiple(n_runs=10, verbose=False, save_file=None):
-    """Run the experiment n_runs times and plot all temperature traces on a single graph."""
+def run_compare_multiple(n_runs=10, verbose=False, save_file=None, csv_file=None):
+    """Run the experiment n_runs times and plot all temperature traces on a single graph.
+
+    If `csv_file` is provided (or `save_file` with a .png extension is passed),
+    export a per-trial CSV and Markdown table containing the master/shared seeds and
+    the difference between final room temperature and the user preferred temperature
+    (setpoint=22.0) for both Graph and Classic models.
+    """
     seeds = np.random.randint(0, 2**31 - 1, size=n_runs)
     all_results = []
     for i, s in enumerate(seeds):
@@ -1115,6 +1122,111 @@ def run_compare_multiple(n_runs=10, verbose=False, save_file=None):
         plt.savefig(save_file, bbox_inches="tight")
         if verbose:
             logger.info("Saved consolidated plot to %s", save_file)
+
+    # Export per-trial table of final temp differences and seeds (CSV + Markdown)
+    if csv_file is None and save_file:
+        # derive csv filename from provided plot filename by convention
+        if isinstance(save_file, str) and save_file.lower().endswith(".png"):
+            csv_file = save_file[:-4] + "_table.csv"
+    if csv_file:
+        rows = []
+        target = 22.0
+        for idx, r in enumerate(all_results, start=1):
+            g_final = float(r["g_temps"][-1])
+            c_final = float(r["c_temps"][-1])
+            rows.append(
+                {
+                    "trial": idx,
+                    "master_seed": int(r.get("master_seed", 0)),
+                    "shared_seed": int(r.get("shared_seed", 0)),
+                    "graph_final_temp": g_final,
+                    "graph_diff": g_final - target,
+                    "classic_final_temp": c_final,
+                    "classic_diff": c_final - target,
+                }
+            )
+
+        # compute summary rows: AVERAGE, DIFFERENCE (Graph - Classic), PERCENT_DIFF (relative to Classic)
+        avg_graph_final = np.mean([r["graph_final_temp"] for r in rows])
+        avg_classic_final = np.mean([r["classic_final_temp"] for r in rows])
+        avg_graph_diff = np.mean([r["graph_diff"] for r in rows])
+        avg_classic_diff = np.mean([r["classic_diff"] for r in rows])
+
+        rows.append(
+            {
+                "trial": "AVERAGE",
+                "master_seed": "",
+                "shared_seed": "",
+                "graph_final_temp": avg_graph_final,
+                "graph_diff": avg_graph_diff,
+                "classic_final_temp": avg_classic_final,
+                "classic_diff": avg_classic_diff,
+            }
+        )
+
+        diff_final = avg_graph_final - avg_classic_final
+        diff_diff = avg_graph_diff - avg_classic_diff
+        rows.append(
+            {
+                "trial": "DIFFERENCE",
+                "master_seed": "",
+                "shared_seed": "",
+                "graph_final_temp": diff_final,
+                "graph_diff": diff_diff,
+                "classic_final_temp": "",
+                "classic_diff": "",
+            }
+        )
+
+        if avg_classic_final != 0:
+            pct_final = (diff_final / avg_classic_final) * 100.0
+        else:
+            pct_final = float("inf")
+        if avg_classic_diff != 0:
+            pct_diff = (diff_diff / avg_classic_diff) * 100.0
+        else:
+            pct_diff = float("inf")
+
+        rows.append(
+            {
+                "trial": "PERCENT_DIFF",
+                "master_seed": "",
+                "shared_seed": "",
+                "graph_final_temp": pct_final,
+                "graph_diff": pct_diff,
+                "classic_final_temp": "",
+                "classic_diff": "",
+            }
+        )
+
+        fieldnames = [
+            "trial",
+            "master_seed",
+            "shared_seed",
+            "graph_final_temp",
+            "graph_diff",
+            "classic_final_temp",
+            "classic_diff",
+        ]
+        try:
+            with open(csv_file, "w", newline="") as fh:
+                writer = csv.DictWriter(fh, fieldnames=fieldnames)
+                writer.writeheader()
+                for r in rows:
+                    writer.writerow(r)
+            if verbose:
+                logger.info("Exported per-trial table to %s", csv_file)
+            md_file = csv_file.replace(".csv", ".md")
+            with open(md_file, "w", encoding="utf-8") as fh:
+                fh.write("| " + " | ".join(fieldnames) + " |\n")
+                fh.write("|" + "|".join(["---"] * len(fieldnames)) + "|\n")
+                for r in rows:
+                    fh.write("| " + " | ".join(str(r[f]) for f in fieldnames) + " |\n")
+            if verbose:
+                logger.info("Exported per-trial markdown table to %s", md_file)
+        except Exception:
+            logger.exception("Failed to export per-trial table to %s", csv_file)
+
     plt.show()
     return all_results
 

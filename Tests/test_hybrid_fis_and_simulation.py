@@ -19,6 +19,7 @@ from Experiments.HybridTempPredictionComparison import (
     copy_weights_to_classic,
     fis_classic,
     generate_dataset_samples,
+    run_compare_multiple,
 )
 
 
@@ -213,3 +214,68 @@ def test_static_env_deterministic_by_seed_graph_and_classic():
         classic, scalers, steps=10, rng_seed=seed, verbose=False
     )
     assert np.array_equal(c1_t, c2_t)
+
+
+def test_export_per_trial_table(tmp_path):
+    """Run 3 trials and export per-trial CSV + Markdown table; verify outputs."""
+    csv_path = str(tmp_path / "compare_test_table.csv")
+    md_path = str(tmp_path / "compare_test_table.md")
+
+    results = run_compare_multiple(
+        n_runs=3, verbose=False, save_file=None, csv_file=csv_path
+    )
+    assert len(results) == 3
+
+    import csv as _csv
+    import os
+
+    assert os.path.exists(csv_path)
+    with open(csv_path, newline="") as fh:
+        reader = _csv.DictReader(fh)
+        rows = list(reader)
+
+    assert len(rows) == 3 + 3  # 3 trials + 3 summary rows
+    expected_fields = [
+        "trial",
+        "master_seed",
+        "shared_seed",
+        "graph_final_temp",
+        "graph_diff",
+        "classic_final_temp",
+        "classic_diff",
+    ]
+    assert reader.fieldnames == expected_fields
+
+    # basic numeric sanity checks for per-trial rows
+    per_rows = rows[:-3]
+    for r in per_rows:
+        float(r["graph_final_temp"])
+        float(r["classic_final_temp"])
+        float(r["graph_diff"])
+        float(r["classic_diff"])
+
+    # validate summary rows
+    avg_row = rows[-3]
+    diff_row = rows[-2]
+    pct_row = rows[-1]
+
+    import statistics
+
+    avg_graph = statistics.mean(float(r["graph_final_temp"]) for r in per_rows)
+    avg_classic = statistics.mean(float(r["classic_final_temp"]) for r in per_rows)
+
+    assert avg_row["trial"] == "AVERAGE"
+    assert abs(float(avg_row["graph_final_temp"]) - avg_graph) < 1e-6
+
+    assert diff_row["trial"] == "DIFFERENCE"
+    diff_expected = avg_graph - avg_classic
+    assert abs(float(diff_row["graph_final_temp"]) - diff_expected) < 1e-6
+
+    assert pct_row["trial"] == "PERCENT_DIFF"
+    pct_expected = (
+        (diff_expected / avg_classic) * 100.0 if avg_classic != 0 else float("inf")
+    )
+    assert abs(float(pct_row["graph_final_temp"]) - pct_expected) < 1e-6
+
+    # check markdown file was created alongside csv
+    assert os.path.exists(md_path)

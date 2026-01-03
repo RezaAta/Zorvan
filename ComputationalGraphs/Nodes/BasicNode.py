@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from ComputationalGraphs.Nodes.AbstractNode import AbstractNode
+from ComputationalGraphs.Nodes.computation_type import ComputationType
 from ComputationalGraphs.Nodes.Node import Node
 
 
@@ -10,7 +11,7 @@ class BasicNode(Node, ABC):  # Inherits from both Node and ABC
         super().__init__(name)  # Call Node's constructor
         self.value = value  # Node's value
         self.inputCount = 0  # Number of inputs
-        self.computationType = "basic"  # Type of computation for the node
+        self.computationType = ComputationType.BASIC  # Type of computation for the node
 
     def ResetValue(self):
         import logging

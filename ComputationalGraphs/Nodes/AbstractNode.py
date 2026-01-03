@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 
+from ComputationalGraphs.Nodes.computation_type import ComputationType
 from ComputationalGraphs.Nodes.Node import Node
 
 
@@ -38,7 +39,7 @@ class AbstractNode(Node):
         # External predecessors will be set by Graph.abstract_nodes()
         # Do NOT set internal nodes as predecessors (that was a bug)
         # Standardize on 'computationType' (used by BasicNode/CompressedNode)
-        self.computationType = "complex"
+        self.computationType = ComputationType.COMPLEX
 
         # Value is a list of all internal node values
         self.value = [node.value for node in self.nodes]
