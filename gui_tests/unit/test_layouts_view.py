@@ -52,3 +52,21 @@ def test_layouts_view_apply_calls_viewmodel():
     assert algo == "grid"
     assert direction == "TB"
     assert spacing == 250
+
+
+def test_mlp_layered_removed_from_combo():
+    # Ensure the deprecated 'mlp_layered' option is no longer present in the view
+    from gui_framework.views.layouts_view import LayoutsView
+
+    class DummyVM:
+        def is_initialized(self):
+            return True
+
+        def apply_layout(self, algorithm, direction, spacing):
+            pass
+
+    vm = DummyVM()
+    view = LayoutsView(vm)
+
+    for i in range(view.algo_combo.count()):
+        assert view.algo_combo.itemData(i) != "mlp_layered"

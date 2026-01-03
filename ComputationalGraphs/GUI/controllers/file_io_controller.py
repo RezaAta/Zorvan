@@ -80,6 +80,9 @@ class FileIOController:
 
             self.status_bar.showMessage("New graph created")
 
+            # Notify MVVM adapter
+            self._notify_mvvm_new_graph()
+
     def open_graph(self):
         """Open a graph from file."""
         filename, _ = QFileDialog.getOpenFileName(
@@ -150,6 +153,9 @@ class FileIOController:
                     DrawioIO.save(self.graph, filename + ".xml")
 
                 self.status_bar.showMessage(f"Saved {filename}")
+
+                # Notify MVVM adapter
+                self._notify_mvvm_file_saved(filename)
             except Exception as e:
                 QMessageBox.critical(
                     self.main_window,
@@ -198,6 +204,9 @@ class FileIOController:
             pass
 
         self.status_bar.showMessage(f"Loaded {filename}")
+
+        # Notify MVVM adapter
+        self._notify_mvvm_file_opened(filename)
 
     # === Phase 3: Save Selection and Import Graph ===
 
@@ -440,3 +449,38 @@ class FileIOController:
         while f"{base_name}_{counter}" in existing_names:
             counter += 1
         return f"{base_name}_{counter}"
+
+    # === MVVM Integration Methods ===
+
+    def _notify_mvvm_file_opened(self, file_path: str):
+        """Notify MVVM adapter that a file was opened."""
+        try:
+            if (
+                hasattr(self.main_window, "file_io_adapter")
+                and self.main_window.file_io_adapter
+            ):
+                self.main_window.file_io_adapter.notify_file_opened(file_path)
+        except Exception:
+            pass
+
+    def _notify_mvvm_file_saved(self, file_path: str):
+        """Notify MVVM adapter that a file was saved."""
+        try:
+            if (
+                hasattr(self.main_window, "file_io_adapter")
+                and self.main_window.file_io_adapter
+            ):
+                self.main_window.file_io_adapter.notify_file_saved(file_path)
+        except Exception:
+            pass
+
+    def _notify_mvvm_new_graph(self):
+        """Notify MVVM adapter that a new graph was created."""
+        try:
+            if (
+                hasattr(self.main_window, "file_io_adapter")
+                and self.main_window.file_io_adapter
+            ):
+                self.main_window.file_io_adapter.notify_new_graph()
+        except Exception:
+            pass

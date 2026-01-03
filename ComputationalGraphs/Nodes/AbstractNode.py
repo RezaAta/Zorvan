@@ -144,42 +144,10 @@ class AbstractNode(Node):
 
     # --- Methods for managing internal nodes ---
 
-    def extend(self, node):
-        """
-        Add a node to the AbstractNode's internal list.
-
-        Args:
-            node: The node to add. Must be disjoint from existing nodes
-                  (validation should be done by caller/Graph).
-        """
-        if node not in self.nodes:
-            self.nodes.append(node)
-            self.UpdateValues()
-
-    def remove(self, node):
-        """
-        Remove a node from the AbstractNode's internal list.
-
-        Args:
-            node: The node to remove.
-
-        Returns:
-            The removed node, or None if not found.
-        """
-        if node in self.nodes:
-            self.nodes.remove(node)
-            self.UpdateValues()
-            return node
-        return None
-
-    def expand(self):
-        """
-        Return all internal nodes for expanding back into the graph.
-
-        Returns:
-            A list of all internal nodes.
-        """
-        return list(self.nodes)
+    # Instance-level mutation helpers (`extend`, `remove`, `expand`) were
+    # removed because node list management should be performed by Graph-level
+    # APIs to ensure adjacency/validation invariants. Use `get_internal_nodes`
+    # for read-only access to the internal nodes.
 
     def get_internal_nodes(self):
         """

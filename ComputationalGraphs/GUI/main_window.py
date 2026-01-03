@@ -247,6 +247,10 @@ class MainWindow(QMainWindow):
         self.menu_toolbar_controller = MenuToolbarController(self)
         self.control_panel_builder = ControlPanelBuilder(self)
 
+        # === MVVM Integration ===
+        # Initialize MVVM adapters for incremental migration from legacy controllers
+        self._init_mvvm_adapters()
+
         # State (must be before init_ui)
         self.colorize_enabled = False
         self.min_value_range = 0.0  # Numeric min value
@@ -373,6 +377,113 @@ class MainWindow(QMainWindow):
                 pass
         except Exception:
             pass
+
+    def _init_mvvm_adapters(self):
+        """Initialize MVVM adapters for incremental migration from legacy controllers.
+
+        This method sets up the bridge between the new MVVM architecture and
+        the legacy controller-based system, enabling gradual migration.
+        """
+        # Initialize execution adapter (bridges ExecutionViewModel with GraphRunner)
+        try:
+            from gui_framework.adapters.execution_adapter import ExecutionAdapter
+
+            self.execution_adapter = ExecutionAdapter(self)
+            self.execution_adapter.connect()
+            logger.debug("MainWindow: ExecutionAdapter initialized")
+        except Exception as e:
+            logger.warning("Failed to initialize ExecutionAdapter: %s", e)
+            self.execution_adapter = None
+
+        # Initialize file I/O adapter (bridges FileIOViewModel with FileIOController)
+        try:
+            from gui_framework.adapters.file_io_adapter import FileIOAdapter
+
+            self.file_io_adapter = FileIOAdapter(self)
+            self.file_io_adapter.connect()
+            logger.debug("MainWindow: FileIOAdapter initialized")
+        except Exception as e:
+            logger.warning("Failed to initialize FileIOAdapter: %s", e)
+            self.file_io_adapter = None
+
+        # Initialize theme adapter (bridges ThemeViewModel with legacy ThemeManager)
+        try:
+            from gui_framework.adapters.theme_adapter import ThemeAdapter
+
+            self.theme_adapter = ThemeAdapter()
+            # Sync initial theme from legacy to MVVM
+            self.theme_adapter.sync_legacy_to_state_store()
+            # Enable bidirectional sync
+            self.theme_adapter.start_bidirectional_sync()
+            # Store viewmodel reference for convenience
+            self.theme_vm = self.theme_adapter._theme_viewmodel
+            logger.debug("MainWindow: ThemeAdapter initialized with bidirectional sync")
+        except Exception as e:
+            logger.warning("Failed to initialize ThemeAdapter: %s", e)
+            self.theme_adapter = None
+            self.theme_vm = None
+
+        # Initialize palette adapter (bridges CombinedNodePaletteViewModel with legacy palette)
+        try:
+            from gui_framework.adapters.palette_adapter import PaletteAdapter
+
+            self.palette_adapter = PaletteAdapter(self)
+            self.palette_adapter.connect()
+            # Store viewmodel reference for convenience
+            self.palette_vm = self.palette_adapter.viewmodel
+            logger.debug("MainWindow: PaletteAdapter initialized")
+        except Exception as e:
+            logger.warning("Failed to initialize PaletteAdapter: %s", e)
+            self.palette_adapter = None
+            self.palette_vm = None
+
+        # Initialize examples loader adapter (bridges ExamplesLoaderViewModel with legacy loader)
+        try:
+            from gui_framework.adapters.examples_loader_adapter import (
+                ExamplesLoaderAdapter,
+            )
+
+            self.examples_loader_adapter = ExamplesLoaderAdapter(self)
+            self.examples_loader_adapter.connect()
+            # Store viewmodel reference for convenience
+            self.examples_loader_vm = self.examples_loader_adapter.viewmodel
+            logger.debug("MainWindow: ExamplesLoaderAdapter initialized")
+        except Exception as e:
+            logger.warning("Failed to initialize ExamplesLoaderAdapter: %s", e)
+            self.examples_loader_adapter = None
+            self.examples_loader_vm = None
+
+        # Initialize layouts adapter (bridges LayoutsView with GraphLayoutController)
+        try:
+            from gui_framework.adapters.layouts_adapter import LayoutsAdapter
+
+            self.layouts_adapter = LayoutsAdapter(self)
+            self.layouts_adapter.connect()
+            logger.debug("MainWindow: LayoutsAdapter initialized")
+        except Exception as e:
+            logger.warning("Failed to initialize LayoutsAdapter: %s", e)
+            self.layouts_adapter = None
+
+        # Initialize dialogs adapter (bridges MVVM dialogs with DialogController)
+        try:
+            from gui_framework.adapters.dialogs_adapter import DialogsAdapter
+
+            self.dialogs_adapter = DialogsAdapter(self)
+            self.dialogs_adapter.connect()
+            logger.debug("MainWindow: DialogsAdapter initialized")
+        except Exception as e:
+            logger.warning("Failed to initialize DialogsAdapter: %s", e)
+            self.dialogs_adapter = None
+
+        # Initialize plot adapter (bridges PlotView with legacy PlotWindow)
+        try:
+            from gui_framework.adapters.plot_adapter import PlotAdapter
+
+            self.plot_adapter = PlotAdapter(parent=self)
+            logger.debug("MainWindow: PlotAdapter initialized")
+        except Exception as e:
+            logger.warning("Failed to initialize PlotAdapter: %s", e)
+            self.plot_adapter = None
 
     def set_graph(self, graph: Graph):
         """Set the authoritative Graph instance and keep canvas and runner in sync.

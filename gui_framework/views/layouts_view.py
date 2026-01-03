@@ -44,7 +44,7 @@ if PYQT_AVAILABLE:
             self.algo_combo = QComboBox()
             self.algo_combo.addItem("Sugiyama", "sugiyama")
             self.algo_combo.addItem("Tree", "tree")
-            self.algo_combo.addItem("MLP (layered)", "mlp_layered")
+            # MLP (layered) removed — prefer MLP (full) layout only
             self.algo_combo.addItem("MLP (full)", "mlp_layout")
             self.algo_combo.addItem("Grid", "grid")
             self.algo_combo.addItem("Circular", "circular")

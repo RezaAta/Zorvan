@@ -1039,7 +1039,89 @@ class ControlPanelBuilder:
         parent_layout.addWidget(mw.manual_sequence_widget)
 
     def _build_execution_buttons(self, parent_layout):
-        """Build play/pause/step/reset buttons."""
+        """Build play/pause/step/reset buttons.
+
+        Attempts to use MVVM ExecutionView if available, falls back to legacy buttons.
+        """
+        mw = self.mw
+
+        # Try MVVM integration first
+        if self._try_build_mvvm_execution_controls(parent_layout):
+            return  # MVVM controls built successfully
+
+        # Fallback to legacy buttons
+        self._build_legacy_execution_buttons(parent_layout)
+
+    def _try_build_mvvm_execution_controls(self, parent_layout) -> bool:
+        """Attempt to build MVVM-based execution controls.
+
+        Returns:
+            True if MVVM controls were built successfully, False to use legacy.
+        """
+        mw = self.mw
+
+        try:
+            # Check if MVVM adapter is available
+            if not hasattr(mw, "execution_adapter") or mw.execution_adapter is None:
+                logger.debug(
+                    "MVVM ExecutionAdapter not available, using legacy controls"
+                )
+                return False
+
+            from gui_framework.views.execution_view import PYQT_AVAILABLE, ExecutionView
+
+            if not PYQT_AVAILABLE:
+                logger.debug(
+                    "PyQt6 not available for ExecutionView, using legacy controls"
+                )
+                return False
+
+            # Create the MVVM ExecutionView with the adapter's viewmodel
+            execution_view = ExecutionView(mw.execution_adapter.viewmodel, parent=mw)
+
+            # Store reference on main window for later access
+            mw.mvvm_execution_view = execution_view
+
+            # Add the MVVM view to the layout
+            parent_layout.addWidget(execution_view)
+
+            # Also create minimal legacy button references for compatibility
+            # (some code may reference mw.play_btn, etc.)
+            self._create_legacy_button_aliases(execution_view)
+
+            logger.info("MVVM ExecutionView integrated successfully")
+            return True
+
+        except Exception as e:
+            logger.warning("Failed to build MVVM execution controls: %s", e)
+            return False
+
+    def _create_legacy_button_aliases(self, execution_view):
+        """Create legacy button aliases pointing to MVVM view buttons.
+
+        This provides backward compatibility for code that references
+        mw.play_btn, mw.pause_btn, etc.
+        """
+        mw = self.mw
+        try:
+            mw.play_btn = execution_view.play_button
+            mw.pause_btn = execution_view.pause_button
+            mw.resume_btn = execution_view.resume_button
+            mw.step_btn = execution_view.step_button
+            mw.reset_btn = execution_view.reset_button
+            mw.restore_graph_btn = execution_view.restore_button
+            mw.reset_processor_btn = (
+                execution_view.stop_button
+            )  # stop_button = Reset Proc in MVVM
+            mw.rebuild_exec_btn = execution_view.rebuild_button
+            # Store reference to progress bar for legacy access
+            mw.mvvm_step_progress = execution_view.progress_bar
+            mw.mvvm_step_label = execution_view.step_label
+        except Exception as e:
+            logger.debug("Could not create legacy button aliases: %s", e)
+
+    def _build_legacy_execution_buttons(self, parent_layout):
+        """Build legacy play/pause/step/reset buttons."""
         mw = self.mw
 
         btn_row = QHBoxLayout()
@@ -1681,7 +1763,10 @@ class ControlPanelBuilder:
         on_grid_mode_changed(mw.grid_mode_combo.currentIndex())
 
     def _build_layout_section(self) -> QWidget:
-        """Build the graph layout controls section."""
+        """Build the graph layout controls section.
+
+        Attempts to use MVVM LayoutsView if available, falls back to legacy buttons.
+        """
         mw = self.mw
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -1692,6 +1777,59 @@ class ControlPanelBuilder:
         else:
             layout.addWidget(QLabel("<b>Graph Layout</b>"))
 
+        # Try MVVM LayoutsView first
+        if self._try_build_mvvm_layouts_controls(layout):
+            layout.addStretch()
+            return container
+
+        # Fallback to legacy buttons
+        self._build_legacy_layout_controls(layout)
+
+        layout.addStretch()
+        return container
+
+    def _try_build_mvvm_layouts_controls(self, parent_layout) -> bool:
+        """Attempt to build MVVM-based layout controls.
+
+        Returns:
+            True if MVVM controls were built successfully, False to use legacy.
+        """
+        mw = self.mw
+
+        try:
+            # Check if MVVM adapter is available
+            if not hasattr(mw, "layouts_adapter") or mw.layouts_adapter is None:
+                logger.debug("MVVM LayoutsAdapter not available, using legacy controls")
+                return False
+
+            # Prefer the legacy-styled buttons but still use MVVM adapter logic
+            try:
+                mw.layouts_adapter  # ensure attribute exists
+            except Exception:
+                logger.debug("LayoutsAdapter attribute missing, using legacy controls")
+                return False
+
+            # Build legacy-style buttons that call the adapter
+            self._build_mvvm_layout_button_controls(parent_layout, mw.layouts_adapter)
+
+            # Add status label below
+            mw.layout_status_label = QLabel()
+            mw._update_layout_status_label()
+            parent_layout.addWidget(mw.layout_status_label)
+
+            logger.info(
+                "MVVM-based legacy-style layout controls integrated successfully"
+            )
+            return True
+
+        except Exception as e:
+            logger.warning("Failed to build MVVM layout controls: %s", e)
+            return False
+
+    def _build_legacy_layout_controls(self, parent_layout):
+        """Build legacy layout control buttons."""
+        mw = self.mw
+
         mw.layout_sugiyama_btn = _create_standard_button(
             mw, "Hierarchical (Sugiyama)", None, None, 14
         )
@@ -1699,19 +1837,12 @@ class ControlPanelBuilder:
         mw.layout_sugiyama_btn.clicked.connect(
             lambda: mw.apply_graph_layout("sugiyama")
         )
-        layout.addWidget(mw.layout_sugiyama_btn)
+        parent_layout.addWidget(mw.layout_sugiyama_btn)
 
         mw.layout_tree_btn = _create_standard_button(mw, "Tree Layout", None, None, 14)
         mw.layout_tree_btn.setToolTip("Walker's tree layout")
         mw.layout_tree_btn.clicked.connect(lambda: mw.apply_graph_layout("tree"))
-        layout.addWidget(mw.layout_tree_btn)
-
-        mw.layout_mlp_btn = _create_standard_button(
-            mw, "Neural Network Layers", None, None, 14
-        )
-        mw.layout_mlp_btn.setToolTip("Auto-detect MLP structure")
-        mw.layout_mlp_btn.clicked.connect(lambda: mw.apply_graph_layout("mlp_layered"))
-        layout.addWidget(mw.layout_mlp_btn)
+        parent_layout.addWidget(mw.layout_tree_btn)
 
         mw.layout_mlp_full_btn = _create_standard_button(
             mw, "MLP Layout (Full)", None, None, 14
@@ -1720,7 +1851,7 @@ class ControlPanelBuilder:
         mw.layout_mlp_full_btn.clicked.connect(
             lambda: mw.apply_graph_layout("mlp_layout")
         )
-        layout.addWidget(mw.layout_mlp_full_btn)
+        parent_layout.addWidget(mw.layout_mlp_full_btn)
 
         # Direction
         direction_layout = QHBoxLayout()
@@ -1731,7 +1862,7 @@ class ControlPanelBuilder:
         mw.layout_direction_combo.setToolTip("Data flow direction")
         direction_layout.addWidget(mw.layout_direction_combo)
         direction_layout.addStretch()
-        layout.addLayout(direction_layout)
+        parent_layout.addLayout(direction_layout)
 
         # Spacing
         spacing_layout = QHBoxLayout()
@@ -1744,14 +1875,95 @@ class ControlPanelBuilder:
         mw.layout_spacing_spin.setToolTip("Spacing between nodes")
         spacing_layout.addWidget(mw.layout_spacing_spin)
         spacing_layout.addStretch()
-        layout.addLayout(spacing_layout)
+        parent_layout.addLayout(spacing_layout)
 
         mw.layout_status_label = QLabel()
         mw._update_layout_status_label()
-        layout.addWidget(mw.layout_status_label)
+        parent_layout.addWidget(mw.layout_status_label)
 
-        layout.addStretch()
-        return container
+    def _build_mvvm_layout_button_controls(self, parent_layout, adapter):
+        """Build legacy-styled layout buttons that route through LayoutsAdapter."""
+        mw = self.mw
+
+        # Buttons
+        mw.layout_sugiyama_btn = _create_standard_button(
+            mw, "Hierarchical (Sugiyama)", None, None, 14
+        )
+        mw.layout_sugiyama_btn.setToolTip("Sugiyama algorithm for DAGs")
+        mw.layout_sugiyama_btn.clicked.connect(
+            lambda: adapter.apply_layout(
+                "sugiyama",
+                direction=self._get_layout_direction(),
+                spacing=self._get_layout_spacing(),
+            )
+        )
+        parent_layout.addWidget(mw.layout_sugiyama_btn)
+
+        mw.layout_tree_btn = _create_standard_button(mw, "Tree Layout", None, None, 14)
+        mw.layout_tree_btn.setToolTip("Walker's tree layout")
+        mw.layout_tree_btn.clicked.connect(
+            lambda: adapter.apply_layout(
+                "tree",
+                direction=self._get_layout_direction(),
+                spacing=self._get_layout_spacing(),
+            )
+        )
+        parent_layout.addWidget(mw.layout_tree_btn)
+
+        mw.layout_mlp_full_btn = _create_standard_button(
+            mw, "MLP Layout (Full)", None, None, 14
+        )
+        mw.layout_mlp_full_btn.setToolTip("Full MLP layout with backprop")
+        mw.layout_mlp_full_btn.clicked.connect(
+            lambda: adapter.apply_layout(
+                "mlp_layout",
+                direction=self._get_layout_direction(),
+                spacing=self._get_layout_spacing(),
+            )
+        )
+        parent_layout.addWidget(mw.layout_mlp_full_btn)
+
+        # Direction
+        direction_layout = QHBoxLayout()
+        direction_layout.addWidget(QLabel("Direction:"))
+        mw.layout_direction_combo = QComboBox()
+        mw.layout_direction_combo.addItems(["Left → Right", "Top → Bottom"])
+        mw.layout_direction_combo.setCurrentIndex(0)
+        mw.layout_direction_combo.setToolTip("Data flow direction")
+        direction_layout.addWidget(mw.layout_direction_combo)
+        direction_layout.addStretch()
+        parent_layout.addLayout(direction_layout)
+
+        # Spacing
+        spacing_layout = QHBoxLayout()
+        spacing_layout.addWidget(QLabel("Spacing:"))
+        mw.layout_spacing_spin = QSpinBox()
+        mw.layout_spacing_spin.setRange(50, 500)
+        mw.layout_spacing_spin.setValue(80)
+        mw.layout_spacing_spin.setSingleStep(10)
+        mw.layout_spacing_spin.setSuffix(" px")
+        mw.layout_spacing_spin.setToolTip("Spacing between nodes")
+        spacing_layout.addWidget(mw.layout_spacing_spin)
+        spacing_layout.addStretch()
+        parent_layout.addLayout(spacing_layout)
+
+    def _get_layout_direction(self):
+        mw = self.mw
+        if (
+            not hasattr(mw, "layout_direction_combo")
+            or mw.layout_direction_combo is None
+        ):
+            return "LR"
+        text = mw.layout_direction_combo.currentText()
+        if "Top" in text:
+            return "TB"
+        return "LR"
+
+    def _get_layout_spacing(self):
+        mw = self.mw
+        if not hasattr(mw, "layout_spacing_spin") or mw.layout_spacing_spin is None:
+            return 150
+        return int(mw.layout_spacing_spin.value())
 
     def _build_plotting_section(self) -> QWidget:
         """Build the plotting controls section."""
