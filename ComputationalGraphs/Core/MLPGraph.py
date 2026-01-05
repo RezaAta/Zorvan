@@ -3,6 +3,7 @@ import random
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
 from ComputationalGraphs.Nodes.BufferNode import BufferNode
+from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
 from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from ComputationalGraphs.Nodes.InitializableContainerNode import (
     InitializableContainerNode,
@@ -378,38 +379,20 @@ class MLPGraph(Graph):
             for layerNum, numNeurons in enumerate(self.hiddenLayerSizes):
                 biasRow = []
                 for n in range(numNeurons):
-                    b = InitializableContainerNode(
-                        name=f"B_H{layerNum}N{n}",
-                        value=0.0,
-                        init_low=-1.0,
-                        init_high=1.0,
-                    )
+                    # Use a plain ContainerNode for biases so they are deterministically 0.0 by default
+                    b = ContainerNode(name=f"B_H{layerNum}N{n}", value=0.0)
                     self.AddNode(b)
                     self.stopping_nodes.append(b)
-                    if getattr(b, "initializer", None) is not None:
-                        try:
-                            b.reinitialize()
-                        except Exception:
-                            pass
                     biasRow.append(b)
                 self.biasLayers.append(biasRow)
 
             # Output biases
             outBiasRow = []
             for j in range(self.numOutputs):
-                b = InitializableContainerNode(
-                    name=f"B_y{j}",
-                    value=0.0,
-                    init_low=-1.0,
-                    init_high=1.0,
-                )
+                # Output biases are plain ContainerNode with deterministic zero initialization
+                b = ContainerNode(name=f"B_y{j}", value=0.0)
                 self.AddNode(b)
                 self.stopping_nodes.append(b)
-                if getattr(b, "initializer", None) is not None:
-                    try:
-                        b.reinitialize()
-                    except Exception:
-                        pass
                 outBiasRow.append(b)
             self.biasLayers.append(outBiasRow)
 

@@ -377,6 +377,26 @@ def copy_weights_to_classic(mlp_graph, classic):
                 classic.biases[b_idx][0, j] = bnode.value
 
 
+def copy_weights_from_classic(classic, mlp_graph):
+    """Copy weights and biases from a trained `ClassicMLP` into a `mlp_graph` instance.
+
+    This is the inverse of `copy_weights_to_classic`. It mutates the graph's
+    `weightLayers` and `biasLayers` in-place.
+    """
+    # copy weights
+    for layer_idx, Wmat in enumerate(classic.weights):
+        rows, cols = Wmat.shape
+        weightLayer = mlp_graph.weightLayers[layer_idx]
+        for i in range(rows):
+            for j in range(cols):
+                weightLayer[i][j].value = float(Wmat[i, j])
+    # copy biases if present
+    if getattr(mlp_graph, "biasLayers", None) and classic.use_bias:
+        for b_idx, biasRow in enumerate(mlp_graph.biasLayers):
+            for j, bnode in enumerate(biasRow):
+                bnode.value = float(classic.biases[b_idx][0, j])
+
+
 def fis_classic(error, delta_pred):
     # membership functions (triangle/trapezoid) matching graph's PiecewiseLinearNode
     def piecewise(x, xs, mus):
@@ -423,6 +443,15 @@ def fis_classic(error, delta_pred):
 
 def graph_predict_single(mlp_graph, x_temp, x_prev, scalers):
     """Stateless single-sample prediction using a graph MLP; returns denormalized scalar."""
+    # Prepare the graph for test-time use: this detaches any backprop predecessors
+    # from bias nodes and mounts prediction buffers so the network behaves as a pure
+    # forward-pass MLP during single-sample predictions.
+    try:
+        mlp_graph.PrepareForTest(xTest=[[x_temp], [x_prev]], yTest=[[0.0]])
+    except Exception:
+        # PrepareForTest is safe to ignore if not available for some reason
+        pass
+
     mlp_graph.FlushNetwork()
     mlp_graph.ResetWeightInputs()
     proc = GraphProcessor(mlp_graph, verbose=False)
@@ -492,13 +521,8 @@ def closed_loop_simulation_graph_detached(
     powers = []
     errors = []
 
-    net_len = 3 * (len(mlp_graph.hiddenLayers) + 1)
-
     # ensure stateless per-step prediction
     def predict_graph(mlp_graph, T_in, prev_power_in):
-        # reset network state so predictions are independent
-        mlp_graph.FlushNetwork()
-        mlp_graph.ResetWeightInputs()
         return graph_predict_single(mlp_graph, T_in, prev_power_in, scalers)
 
     for t in range(steps):
@@ -552,7 +576,7 @@ def closed_loop_simulation_classic_detached(
     T = rng.uniform(5.0, 25.0)
     if verbose:
         logger.debug("[Classic Detached] rng_seed=%s, initial_T=%.6f", rng_seed, T)
-    prev_power = 0.0
+    prev_power = 0.0 if initial_prev_power is None else initial_prev_power
     temps = []
     powers = []
     errors = []
@@ -697,6 +721,7 @@ def run_compare():
         use_bias=True,
     )
     copy_weights_to_classic(mlp_graph, classic)
+    # Legacy delay synchronization removed: ClassicMLP now updates weights/biases immediately (no delay API).
 
     # Verify initial weight copy is exact (should be zero diff)
     for layer_idx, weightLayer in enumerate(mlp_graph.weightLayers):
@@ -737,7 +762,7 @@ def run_compare():
     yn = (np.array(y_train[0]) - scalers["y_mean"]) / scalers["y_std"]
     yn = yn.reshape(-1, 1)
     # Train for 320 epochs with full batch (960 samples) to match Graph's 320 iterations
-    classic.train(Xn, yn, epochs=320, batch_size=len(Xn))
+    classic.train(Xn, yn, epochs=320, batch_size=len(Xn), verbose=False)
 
     # build hybrid graph from trained mlp (graph's trained weights + FIS)
     hybrid_graph = build_hybrid_from_trained_mlp(mlp_graph, setpoint=22.0)
@@ -1008,6 +1033,7 @@ def run_compare_once(master_seed=None, verbose=False):
         use_bias=True,
     )
     copy_weights_to_classic(mlp_graph, classic)
+    # Legacy delay synchronization removed: ClassicMLP now updates weights/biases immediately (no delay API).
 
     # Train both
     mlp_graph, full_graph, scalers = train_graph_mlp(
@@ -1025,7 +1051,7 @@ def run_compare_once(master_seed=None, verbose=False):
     yn = (np.array(y_train[0]) - scalers["y_mean"]) / scalers["y_std"]
     yn = yn.reshape(-1, 1)
     # Train for 320 epochs with full batch (960 samples) to match Graph's 320 iterations
-    classic.train(Xn, yn, epochs=320, batch_size=len(Xn))
+    classic.train(Xn, yn, epochs=320, batch_size=len(Xn), verbose=False)
 
     # run detached closed-loop evaluation for one representative episode (MLP->FIS detached)
     # Use a shared, random seed for fair comparison between Graph and Classic sims
@@ -1134,23 +1160,25 @@ def run_compare_multiple(n_runs=10, verbose=False, save_file=None, csv_file=None
         for idx, r in enumerate(all_results, start=1):
             g_final = float(r["g_temps"][-1])
             c_final = float(r["c_temps"][-1])
+            g_abs = abs(g_final - target)
+            c_abs = abs(c_final - target)
             rows.append(
                 {
                     "trial": idx,
                     "master_seed": int(r.get("master_seed", 0)),
                     "shared_seed": int(r.get("shared_seed", 0)),
                     "graph_final_temp": g_final,
-                    "graph_diff": g_final - target,
+                    "graph_abs_error": g_abs,
                     "classic_final_temp": c_final,
-                    "classic_diff": c_final - target,
+                    "classic_abs_error": c_abs,
                 }
             )
 
         # compute summary rows: AVERAGE, DIFFERENCE (Graph - Classic), PERCENT_DIFF (relative to Classic)
         avg_graph_final = np.mean([r["graph_final_temp"] for r in rows])
         avg_classic_final = np.mean([r["classic_final_temp"] for r in rows])
-        avg_graph_diff = np.mean([r["graph_diff"] for r in rows])
-        avg_classic_diff = np.mean([r["classic_diff"] for r in rows])
+        avg_graph_abs = np.mean([r["graph_abs_error"] for r in rows])
+        avg_classic_abs = np.mean([r["classic_abs_error"] for r in rows])
 
         rows.append(
             {
@@ -1158,23 +1186,23 @@ def run_compare_multiple(n_runs=10, verbose=False, save_file=None, csv_file=None
                 "master_seed": "",
                 "shared_seed": "",
                 "graph_final_temp": avg_graph_final,
-                "graph_diff": avg_graph_diff,
+                "graph_abs_error": avg_graph_abs,
                 "classic_final_temp": avg_classic_final,
-                "classic_diff": avg_classic_diff,
+                "classic_abs_error": avg_classic_abs,
             }
         )
 
         diff_final = avg_graph_final - avg_classic_final
-        diff_diff = avg_graph_diff - avg_classic_diff
+        diff_abs = avg_graph_abs - avg_classic_abs
         rows.append(
             {
                 "trial": "DIFFERENCE",
                 "master_seed": "",
                 "shared_seed": "",
                 "graph_final_temp": diff_final,
-                "graph_diff": diff_diff,
+                "graph_abs_error": diff_abs,
                 "classic_final_temp": "",
-                "classic_diff": "",
+                "classic_abs_error": "",
             }
         )
 
@@ -1182,10 +1210,10 @@ def run_compare_multiple(n_runs=10, verbose=False, save_file=None, csv_file=None
             pct_final = (diff_final / avg_classic_final) * 100.0
         else:
             pct_final = float("inf")
-        if avg_classic_diff != 0:
-            pct_diff = (diff_diff / avg_classic_diff) * 100.0
+        if avg_classic_abs != 0:
+            pct_abs = (diff_abs / avg_classic_abs) * 100.0
         else:
-            pct_diff = float("inf")
+            pct_abs = float("inf")
 
         rows.append(
             {
@@ -1193,9 +1221,9 @@ def run_compare_multiple(n_runs=10, verbose=False, save_file=None, csv_file=None
                 "master_seed": "",
                 "shared_seed": "",
                 "graph_final_temp": pct_final,
-                "graph_diff": pct_diff,
+                "graph_abs_error": pct_abs,
                 "classic_final_temp": "",
-                "classic_diff": "",
+                "classic_abs_error": "",
             }
         )
 
@@ -1204,9 +1232,9 @@ def run_compare_multiple(n_runs=10, verbose=False, save_file=None, csv_file=None
             "master_seed",
             "shared_seed",
             "graph_final_temp",
-            "graph_diff",
+            "graph_abs_error",
             "classic_final_temp",
-            "classic_diff",
+            "classic_abs_error",
         ]
         try:
             with open(csv_file, "w", newline="") as fh:

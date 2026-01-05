@@ -108,7 +108,9 @@ def run_experiment(
 
     start = time.time()
     # Train for `epochs` to match graph_mse_epoch length
-    classic_mse = classic.train(Xn, yn, epochs=epochs, batch_size=len(Xn))
+    classic_mse = classic.train(
+        Xn, yn, epochs=epochs, batch_size=len(Xn), verbose=False
+    )
     classic_time = time.time() - start
 
     # Evaluate on test set

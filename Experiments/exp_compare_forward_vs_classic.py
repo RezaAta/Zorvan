@@ -201,10 +201,15 @@ print(f"  Iterations per sample: {iterations_per_sample}")
 print(f"  Samples per epoch: {num_samples}")
 print(f"  Iterations per epoch: {iterations_per_epoch}")
 
+# CRITICAL: Mark source nodes and ContainerNodes as processed before first forward pass
+# This allows starting nodes (first layer multiplications) to read input/weight values
+mlp_forward.PrepareForForwardProcessing(processor_forward)
+print("Called PrepareForForwardProcessing to mark sources and weights as processed")
+
 mse_history_forward = []
 start_time = time.time()
 
-# Training - DataStreamNodes automatically cycle through samples (no PrepareForForwardProcessing needed)
+# Training loop
 for epoch in range(epochs):
     # Run one epoch worth of iterations
     processor_forward.ForwardProcessing(iterations=iterations_per_epoch)

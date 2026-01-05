@@ -63,7 +63,62 @@ class PlottingController:
         return "PyQtGraph" if backend == "pyqtgraph" else "Matplotlib"
 
     def open_plot_window(self):
-        """Open the plot configuration dialog and create plot window."""
+        """Open the plot configuration dialog and create plot window.
+
+        Tries MVVM PlotAdapter first, falls back to legacy dialog.
+        """
+        # Try MVVM adapter first
+        if self._try_mvvm_plot_dialog():
+            return
+
+        # Fallback to legacy dialog
+        self._open_legacy_plot_window()
+
+    def _try_mvvm_plot_dialog(self) -> bool:
+        """Try to open plot config using MVVM PlotAdapter.
+
+        Returns:
+            True if MVVM dialog was used successfully, False to use legacy.
+        """
+        try:
+            mw = self.main_window
+            if not hasattr(mw, "plot_adapter") or mw.plot_adapter is None:
+                return False
+
+            if not self.graph or len(self.graph.nodes) == 0:
+                from PyQt6.QtWidgets import QMessageBox
+
+                QMessageBox.warning(
+                    mw, "No Graph", "Please load or create a graph first."
+                )
+                return True  # Handled (with error), don't fall back
+
+            # Get max iterations from the control panel
+            default_max_iter = mw.max_steps_spin.value()
+
+            # Try the adapter's show_config_dialog
+            result = mw.plot_adapter.show_config_dialog(
+                self.graph, max_iterations=default_max_iter
+            )
+
+            if result:
+                # Store reference for legacy compatibility
+                if mw.plot_adapter.plot_view:
+                    self.plot_window = mw.plot_adapter.plot_view
+                self.status_bar.showMessage("Plot window opened via MVVM")
+                return True
+            else:
+                # User cancelled - still handled
+                return True
+
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).debug("MVVM plot dialog failed: %s", e)
+            return False
+
+    def _open_legacy_plot_window(self):
+        """Open legacy plot configuration dialog and create plot window."""
         from ComputationalGraphs.GUI.plot_window import (
             PlotConfigDialog,
             create_plot_window,

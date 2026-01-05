@@ -71,7 +71,8 @@ def generate_initial_weights_and_biases(
         w = rng.uniform(-1.0, 1.0, size=(layer_dims[i], layer_dims[i + 1]))
         weights.append(w)
         if use_bias:
-            b = rng.uniform(-1.0, 1.0, size=(1, layer_dims[i + 1]))
+            # Biases set to zero for deterministic experiments (no randomization)
+            b = np.zeros((1, layer_dims[i + 1]))
         else:
             b = None
         biases.append(b)

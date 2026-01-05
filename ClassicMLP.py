@@ -46,8 +46,15 @@ class ClassicMLP:
         self.initial_weight = initial_weight
         self.use_bias = use_bias
 
+        # (Delay feature removed) Updates are applied eagerly per-batch.
+        # The legacy delay API has been removed to ensure parity with graph implementations.
+
         self.weights = self._initialize_weights()
         self.biases = self._initialize_biases()
+
+    # NOTE: delay API removed — use immediate updates (default).
+
+    # NOTE: delay API removed — use immediate updates (default).
 
     def _initialize_weights(self):
         layer_dims = [self.input_size] + self.hidden_layers + [self.output_size]
@@ -110,7 +117,12 @@ class ClassicMLP:
             activations.append(a)
         return activations
 
-    def backward_pass(self, X, y, activations):
+    def backward_pass(self, X, y, activations, apply_updates: bool = True):
+        """Compute gradients (and apply them unless apply_updates=False).
+
+        Returns (dw_list, db_list) when apply_updates=False; otherwise applies updates
+        immediately (legacy behavior).
+        """
         errors = [activations[-1] - y]
         deltas = [
             errors[-1]
@@ -132,15 +144,49 @@ class ClassicMLP:
 
         deltas.reverse()
 
+        # Compute weight/bias deltas (unscaled by learning rate)
+        dw_list = []
+        db_list = []
         for i in range(len(self.weights)):
-            self.weights[i] -= self.learning_rate * np.dot(activations[i].T, deltas[i])
+            dw = np.dot(activations[i].T, deltas[i])
+            dw_list.append(dw)
             if self.use_bias:
-                self.biases[i] -= self.learning_rate * np.sum(
-                    deltas[i], axis=0, keepdims=True
-                )
+                db = np.sum(deltas[i], axis=0, keepdims=True)
+                db_list.append(db)
+            else:
+                db_list.append(None)
 
-    def train(self, X, y, epochs=100, batch_size=32):
+        if apply_updates:
+            # Immediate application: apply weight and bias updates now
+            for i in range(len(self.weights)):
+                self.weights[i] -= self.learning_rate * dw_list[i]
+                if self.use_bias:
+                    self.biases[i] -= self.learning_rate * db_list[i]
+            return None, None
+
+        # If here, we return deltas for later application by the caller
+        return dw_list, db_list
+
+    def train(
+        self,
+        X,
+        y,
+        epochs=100,
+        batch_size=32,
+        verbose=True,
+        flush_on_return: bool = True,
+    ):
+        """Train the network.
+
+        Updates are applied immediately per-batch; delay feature removed.
+
+        Args:
+            flush_on_return: If False, do not apply queued pending updates at the end of this
+                `train` call. Useful when performing stepped epoch-by-epoch training where
+                the caller wants to preserve queued updates between calls.
+        """
         mse_history = []
+
         for epoch in range(epochs):
             mse = 0
             for i in range(0, X.shape[0], batch_size):
@@ -148,13 +194,16 @@ class ClassicMLP:
                 y_batch = y[i : i + batch_size]
 
                 activations = self.forward_pass(X_batch)
-                self.backward_pass(X_batch, y_batch, activations)
+
+                # Always apply updates immediately (no queuing)
+                self.backward_pass(X_batch, y_batch, activations, apply_updates=True)
 
                 mse += np.mean((activations[-1] - y_batch) ** 2)
 
             mse /= X.shape[0] / batch_size
             mse_history.append(mse)
-            print(f"Epoch {epoch + 1}/{epochs}, MSE: {mse:.4f}")
+            if verbose:
+                print(f"Epoch {epoch + 1}/{epochs}, MSE: {mse:.4f}")
 
         return mse_history
 

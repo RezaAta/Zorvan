@@ -240,9 +240,9 @@ def test_export_per_trial_table(tmp_path):
         "master_seed",
         "shared_seed",
         "graph_final_temp",
-        "graph_diff",
+        "graph_abs_error",
         "classic_final_temp",
-        "classic_diff",
+        "classic_abs_error",
     ]
     assert reader.fieldnames == expected_fields
 
@@ -251,8 +251,8 @@ def test_export_per_trial_table(tmp_path):
     for r in per_rows:
         float(r["graph_final_temp"])
         float(r["classic_final_temp"])
-        float(r["graph_diff"])
-        float(r["classic_diff"])
+        float(r["graph_abs_error"])
+        float(r["classic_abs_error"])
 
     # validate summary rows
     avg_row = rows[-3]
@@ -261,21 +261,27 @@ def test_export_per_trial_table(tmp_path):
 
     import statistics
 
-    avg_graph = statistics.mean(float(r["graph_final_temp"]) for r in per_rows)
-    avg_classic = statistics.mean(float(r["classic_final_temp"]) for r in per_rows)
+    avg_graph_final = statistics.mean(float(r["graph_final_temp"]) for r in per_rows)
+    avg_classic_final = statistics.mean(
+        float(r["classic_final_temp"]) for r in per_rows
+    )
+    avg_graph_abs = statistics.mean(float(r["graph_abs_error"]) for r in per_rows)
+    avg_classic_abs = statistics.mean(float(r["classic_abs_error"]) for r in per_rows)
 
     assert avg_row["trial"] == "AVERAGE"
-    assert abs(float(avg_row["graph_final_temp"]) - avg_graph) < 1e-6
+    assert abs(float(avg_row["graph_abs_error"]) - avg_graph_abs) < 1e-6
 
     assert diff_row["trial"] == "DIFFERENCE"
-    diff_expected = avg_graph - avg_classic
-    assert abs(float(diff_row["graph_final_temp"]) - diff_expected) < 1e-6
+    diff_expected = avg_graph_abs - avg_classic_abs
+    assert abs(float(diff_row["graph_abs_error"]) - diff_expected) < 1e-6
 
     assert pct_row["trial"] == "PERCENT_DIFF"
     pct_expected = (
-        (diff_expected / avg_classic) * 100.0 if avg_classic != 0 else float("inf")
+        (diff_expected / avg_classic_abs) * 100.0
+        if avg_classic_abs != 0
+        else float("inf")
     )
-    assert abs(float(pct_row["graph_final_temp"]) - pct_expected) < 1e-6
+    assert abs(float(pct_row["graph_abs_error"]) - pct_expected) < 1e-6
 
     # check markdown file was created alongside csv
     assert os.path.exists(md_path)

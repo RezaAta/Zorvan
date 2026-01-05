@@ -72,14 +72,89 @@ print(classic_mlp.weights[1])
 classic_initial_hidden = classic_mlp.weights[0].copy()
 classic_initial_output = classic_mlp.weights[1].copy()
 
+# Build a small MLPGraph early so we can set the Classic training delay to match the
+# graph's input buffer size. We'll reuse this `mlpGraph` for the concurrent test later.
+random.seed(42)
+mlpGraph = MLPGraph(
+    numInputs=2,
+    numOutputs=1,
+    numHiddenLayers=1,
+    activationFunction=SigmoidNode,
+    outputLayerType=LinearNode,
+)
+mlpGraph.BuildMLP()
+# Legacy delay synchronization removed: ClassicMLP now updates weights/biases immediately (no delay API).
+
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--trace",
+    action="store_true",
+    help="Enable per-epoch tracing and save traces to artifacts/xor_traces/",
+)
+args = parser.parse_args()
+TRACE = args.trace
+
 print("Training Classic MLP...")
 start_time = time.time()
 
-# Train with batch_size=1 (SGD) to match the sample-by-sample processing
-# Classic MLP with batch_size=4 and lr=0.5 diverges, but SGD works well
-mse_history_classic = classic_mlp.train(X_classic, y_classic, epochs=5000, batch_size=1)
+epochs = 5000
+batch_size = 1
+# If tracing, train 1 epoch at a time so we can snapshot parameters; otherwise, call train once
+if TRACE:
+    # prepare trace storage for XOR (architecture 2-2-1)
+    input_size = classic_mlp.input_size
+    hidden_size = classic_mlp.hidden_layers[0]
+    output_size = classic_mlp.output_size
 
-classic_time = time.time() - start_time
+    classic_w_hidden = np.zeros((epochs, input_size, hidden_size))
+    classic_w_output = np.zeros((epochs, hidden_size, output_size))
+    classic_b_hidden = (
+        np.zeros((epochs, 1, hidden_size)) if classic_mlp.use_bias else None
+    )
+    classic_b_output = (
+        np.zeros((epochs, 1, output_size)) if classic_mlp.use_bias else None
+    )
+    mse_history_classic = []
+
+    # Train epoch-by-epoch (important: per-layer delays are preserved across calls)
+    for e in range(epochs):
+        # debug first few epochs
+        if e < 3:
+            print(f"DEBUG before epoch {e} classic W0:\n{classic_mlp.weights[0]}")
+
+        # step one epoch without flushing pending updates at return
+        _ = classic_mlp.train(
+            X_classic,
+            y_classic,
+            epochs=1,
+            batch_size=batch_size,
+            verbose=False,
+            flush_on_return=False,
+        )
+
+        if e < 3:
+            print(f"DEBUG after epoch {e} classic W0:\n{classic_mlp.weights[0]}")
+
+        # snapshot weights and biases (state after internal epoch step, but before final flush)
+        classic_w_hidden[e, :, :] = classic_mlp.weights[0]
+        classic_w_output[e, :, :] = classic_mlp.weights[1]
+        if classic_mlp.use_bias:
+            classic_b_hidden[e, 0, :] = classic_mlp.biases[0][0, :]
+            classic_b_output[e, 0, :] = classic_mlp.biases[1][0, :]
+        # compute current MSE on classic training set
+        preds = classic_mlp.predict(X_classic)
+        mse_history_classic.append(np.mean((preds - y_classic) ** 2))
+
+    mse_history_classic = np.array(mse_history_classic)
+    classic_time = time.time() - start_time
+
+else:
+    mse_history_classic = classic_mlp.train(
+        X_classic, y_classic, epochs=epochs, batch_size=batch_size
+    )
+    classic_time = time.time() - start_time
 
 # Predictions
 predictions_classic = classic_mlp.predict(X_classic).flatten()
@@ -112,18 +187,10 @@ for i in range(len(X_classic)):
 print("\n[2/2] CONCURRENT COMPUTATIONAL GRAPH (FIXED)")
 print("-" * 80)
 
-# Build MLP Graph - exact configuration from TestingOnXOR.py
-# Set seed for Concurrent Graph (uses random.uniform)
+# Note: mlpGraph already built above for delay-sync with Classic training
+# Set seed for Concurrent Graph (uses random.uniform) - re-seed for reproducibility
 random.seed(42)
-mlpGraph = MLPGraph(
-    numInputs=2,
-    numOutputs=1,
-    numHiddenLayers=1,
-    # hiddenLayerSizes not specified -> defaults to [numInputs] = [2]
-    activationFunction=SigmoidNode,
-    outputLayerType=LinearNode,
-)
-mlpGraph.BuildMLP()
+# mlpGraph instance built earlier is reused here
 
 # Build Backprop Graph with FIXED connections
 backprop_graph = BackpropGraph(mlpGraph, learningRate=0.1)
@@ -153,6 +220,20 @@ for node in mlpGraph.nodes:
         hidden_idx = int(node.name.split("W_H0N")[1].split("y")[0])
         output_idx = int(node.name.split("y")[1])
         node.value = classic_initial_output[hidden_idx, output_idx]
+
+# Bias copy from Classic to Graph omitted: initial biases are zero-initialized and do not need copying
+# if hasattr(mlpGraph, "biasLayers") and mlpGraph.add_bias:
+#    try:
+#        print("Copying biases from Classic MLP to Concurrent Graph...")
+#        for layer_idx, b_array in enumerate(classic_mlp.biases):
+#            if b_array is None:
+#                continue
+#            # b_array has shape (1, n)
+#            for neuron_idx in range(b_array.shape[1]):
+#                bnode = mlpGraph.biasLayers[layer_idx][neuron_idx]
+#                bnode.value = float(b_array[0, neuron_idx])
+#    except Exception:
+#        print("Warning: could not copy biases from Classic to Graph")
 
 print("\nConcurrent Graph Initial Weights (after copy from Classic):")
 # Extract weight matrix format to verify copy - check fullMLPGraph nodes
@@ -186,14 +267,17 @@ print(f"Single-thread mode: {fullGraphProcessor.use_single_thread_mode}")
 
 # Network warmup
 networkLength = 3 * (len(mlpGraph.hiddenLayers) + 1)
-mlpProcessor.ComputeGraph(networkLength)
+# For trace runs we skip warmup to keep initial buffer state identical between Classic and Graph
+if not TRACE:
+    mlpProcessor.ComputeGraph(networkLength)
 
 # Training - exact configuration from TestingOnXOR.py
 print("Training Concurrent Graph...")
 fakeBatchSize = 1
 epochs = 5000
 numberOfIterationsInEpochs = 4
-totalIterations = epochs * numberOfIterationsInEpochs * fakeBatchSize
+iters_per_epoch = numberOfIterationsInEpochs * fakeBatchSize
+totalIterations = epochs * iters_per_epoch
 
 mlpGraph.CreateErrorBuffers(totalIterations, mse_buffer_size=numberOfIterationsInEpochs)
 errorBuffers = mlpGraph.errorBuffers
@@ -206,21 +290,91 @@ if hasattr(mlpGraph, "mseNodes"):
             fullMLPGraph.AddNode(mse_node)
 
 start_time = time.time()
-fullGraphProcessor.ComputeGraph(totalIterations + 1)
-graph_time = time.time() - start_time
+if TRACE:
+    # per-epoch incremental ComputeGraph so we can snapshot params after each epoch
+    graph_time = 0.0
+    mse_history_graph = []
 
-# Calculate MSE over epochs
-MSEOverEpochs = []
-for i in range(totalIterations):
-    mse = 0
-    for errorBuffer in errorBuffers:
-        mse += (errorBuffer.buffer[i]) ** 2
-    mse = mse / len(errorBuffers)
-    MSEOverEpochs.append(mse)
+    # Pre-allocate storage for weights/biases matching Classic shapes
+    input_size = 2
+    hidden_size = mlpGraph.hiddenLayerSizes[0]
+    output_size = mlpGraph.numOutputs
 
-MSEOverEpochs = np.array(MSEOverEpochs)
-newMSEOverEpochs = MSEOverEpochs.reshape(-1, numberOfIterationsInEpochs * fakeBatchSize)
-mse_history_graph = np.mean(newMSEOverEpochs, axis=1)
+    graph_w_hidden = np.zeros((epochs, input_size, hidden_size))
+    graph_w_output = np.zeros((epochs, hidden_size, output_size))
+    graph_b_hidden = np.zeros((epochs, 1, hidden_size)) if mlpGraph.add_bias else None
+    graph_b_output = np.zeros((epochs, 1, output_size)) if mlpGraph.add_bias else None
+
+    for e in range(epochs):
+        t0 = time.time()
+        # step one iteration at a time so we can observe when biases/weights change
+        for k in range(iters_per_epoch):
+            fullGraphProcessor.ComputeGraph(1)
+            # debug per-iteration bias values for first epoch
+            if e < 2:
+                hb = (
+                    [b.value for b in mlpGraph.biasLayers[0]]
+                    if mlpGraph.add_bias
+                    else None
+                )
+                ob = (
+                    [b.value for b in mlpGraph.biasLayers[1]]
+                    if mlpGraph.add_bias
+                    else None
+                )
+                print(f"DEBUG graph iter e={e} k={k} bias hidden={hb} out={ob}")
+        graph_time += time.time() - t0
+
+        # snapshot weights: mlpGraph.weightLayers is list of layers
+        # first layer: input->hidden shape (input_size x hidden_size)
+        w0 = np.zeros((input_size, hidden_size))
+        for i in range(input_size):
+            for j in range(hidden_size):
+                w0[i, j] = mlpGraph.weightLayers[0][i][j].value
+        graph_w_hidden[e] = w0
+        # output weights
+        w1 = np.zeros((hidden_size, output_size))
+        for i in range(hidden_size):
+            for j in range(output_size):
+                w1[i, j] = mlpGraph.weightLayers[1][i][j].value
+        graph_w_output[e] = w1
+        # biases
+        if mlpGraph.add_bias:
+            graph_b_hidden[e, 0, :] = [b.value for b in mlpGraph.biasLayers[0]]
+            graph_b_output[e, 0, :] = [b.value for b in mlpGraph.biasLayers[1]]
+        # compute MSE for this epoch using buffers (robust to None entries)
+        mse = 0
+        start_idx = e * iters_per_epoch
+        end_idx = (e + 1) * iters_per_epoch
+        for errorBuffer in errorBuffers:
+            values = [v for v in errorBuffer.buffer[start_idx:end_idx] if v is not None]
+            if len(values) > 0:
+                mse += np.mean(np.array(values) ** 2)
+            else:
+                mse += 0.0
+        mse = mse / len(errorBuffers)
+        mse_history_graph.append(mse)
+
+    mse_history_graph = np.array(mse_history_graph)
+else:
+    start_time = time.time()
+    fullGraphProcessor.ComputeGraph(totalIterations + 1)
+    graph_time = time.time() - start_time
+
+    # Calculate MSE over epochs
+    MSEOverEpochs = []
+    for i in range(totalIterations):
+        mse = 0
+        for errorBuffer in errorBuffers:
+            mse += (errorBuffer.buffer[i]) ** 2
+        mse = mse / len(errorBuffers)
+        MSEOverEpochs.append(mse)
+
+    MSEOverEpochs = np.array(MSEOverEpochs)
+    newMSEOverEpochs = MSEOverEpochs.reshape(
+        -1, numberOfIterationsInEpochs * fakeBatchSize
+    )
+    mse_history_graph = np.mean(newMSEOverEpochs, axis=1)
 
 # Test predictions
 mlpGraph.PrepareForTest(X_graph, y_graph)
@@ -251,6 +405,104 @@ for i in range(len(X_graph[0])):
     print(
         f"  [{X_graph[0][i]:.1f}, {X_graph[1][i]:.1f}] -> {predictions_graph[i]:.4f} (Binary: {predictions_binary_graph[i]}) | True: {ground_truth[i]}"
     )
+
+# If tracing, save traces to artifacts/xor_traces/ and run exact equality checks
+if TRACE:
+    out_dir = "artifacts/xor_traces"
+    import os
+
+    os.makedirs(out_dir, exist_ok=True)
+    np.savez_compressed(
+        os.path.join(out_dir, "xor_seed42_traces.npz"),
+        classic_w_hidden=classic_w_hidden,
+        classic_w_output=classic_w_output,
+        classic_b_hidden=classic_b_hidden,
+        classic_b_output=classic_b_output,
+        classic_mse=np.array(mse_history_classic),
+        graph_w_hidden=graph_w_hidden,
+        graph_w_output=graph_w_output,
+        graph_b_hidden=graph_b_hidden,
+        graph_b_output=graph_b_output,
+        graph_mse=np.array(mse_history_graph),
+    )
+
+    # Exact per-epoch equality check (tolerance 1e-12)
+    tol = 1e-12
+    equal = True
+    first_diff = None
+    for e in range(epochs):
+        if not np.allclose(classic_w_hidden[e], graph_w_hidden[e], atol=tol, rtol=0):
+            equal = False
+            first_diff = ("W_xH0", e, classic_w_hidden[e], graph_w_hidden[e])
+            break
+        if not np.allclose(classic_w_output[e], graph_w_output[e], atol=tol, rtol=0):
+            equal = False
+            first_diff = ("W_H0y", e, classic_w_output[e], graph_w_output[e])
+            break
+        if classic_b_hidden is not None:
+            if not np.allclose(
+                classic_b_hidden[e], graph_b_hidden[e], atol=tol, rtol=0
+            ):
+                equal = False
+                first_diff = ("B_H0", e, classic_b_hidden[e], graph_b_hidden[e])
+                break
+        if classic_b_output is not None:
+            if not np.allclose(
+                classic_b_output[e], graph_b_output[e], atol=tol, rtol=0
+            ):
+                equal = False
+                first_diff = ("B_y", e, classic_b_output[e], graph_b_output[e])
+                break
+    if equal:
+        print(
+            "TRACE: All per-epoch weights and biases are exactly equal within tolerance."
+        )
+    else:
+        name, e, cval, gval = first_diff
+        print(f"TRACE: First difference at epoch {e}, param {name}.")
+        print("Classic:\n", cval)
+        print("Graph:\n", gval)
+
+    # Compare first-update epoch for biases between Classic and Graph
+    if classic_b_hidden is not None:
+        tol = 1e-12
+
+        def first_nonzero_epoch(arr):
+            for e in range(arr.shape[0]):
+                if np.any(np.abs(arr[e, 0, :]) > tol):
+                    return e
+            return None
+
+        classic_hidden_epoch = first_nonzero_epoch(classic_b_hidden)
+        graph_hidden_epoch = (
+            first_nonzero_epoch(graph_b_hidden) if graph_b_hidden is not None else None
+        )
+        classic_out_epoch = (
+            first_nonzero_epoch(classic_b_output)
+            if classic_b_output is not None
+            else None
+        )
+        graph_out_epoch = (
+            first_nonzero_epoch(graph_b_output) if graph_b_output is not None else None
+        )
+
+        print(
+            "\nTRACE TIMING CHECK: comparing Classic vs Graph bias first-update epochs"
+        )
+        print(
+            f"Hidden bias: Classic={classic_hidden_epoch}, Graph={graph_hidden_epoch}"
+        )
+        print(f"Output bias: Classic={classic_out_epoch}, Graph={graph_out_epoch}")
+        if (
+            classic_hidden_epoch == graph_hidden_epoch
+            and classic_out_epoch == graph_out_epoch
+        ):
+            print("TRACE TIMING CHECK: PASS — Classic bias updates align with Graph.")
+        else:
+            print(
+                "TRACE TIMING CHECK: FAIL — Classic bias updates do not align with Graph."
+            )
+
 
 # ============================================================================
 # COMPARISON SUMMARY

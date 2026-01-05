@@ -1431,11 +1431,37 @@ class MainWindow(QMainWindow):
         self.dialog_controller.load_example(builder, name)
 
     def _show_mlp_dialog(self):
-        """Show dialog to generate MLP graph. Delegated to DialogController."""
+        """Show dialog to generate MLP graph.
+
+        Tries MVVM DialogsAdapter first, falls back to legacy DialogController.
+        """
+        # Try MVVM adapter first
+        if hasattr(self, "dialogs_adapter") and self.dialogs_adapter:
+            try:
+                result = self.dialogs_adapter.show_mlp_dialog()
+                if result is not None:
+                    return  # MVVM handled it
+            except Exception:
+                pass  # Fall back to legacy
+
+        # Legacy fallback
         self.dialog_controller.show_mlp_dialog()
 
     def _show_backprop_dialog(self):
-        """Show dialog to add backpropagation to existing MLP. Delegated to DialogController."""
+        """Show dialog to add backpropagation to existing MLP.
+
+        Tries MVVM DialogsAdapter first, falls back to legacy DialogController.
+        """
+        # Try MVVM adapter first
+        if hasattr(self, "dialogs_adapter") and self.dialogs_adapter:
+            try:
+                result = self.dialogs_adapter.show_backprop_dialog()
+                if result:
+                    return  # MVVM handled it
+            except Exception:
+                pass  # Fall back to legacy
+
+        # Legacy fallback
         self.dialog_controller.show_backprop_dialog()
 
     def _show_new_graph_dialog(self):
