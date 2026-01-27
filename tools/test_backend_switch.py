@@ -15,8 +15,10 @@ def main():
     mw.plot_window = (
         mw.create_plot_window if hasattr(mw, "create_plot_window") else None
     )
-    # Instead of using that, create using factory
-    from ComputationalGraphs.GUI.plot_window import create_plot_window
+    # Use the MVVM PlotAdapter to create a plot window
+    from gui_framework.adapters.plot_adapter import PlotAdapter
+
+    adapter = PlotAdapter(parent=mw)
 
     # Create Matplotlib plot with a dummy node
     class DummyNode:
@@ -25,7 +27,8 @@ def main():
             self.value = value
 
     n = DummyNode("test", 0)
-    mw.plot_window = create_plot_window([n], 50, None, backend="matplotlib")
+    adapter._create_plot_window([n], max_iterations=50)
+    mw.plot_window = adapter.plot_view
     print("Created window backend (before):", getattr(mw.plot_window, "backend", None))
     mw.plot_window.show()
     # Now switch backend to PyQtGraph

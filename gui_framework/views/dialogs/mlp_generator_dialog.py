@@ -110,17 +110,17 @@ class MLPGeneratorDialog(QDialog):
         # Initialize hidden size controls
         self._hidden_spinboxes = []
         self._per_layer_combos = []
+        self._per_layer_combo_rows = []  # Track row widgets for visibility toggle
         self._update_hidden_sizes(self.num_hidden_layers.value())
         # Per-layer selectors hidden by default
         self._toggle_per_layer_selectors(self.num_hidden_layers.value())
 
     def _update_hidden_sizes(self, count: int):
-        # Clear widgets
-        for sb in list(self._hidden_spinboxes):
-            try:
-                sb.deleteLater()
-            except Exception:
-                pass
+        # Clear widgets - must remove from layout before deleting
+        while self.hidden_sizes_layout.count():
+            item = self.hidden_sizes_layout.takeAt(0)
+            if item and item.widget():
+                item.widget().deleteLater()
         self._hidden_spinboxes = []
 
         for i in range(count):
@@ -132,23 +132,36 @@ class MLPGeneratorDialog(QDialog):
             self._hidden_spinboxes.append(sb)
 
         # Update per-layer activation selectors to match count
-        # Clear existing combos
-        for cb in list(self._per_layer_combos):
-            try:
-                cb.deleteLater()
-            except Exception:
-                pass
+        # Clear existing combos and their labels - must remove from layout before deleting
+        while self.per_layer_selectors_layout.count():
+            item = self.per_layer_selectors_layout.takeAt(0)
+            if item and item.widget():
+                item.widget().deleteLater()
         self._per_layer_combos = []
+        self._per_layer_combo_rows = []  # Track row widgets for cleanup
 
+        visible = self.per_layer_checkbox.isChecked()
         for i in range(count):
+            # Create a row widget with label and combo for each layer
+            row_widget = QWidget()
+            row_layout = QHBoxLayout(row_widget)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+
+            label = QLabel(f"Layer {i+1}:")
             combo = QComboBox()
             combo.addItems(["Sigmoid", "ReLU", "Tanh", "Linear"])
             combo.setCurrentText("Sigmoid")
             combo.setEditable(False)
-            combo.setToolTip(f"Activation for layer {i+1}")
-            combo.setVisible(self.per_layer_checkbox.isChecked())
-            self.per_layer_selectors_layout.addWidget(combo)
+            combo.setToolTip(f"Activation function for hidden layer {i+1}")
+
+            row_layout.addWidget(label)
+            row_layout.addWidget(combo)
+            row_layout.addStretch()
+
+            row_widget.setVisible(visible)
+            self.per_layer_selectors_layout.addWidget(row_widget)
             self._per_layer_combos.append(combo)
+            self._per_layer_combo_rows.append(row_widget)
 
     def _toggle_per_layer_selectors(self, count: int):
         # Ensure per-layer combo widgets exist and show/hide based on checkbox
@@ -159,8 +172,9 @@ class MLPGeneratorDialog(QDialog):
             self.per_layer_selectors_widget.setVisible(visible)
         except Exception:
             pass
-        for i, cb in enumerate(self._per_layer_combos):
-            cb.setVisible(visible)
+        # Toggle the row widgets (which contain label + combo)
+        for row_widget in getattr(self, "_per_layer_combo_rows", []):
+            row_widget.setVisible(visible)
 
     def _on_generate(self):
         # Read parameters

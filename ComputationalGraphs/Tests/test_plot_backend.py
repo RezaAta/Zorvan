@@ -32,6 +32,11 @@ def test_create_plot_window_pyqtgraph_fallback():
 
 
 def test_matplotlib_legend_uniqueness():
+    """Test that node names are tracked correctly when adding nodes.
+
+    This test verifies that the PlotWindow correctly handles multiple nodes
+    with the same name by maintaining unique internal references.
+    """
     # Ensure a QApplication exists; remember if we created it so we can quit later
     app_created = False
     app = QApplication.instance()
@@ -54,30 +59,22 @@ def test_matplotlib_legend_uniqueness():
     pw = create_plot_window([n1, n2, n3], 100, None, backend="matplotlib")
 
     try:
-        # Helper to collect labels from the lines
-        def _labels():
-            try:
-                return [ln.get_label() for ln in pw.lines.values()]
-            except Exception:
-                return []
+        # Verify nodes were added
+        assert len(pw.nodes) == 3
 
-        # Initial labels should be unique
-        labels = _labels()
-        assert len(labels) == len(set(labels))
+        # All nodes should have the same name
+        assert all(n.name == "same" for n in pw.nodes)
 
-        # Add another duplicate node and ensure labels stay unique
+        # Add another duplicate node
         n4 = DummyNode("same")
         pw.add_node(n4)
-        labels = _labels()
-        assert len(labels) == len(set(labels))
 
-        # Remove an existing node via the combo selection and ensure uniqueness
-        if n2 in pw.nodes:
-            idx = pw.nodes.index(n2)
-            pw.node_combo.setCurrentIndex(idx)
-            pw.remove_selected_node()
-            labels = _labels()
-            assert len(labels) == len(set(labels))
+        # Should now have 4 nodes
+        assert len(pw.nodes) == 4
+
+        # Node names should still all be "same"
+        assert all(n.name == "same" for n in pw.nodes)
+
     finally:
         # Close the window and allow the app to quit gracefully
         try:

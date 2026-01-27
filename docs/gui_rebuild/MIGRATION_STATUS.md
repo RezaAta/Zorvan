@@ -1,17 +1,17 @@
 # GUI Migration Status
 
-Last Updated: 2025-12-19
+Last Updated: 2026-01-06
 
 ## Executive Summary
 
-The GUI rebuild from controller pattern to MVVM with Event Bus is **in excellent progress**. Core framework complete, proof of concept validated, Phase 3 high-value widgets fully migrated, and **Phase 4 Canvas Migration now complete**.
+The GUI rebuild from controller pattern to MVVM with Event Bus is **nearly complete**. Core framework complete, all high-value widgets migrated, Canvas migration done, and **Phase 5 features fully migrated via adapters**.
 
-**Overall Progress**: ~70% complete (Phases 0-4 done, Phase 5-6 remaining)
+**Overall Progress**: ~95% complete (Phases 0-5 done, Phase 6 Polish remaining)
 
 ## Phase Completion Status
 
 ### ✅ Phase 0: Discovery & Planning (COMPLETE)
-**Timeline**: Week 0  
+**Timeline**: Week 0
 **Status**: 100% complete
 
 **Deliverables**:
@@ -27,8 +27,8 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in excellent
 ---
 
 ### ✅ Phase 1: Core Framework (COMPLETE)
-**Timeline**: Week 1  
-**Status**: 100% complete  
+**Timeline**: Week 1
+**Status**: 100% complete
 **Duration**: 1 day (faster than planned)
 
 **Deliverables**:
@@ -47,8 +47,8 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in excellent
 ---
 
 ### ✅ Phase 2: Proof of Concept (COMPLETE)
-**Timeline**: Week 2  
-**Status**: 100% complete  
+**Timeline**: Week 2
+**Status**: 100% complete
 **Duration**: 1 day (faster than planned)
 
 **Deliverables**:
@@ -73,8 +73,8 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in excellent
 ---
 
 ### ✅ Phase 3: High-Value Widgets (COMPLETE)
-**Timeline**: Week 3-4  
-**Status**: 100% complete (4 of 4 PRs done)  
+**Timeline**: Week 3-4
+**Status**: 100% complete (4 of 4 PRs done)
 **Started**: Week 3
 **Completed**: 2025-12-19
 
@@ -130,8 +130,8 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in excellent
 ---
 
 ### ✅ Phase 4: Canvas Migration (COMPLETE)
-**Timeline**: Week 5  
-**Status**: 100% complete  
+**Timeline**: Week 5
+**Status**: 100% complete
 **Complexity**: HIGHEST (2,606 LOC migrated to ~1,106 LOC MVVM)
 
 **PRs Completed**:
@@ -173,23 +173,71 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **in excellent
 
 ---
 
-### ⏳ Phase 5: Remaining Features (NOT STARTED)
-**Timeline**: Week 6-7  
-**Status**: 0% complete
+### ✅ Phase 5: Remaining Features (COMPLETE)
+**Timeline**: Week 6-7
+**Status**: 100% complete
+**Completed**: 2026-01-06
 
-**PRs Planned**:
-1. **PR #14**: Plot Windows (matplotlib, pyqtgraph)
-2. **PR #15**: Dialogs (MLP generator, Backprop, Node editor, etc.)
-3. **PR #16**: Layout Algorithms integration
-4. **PR #17**: Examples Loader integration
-5. **PR #18**: Inspector Panels migration
+**Components Migrated**:
+1. ✅ **Plot Windows** (matplotlib, pyqtgraph)
+   - PlotViewModel: Pure Python plot data management
+   - PlotView: Dual-backend support (matplotlib/pyqtgraph) with real-time updates
+   - PlotAdapter: Bridge for legacy PlotWindow compatibility
+   - PlotConfigView/ViewModel: Node selection dialog
+   - Legacy PlotWindow and PlotWindowPG now thin wrappers to MVVM
+   - All plot tests passing (5 tests)
 
-**Estimated**: 8-12 days across 5 PRs
+2. ✅ **Dialogs** (All via adapter pattern)
+   - MLPGeneratorDialog → MVVM (MLPGeneratorViewModel + View)
+   - BackpropDialog → MVVM (BackpropViewModel + View)
+   - NodeEditorDialog → MVVM (NodeEditorViewModel + View)
+   - ActivationDialog → MVVM (ActivationViewModel + View)
+   - LearningRateDialog → MVVM (LearningRateViewModel + View)
+   - ReplaceNodeDialog → MVVM (ReplaceNodeViewModel + View)
+   - CustomNodeDialog → MVVM (CustomNodeViewModel + View)
+   - All legacy dialog files are now thin adapter wrappers
+
+3. ✅ **Layout Algorithms integration**
+   - LayoutsAdapter: Bridges LayoutsView with GraphLayoutController
+   - LayoutsView: UI for layout selection
+   - All layout tests passing
+
+4. ✅ **Examples Loader integration**
+   - ExamplesLoaderAdapter: Bridges ExamplesLoaderViewModel with legacy loader
+   - ExamplesLoaderViewModel: Pure Python examples management
+   - Examples menu fully functional
+
+5. ✅ **Inspector Panels migration**
+   - InspectorViewModel: Pure Python node inspection logic
+   - InspectorView: Property display and editing
+   - InspectorAdapter: Bridge for legacy inspector pane
+
+**MVVM Adapters Initialized in MainWindow**:
+- ExecutionAdapter ✅
+- FileIOAdapter ✅
+- ThemeAdapter ✅
+- PaletteAdapter ✅
+- ExamplesLoaderAdapter ✅
+- LayoutsAdapter ✅
+- DialogsAdapter ✅
+- PlotAdapter ✅
+
+**Legacy Files Cleaned Up**:
+- `plot_window.py` → Thin wrapper delegating to PlotAdapter
+- `plot_window_pyqtgraph.py` → Thin wrapper delegating to PlotWindow
+- Original 637 LOC `plot_window_pyqtgraph.py` moved to `Deprecated/`
+
+**Phase 5 Metrics**:
+- All 8 adapters initialized and working
+- All dialogs using MVVM under the hood
+- Legacy compatibility maintained for existing tests
+- Zero breaking changes
+- All related tests passing
 
 ---
 
 ### ⏳ Phase 6: Polish & Release (NOT STARTED)
-**Timeline**: Week 8  
+**Timeline**: Week 8
 **Status**: 0% complete
 
 **Tasks**:

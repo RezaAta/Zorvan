@@ -180,6 +180,8 @@ class PlotAdapter:
         """
         if self.plot_viewmodel:
             self.plot_viewmodel.set_current_iteration(iteration)
+        if self.plot_view:
+            self.plot_view.set_iteration(iteration)
 
     def clear_plot(self):
         """Clear all plot data."""
@@ -223,6 +225,27 @@ class PlotAdapter:
         if self.plot_viewmodel:
             return self.plot_viewmodel.get_plotted_nodes()
         return []
+
+    def is_paused(self) -> bool:
+        """
+        Check if plot updates are paused.
+
+        Returns:
+            True if paused, False otherwise
+        """
+        if self.plot_view:
+            return self.plot_view.is_paused()
+        return False
+
+    def set_active_subgraph(self, subgraph):
+        """
+        Set the currently active subgraph for tracking.
+
+        Args:
+            subgraph: The currently processing subgraph
+        """
+        if self.plot_view:
+            self.plot_view.set_active_subgraph(subgraph)
 
 
 # Backwards compatibility alias

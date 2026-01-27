@@ -91,11 +91,13 @@ if PYQT_AVAILABLE:
 
             Args:
                 viewmodel: PlotViewModel instance
-                parent: Parent Qt widget
+                parent: Parent Qt widget (pass None for standalone window)
             """
-            super().__init__(viewmodel, parent)
+            # Pass None as parent to make this a standalone top-level window
+            super().__init__(viewmodel, None)
             # Backwards compatibility: expose 'viewmodel' attribute
             self.viewmodel = viewmodel
+            self._parent_window = parent  # Keep reference for window positioning
             self.setWindowTitle("Node Values Plot")
             self.resize(900, 600)
 
@@ -105,6 +107,12 @@ if PYQT_AVAILABLE:
             self.matplotlib_axes = None
             self.pyqtgraph_plot = None
             self._line_items = {}  # node_name -> plot item
+
+            # State for legacy features
+            self._paused = False
+            self._autoscale_y = True
+            self._track_active_only = False
+            self._active_subgraph = None
 
             self._setup_ui()
             # Connect signals after UI is setup
@@ -154,33 +162,75 @@ if PYQT_AVAILABLE:
             self.backend_combo.currentIndexChanged.connect(self._on_backend_changed)
             backend_layout.addWidget(self.backend_combo)
             backend_layout.addStretch()
+
+            # Iteration label
+            self.iteration_label = QLabel("Iteration: 0")
+            self.iteration_label.setMinimumWidth(150)
+            backend_layout.addWidget(self.iteration_label)
+
             layout.addLayout(backend_layout)
 
             # Plot container (dynamically populated based on backend)
             self.plot_container_layout = QVBoxLayout()
             layout.addLayout(self.plot_container_layout)
 
-            # Controls (bottom)
+            # Controls row 1 (main actions)
             controls_layout = QHBoxLayout()
 
             self.clear_button = QPushButton("Clear")
             self.clear_button.clicked.connect(self._on_clear_clicked)
             controls_layout.addWidget(self.clear_button)
 
+            self.reset_zoom_button = QPushButton("Reset Zoom")
+            self.reset_zoom_button.clicked.connect(self._on_reset_zoom_clicked)
+            controls_layout.addWidget(self.reset_zoom_button)
+
+            controls_layout.addStretch()
+
+            # Checkboxes for plot options
+            self.autoscale_check = QCheckBox("Auto-scale Y")
+            self.autoscale_check.setChecked(True)
+            self.autoscale_check.stateChanged.connect(self._on_autoscale_changed)
+            controls_layout.addWidget(self.autoscale_check)
+
+            self.pause_check = QCheckBox("Pause Plot")
+            self.pause_check.setChecked(False)
+            self.pause_check.stateChanged.connect(self._on_pause_changed)
+            controls_layout.addWidget(self.pause_check)
+
+            self.antialias_check = QCheckBox("Antialiasing")
+            self.antialias_check.setChecked(True)
+            self.antialias_check.setToolTip(
+                "Disable for better performance with noisy data"
+            )
+            self.antialias_check.stateChanged.connect(self._on_antialias_changed)
+            controls_layout.addWidget(self.antialias_check)
+
+            self.track_active_check = QCheckBox("Track active subgraph")
+            self.track_active_check.setToolTip(
+                "Only update nodes in the currently processing subgraph"
+            )
+            self.track_active_check.stateChanged.connect(self._on_track_active_changed)
+            controls_layout.addWidget(self.track_active_check)
+
+            layout.addLayout(controls_layout)
+
+            # Controls row 2 (node management)
+            node_controls = QHBoxLayout()
+
+            node_controls.addWidget(QLabel("Plotted Nodes:"))
             self.node_list_widget = QListWidget()
-            self.node_list_widget.setMaximumHeight(120)
+            self.node_list_widget.setMaximumHeight(100)
             self.node_list_widget.setSelectionMode(
                 QListWidget.SelectionMode.SingleSelection
             )
-
-            controls_layout.addWidget(QLabel("Plotted Nodes:"))
-            controls_layout.addWidget(self.node_list_widget)
+            node_controls.addWidget(self.node_list_widget)
 
             self.remove_node_button = QPushButton("Remove Selected")
             self.remove_node_button.clicked.connect(self._on_remove_node_clicked)
-            controls_layout.addWidget(self.remove_node_button)
+            node_controls.addWidget(self.remove_node_button)
 
-            layout.addLayout(controls_layout)
+            layout.addLayout(node_controls)
 
             # Status label
             self.status_label = QLabel("Ready")
@@ -365,7 +415,8 @@ if PYQT_AVAILABLE:
 
         def _on_data_updated(self, _):
             """Handle data updated in ViewModel."""
-            self._refresh_plot()
+            if not self._paused:
+                self._refresh_plot()
 
         def _on_nodes_changed(self, _):
             """Handle nodes changed in ViewModel."""
@@ -382,9 +433,66 @@ if PYQT_AVAILABLE:
                 node_name = current_item.text()
                 self.get_viewmodel().remove_node(node_name)
 
+        def _on_reset_zoom_clicked(self):
+            """Reset zoom to show all data."""
+            if self.pyqtgraph_plot:
+                self.pyqtgraph_plot.enableAutoRange()
+            if self.matplotlib_axes:
+                self.matplotlib_axes.relim()
+                self.matplotlib_axes.autoscale_view()
+                self.matplotlib_canvas.draw()
+
+        def _on_autoscale_changed(self, state):
+            """Handle autoscale checkbox change."""
+            self._autoscale_y = self.autoscale_check.isChecked()
+            if self.pyqtgraph_plot:
+                self.pyqtgraph_plot.enableAutoRange(y=self._autoscale_y)
+
+        def _on_pause_changed(self, state):
+            """Handle pause checkbox change."""
+            self._paused = self.pause_check.isChecked()
+
+        def _on_antialias_changed(self, state):
+            """Handle antialiasing checkbox change."""
+            if self.pyqtgraph_plot:
+                # Redraw curves with new antialiasing setting
+                use_aa = self.antialias_check.isChecked()
+                for node_name, line_item in self._line_items.items():
+                    try:
+                        # Get current data and redraw with new antialiasing
+                        data_points = (
+                            self.get_viewmodel().get_all_plot_data().get(node_name, [])
+                        )
+                        if data_points:
+                            iterations = [p.iteration for p in data_points]
+                            values = [p.value for p in data_points]
+                            line_item.setData(iterations, values, antialias=use_aa)
+                    except Exception:
+                        pass
+
+        def _on_track_active_changed(self, state):
+            """Handle track active subgraph checkbox change."""
+            self._track_active_only = self.track_active_check.isChecked()
+
+        def set_active_subgraph(self, subgraph):
+            """Set the currently active subgraph for tracking."""
+            self._active_subgraph = subgraph
+
+        def set_iteration(self, iteration: int):
+            """Update the iteration label."""
+            try:
+                self.iteration_label.setText(f"Iteration: {iteration}")
+            except Exception:
+                pass
+
+        def is_paused(self) -> bool:
+            """Check if plot updates are paused."""
+            return self._paused
+
         def update_plot(self):
             """Manual update method for external calls."""
-            self._refresh_plot()
+            if not self._paused:
+                self._refresh_plot()
 
 else:
     # Stub for testing without PyQt6

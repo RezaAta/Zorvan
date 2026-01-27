@@ -65,134 +65,54 @@ class PlottingController:
     def open_plot_window(self):
         """Open the plot configuration dialog and create plot window.
 
-        Tries MVVM PlotAdapter first, falls back to legacy dialog.
+        Uses MVVM PlotAdapter.
         """
-        # Try MVVM adapter first
-        if self._try_mvvm_plot_dialog():
-            return
-
-        # Fallback to legacy dialog
-        self._open_legacy_plot_window()
-
-    def _try_mvvm_plot_dialog(self) -> bool:
-        """Try to open plot config using MVVM PlotAdapter.
-
-        Returns:
-            True if MVVM dialog was used successfully, False to use legacy.
-        """
-        try:
-            mw = self.main_window
-            if not hasattr(mw, "plot_adapter") or mw.plot_adapter is None:
-                return False
-
-            if not self.graph or len(self.graph.nodes) == 0:
-                from PyQt6.QtWidgets import QMessageBox
-
-                QMessageBox.warning(
-                    mw, "No Graph", "Please load or create a graph first."
-                )
-                return True  # Handled (with error), don't fall back
-
-            # Get max iterations from the control panel
-            default_max_iter = mw.max_steps_spin.value()
-
-            # Try the adapter's show_config_dialog
-            result = mw.plot_adapter.show_config_dialog(
-                self.graph, max_iterations=default_max_iter
-            )
-
-            if result:
-                # Store reference for legacy compatibility
-                if mw.plot_adapter.plot_view:
-                    self.plot_window = mw.plot_adapter.plot_view
-                self.status_bar.showMessage("Plot window opened via MVVM")
-                return True
-            else:
-                # User cancelled - still handled
-                return True
-
-        except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).debug("MVVM plot dialog failed: %s", e)
-            return False
-
-    def _open_legacy_plot_window(self):
-        """Open legacy plot configuration dialog and create plot window."""
-        from ComputationalGraphs.GUI.plot_window import (
-            PlotConfigDialog,
-            create_plot_window,
-        )
+        mw = self.main_window
 
         if not self.graph or len(self.graph.nodes) == 0:
-            QMessageBox.warning(
-                self.main_window, "No Graph", "Please load or create a graph first."
-            )
+            QMessageBox.warning(mw, "No Graph", "Please load or create a graph first.")
             return
 
+        # Ensure plot_adapter exists
+        if not hasattr(mw, "plot_adapter") or mw.plot_adapter is None:
+            from gui_framework.adapters.plot_adapter import PlotAdapter
+
+            mw.plot_adapter = PlotAdapter(parent=mw)
+
         # Get max iterations from the control panel
-        default_max_iter = self.main_window.max_steps_spin.value()
+        default_max_iter = mw.max_steps_spin.value()
 
-        # Open configuration dialog
-        config_dialog = PlotConfigDialog(self.graph, default_max_iter, self.main_window)
-        if config_dialog.exec() == QDialog.DialogCode.Accepted:
-            selected_nodes = config_dialog.get_selected_nodes()
+        # Set backend on adapter
+        backend = self._get_selected_backend()
+        mw.plot_adapter.set_backend(backend)
 
-            if not selected_nodes:
-                QMessageBox.warning(
-                    self.main_window,
-                    "No Nodes Selected",
-                    "Please select at least one node to plot.",
+        # Show config dialog via MVVM
+        result = mw.plot_adapter.show_config_dialog(
+            self.graph, max_iterations=default_max_iter
+        )
+
+        if result:
+            # Store reference for legacy compatibility
+            if mw.plot_adapter.plot_view:
+                self.plot_window = mw.plot_adapter.plot_view
+
+                # Set window title with backend name
+                display_backend = self._get_display_backend_name(backend)
+                self.plot_window.setWindowTitle(
+                    f"Node Values Plot - Computational Graphs ({display_backend})"
                 )
-                return
-
-            max_iterations = config_dialog.get_max_iterations()
-
-            # Close existing plot window if backend mismatch
-            if self.plot_window:
-                selected_backend = self._get_selected_backend()
-                try:
-                    existing_backend = getattr(
-                        self.plot_window, "backend", "matplotlib"
-                    )
-                except Exception:
-                    existing_backend = "matplotlib"
-                if existing_backend != selected_backend:
-                    self.plot_window.close()
-                    self.plot_window = None
-
-            # Create new plot window (respecting backend choice)
-            backend = self._get_selected_backend()
-            self.plot_window = create_plot_window(
-                selected_nodes, max_iterations, None, backend=backend
-            )
-
-            # Show backend name in the title
-            display_backend = self._get_display_backend_name(backend)
-            self.plot_window.setWindowTitle(
-                f"Node Values Plot - Computational Graphs ({display_backend})"
-            )
-            self.plot_window.show()
-
-            # Update plot with current iteration (if graph is running)
-            if hasattr(self.main_window.graph_runner, "_iteration_counter"):
-                active_sg = self.main_window.graph_runner.get_processing_graph()
-                self.plot_window.update_plot(
-                    self.main_window.graph_runner._iteration_counter, active_sg
-                )
-
-            self.status_bar.showMessage(f"Plotting {len(selected_nodes)} nodes")
+            self.status_bar.showMessage("Plot window opened")
 
     def add_selected_to_plot(self):
         """Add currently selected node(s) in the canvas to the plot window."""
         from ComputationalGraphs.GUI.node_item import NodeItem
-        from ComputationalGraphs.GUI.plot_window import create_plot_window
 
+        mw = self.main_window
         selected_items = self.canvas.scene.selectedItems()
 
         if not selected_items:
             QMessageBox.information(
-                self.main_window,
+                mw,
                 "No Selection",
                 "Please select a node in the canvas first.",
             )
@@ -203,45 +123,55 @@ class PlottingController:
 
         if not node_items:
             QMessageBox.information(
-                self.main_window,
+                mw,
                 "No Nodes Selected",
                 "Please select a node (not an edge).",
             )
             return
 
+        # Ensure plot_adapter exists
+        if not hasattr(mw, "plot_adapter") or mw.plot_adapter is None:
+            from gui_framework.adapters.plot_adapter import PlotAdapter
+
+            mw.plot_adapter = PlotAdapter(parent=mw)
+
         # Check backend consistency
+        backend = self._get_selected_backend()
+        mw.plot_adapter.set_backend(backend)
+
         if self.plot_window:
-            selected_backend = self._get_selected_backend()
             existing_backend = getattr(self.plot_window, "backend", "matplotlib")
-            if existing_backend != selected_backend:
-                # Recreate with selected backend
-                self.plot_window.close()
+            if existing_backend != backend:
+                # Close and recreate
+                try:
+                    self.plot_window.close()
+                except Exception:
+                    pass
                 self.plot_window = None
 
         if not self.plot_window or not self.plot_window.isVisible():
-            # Create with first selected node as standalone window
-            max_iterations = self.main_window.max_steps_spin.value()
-            first_node = node_items[0].node
-            backend = self._get_selected_backend()
-            self.plot_window = create_plot_window(
-                [first_node], max_iterations, None, backend=backend
-            )
+            # Create plot window with first selected node
+            max_iterations = mw.max_steps_spin.value()
+            node_names = [n.node.name for n in node_items]
+            mw.plot_adapter._create_plot_window(node_names, max_iterations)
+            self.plot_window = mw.plot_adapter.plot_view
 
-            # Show backend name in the title
-            display_backend = self._get_display_backend_name(backend)
-            self.plot_window.setWindowTitle(
-                f"Node Values Plot - Computational Graphs ({display_backend})"
-            )
-            self.plot_window.show()
-            node_items = node_items[1:]  # Remove first node since it's already added
+            if self.plot_window:
+                # Set window title with backend name
+                display_backend = self._get_display_backend_name(backend)
+                self.plot_window.setWindowTitle(
+                    f"Node Values Plot - Computational Graphs ({display_backend})"
+                )
+                self.plot_window.show()
+        else:
+            # Add remaining selected nodes to existing plot
+            for node_item in node_items:
+                try:
+                    mw.plot_adapter.add_node(node_item.node.name)
+                except Exception:
+                    pass
 
-        # Add remaining selected nodes to plot
-        for node_item in node_items:
-            self.plot_window.add_node(node_item.node)
-
-        node_count = len(
-            [item for item in selected_items if isinstance(item, NodeItem)]
-        )
+        node_count = len(node_items)
         self.status_bar.showMessage(f"Added {node_count} node(s) to plot")
 
     def on_backend_changed(self, index):
@@ -250,9 +180,9 @@ class PlottingController:
 
     def ensure_backend_consistency(self):
         """If a plot window exists with a different backend than selected, re-create it preserving plotted nodes."""
-        from ComputationalGraphs.GUI.plot_window import create_plot_window
+        mw = self.main_window
 
-        if not hasattr(self.main_window, "plot_backend_combo"):
+        if not hasattr(mw, "plot_backend_combo"):
             return
 
         selected_backend = self._get_selected_backend()
@@ -264,31 +194,43 @@ class PlottingController:
         if existing_backend == selected_backend:
             return
 
-        # Preserve listed nodes
+        # Preserve listed nodes (as names)
         try:
-            current_nodes = list(self.plot_window.nodes)
+            current_node_names = list(
+                getattr(self.plot_window, "node_names", [])
+                or [n.name for n in getattr(self.plot_window, "nodes", [])]
+            )
             max_iterations = getattr(
                 self.plot_window,
                 "max_iterations",
-                self.main_window.max_steps_spin.value(),
+                mw.max_steps_spin.value(),
             )
         except Exception:
-            current_nodes = []
-            max_iterations = self.main_window.max_steps_spin.value()
+            current_node_names = []
+            max_iterations = mw.max_steps_spin.value()
 
-        # Close and recreate
+        # Close existing
         try:
             self.plot_window.close()
         except Exception:
             pass
 
-        self.plot_window = create_plot_window(
-            current_nodes, max_iterations, None, backend=selected_backend
-        )
+        # Ensure plot_adapter exists
+        if not hasattr(mw, "plot_adapter") or mw.plot_adapter is None:
+            from gui_framework.adapters.plot_adapter import PlotAdapter
 
-        # Show backend name in the title
-        display_backend = self._get_display_backend_name(selected_backend)
-        self.plot_window.setWindowTitle(
-            f"Node Values Plot - Computational Graphs ({display_backend})"
-        )
-        self.plot_window.show()
+            mw.plot_adapter = PlotAdapter(parent=mw)
+
+        # Recreate with new backend
+        mw.plot_adapter.set_backend(selected_backend)
+        if current_node_names:
+            mw.plot_adapter._create_plot_window(current_node_names, max_iterations)
+            self.plot_window = mw.plot_adapter.plot_view
+
+            if self.plot_window:
+                # Show backend name in the title
+                display_backend = self._get_display_backend_name(selected_backend)
+                self.plot_window.setWindowTitle(
+                    f"Node Values Plot - Computational Graphs ({display_backend})"
+                )
+                self.plot_window.show()

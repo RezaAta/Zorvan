@@ -54,8 +54,7 @@ from .graph_runner import GraphRunner
 
 logger = logging.getLogger(__name__)
 
-# Import plot_window early to init PyQtGraph config
-from .plot_window import PlotConfigDialog, create_plot_window  # noqa: F401
+# Legacy plot_window imports removed - plotting now uses MVVM PlotAdapter
 
 
 class CollapsibleSection(QWidget):
@@ -1433,35 +1432,15 @@ class MainWindow(QMainWindow):
     def _show_mlp_dialog(self):
         """Show dialog to generate MLP graph.
 
-        Tries MVVM DialogsAdapter first, falls back to legacy DialogController.
+        Uses DialogController which delegates to MVVM MLPGeneratorDialog.
         """
-        # Try MVVM adapter first
-        if hasattr(self, "dialogs_adapter") and self.dialogs_adapter:
-            try:
-                result = self.dialogs_adapter.show_mlp_dialog()
-                if result is not None:
-                    return  # MVVM handled it
-            except Exception:
-                pass  # Fall back to legacy
-
-        # Legacy fallback
         self.dialog_controller.show_mlp_dialog()
 
     def _show_backprop_dialog(self):
         """Show dialog to add backpropagation to existing MLP.
 
-        Tries MVVM DialogsAdapter first, falls back to legacy DialogController.
+        Uses DialogController which delegates to MVVM BackpropDialog.
         """
-        # Try MVVM adapter first
-        if hasattr(self, "dialogs_adapter") and self.dialogs_adapter:
-            try:
-                result = self.dialogs_adapter.show_backprop_dialog()
-                if result:
-                    return  # MVVM handled it
-            except Exception:
-                pass  # Fall back to legacy
-
-        # Legacy fallback
         self.dialog_controller.show_backprop_dialog()
 
     def _show_new_graph_dialog(self):

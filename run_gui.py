@@ -2,12 +2,15 @@
 Launch script for the ComputationalGraphs visual editor.
 """
 
+import logging
 import sys
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from ComputationalGraphs.GUI.main_window import MainWindow
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():
