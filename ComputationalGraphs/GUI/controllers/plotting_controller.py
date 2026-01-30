@@ -151,9 +151,8 @@ class PlottingController:
 
         if not self.plot_window or not self.plot_window.isVisible():
             # Create plot window with first selected node
-            max_iterations = mw.max_steps_spin.value()
             node_names = [n.node.name for n in node_items]
-            mw.plot_adapter._create_plot_window(node_names, max_iterations)
+            mw.plot_adapter._create_plot_window(node_names)
             self.plot_window = mw.plot_adapter.plot_view
 
             if self.plot_window:

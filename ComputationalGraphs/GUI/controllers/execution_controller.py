@@ -43,6 +43,50 @@ class ExecutionController:
         """Access the status bar from main window."""
         return self.main_window.status_bar
 
+    def _update_plot(self, iteration, active_subgraph=None):
+        """Update the plot window with current node values.
+
+        This method collects values from plotted nodes and sends them
+        to the plot adapter for display.
+
+        Args:
+            iteration: Current iteration/step number
+            active_subgraph: Currently active subgraph (optional)
+        """
+        mw = self.main_window
+
+        # Check if plot adapter is available and has a plot open
+        if not hasattr(mw, "plot_adapter") or mw.plot_adapter is None:
+            return
+        if not mw.plot_adapter.is_plot_window_open():
+            return
+
+        # Get the list of nodes being plotted
+        plotted_node_names = mw.plot_adapter.get_plotted_nodes()
+        if not plotted_node_names:
+            return
+
+        # Build a name->node lookup from the graph
+        graph = self.graph
+        if not graph or not hasattr(graph, "nodes"):
+            return
+
+        node_lookup = {n.name: n for n in graph.nodes}
+
+        # Collect current values for plotted nodes
+        data = {}
+        for name in plotted_node_names:
+            node = node_lookup.get(name)
+            if node is not None:
+                data[name] = getattr(node, "value", 0)
+
+        # Send data to the adapter
+        if data:
+            mw.plot_adapter.update_plots_batch(data, iteration)
+            mw.plot_adapter.set_iteration(iteration)
+            if active_subgraph is not None:
+                mw.plot_adapter.set_active_subgraph(active_subgraph)
+
     def play(self):
         """Start graph execution."""
         # Always rebuild if the canvas/graph are out of sync
@@ -241,13 +285,9 @@ class ExecutionController:
                 self.canvas.update_node_visuals(False, 0, 1)
 
             # Update plot (unless skip_plotting is enabled)
-            if (
-                not self.main_window.skip_plotting
-                and self.main_window.plot_window
-                and self.main_window.plot_window.isVisible()
-            ):
+            if not self.main_window.skip_plotting:
                 active_sg = self.graph_runner.get_processing_graph()
-                self.main_window.plot_window.update_plot(new_step, active_sg)
+                self._update_plot(new_step, active_sg)
 
             self.status_bar.showMessage(
                 f"Batch resume complete: {additional_steps} steps (total: {new_step})"
@@ -449,13 +489,9 @@ class ExecutionController:
                 self.canvas.update_node_visuals(False, 0, 1)
 
             # Update plot window if open (unless skip_plotting is enabled)
-            if (
-                not self.main_window.skip_plotting
-                and self.main_window.plot_window
-                and self.main_window.plot_window.isVisible()
-            ):
+            if not self.main_window.skip_plotting:
                 active_sg = self.graph_runner.get_processing_graph()
-                self.main_window.plot_window.update_plot(max_steps, active_sg)
+                self._update_plot(max_steps, active_sg)
 
             self.status_bar.showMessage(
                 f"Batch mode complete: {max_steps} steps executed"
@@ -507,14 +543,10 @@ class ExecutionController:
         # If 'Skip Graph Visualization' is enabled, skip canvas/visual updates
         if self.main_window.skip_visualization:
             # Update plot window if open (unless skip_plotting is enabled)
-            if (
-                not self.main_window.skip_plotting
-                and self.main_window.plot_window
-                and self.main_window.plot_window.isVisible()
-            ):
+            if not self.main_window.skip_plotting:
                 try:
                     active_sg = self.graph_runner.get_processing_graph()
-                    self.main_window.plot_window.update_plot(step, active_sg)
+                    self._update_plot(step, active_sg)
                 except Exception:
                     pass
             return
@@ -538,13 +570,9 @@ class ExecutionController:
             self.canvas.highlight_active_nodes([])
 
         # Update plot window if open
-        if (
-            not self.main_window.skip_plotting
-            and self.main_window.plot_window
-            and self.main_window.plot_window.isVisible()
-        ):
+        if not self.main_window.skip_plotting:
             active_sg = self.graph_runner.get_processing_graph()
-            self.main_window.plot_window.update_plot(step, active_sg)
+            self._update_plot(step, active_sg)
 
     def on_execution_finished(self):
         """Handle execution completion callback."""

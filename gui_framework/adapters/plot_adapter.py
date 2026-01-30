@@ -57,7 +57,7 @@ class PlotAdapter:
         self.plot_view: Optional[PlotView] = None
         self.backend = "matplotlib"  # Default backend
 
-    def show_config_dialog(self, graph, max_iterations: int = 100) -> bool:
+    def show_config_dialog(self, graph, max_iterations: int = 1000000) -> bool:
         """
         Show plot configuration dialog (mimics old interface).
 
@@ -104,23 +104,20 @@ class PlotAdapter:
             max_iter = config_vm.get_max_iterations()
 
             if selected_nodes:
-                self._create_plot_window(selected_nodes, max_iter)
+                self._create_plot_window(selected_nodes)
                 return True
 
         return False
 
-    def _create_plot_window(self, node_names: List[str], max_iterations: int):
+    def _create_plot_window(self, node_names: List[str]):
         """
         Create the plot window with selected nodes.
 
         Args:
             node_names: List of node names to plot
-            max_iterations: Maximum iterations
         """
-        # Create plot ViewModel
-        self.plot_viewmodel = PlotViewModel(
-            max_iterations=max_iterations, backend=self.backend
-        )
+        # Create plot ViewModel with default buffer size (user can change in plot window)
+        self.plot_viewmodel = PlotViewModel(backend=self.backend)
         self.plot_viewmodel.set_nodes(node_names)
 
         # Create plot View
@@ -259,7 +256,7 @@ if not PYQT_AVAILABLE:
         def __init__(self, parent=None):
             self.parent = parent
 
-        def show_config_dialog(self, graph, max_iterations=100):
+        def show_config_dialog(self, graph, max_iterations=1000000):
             return False
 
         def is_plot_window_open(self):

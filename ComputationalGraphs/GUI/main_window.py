@@ -179,7 +179,7 @@ class MainWindow(QMainWindow):
             # If QApplication not available or font fails, ignore silently
             pass
 
-        self.setWindowTitle("Computational Graphs Visual Editor")
+        self.setWindowTitle("Zorvan")
         self.resize(1200, 800)
 
         # Undo/Redo stack for UI actions
@@ -246,9 +246,10 @@ class MainWindow(QMainWindow):
         self.menu_toolbar_controller = MenuToolbarController(self)
         self.control_panel_builder = ControlPanelBuilder(self)
 
-        # === MVVM Integration ===
-        # Initialize MVVM adapters for incremental migration from legacy controllers
-        self._init_mvvm_adapters()
+        # === MVVM Integration - Phase 1 ===
+        # Create adapters and viewmodels BEFORE init_ui() so MVVM views can be built
+        # Signal connections are deferred until AFTER init_ui() (phase 2)
+        self._create_mvvm_adapters()
 
         # State (must be before init_ui)
         self.colorize_enabled = False
@@ -377,23 +378,58 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-    def _init_mvvm_adapters(self):
-        """Initialize MVVM adapters for incremental migration from legacy controllers.
+        # === MVVM Integration - Phase 2 ===
+        # Connect adapter signals AFTER init_ui() so all widgets exist
+        self._connect_mvvm_adapters()
 
-        This method sets up the bridge between the new MVVM architecture and
-        the legacy controller-based system, enabling gradual migration.
+    def _create_mvvm_adapters(self):
+        """Phase 1: Create MVVM adapters and their ViewModels.
+
+        This runs BEFORE init_ui() so that the control panel builder can
+        create MVVM views (like ExecutionView) during UI construction.
+        Signal connections are deferred to _connect_mvvm_adapters().
         """
-        # Initialize execution adapter (bridges ExecutionViewModel with GraphRunner)
+        # Initialize execution adapter (creates ExecutionViewModel)
         try:
             from gui_framework.adapters.execution_adapter import ExecutionAdapter
 
             self.execution_adapter = ExecutionAdapter(self)
-            self.execution_adapter.connect()
-            logger.debug("MainWindow: ExecutionAdapter initialized")
+            logger.debug("MainWindow: ExecutionAdapter created")
         except Exception as e:
-            logger.warning("Failed to initialize ExecutionAdapter: %s", e)
+            logger.warning("Failed to create ExecutionAdapter: %s", e)
             self.execution_adapter = None
 
+        # Pre-initialize other adapters as None (created in phase 2)
+        self.file_io_adapter = None
+        self.theme_adapter = None
+        self.theme_vm = None
+        self.palette_adapter = None
+        self.node_inspector_adapter = None
+        self.plot_adapter = None
+
+    def _connect_mvvm_adapters(self):
+        """Phase 2: Connect MVVM adapter signals after UI is built.
+
+        This runs AFTER init_ui() so all widgets exist when adapters
+        try to connect to their signals.
+        """
+        # Connect execution adapter signals
+        if self.execution_adapter:
+            try:
+                self.execution_adapter.connect()
+                logger.debug("MainWindow: ExecutionAdapter signals connected")
+            except Exception as e:
+                logger.warning("Failed to connect ExecutionAdapter: %s", e)
+
+        # Initialize remaining adapters (these don't need MVVM views during init_ui)
+        self._init_remaining_adapters()
+
+    def _init_remaining_adapters(self):
+        """Initialize remaining MVVM adapters that don't need views during init_ui.
+
+        This method sets up the bridge between the new MVVM architecture and
+        the legacy controller-based system, enabling gradual migration.
+        """
         # Initialize file I/O adapter (bridges FileIOViewModel with FileIOController)
         try:
             from gui_framework.adapters.file_io_adapter import FileIOAdapter

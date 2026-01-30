@@ -5,8 +5,8 @@ Manages node selection, filtering, and plot settings without PyQt dependencies.
 This ViewModel is completely testable without GUI.
 """
 
-from typing import List, Optional, Set
 from dataclasses import dataclass
+from typing import List, Optional, Set
 
 from ..viewmodels.base import BaseViewModel, ObservableProperty
 
@@ -14,6 +14,7 @@ from ..viewmodels.base import BaseViewModel, ObservableProperty
 @dataclass
 class NodeInfo:
     """Information about a node available for plotting."""
+
     name: str
     node_id: str  # For reference
     is_in_subgraph: bool = False
@@ -39,11 +40,11 @@ class PlotConfigViewModel(BaseViewModel):
     selection_changed = ObservableProperty("selection_changed", default=0)  # Counter
     filter_changed = ObservableProperty("filter_changed", default=0)  # Counter
 
-    def __init__(self, max_iterations: int = 100):
+    def __init__(self, max_iterations: int = 1000000):
         """Initialize PlotConfigViewModel.
 
         Args:
-            max_iterations: Default maximum iterations
+            max_iterations: Default maximum data points to store (default: 1M, effectively unlimited)
         """
         super().__init__()
 
@@ -53,7 +54,7 @@ class PlotConfigViewModel(BaseViewModel):
         # Node management
         self._available_nodes: List[NodeInfo] = []
         self._selected_nodes: Set[str] = set()  # Node names
-        self._filter_mode: str = 'all'  # 'all', 'mother', or subgraph name
+        self._filter_mode: str = "all"  # 'all', 'mother', or subgraph name
         self._filtered_nodes: List[NodeInfo] = []
 
         # Subgraph tracking
@@ -76,13 +77,17 @@ class PlotConfigViewModel(BaseViewModel):
             nodes: List of NodeInfo objects
         """
         self._available_nodes = list(nodes)
-        
+
         # Extract unique subgraph names
-        self._subgraph_names = sorted(list(set(
-            node.subgraph_name 
-            for node in nodes 
-            if node.subgraph_name is not None
-        )))
+        self._subgraph_names = sorted(
+            list(
+                set(
+                    node.subgraph_name
+                    for node in nodes
+                    if node.subgraph_name is not None
+                )
+            )
+        )
 
         # Apply current filter
         self._apply_filter()
@@ -155,10 +160,12 @@ class PlotConfigViewModel(BaseViewModel):
         """Select all currently visible (filtered) nodes."""
         for node in self._filtered_nodes:
             self._selected_nodes.add(node.name)
-        
+
         if self._filtered_nodes:
             self.selection_changed += 1
-            print(f"[PlotConfigViewModel] Selected all {len(self._filtered_nodes)} visible nodes")
+            print(
+                f"[PlotConfigViewModel] Selected all {len(self._filtered_nodes)} visible nodes"
+            )
 
     def deselect_all(self):
         """Deselect all nodes."""
@@ -191,19 +198,19 @@ class PlotConfigViewModel(BaseViewModel):
 
     def _apply_filter(self):
         """Apply the current filter to nodes."""
-        if self._filter_mode == 'all':
+        if self._filter_mode == "all":
             # Show all nodes
             self._filtered_nodes = list(self._available_nodes)
-        elif self._filter_mode == 'mother':
+        elif self._filter_mode == "mother":
             # Show only nodes not in any subgraph
             self._filtered_nodes = [
-                node for node in self._available_nodes
-                if not node.is_in_subgraph
+                node for node in self._available_nodes if not node.is_in_subgraph
             ]
         else:
             # Show nodes from specific subgraph
             self._filtered_nodes = [
-                node for node in self._available_nodes
+                node
+                for node in self._available_nodes
                 if node.subgraph_name == self._filter_mode
             ]
 
@@ -234,6 +241,6 @@ class PlotConfigViewModel(BaseViewModel):
         Returns:
             List of filter options: ['all', 'mother', subgraph1, subgraph2, ...]
         """
-        options = ['all', 'mother']
+        options = ["all", "mother"]
         options.extend(self._subgraph_names)
         return options

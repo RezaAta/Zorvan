@@ -97,7 +97,7 @@ class FileIOAdapter:
     def _update_window_title(self, file_path: Optional[str]):
         """Update main window title to reflect current file."""
         try:
-            base_title = "Computational Graphs Visual Editor"
+            base_title = "Zorvan"
             if file_path:
                 file_name = self.viewmodel.get_file_name()
                 self.main_window.setWindowTitle(f"{file_name} - {base_title}")

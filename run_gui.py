@@ -1,11 +1,13 @@
 """
-Launch script for the ComputationalGraphs visual editor.
+Launch script for the Zorvan visual editor.
 """
 
 import logging
+import os
 import sys
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
 from ComputationalGraphs.GUI.main_window import MainWindow
@@ -21,8 +23,13 @@ def main():
     )
 
     app = QApplication(sys.argv)
-    app.setApplicationName("Computational Graphs Editor")
+    app.setApplicationName("Zorvan")
     app.setOrganizationName("ComputationalGraphs")
+
+    # Set application icon
+    icon_path = os.path.join(os.path.dirname(__file__), "assets", "zorvan_icon.png")
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
 
     # Load stylesheet (optional) and apply theme manager if available
     try:
@@ -34,8 +41,6 @@ def main():
             tm.apply_theme(app)
         except Exception:
             # Fallback to legacy static stylesheet
-            import os
-
             style_path = os.path.join(
                 os.path.dirname(__file__), "ComputationalGraphs", "GUI", "styles.qss"
             )

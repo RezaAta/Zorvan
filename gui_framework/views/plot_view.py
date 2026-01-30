@@ -15,6 +15,7 @@ try:
         QListWidget,
         QListWidgetItem,
         QPushButton,
+        QSpinBox,
         QVBoxLayout,
         QWidget,
     )
@@ -98,7 +99,7 @@ if PYQT_AVAILABLE:
             # Backwards compatibility: expose 'viewmodel' attribute
             self.viewmodel = viewmodel
             self._parent_window = parent  # Keep reference for window positioning
-            self.setWindowTitle("Node Values Plot")
+            self.setWindowTitle("Zorvan - Node Values Plot")
             self.resize(900, 600)
 
             # Plot components
@@ -161,6 +162,18 @@ if PYQT_AVAILABLE:
 
             self.backend_combo.currentIndexChanged.connect(self._on_backend_changed)
             backend_layout.addWidget(self.backend_combo)
+
+            # Buffer size control
+            backend_layout.addSpacing(20)
+            backend_layout.addWidget(QLabel("Buffer Size:"))
+            self.buffer_size_spin = QSpinBox()
+            self.buffer_size_spin.setRange(100, 10000000)
+            self.buffer_size_spin.setSingleStep(1000)
+            self.buffer_size_spin.setValue(self.viewmodel.get_buffer_size())
+            self.buffer_size_spin.setToolTip("Maximum data points to store per node")
+            self.buffer_size_spin.valueChanged.connect(self._on_buffer_size_changed)
+            backend_layout.addWidget(self.buffer_size_spin)
+
             backend_layout.addStretch()
 
             # Iteration label
@@ -407,6 +420,11 @@ if PYQT_AVAILABLE:
             backend = self.backend_combo.itemData(index)
             if backend and backend != self.get_viewmodel().get_backend():
                 self.get_viewmodel().set_backend(backend)
+
+        def _on_buffer_size_changed(self, value: int):
+            """Handle buffer size spinbox change."""
+            self.get_viewmodel().set_buffer_size(value)
+            self.status_label.setText(f"Buffer size set to {value}")
 
         def _on_backend_updated(self, _):
             """Handle backend changed in ViewModel."""
