@@ -40,9 +40,9 @@ class NodeSequenceController:
         return self.main_window.status_bar
 
     @property
-    def starting_nodes_list(self):
-        """Access the starting nodes list widget."""
-        return self.main_window.starting_nodes_list
+    def starting_nodes_label(self):
+        """Access the starting nodes label widget."""
+        return self.main_window.starting_nodes_label
 
     @property
     def stopping_nodes_list(self):
@@ -57,24 +57,25 @@ class NodeSequenceController:
     # --- Starting Nodes Management ---
 
     def update_starting_nodes_display(self):
-        """Update the starting nodes list display."""
-        self.starting_nodes_list.clear()
-
+        """Update the starting nodes label display with comma-separated names."""
         if not self.graph:
+            self.starting_nodes_label.setText("")
             return
 
         # Check if graph has starting_nodes attribute
         if hasattr(self.graph, "starting_nodes") and self.graph.starting_nodes:
-            for node in self.graph.starting_nodes:
-                self.starting_nodes_list.addItem(node.name)
+            node_names = [node.name for node in self.graph.starting_nodes]
+            self.starting_nodes_label.setText(", ".join(node_names))
         else:
             # Auto-detect nodes with no predecessors and show in gray (not set)
             source_nodes = [
                 node for node in self.graph.nodes if len(node.predecessors) == 0
             ]
-            for node in source_nodes:
-                item_text = f"(auto) {node.name}"
-                self.starting_nodes_list.addItem(item_text)
+            if source_nodes:
+                node_names = [f"(auto) {node.name}" for node in source_nodes]
+                self.starting_nodes_label.setText(", ".join(node_names))
+            else:
+                self.starting_nodes_label.setText("")
 
     def add_selected_to_starting_nodes(self):
         """Add selected nodes from canvas to starting nodes list."""
@@ -115,7 +116,7 @@ class NodeSequenceController:
         self.status_bar.showMessage(f"Added {added_count} node(s) to starting nodes")
 
     def remove_from_starting_nodes(self):
-        """Remove selected nodes from starting nodes list."""
+        """Remove selected canvas nodes from starting nodes."""
         if (
             not self.graph
             or not hasattr(self.graph, "starting_nodes")
@@ -123,30 +124,25 @@ class NodeSequenceController:
         ):
             return
 
-        # Get selected items from the list
-        selected_items = self.starting_nodes_list.selectedItems()
+        # Get selected nodes from canvas
+        selected_items = [
+            item for item in self.canvas.scene.selectedItems() if hasattr(item, "node")
+        ]
+
         if not selected_items:
             QMessageBox.information(
                 self.main_window,
                 "No Selection",
-                "Please select node(s) from the starting nodes list.",
+                "Please select node(s) on the canvas to remove from starting nodes.",
             )
             return
 
-        # Remove nodes by name
+        # Remove selected nodes from starting_nodes
         removed_count = 0
         for item in selected_items:
-            node_name = item.text().replace(
-                "(auto) ", ""
-            )  # Remove auto prefix if present
-            # Find and remove the node
-            for node in self.graph.starting_nodes[
-                :
-            ]:  # Use slice to modify while iterating
-                if node.name == node_name:
-                    self.graph.starting_nodes.remove(node)
-                    removed_count += 1
-                    break
+            if item.node in self.graph.starting_nodes:
+                self.graph.starting_nodes.remove(item.node)
+                removed_count += 1
 
         self.update_starting_nodes_display()
         self.status_bar.showMessage(

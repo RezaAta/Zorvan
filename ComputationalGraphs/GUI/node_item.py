@@ -77,7 +77,7 @@ class NodeItem(QGraphicsEllipseItem):
         # should not overwrite the user-applied default color.
         self._default_color_overridden = False
 
-        self.active_color = QColor(100, 180, 255)  # Bright light blue for active nodes
+        self.active_color = QColor(255, 220, 50)  # Bright yellow/gold for active nodes
         self.color = None  # Custom color (set by layout/coloring functions)
         # Manual color is used for ANN/explicit coloring which takes precedence
         # over value-based coloring. Initialize to None for safety.
@@ -1340,8 +1340,16 @@ class NodeItem(QGraphicsEllipseItem):
         """Custom paint to show selection state and active nodes."""
         # Priority: Active > Selected > Manual Color > Value Color > Default
         if self.is_active:
-            # Active nodes get the brightest color (thinking brain effect)
-            self.setBrush(QBrush(self.active_color))
+            # Active nodes get brightened version of their current color
+            # Use the base color (manual > value > default) and make it much lighter
+            base_color = getattr(self, "manual_color", None)
+            if base_color is None:
+                base_color = (
+                    self.color if self.color is not None else self.default_color
+                )
+            # Brighten significantly (150 = 50% brighter)
+            active_color = QColor(base_color).lighter(150)
+            self.setBrush(QBrush(active_color))
         elif self.isSelected():
             self.setBrush(QBrush(self.selected_color))
         else:

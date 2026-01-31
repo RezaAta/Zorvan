@@ -766,32 +766,42 @@ class ControlPanelBuilder:
         else:
             group.addWidget(QLabel("<b>Starting Nodes</b>"))
 
-        mw.starting_nodes_list = QListWidget()
-        mw.starting_nodes_list.setMaximumHeight(120)
+        # Use a QLabel with word wrap for compact comma-separated display
+        mw.starting_nodes_label = QLabel()
+        mw.starting_nodes_label.setWordWrap(True)
+        mw.starting_nodes_label.setMinimumHeight(24)
+        mw.starting_nodes_label.setTextInteractionFlags(
+            mw.starting_nodes_label.textInteractionFlags()
+            | Qt.TextInteractionFlag.TextSelectableByMouse
+        )
         try:
             from ..theme import get_theme_manager
 
-            # Always fetch a fresh ThemeManager instance for signal connections
             tm = get_theme_manager()
             mw._theme_manager = tm
             list_bg = tm.get_color("list_bg", "#313335").name()
             border = tm.get_color("border", "#555555").name()
-            mw.starting_nodes_list.setStyleSheet(
-                f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
+            text_color = tm.get_color("text", "#ffffff").name()
+            mw.starting_nodes_label.setStyleSheet(
+                f"QLabel {{ background-color: {list_bg}; border: 1px solid {border}; "
+                f"color: {text_color}; padding: 4px; }}"
             )
             try:
                 mw._theme_manager.theme_changed.connect(
-                    lambda: mw.starting_nodes_list.setStyleSheet(
-                        f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
+                    lambda: mw.starting_nodes_label.setStyleSheet(
+                        f"QLabel {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; "
+                        f"border: 1px solid {mw._theme_manager.get_color('border').name()}; "
+                        f"color: {mw._theme_manager.get_color('text').name()}; padding: 4px; }}"
                     )
                 )
             except Exception:
                 pass
         except Exception:
-            mw.starting_nodes_list.setStyleSheet(
-                "QListWidget { background-color: #2a2a2a; border: 1px solid #555; }"
+            mw.starting_nodes_label.setStyleSheet(
+                "QLabel { background-color: #2a2a2a; border: 1px solid #555; "
+                "color: #ffffff; padding: 4px; }"
             )
-        group.addWidget(mw.starting_nodes_list)
+        group.addWidget(mw.starting_nodes_label)
 
         btn_row1 = QHBoxLayout()
         mw.add_to_starting_btn = _create_standard_button(
@@ -808,7 +818,9 @@ class ControlPanelBuilder:
         mw.remove_from_starting_btn = _create_standard_button(
             mw, "Remove", "fa5s.trash", QStyle.StandardPixmap.SP_TrashIcon, 14
         )
-        mw.remove_from_starting_btn.setToolTip("Remove selected node(s)")
+        mw.remove_from_starting_btn.setToolTip(
+            "Remove selected canvas node(s) from starting nodes"
+        )
         mw.remove_from_starting_btn.clicked.connect(mw.remove_from_starting_nodes)
         btn_row1.addWidget(mw.remove_from_starting_btn)
         group.addLayout(btn_row1)
@@ -983,12 +995,14 @@ class ControlPanelBuilder:
             mw.add_selected_nodes_to_selected_step
         )
         btn_row1.addWidget(mw.add_to_selected_step_btn)
+        group.addLayout(btn_row1)
 
+        btn_row2 = QHBoxLayout()
         mw.remove_step_btn = _create_standard_button(
             mw, "Remove Step", "fa5s.trash", QStyle.StandardPixmap.SP_TrashIcon, 14
         )
         mw.remove_step_btn.clicked.connect(mw.remove_from_manual_sequence)
-        btn_row1.addWidget(mw.remove_step_btn)
+        btn_row2.addWidget(mw.remove_step_btn)
 
         mw.clear_sequence_btn = _create_standard_button(
             mw,
@@ -998,10 +1012,10 @@ class ControlPanelBuilder:
             14,
         )
         mw.clear_sequence_btn.clicked.connect(mw.clear_manual_sequence)
-        btn_row1.addWidget(mw.clear_sequence_btn)
-        group.addLayout(btn_row1)
+        btn_row2.addWidget(mw.clear_sequence_btn)
+        group.addLayout(btn_row2)
 
-        btn_row2 = QHBoxLayout()
+        btn_row3 = QHBoxLayout()
         mw.load_sequence_btn = _create_standard_button(
             mw,
             "Load Sequence",
@@ -1010,17 +1024,9 @@ class ControlPanelBuilder:
             14,
         )
         mw.load_sequence_btn.clicked.connect(mw.load_manual_sequence_from_graph)
-        btn_row2.addWidget(mw.load_sequence_btn)
+        btn_row3.addWidget(mw.load_sequence_btn)
 
-        mw.apply_sequence_btn = _create_standard_button(
-            mw,
-            "Apply to Graph",
-            "fa5s.check",
-            QStyle.StandardPixmap.SP_DialogApplyButton,
-            14,
-        )
-        mw.apply_sequence_btn.clicked.connect(mw.apply_manual_sequence_to_graph)
-        btn_row2.addWidget(mw.apply_sequence_btn)
+        # "Apply to Graph" button removed - sequence now auto-applies on changes
 
         mw.replace_selected_step_btn = _create_standard_button(
             mw,
@@ -1033,8 +1039,8 @@ class ControlPanelBuilder:
         mw.replace_selected_step_btn.clicked.connect(
             mw.replace_selected_step_with_selected_nodes
         )
-        btn_row2.addWidget(mw.replace_selected_step_btn)
-        group.addLayout(btn_row2)
+        btn_row3.addWidget(mw.replace_selected_step_btn)
+        group.addLayout(btn_row3)
 
         parent_layout.addWidget(mw.manual_sequence_widget)
 

@@ -101,6 +101,9 @@ class RemoveItemsCommand(QUndoCommand):
                 except Exception:
                     pass
 
+        # Remove node from manual processing sequence if present
+        self._remove_node_from_sequence(node)
+
     def _restore_node(self, node, x, y, manual_color):
         """Restore a node to graph and canvas."""
         # Add back to graph
@@ -133,3 +136,45 @@ class RemoveItemsCommand(QUndoCommand):
 
         # Add edge (this also connects in graph)
         self.canvas.add_edge_item(src, tgt)
+
+    def _remove_node_from_sequence(self, node):
+        """Remove a node from starting_nodes and manual_processing_sequence."""
+        sequence_changed = False
+
+        # Remove from starting_nodes if present
+        if hasattr(self.graph, "starting_nodes") and self.graph.starting_nodes:
+            if node in self.graph.starting_nodes:
+                self.graph.starting_nodes.remove(node)
+                sequence_changed = True
+
+        # Remove from manual_processing_sequence if present
+        if (
+            hasattr(self.graph, "manual_processing_sequence")
+            and self.graph.manual_processing_sequence
+        ):
+            for step in self.graph.manual_processing_sequence:
+                if node in step:
+                    step.remove(node)
+                    sequence_changed = True
+            # Remove empty steps
+            self.graph.manual_processing_sequence = [
+                step for step in self.graph.manual_processing_sequence if step
+            ]
+
+        # Refresh the UI to reflect changes
+        if sequence_changed:
+            self._refresh_sequence_ui()
+
+    def _refresh_sequence_ui(self):
+        """Refresh the sequence list widget in the main window."""
+        try:
+            if hasattr(self.canvas, "main_window") and self.canvas.main_window:
+                mw = self.canvas.main_window
+                # Refresh starting nodes display
+                if hasattr(mw, "update_starting_nodes_display"):
+                    mw.update_starting_nodes_display()
+                # Refresh manual sequence list
+                if hasattr(mw, "load_manual_sequence_from_graph"):
+                    mw.load_manual_sequence_from_graph()
+        except Exception:
+            pass  # UI refresh is not critical

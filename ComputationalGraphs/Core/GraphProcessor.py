@@ -361,5 +361,5 @@ class GraphProcessor:
             if interval:
                 time.sleep(interval / 1000.0)
 
-        # Clear highlighting after completion
-        self._currently_processing_nodes = []
+        # Note: Do NOT clear _currently_processing_nodes here.
+        # The GUI needs to read it after ManualProcessing returns to highlight active nodes.
