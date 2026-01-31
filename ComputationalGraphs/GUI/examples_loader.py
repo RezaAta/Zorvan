@@ -47,6 +47,11 @@ class ExamplesLoader:
             "Chain of addition nodes showing sequential computation",
             self._build_addition_chain,
         )
+        basic.add_example(
+            "Fully Connected Addition (3 nodes)",
+            "3 addition nodes fully connected - values double each iteration (start=1)",
+            self._build_fully_connected_addition,
+        )
         self.categories["basic"] = basic
 
         # Neural Network Examples (All unified to Concurrent MLP)
@@ -201,6 +206,38 @@ class ExamplesLoader:
         sum2.AddPreNode(sum1, c)
 
         graph.AddNode(a, b, c, sum1, sum2)
+        graph.UpdateAdjacencyMatrix()
+
+        return graph
+
+    def _build_fully_connected_addition(self) -> Graph:
+        """Build 3 fully connected addition nodes.
+
+        Each node has the other 2 as predecessors.
+        All start with value=1, so after each iteration values double:
+        - Iteration 0: A=1, B=1, C=1
+        - Iteration 1: A=2, B=2, C=2  (each computes 1+1)
+        - Iteration 2: A=4, B=4, C=4  (each computes 2+2)
+        - Iteration 3: A=8, B=8, C=8  (each computes 4+4)
+        """
+        graph = Graph()
+
+        # Create 3 addition nodes, all initialized to 1
+        a = AdditionNode(name="A", value=1)
+        b = AdditionNode(name="B", value=1)
+        c = AdditionNode(name="C", value=1)
+
+        # Fully connect: each node has the other 2 as predecessors
+        a.AddPreNode(b, c)  # A computes B + C
+        b.AddPreNode(a, c)  # B computes A + C
+        c.AddPreNode(a, b)  # C computes A + B
+
+        # Set GUI positions for nice layout (triangle)
+        a.gui_pos = (200, 100)
+        b.gui_pos = (100, 250)
+        c.gui_pos = (300, 250)
+
+        graph.AddNode(a, b, c)
         graph.UpdateAdjacencyMatrix()
 
         return graph

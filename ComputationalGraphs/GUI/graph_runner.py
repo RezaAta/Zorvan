@@ -81,44 +81,17 @@ class GraphRunner(QObject):
             # If anything goes wrong reading UI state, leave verbose as created
             pass
 
-        # If using forward processing, reset state to ensure fresh initialization
-        if self.processor_type == "forward" and hasattr(
-            self.graph_processor, "reset_forward_state"
-        ):
-            self.graph_processor.reset_forward_state()
-        # If using manual processing, reset manual state to ensure index starts at 0
-        if self.processor_type == "manual" and hasattr(
+        # If using forward or manual processing, reset manual state
+        if self.processor_type in ("forward", "manual") and hasattr(
             self.graph_processor, "reset_manual_state"
         ):
             self.graph_processor.reset_manual_state()
-
-        # If using forward processing, prefer graph-level preparation:
-        # Many forward-processing graphs (e.g., MLPGraphForwardProcessing) implement
-        # `PrepareForForwardProcessing(processor)` which marks source and container
-        # nodes as processed for the first forward pass. Call that if available.
-        if self.processor_type == "forward":
-            if hasattr(self.graph, "PrepareForForwardProcessing"):
+            # Mark source nodes as processed for proper initialization
+            if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
                 try:
-                    # Let the graph prepare itself using the processor instance
-                    self.graph.PrepareForForwardProcessing(self.graph_processor)
+                    self.graph_processor.mark_source_nodes_as_processed()
                 except Exception:
-                    # Fall back to any processor helper if graph-level prep fails
-                    if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
-                        try:
-                            self.graph_processor.mark_source_nodes_as_processed()
-                        except Exception:
-                            pass
-            else:
-                # If graph does not provide PrepareForForwardProcessing, attempt processor helper
-                if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
-                    try:
-                        self.graph_processor.mark_source_nodes_as_processed()
-                    except Exception:
-                        pass
-            # Do NOT automatically mark ContainerNodes as processed here.
-            # Marking container (weight) nodes should be handled explicitly
-            # by graph builders or user actions so they can participate in
-            # forward-processing cycles and updates correctly.
+                    pass
 
         # Capture initial snapshot after graph setup
         # Flush Qt event loop to process any deferred parameter updates (singleShot)
@@ -134,6 +107,19 @@ class GraphRunner(QObject):
         except Exception:
             pass
         self.save_graph_snapshot()
+
+        # Clear user_locked_value on all nodes so computation can update values.
+        # The snapshot already captured the user-edited values, so they can be
+        # restored on reset. But during execution, values must be allowed to change.
+        self._unlock_all_node_values()
+
+    def _unlock_all_node_values(self):
+        """Clear user_locked_value flag on all nodes to allow computation updates."""
+        if not self.graph:
+            return
+        for node in self.graph.nodes:
+            if hasattr(node, "user_locked_value") and node.user_locked_value:
+                node.user_locked_value = False
 
     def save_graph_snapshot(self):
         """Capture the current graph state as a snapshot for later restoration.
@@ -289,45 +275,23 @@ class GraphRunner(QObject):
 
     def _reset_processor_state(self):
         """Internal helper to reset processor state without touching node values or step counter."""
-        # Reset forward processing state
-        if self.processor_type == "forward" and self.graph_processor:
-            if hasattr(self.graph_processor, "reset_forward_state"):
-                self.graph_processor.reset_forward_state()
-
-            # Re-prepare the graph for forward processing
-            if hasattr(self.graph, "PrepareForForwardProcessing"):
-                try:
-                    self.graph.PrepareForForwardProcessing(self.graph_processor)
-                except Exception:
-                    if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
-                        try:
-                            self.graph_processor.mark_source_nodes_as_processed()
-                        except Exception:
-                            pass
-                    if hasattr(
-                        self.graph_processor, "mark_container_nodes_as_processed"
-                    ):
-                        try:
-                            self.graph_processor.mark_container_nodes_as_processed()
-                        except Exception:
-                            pass
-            else:
-                if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
-                    try:
-                        self.graph_processor.mark_source_nodes_as_processed()
-                    except Exception:
-                        pass
-                if hasattr(self.graph_processor, "mark_container_nodes_as_processed"):
-                    try:
-                        self.graph_processor.mark_container_nodes_as_processed()
-                    except Exception:
-                        pass
-
-        # Reset manual processing state
-        if self.processor_type == "manual" and self.graph_processor:
+        # Reset manual processing state (used by both "forward" and "manual" modes)
+        if self.processor_type in ("forward", "manual") and self.graph_processor:
             if hasattr(self.graph_processor, "reset_manual_state"):
                 try:
                     self.graph_processor.reset_manual_state()
+                except Exception:
+                    pass
+
+            # Mark source nodes as processed for proper initialization
+            if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
+                try:
+                    self.graph_processor.mark_source_nodes_as_processed()
+                except Exception:
+                    pass
+            if hasattr(self.graph_processor, "mark_container_nodes_as_processed"):
+                try:
+                    self.graph_processor.mark_container_nodes_as_processed()
                 except Exception:
                     pass
 
@@ -389,8 +353,10 @@ class GraphRunner(QObject):
                         while controller.pause_event.is_set():
                             time.sleep(0.01)
 
-                        self.graph_processor.ForwardProcessing(
-                            iterations=1, starting_nodes=starting_nodes
+                        # Forward mode uses ManualProcessing with auto-sequence
+                        self.graph_processor.ManualProcessing(
+                            iterations=1,
+                            starting_nodes=starting_nodes,
                         )
                         iterations_run += 1
                         self.current_step += 1
@@ -575,9 +541,10 @@ class GraphRunner(QObject):
                         while controller.pause_event.is_set():
                             time.sleep(0.01)
 
-                        # Run a single forward iteration
-                        self.graph_processor.ForwardProcessing(
-                            iterations=1, starting_nodes=starting_nodes
+                        # Run a single iteration via ManualProcessing
+                        self.graph_processor.ManualProcessing(
+                            iterations=1,
+                            starting_nodes=starting_nodes,
                         )
                         iterations_run += 1
                         self.current_step += 1
@@ -794,36 +761,22 @@ class GraphRunner(QObject):
             return
 
         try:
-            if self.processor_type == "forward":
-                # Forward Processing execution
-                # Execute one iteration
-                # Explicitly pass starting_nodes to ensure correct initialization
+            if self.processor_type in ("forward", "manual"):
+                # Manual/Forward Processing execution
+                # Execute one iteration using ManualProcessing
                 starting_nodes = None
                 if hasattr(self.graph, "starting_nodes") and self.graph.starting_nodes:
                     starting_nodes = self.graph.starting_nodes
 
-                self.graph_processor.ForwardProcessing(
-                    iterations=1, starting_nodes=starting_nodes
-                )
-
-                # Track nodes that were just processed (for highlighting)
-                if hasattr(self.graph_processor, "_currently_processing_nodes"):
-                    self.active_nodes = list(
-                        self.graph_processor._currently_processing_nodes
-                    )
-                else:
-                    self.active_nodes = []
-
-                # Note: We don't stop when active_remaining == 0 because the graph
-                # may reactivate nodes in subsequent iterations (e.g., DataStreamNodes cycling)
-            elif self.processor_type == "manual":
-                # Single-step manual processing uses graph.manual_processing_sequence
                 self.graph_processor.ManualProcessing(
                     iterations=1,
+                    starting_nodes=starting_nodes,
                     computation_sequence=getattr(
                         self.graph, "manual_processing_sequence", None
                     ),
                 )
+
+                # Track nodes that were just processed (for highlighting)
                 if hasattr(self.graph_processor, "_currently_processing_nodes"):
                     self.active_nodes = list(
                         self.graph_processor._currently_processing_nodes
@@ -974,58 +927,23 @@ class GraphRunner(QObject):
         """Set the processor type for graph execution.
 
         Args:
-            processor_type: "forward" for Forward Processing (autonomous execution),
+            processor_type: "forward" or "manual" for ManualProcessing,
                           "concurrent" for traditional concurrent processing
         """
         self.processor_type = processor_type
 
-        # Reset forward state when switching to Forward Processing
-        if processor_type == "forward" and self.graph_processor:
-            if hasattr(self.graph_processor, "reset_forward_state"):
-                self.graph_processor.reset_forward_state()
-
-            # Prefer graph-level preparation which may mark both sources and
-            # container (weight) nodes appropriately. Fall back to processor
-            # helpers if graph-level method is not available.
-            if hasattr(self.graph, "PrepareForForwardProcessing"):
-                try:
-                    self.graph.PrepareForForwardProcessing(self.graph_processor)
-                except Exception:
-                    # Fallback to processor helpers
-                    if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
-                        try:
-                            self.graph_processor.mark_source_nodes_as_processed()
-                        except Exception:
-                            pass
-                    if hasattr(
-                        self.graph_processor, "mark_container_nodes_as_processed"
-                    ):
-                        try:
-                            self.graph_processor.mark_container_nodes_as_processed()
-                        except Exception:
-                            pass
-            else:
-                if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
-                    try:
-                        self.graph_processor.mark_source_nodes_as_processed()
-                    except Exception:
-                        pass
-                if hasattr(self.graph_processor, "mark_container_nodes_as_processed"):
-                    try:
-                        self.graph_processor.mark_container_nodes_as_processed()
-                    except Exception:
-                        pass
-            # Do NOT automatically mark ContainerNodes as processed here.
-            # Marking container (weight) nodes should be handled explicitly
-            # by graph builders or user actions so they can participate in
-            # forward-processing cycles and updates correctly.
-            if (
-                processor_type == "manual"
-                and self.graph_processor
-                and hasattr(self.graph_processor, "reset_manual_state")
-            ):
+        # Reset manual state when switching to forward or manual processing
+        if processor_type in ("forward", "manual") and self.graph_processor:
+            if hasattr(self.graph_processor, "reset_manual_state"):
                 try:
                     self.graph_processor.reset_manual_state()
+                except Exception:
+                    pass
+
+            # Mark source nodes as processed for initialization
+            if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
+                try:
+                    self.graph_processor.mark_source_nodes_as_processed()
                 except Exception:
                     pass
 

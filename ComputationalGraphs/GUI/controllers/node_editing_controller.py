@@ -190,7 +190,6 @@ class NodeEditingController:
                             if new_node:
                                 replaced_count += 1
                         except Exception:
-                            # continue replacing remaining nodes even if one fails
                             continue
                     mw.status_bar.showMessage(
                         f"Replaced {replaced_count} node(s) with type '{new_type}'"

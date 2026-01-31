@@ -149,6 +149,9 @@ class ExecutionSettingsController:
         # Show/hide forward and manual processing panels based on mode
         is_forward_mode = index == 0
         is_manual_mode = index == 2
+        is_sequence_mode = (
+            is_forward_mode or is_manual_mode
+        )  # Both use ManualProcessing
 
         # Threading combo only relevant for concurrent mode
         try:
@@ -156,26 +159,37 @@ class ExecutionSettingsController:
         except Exception:
             pass
 
-        # Starting/stopping nodes panel for forward processing
-        try:
-            mw.starting_nodes_widget.setVisible(is_forward_mode)
+        # Starting/stopping nodes panel for forward and manual processing
+        if (
+            hasattr(mw, "starting_nodes_widget")
+            and mw.starting_nodes_widget is not None
+        ):
+            mw.starting_nodes_widget.setVisible(is_sequence_mode)
+
+        if (
+            hasattr(mw, "stopping_nodes_widget")
+            and mw.stopping_nodes_widget is not None
+        ):
             mw.stopping_nodes_widget.setVisible(is_forward_mode)
-        except Exception:
-            pass
 
         # Manual sequence panel for manual processing
-        try:
+        if (
+            hasattr(mw, "manual_sequence_widget")
+            and mw.manual_sequence_widget is not None
+        ):
             mw.manual_sequence_widget.setVisible(is_manual_mode)
-        except Exception:
-            pass
 
         mode_name = processor_type.replace("_", " ").title()
         mw.status_bar.showMessage(f"Processor type: {mode_name}")
 
-        # Update starting nodes display when switching to Forward Processing
-        if is_forward_mode:
+        # Update starting nodes display when switching to sequence-based modes
+        if is_sequence_mode:
             try:
                 mw.update_starting_nodes_display()
+            except Exception:
+                pass
+        if is_forward_mode:
+            try:
                 mw.update_stopping_nodes_display()
             except Exception:
                 pass

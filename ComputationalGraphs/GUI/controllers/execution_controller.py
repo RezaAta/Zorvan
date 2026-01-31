@@ -129,6 +129,13 @@ class ExecutionController:
         except Exception:
             pass
 
+        # Ensure user-edited nodes are unlocked for computation before execution.
+        # This is needed when rebuild_graph() was skipped (nodes already in sync).
+        try:
+            self.graph_runner._unlock_all_node_values()
+        except Exception:
+            pass
+
         # Use batch mode only when BOTH skip visualization AND skip plotting are enabled
         # This runs at max speed with no per-step callbacks
         if self.main_window.skip_visualization and self.main_window.skip_plotting:
@@ -302,6 +309,12 @@ class ExecutionController:
         """Execute a single step."""
         if not self.graph_runner.is_running:
             self.main_window.rebuild_graph()
+
+        # Ensure user-edited nodes are unlocked for computation
+        try:
+            self.graph_runner._unlock_all_node_values()
+        except Exception:
+            pass
 
         self.graph_runner.single_step()
 
