@@ -12,12 +12,12 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ComputationalGraphs.Tests.EATests.TestingOnDejongSphereFunction import run_graph_ea
 from Experiments.exp_ea_dejong_sphere import (
     evaluate_population,
     evolve,
     sphere_function,
 )
+from Experiments.exp_graph_ea_dejong_sphere import run_graph_ea
 
 
 def pop_diversity(pop):

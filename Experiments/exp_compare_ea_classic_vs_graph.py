@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ClassicEATestOnDeJongSphereFunction import evolve, sphere_function
-from ComputationalGraphs.Tests.EATests.TestingOnDejongSphereFunction import run_graph_ea
+from Experiments.exp_graph_ea_dejong_sphere import run_graph_ea
 
 
 def run_comparison_trials(

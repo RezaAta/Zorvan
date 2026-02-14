@@ -363,3 +363,228 @@ class GraphProcessor:
 
         # Note: Do NOT clear _currently_processing_nodes here.
         # The GUI needs to read it after ManualProcessing returns to highlight active nodes.
+
+    # =========================================================================
+    # Sequence Finder for Forward Processing
+    # =========================================================================
+
+    def find_execution_sequence(self, starting_nodes=None, stopping_nodes=None):
+        """
+        Compute the execution sequence for forward processing based on node dependencies.
+
+        Algorithm:
+        1. Start with starting_nodes as the first step (these are already considered "processed")
+        2. At each step, flag successors of current nodes as candidates
+        3. Candidates whose ALL predecessors are in the processed set get added to the next step
+        4. Repeat until no more nodes can be added
+        5. If unadded nodes remain and they are all source nodes (no predecessors),
+           stop and return the sequence (source nodes not in starting_nodes are skipped)
+        6. If unadded non-source nodes remain, they are unreachable (cycle or disconnected)
+
+        Parameters:
+        - starting_nodes: List of nodes to start execution from.
+            Defaults to graph.starting_nodes.
+        - stopping_nodes: List of nodes that should not trigger successor activation.
+            Defaults to graph.stopping_nodes if it exists.
+
+        Returns:
+            dict with keys:
+            - 'sequence': List of lists [[step_0_nodes], [step_1_nodes], ...]
+            - 'processed_nodes': Set of all nodes in the sequence
+            - 'remaining_nodes': List of nodes not added to sequence
+            - 'remaining_source_nodes': List of remaining nodes that are source nodes
+            - 'remaining_non_source_nodes': List of remaining nodes that are not source nodes
+            - 'complete': True if all nodes were sequenced, False otherwise
+        """
+        # Use graph attributes as defaults
+        if starting_nodes is None:
+            starting_nodes = getattr(self.graph, "starting_nodes", [])
+        if stopping_nodes is None:
+            stopping_nodes = getattr(self.graph, "stopping_nodes", [])
+
+        # Convert to sets for O(1) lookups
+        starting_set = set(starting_nodes)
+        stopping_set = set(stopping_nodes)
+        all_nodes = set(self.graph.nodes)
+
+        # Build successor map for efficient traversal
+        successor_map = self.graph.BuildSuccessorMap()
+
+        # Initialize tracking structures
+        processed_set = set()  # Nodes that have been added to the sequence
+        sequence = []  # List of steps, each step is a list of nodes
+
+        # Step 0: Starting nodes are the first step
+        if starting_nodes:
+            step_0 = list(starting_nodes)
+            sequence.append(step_0)
+            processed_set.update(step_0)
+
+        # Current nodes whose successors we'll examine
+        current_nodes = list(starting_nodes)
+
+        # Main loop: keep adding steps until no more nodes can be added
+        while current_nodes:
+            # Collect all successor candidates from current nodes
+            # (excluding successors of stopping_nodes)
+            candidates = set()
+            for node in current_nodes:
+                if node not in stopping_set:
+                    for successor in successor_map.get(node, []):
+                        if successor not in processed_set:
+                            candidates.add(successor)
+
+            # Filter candidates: only those with ALL predecessors in processed_set
+            ready_nodes = []
+            for candidate in candidates:
+                all_preds_processed = all(
+                    pred in processed_set for pred in candidate.predecessors
+                )
+                if all_preds_processed:
+                    ready_nodes.append(candidate)
+
+            # If we found ready nodes, add them as the next step
+            if ready_nodes:
+                sequence.append(ready_nodes)
+                processed_set.update(ready_nodes)
+                current_nodes = ready_nodes
+            else:
+                # No ready nodes found, stop the loop
+                current_nodes = []
+
+        # Analyze remaining nodes
+        remaining_nodes = [n for n in all_nodes if n not in processed_set]
+        remaining_source_nodes = [
+            n for n in remaining_nodes if len(n.predecessors) == 0
+        ]
+        remaining_non_source_nodes = [
+            n for n in remaining_nodes if len(n.predecessors) > 0
+        ]
+
+        return {
+            "sequence": sequence,
+            "processed_nodes": processed_set,
+            "remaining_nodes": remaining_nodes,
+            "remaining_source_nodes": remaining_source_nodes,
+            "remaining_non_source_nodes": remaining_non_source_nodes,
+            "complete": len(remaining_nodes) == 0,
+        }
+
+    def ForwardProcessing(
+        self,
+        iterations=1,
+        starting_nodes=None,
+        stopping_nodes=None,
+        exec_options: Optional[ExecutionOptions] = None,
+        on_iteration_complete=None,
+        on_step_complete=None,
+        controller: Optional["GraphProcessor.ExecutionController"] = None,
+    ):
+        """
+        Execute forward processing using the computed execution sequence.
+
+        This method computes the execution sequence once, then iterates through
+        the sequence for the specified number of iterations (epochs).
+
+        Parameters:
+        - iterations: Number of full passes through the sequence (epochs).
+        - starting_nodes: Nodes to start execution from. Defaults to graph.starting_nodes.
+        - stopping_nodes: Nodes that should not trigger successor activation.
+        - exec_options: ExecutionOptions for pause/step control.
+        - on_iteration_complete: Callback after each full pass (iteration/epoch).
+        - on_step_complete: Callback after each step within a pass.
+        - controller: Pre-existing ExecutionController.
+
+        Returns:
+            dict with execution statistics:
+            - 'iterations_completed': Number of iterations actually completed
+            - 'steps_per_iteration': Number of steps in the sequence
+            - 'sequence_info': The result from find_execution_sequence()
+        """
+        # Compute execution sequence
+        seq_result = self.find_execution_sequence(
+            starting_nodes=starting_nodes,
+            stopping_nodes=stopping_nodes,
+        )
+        sequence = seq_result["sequence"]
+
+        if not sequence:
+            return {
+                "iterations_completed": 0,
+                "steps_per_iteration": 0,
+                "sequence_info": seq_result,
+            }
+
+        controller_obj = (
+            controller
+            if controller is not None
+            else GraphProcessor.ExecutionController.from_options(exec_options)
+        )
+
+        iterations_completed = 0
+
+        for iteration in range(iterations):
+            # Check stop signal
+            if (
+                getattr(controller_obj, "stop_event", None) is not None
+                and controller_obj.stop_event.is_set()
+            ):
+                break
+
+            # Process each step in the sequence
+            for step_idx, step_nodes in enumerate(sequence):
+                # Check stop signal
+                if (
+                    getattr(controller_obj, "stop_event", None) is not None
+                    and controller_obj.stop_event.is_set()
+                ):
+                    break
+
+                # Check pause signal
+                if getattr(controller_obj, "pause_event", None) is not None:
+                    while controller_obj.pause_event.is_set():
+                        time.sleep(0.01)
+
+                # Track for GUI highlighting
+                self._currently_processing_nodes = list(step_nodes)
+
+                # Phase 1: UpdateInputs for nodes that need it
+                for node in step_nodes:
+                    if not getattr(node, "midCalculation", False):
+                        node.UpdateInputs()
+
+                # Phase 2: ProcessBatch
+                for node in step_nodes:
+                    node.ProcessBatch()
+
+                # Mark these nodes as processed
+                self._processed_nodes.update(step_nodes)
+
+                self.time += 1
+
+                # Step completion callback
+                if on_step_complete:
+                    try:
+                        on_step_complete(iteration + 1, step_idx + 1, step_nodes)
+                    except Exception:
+                        pass
+
+                # Step interval for visualization
+                interval = getattr(controller_obj, "step_interval_ms", None)
+                if interval:
+                    time.sleep(interval / 1000.0)
+
+            iterations_completed += 1
+
+            # Iteration completion callback
+            if on_iteration_complete:
+                try:
+                    on_iteration_complete(iteration + 1)
+                except Exception:
+                    pass
+
+        return {
+            "iterations_completed": iterations_completed,
+            "steps_per_iteration": len(sequence),
+            "sequence_info": seq_result,
+        }

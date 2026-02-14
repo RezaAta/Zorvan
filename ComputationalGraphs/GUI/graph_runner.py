@@ -48,6 +48,10 @@ class GraphRunner(QObject):
         # Snapshot of initial graph state (iteration 0) for restore functionality
         self._graph_snapshot = None
 
+        # Forward processing sequence (computed by find_execution_sequence)
+        self._forward_sequence = None
+        self._forward_step_index = 0
+
         # === Phase 2: Processing Queue ===
         # Queue of (graph/subgraph, iterations) tuples to execute sequentially
         self._processing_queue = []
@@ -93,6 +97,10 @@ class GraphRunner(QObject):
                 except Exception:
                     pass
 
+        # Compute forward processing sequence if in forward mode
+        if self.processor_type == "forward":
+            self._compute_forward_sequence()
+
         # Capture initial snapshot after graph setup
         # Flush Qt event loop to process any deferred parameter updates (singleShot)
         try:
@@ -120,6 +128,43 @@ class GraphRunner(QObject):
         for node in self.graph.nodes:
             if hasattr(node, "user_locked_value") and node.user_locked_value:
                 node.user_locked_value = False
+
+    def _compute_forward_sequence(self):
+        """Compute and cache the forward processing execution sequence.
+
+        Uses the sequence finder algorithm to determine the order of node execution
+        based on dependencies. The sequence is computed once and reused for each
+        iteration through the graph.
+        """
+        self._forward_sequence = None
+        self._forward_step_index = 0
+
+        if not self.graph_processor:
+            return
+
+        try:
+            # Get starting and stopping nodes from the graph
+            starting_nodes = getattr(self.graph, "starting_nodes", None)
+            stopping_nodes = getattr(self.graph, "stopping_nodes", None)
+
+            # Compute the execution sequence
+            result = self.graph_processor.find_execution_sequence(
+                starting_nodes=starting_nodes, stopping_nodes=stopping_nodes
+            )
+
+            self._forward_sequence = result.get("sequence", [])
+
+            # Log sequence info for debugging
+            if result.get("remaining_non_source_nodes"):
+                # Some nodes couldn't be sequenced (possible cycle or disconnection)
+                remaining = [n.name for n in result["remaining_non_source_nodes"]]
+                print(
+                    f"[ForwardProcessing] Warning: {len(remaining)} nodes could not be sequenced: {remaining[:5]}..."
+                )
+
+        except Exception as e:
+            print(f"[ForwardProcessing] Error computing sequence: {e}")
+            self._forward_sequence = []
 
     def save_graph_snapshot(self):
         """Capture the current graph state as a snapshot for later restoration.
@@ -275,6 +320,9 @@ class GraphRunner(QObject):
 
     def _reset_processor_state(self):
         """Internal helper to reset processor state without touching node values or step counter."""
+        # Reset forward sequence step index
+        self._forward_step_index = 0
+
         # Reset manual processing state (used by both "forward" and "manual" modes)
         if self.processor_type in ("forward", "manual") and self.graph_processor:
             if hasattr(self.graph_processor, "reset_manual_state"):
@@ -294,6 +342,10 @@ class GraphRunner(QObject):
                     self.graph_processor.mark_container_nodes_as_processed()
                 except Exception:
                     pass
+
+        # Recompute forward sequence if in forward mode
+        if self.processor_type == "forward":
+            self._compute_forward_sequence()
 
     def start_additional(self, additional_steps):
         """Start execution for a specific number of additional iterations.
@@ -338,12 +390,14 @@ class GraphRunner(QObject):
                 iterations_to_run = additional_steps
 
                 if self.processor_type == "forward":
-                    starting_nodes = None
-                    if (
-                        hasattr(self.graph, "starting_nodes")
-                        and self.graph.starting_nodes
-                    ):
-                        starting_nodes = self.graph.starting_nodes
+                    # Use pre-computed sequence from find_execution_sequence
+                    if not self._forward_sequence:
+                        self._compute_forward_sequence()
+
+                    sequence = self._forward_sequence or []
+                    if not sequence:
+                        self.error_occurred.emit("No execution sequence computed")
+                        return
 
                     iterations_run = 0
                     while (
@@ -353,20 +407,32 @@ class GraphRunner(QObject):
                         while controller.pause_event.is_set():
                             time.sleep(0.01)
 
-                        # Forward mode uses ManualProcessing with auto-sequence
-                        self.graph_processor.ManualProcessing(
-                            iterations=1,
-                            starting_nodes=starting_nodes,
+                        # Get current step in the sequence
+                        step_nodes = sequence[self._forward_step_index]
+
+                        # Track for GUI highlighting
+                        self.active_nodes = list(step_nodes)
+                        self.graph_processor._currently_processing_nodes = list(
+                            step_nodes
                         )
+
+                        # Process each node in the current step
+                        for node in step_nodes:
+                            if not getattr(node, "midCalculation", False):
+                                node.UpdateInputs()
+                        for node in step_nodes:
+                            node.ProcessBatch()
+
+                        # Mark processed
+                        self.graph_processor._processed_nodes.update(step_nodes)
+
+                        # Advance step index (cycle back to start after last step)
+                        self._forward_step_index = (self._forward_step_index + 1) % len(
+                            sequence
+                        )
+
                         iterations_run += 1
                         self.current_step += 1
-
-                        if hasattr(self.graph_processor, "_currently_processing_nodes"):
-                            self.active_nodes = list(
-                                self.graph_processor._currently_processing_nodes
-                            )
-                        else:
-                            self.active_nodes = []
 
                         self.step_completed.emit(self.current_step)
 
@@ -525,12 +591,14 @@ class GraphRunner(QObject):
         def worker():
             try:
                 if self.processor_type == "forward":
-                    starting_nodes = None
-                    if (
-                        hasattr(self.graph, "starting_nodes")
-                        and self.graph.starting_nodes
-                    ):
-                        starting_nodes = self.graph.starting_nodes
+                    # Use pre-computed sequence from find_execution_sequence
+                    if not self._forward_sequence:
+                        self._compute_forward_sequence()
+
+                    sequence = self._forward_sequence or []
+                    if not sequence:
+                        self.error_occurred.emit("No execution sequence computed")
+                        return
 
                     iterations_run = 0
                     while (
@@ -541,21 +609,32 @@ class GraphRunner(QObject):
                         while controller.pause_event.is_set():
                             time.sleep(0.01)
 
-                        # Run a single iteration via ManualProcessing
-                        self.graph_processor.ManualProcessing(
-                            iterations=1,
-                            starting_nodes=starting_nodes,
+                        # Get current step in the sequence
+                        step_nodes = sequence[self._forward_step_index]
+
+                        # Track for GUI highlighting
+                        self.active_nodes = list(step_nodes)
+                        self.graph_processor._currently_processing_nodes = list(
+                            step_nodes
                         )
+
+                        # Process each node in the current step
+                        for node in step_nodes:
+                            if not getattr(node, "midCalculation", False):
+                                node.UpdateInputs()
+                        for node in step_nodes:
+                            node.ProcessBatch()
+
+                        # Mark processed
+                        self.graph_processor._processed_nodes.update(step_nodes)
+
+                        # Advance step index (cycle back to start after last step)
+                        self._forward_step_index = (self._forward_step_index + 1) % len(
+                            sequence
+                        )
+
                         iterations_run += 1
                         self.current_step += 1
-
-                        # Update active nodes for highlighting
-                        if hasattr(self.graph_processor, "_currently_processing_nodes"):
-                            self.active_nodes = list(
-                                self.graph_processor._currently_processing_nodes
-                            )
-                        else:
-                            self.active_nodes = []
 
                         # Emit progress
                         self.step_completed.emit(self.current_step)
@@ -932,6 +1011,10 @@ class GraphRunner(QObject):
         """
         self.processor_type = processor_type
 
+        # Reset forward sequence state
+        self._forward_sequence = None
+        self._forward_step_index = 0
+
         # Reset manual state when switching to forward or manual processing
         if processor_type in ("forward", "manual") and self.graph_processor:
             if hasattr(self.graph_processor, "reset_manual_state"):
@@ -946,6 +1029,10 @@ class GraphRunner(QObject):
                     self.graph_processor.mark_source_nodes_as_processed()
                 except Exception:
                     pass
+
+        # Compute forward sequence if switching to forward mode
+        if processor_type == "forward" and self.graph_processor:
+            self._compute_forward_sequence()
 
     # === Phase 2: Processing Queue Methods ===
 

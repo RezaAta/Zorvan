@@ -54,31 +54,10 @@ class ExamplesLoader:
         )
         self.categories["basic"] = basic
 
-        # Neural Network Examples (All unified to Concurrent MLP)
-        nn_forward = ExampleCategory(
-            "Neural Networks", "All MLP examples use the concurrent MLP with buffers"
-        )
-        nn_forward.add_example(
-            "XOR Problem (2-2-1)",
-            "2-input XOR with 2-neuron hidden layer using sigmoid activation",
-            self._build_xor_mlp_concurrent,
-        )
-        nn_forward.add_example(
-            "Simple MLP (1-1-1)",
-            "Minimal MLP for understanding the architecture",
-            self._build_simple_mlp_concurrent,
-        )
-        nn_forward.add_example(
-            "Iris Classification (4-5-3-3)",
-            "Multi-class classification with two hidden layers",
-            self._build_iris_mlp_concurrent,
-        )
-        self.categories["neural_networks"] = nn_forward
-
-        # Concurrent Processing Neural Network Examples
+        # Concurrent Processing Neural Network Examples (with buffers)
         nn_concurrent = ExampleCategory(
-            "Neural Networks - Concurrent Processing",
-            "MLP with concurrent processing (with buffers)",
+            "Neural Networks - Concurrent",
+            "MLP with concurrent processing (all nodes compute each iteration, uses buffers)",
         )
         nn_concurrent.add_example(
             "XOR Problem (2-2-1) - Concurrent",
@@ -91,12 +70,17 @@ class ExamplesLoader:
             self._build_simple_mlp_concurrent,
         )
         nn_concurrent.add_example(
-            "Diabetes Prediction (Concurrent)",
+            "Iris Classification (4-5-3-3)",
+            "Multi-class classification with two hidden layers",
+            self._build_iris_mlp_concurrent,
+        )
+        nn_concurrent.add_example(
+            "Diabetes Prediction",
             "Regression on the Diabetes dataset using a concurrent MLP with backprop",
             self._build_diabetes_mlp_concurrent,
         )
         nn_concurrent.add_example(
-            "Piecewise Function MLP (Concurrent)",
+            "Piecewise Function MLP",
             (
                 "Regression on a hybrid piecewise function (x in [-3,3] with "
                 "equal samples per region) - 1-in 1-out MLP with a 3-neuron "
@@ -105,7 +89,7 @@ class ExamplesLoader:
             self._build_piecewise_mlp_concurrent,
         )
         nn_concurrent.add_example(
-            "Piecewise Function 2 MLP (Concurrent)",
+            "Piecewise Function 2 MLP",
             (
                 "Regression on piecewise quadratic / linear function (x in [-3,3] "
                 "with equal samples per region) - 1-in, 2-hidden layers (3 ReLU, "
@@ -115,14 +99,31 @@ class ExamplesLoader:
         )
         self.categories["neural_networks_concurrent"] = nn_concurrent
 
+        # Forward Processing Neural Network Examples (sequence-based, no buffers)
+        nn_forward = ExampleCategory(
+            "Neural Networks - Forward",
+            "MLP with forward processing (nodes execute in dependency order, no buffers)",
+        )
+        nn_forward.add_example(
+            "XOR Problem (2-2-1) - Forward",
+            "2-input XOR with forward processing (no buffers)",
+            self._build_xor_mlp_forward,
+        )
+        nn_forward.add_example(
+            "Simple MLP (1-1-1) - Forward",
+            "Minimal MLP with forward processing (no buffers)",
+            self._build_simple_mlp_forward,
+        )
+        self.categories["neural_networks_forward"] = nn_forward
+
         # Manual Processing Neural Network Examples
         nn_manual = ExampleCategory(
-            "Neural Networks - Manual Processing",
-            "Manual execution sequence for a concurrent MLP",
+            "Neural Networks - Manual",
+            "MLP with user-defined manual execution sequence",
         )
         nn_manual.add_example(
             "XOR Problem (2-2-1) - Manual",
-            "2-input XOR with 2-neuron hidden layer using a predefined manual processing sequence (concurrent)",
+            "2-input XOR with a predefined manual processing sequence",
             self._build_xor_mlp_manual,
         )
         self.categories["neural_networks_manual"] = nn_manual
@@ -1015,17 +1016,16 @@ class ExamplesLoader:
         """Build XOR MLP wired for ManualProcessing with a predefined sequence.
 
         This constructs a forward-processing MLP with backprop, combines both
-        graphs into a single `Graph` and assigns `manual_processing_sequence`
-        so the GUI/manual controller can call `GraphProcessor.ManualProcessing`
-        without needing to compute the sequence interactively.
+        graphs into a single `Graph` and uses the sequence finder algorithm
+        to compute the `manual_processing_sequence` automatically.
         """
         from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
             BackpropGraphForwardProcessing,
         )
+        from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
         from ComputationalGraphs.Core.MLPGraphForwardProcessing import (
             MLPGraphForwardProcessing,
         )
-        from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
         from ComputationalGraphs.Nodes.LinearNode import LinearNode
 
         # Build MLP (forward-processing style)
@@ -1033,6 +1033,7 @@ class ExamplesLoader:
             numInputs=2,
             numOutputs=1,
             numHiddenLayers=1,
+            hiddenLayerSizes=[2],
             activationFunction=SigmoidNode,
             outputLayerType=LinearNode,
         )
@@ -1054,250 +1055,73 @@ class ExamplesLoader:
         for node in backprop_graph.nodes:
             fullGraph.AddNode(node)
 
-        # Prepare a manual, explicit processing sequence.
-        # Sequence groups are ordered to perform: forward multiplies -> additions -> activations -> output -> error -> derivatives -> gradients -> lr multipliers -> weight deltas -> weight container updates
-        sequence = []
+        # Set starting nodes for the sequence finder
+        fullGraph.starting_nodes = list(mlpGraph.starting_nodes)
 
-        # 1) First-layer multiplications (input * weights)
-        first_mults = [
-            n for n in fullGraph.nodes if getattr(n, "name", "").startswith("Mul_x")
-        ]
-        sequence.append(first_mults)
-
-        # 2) Hidden layer additions
-        hidden_adds = [h[0] for h in mlpGraph.hiddenLayers[0]]
-        sequence.append(hidden_adds)
-
-        # 3) Hidden activations
-        hidden_acts = [h[1] for h in mlpGraph.hiddenLayers[0]]
-        sequence.append(hidden_acts)
-
-        # 4) Multiplications into output (last hidden -> output)
-        output_mults = []
-        for out_add, out_act in mlpGraph.outputLayer:
-            # predecessors of output addition are the multiplication nodes
-            for pred in out_add.predecessors:
-                if pred not in output_mults:
-                    output_mults.append(pred)
-        sequence.append(output_mults)
-
-        # 5) Output additions
-        out_adds = [out[0] for out in mlpGraph.outputLayer]
-        sequence.append(out_adds)
-
-        # 6) Output activations
-        out_acts = [out[1] for out in mlpGraph.outputLayer]
-        sequence.append(out_acts)
-
-        # 7) Error calculation nodes
-        sequence.append(list(mlpGraph.errorLayer))
-
-        # Backprop-related groups: derive from backprop_graph nodes
-        # 8) Output derivative nodes (D_y...)
-        dy_nodes = [
-            n for n in backprop_graph.nodes if getattr(n, "name", "").startswith("D_y")
-        ]
-        if dy_nodes:
-            sequence.append(dy_nodes)
-
-        # 9) Output error-gradient nodes (EG_y...)
-        eg_output = [
-            n for n in backprop_graph.nodes if getattr(n, "name", "").startswith("EG_y")
-        ]
-        if eg_output:
-            sequence.append(eg_output)
-
-        # 10) LR multipliers for outputs
-        lr_y = [
-            n
-            for n in backprop_graph.nodes
-            if getattr(n, "name", "").startswith("LRMult_y")
-        ]
-        if lr_y:
-            sequence.append(lr_y)
-
-        # 11) Hidden derivative and weighted-gradient-sum nodes (hidden grad accumulation)
-        d_hidden = [
-            n for n in backprop_graph.nodes if getattr(n, "name", "").startswith("D_H")
-        ]
-        wgs_nodes = [
-            n
-            for n in backprop_graph.nodes
-            if getattr(n, "name", "").startswith("WGS_H")
-        ]
-        if wgs_nodes:
-            sequence.append(wgs_nodes)
-        if d_hidden:
-            sequence.append(d_hidden)
-
-        # 12) Hidden error-gradient nodes (EG_H...)
-        eg_hidden = [
-            n for n in backprop_graph.nodes if getattr(n, "name", "").startswith("EG_H")
-        ]
-        if eg_hidden:
-            sequence.append(eg_hidden)
-
-        # 13) LR multipliers for hidden nodes
-        lr_hidden = [
-            n
-            for n in backprop_graph.nodes
-            if getattr(n, "name", "").startswith("LRMult_H")
-        ]
-        if lr_hidden:
-            sequence.append(lr_hidden)
-
-        # 14) Weight delta nodes (dW_*) produced by weight recalculation layers
-        dws = [
-            n for n in backprop_graph.nodes if getattr(n, "name", "").startswith("dW_")
-        ]
-        if dws:
-            sequence.append(dws)
-
-        # 15) Finally, include Container weight nodes so they process their incoming dW updates
-        # Include all container weights (both stopping and non-stopping) and deduplicate
-        container_weights = []
-        for n in fullGraph.nodes:
-            if isinstance(n, ContainerNode):
-                container_weights.append(n)
-        # also append stopping_nodes (weights) to ensure updates occur
-        try:
-            container_weights += [
-                n
-                for n in getattr(mlpGraph, "stopping_nodes", [])
-                if isinstance(n, ContainerNode)
-            ]
-        except Exception:
-            pass
-        if container_weights:
-            sequence.append(container_weights)
-
-        # 16) Advance input streams and label nodes AFTER weight updates so the next
-        # sample is read for the next manual sequence cycle. This ensures the
-        # network doesn't get stuck on the initial sample.
-        input_nodes = list(mlpGraph.inputLayer)
-        label_nodes = list(mlpGraph.labelLayer)
-        if input_nodes or label_nodes:
-            sequence.append(input_nodes + label_nodes)
-
-        # Compress the sequence to match the MLP graph pass length so that
-        # DataStreamNodes are executed once per training pass. This keeps the
-        # manual sequence aligned with `mlpGraph.GetPassLength()` used by
-        # Reactivation/forward processing logic.
-        try:
-            pass_len = mlpGraph.GetPassLength()
-            if pass_len and len(sequence) > pass_len:
-                # Build successor and predecessor maps for conflict detection
-                successor_map = fullGraph.BuildSuccessorMap()
-                predecessor_map = {
-                    node: set(node.predecessors) for node in fullGraph.nodes
-                }
-
-                # Merge adjacent original steps into groups, avoiding intra-group dependencies
-                groups = []
-                cur_group = []
-                cur_set = set()
-                for step in sequence:
-                    # Check if adding this step would cause a dependency conflict
-                    conflict = False
-                    for n in step:
-                        if any(
-                            pred in cur_set for pred in predecessor_map.get(n, set())
-                        ):
-                            conflict = True
-                            break
-                        if any(succ in cur_set for succ in successor_map.get(n, [])):
-                            conflict = True
-                            break
-                    if conflict:
-                        if cur_group:
-                            groups.append(cur_group)
-                        cur_group = list(step)
-                        cur_set = set(step)
-                    else:
-                        for n in step:
-                            if n not in cur_set:
-                                cur_group.append(n)
-                                cur_set.add(n)
-                if cur_group:
-                    groups.append(cur_group)
-
-                # If groups exceed pass_len, attempt to merge adjacent safe groups
-                while len(groups) > pass_len:
-                    merged_any = False
-                    for i in range(len(groups) - 1):
-                        g1 = groups[i]
-                        g2 = groups[i + 1]
-                        # Check whether any node in g1 is predecessor/successor of node in g2
-                        safe = True
-                        for a in g1:
-                            for b in g2:
-                                if a in predecessor_map.get(
-                                    b, set()
-                                ) or a in successor_map.get(b, []):
-                                    safe = False
-                                    break
-                            if not safe:
-                                break
-                        if safe:
-                            groups[i] = g1 + g2
-                            del groups[i + 1]
-                            merged_any = True
-                            break
-                    if not merged_any:
-                        # Cannot merge further without violating dependencies; break
-                        break
-
-                # If groups < pass_len, attempt to split larger groups while preserving no intra-group dependencies
-                while len(groups) < pass_len:
-                    # Find a group with 2+ nodes to split
-                    split_idx = next(
-                        (i for i, g in enumerate(groups) if len(g) > 1), None
-                    )
-                    if split_idx is None:
-                        break
-                    g = groups[split_idx]
-                    split_done = False
-                    # Try to find a pivot where left has no successors in right (no dependencies across split)
-                    for pivot in range(1, len(g)):
-                        left = g[:pivot]
-                        right = g[pivot:]
-                        ok = True
-                        for a in left:
-                            for b in right:
-                                if a in predecessor_map.get(
-                                    b, set()
-                                ) or a in successor_map.get(b, []):
-                                    ok = False
-                                    break
-                            if not ok:
-                                break
-                        if ok:
-                            groups[split_idx : split_idx + 1] = [left, right]
-                            split_done = True
-                            break
-                    if not split_done:
-                        break
-
-                sequence = groups
-        except Exception:
-            # If anything fails, keep the original sequence
-            pass
-
-        # Assign the manual processing sequence on the graph (use Node objects)
-        fullGraph.set_manual_processing_sequence(sequence, strict=True)
-        # Store the manual pass length so GUI/consumers know how many iterations are
-        # required for a complete manual pass (each group is one iteration).
-        fullGraph.manual_pass_length = len(sequence)
-
-        # Set starting nodes for concurrent GUI expectations (data streams + labels)
-        fullGraph.starting_nodes = [
-            input_pair[0] for input_pair in mlpGraph.inputLayer
-        ] + mlpGraph.labelLayer
-        # Copy stopping nodes (weights) so GUI/processor can respect them
+        # Set stopping nodes (weight nodes shouldn't trigger successor activation)
         if hasattr(mlpGraph, "stopping_nodes"):
             fullGraph.stopping_nodes = list(mlpGraph.stopping_nodes)
+        else:
+            fullGraph.stopping_nodes = []
 
         fullGraph.UpdateAdjacencyMatrix()
+
+        # Apply an explicit manual processing sequence determined from the graph structure.
+        # If any expected node name is missing, fall back to the sequence finder.
+        node_by_name = {n.name: n for n in fullGraph.nodes}
+
+        expected_steps = [
+            ["Mul_x0H0", "Mul_x0H1", "Mul_x1H0", "Mul_x1H1"],
+            ["Add_L0N0", "Add_L0N1"],
+            ["Act_L0N0", "Act_L0N1"],
+            ["Mul_H0N0y0", "Mul_H0N1y0", "D_H0N0", "D_H0N1"],
+            ["Add_y0"],
+            ["y0"],
+            ["Error_y0", "D_y0"],
+            ["EG_y0"],
+            ["LRMult_y0", "WG_H0N0W0", "WG_H0N1W0"],
+            ["dW_H0N0y0", "dW_H0N1y0", "WGS_H0N0", "WGS_H0N1"],
+            ["EG_H0N0", "EG_H0N1", "W_H0N0y0", "W_H0N1y0"],
+            ["LRMult_H0N0", "LRMult_H0N1"],
+            ["dW_x0H0N0", "dW_x0H0N1", "dW_x1H0N0", "dW_x1H0N1"],
+            ["W_x0H0N0", "W_x0H0N1", "W_x1H0N0", "W_x1H0N1"],
+            ["x0", "x1", "L_y0"],
+        ]
+
+        sequence = []
+        missing = []
+        for step_names in expected_steps:
+            step_nodes = [node_by_name[n] for n in step_names if n in node_by_name]
+            if len(step_nodes) != len(step_names):
+                missing.extend([n for n in step_names if n not in node_by_name])
+            if step_nodes:
+                sequence.append(step_nodes)
+
+        if missing:
+            # Fallback: compute sequence automatically if our hard-coded list doesn't match
+            processor = GraphProcessor(fullGraph, verbose=False)
+            processor.mark_source_nodes_as_processed()
+            processor.mark_container_nodes_as_processed()
+            seq_result = processor.find_execution_sequence(
+                starting_nodes=fullGraph.starting_nodes,
+                stopping_nodes=fullGraph.stopping_nodes,
+            )
+            sequence = seq_result.get("sequence", [])
+
+        # Remove starting nodes from the manual sequence to avoid duplicate execution
+        starting_set = set(getattr(fullGraph, "starting_nodes", []))
+        if starting_set:
+            filtered_sequence = []
+            for step in sequence:
+                filtered = [n for n in step if n not in starting_set]
+                if filtered:
+                    filtered_sequence.append(filtered)
+            sequence = filtered_sequence
+
+        # Assign manual sequence and pass length
+        if sequence:
+            fullGraph.set_manual_processing_sequence(sequence, strict=True)
+            fullGraph.manual_pass_length = len(sequence)
 
         # Store references for debugging/UI
         fullGraph._mlp_graph = mlpGraph
@@ -1658,3 +1482,123 @@ class ExamplesLoader:
 
         graph.UpdateAdjacencyMatrix()
         return graph
+
+    # =========================================================================
+    # Forward Processing Examples
+    # =========================================================================
+
+    def _build_xor_mlp_forward(self) -> Graph:
+        """Build XOR MLP with forward processing (no buffers).
+
+        Uses MLPGraphForwardProcessing which executes nodes in dependency order
+        based on the sequence finder algorithm. This is more intuitive for
+        understanding neural network forward/backward passes.
+        """
+        from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
+            BackpropGraphForwardProcessing,
+        )
+        from ComputationalGraphs.Core.MLPGraphForwardProcessing import (
+            MLPGraphForwardProcessing,
+        )
+        from ComputationalGraphs.Nodes.LinearNode import LinearNode
+
+        # Create MLP without buffers (for forward processing)
+        mlpGraph = MLPGraphForwardProcessing(
+            numInputs=2,
+            numOutputs=1,
+            numHiddenLayers=1,
+            hiddenLayerSizes=[2],
+            activationFunction=SigmoidNode,
+            outputLayerType=LinearNode,
+        )
+        mlpGraph.BuildMLP()
+
+        # XOR Dataset - Row-per-sample format for forward processing
+        X = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]
+        y = [[0.0], [1.0], [1.0], [0.0]]
+        mlpGraph.LoadData(X, y)
+
+        # Add backpropagation
+        backprop_graph = BackpropGraphForwardProcessing(mlpGraph, learningRate=0.5)
+        backprop_graph.BuildBackprop()
+
+        # Combine graphs
+        fullGraph = Graph()
+        for node in mlpGraph.nodes:
+            fullGraph.AddNode(node)
+        for node in backprop_graph.nodes:
+            fullGraph.AddNode(node)
+
+        # Set starting nodes for forward processing (first computation nodes)
+        fullGraph.starting_nodes = list(mlpGraph.starting_nodes)
+
+        # Set stopping nodes (weight nodes shouldn't trigger successor activation)
+        if hasattr(mlpGraph, "stopping_nodes"):
+            fullGraph.stopping_nodes = list(mlpGraph.stopping_nodes)
+        else:
+            fullGraph.stopping_nodes = []
+
+        fullGraph.UpdateAdjacencyMatrix()
+
+        # Store reference to mlpGraph for potential access later
+        fullGraph._mlp_graph = mlpGraph
+
+        return fullGraph
+
+    def _build_simple_mlp_forward(self) -> Graph:
+        """Build minimal 1x1x1 MLP with forward processing (no buffers).
+
+        Uses MLPGraphForwardProcessing for sequential node execution.
+        """
+        from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
+            BackpropGraphForwardProcessing,
+        )
+        from ComputationalGraphs.Core.MLPGraphForwardProcessing import (
+            MLPGraphForwardProcessing,
+        )
+        from ComputationalGraphs.Nodes.LinearNode import LinearNode
+
+        mlpGraph = MLPGraphForwardProcessing(
+            numInputs=1,
+            numOutputs=1,
+            numHiddenLayers=1,
+            hiddenLayerSizes=[1],
+            activationFunction=SigmoidNode,
+            outputLayerType=LinearNode,
+        )
+        mlpGraph.BuildMLP()
+
+        # Load sample data (simple linear relationship) - Row-per-sample format
+        X = [[0.0], [0.25], [0.5], [0.75], [1.0]]
+        y = [[0.0], [0.25], [0.5], [0.75], [1.0]]
+        mlpGraph.LoadData(X, y)
+
+        # Add backpropagation for training
+        backprop_graph = BackpropGraphForwardProcessing(mlpGraph, learningRate=0.5)
+        backprop_graph.BuildBackprop()
+
+        # Combine graphs
+        fullGraph = Graph()
+        for node in mlpGraph.nodes:
+            fullGraph.AddNode(node)
+        for node in backprop_graph.nodes:
+            fullGraph.AddNode(node)
+
+        # Set starting nodes for forward processing
+        fullGraph.starting_nodes = (
+            list(mlpGraph.starting_nodes) if hasattr(mlpGraph, "starting_nodes") else []
+        )
+
+        # Set stopping nodes (weight nodes shouldn't trigger successor activation)
+        if hasattr(mlpGraph, "stopping_nodes"):
+            fullGraph.stopping_nodes = list(mlpGraph.stopping_nodes)
+        else:
+            fullGraph.stopping_nodes = []
+
+        fullGraph.UpdateAdjacencyMatrix()
+
+        # Store reference to mlpGraph for potential access later
+        fullGraph._mlp_graph = mlpGraph
+        fullGraph._backprop_graph = backprop_graph
+
+        return fullGraph

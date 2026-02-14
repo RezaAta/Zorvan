@@ -108,6 +108,11 @@ class ExecutionController:
         except Exception:
             self.main_window.rebuild_graph()
 
+        # Commit any typed value in the Max Steps spin box before reading it
+        try:
+            self.main_window.max_steps_spin.interpretText()
+        except Exception:
+            pass
         max_steps = self.main_window.max_steps_spin.value()
 
         # Set up progress bar for the upcoming run
@@ -186,6 +191,10 @@ class ExecutionController:
         # Check if execution completed (not just paused)
         if self.graph_runner.current_step >= self.graph_runner.max_steps:
             # Execution finished - run additional iterations from current step
+            try:
+                self.main_window.max_steps_spin.interpretText()
+            except Exception:
+                pass
             additional_steps = self.main_window.max_steps_spin.value()
             new_total = self.graph_runner.current_step + additional_steps
 
@@ -321,6 +330,10 @@ class ExecutionController:
     def reset(self):
         """Full reset: restore graph to snapshot state AND reset processor."""
         self.graph_runner.reset()
+        try:
+            self.main_window.max_steps_spin.interpretText()
+        except Exception:
+            pass
         max_steps = self.main_window.max_steps_spin.value()
         try:
             self.main_window.step_label.setText(f"Step: 0 / {max_steps}")
@@ -412,6 +425,10 @@ class ExecutionController:
         but keeps all node values unchanged.
         """
         self.graph_runner.reset_processor()
+        try:
+            self.main_window.max_steps_spin.interpretText()
+        except Exception:
+            pass
         max_steps = self.main_window.max_steps_spin.value()
         try:
             self.main_window.step_label.setText(f"Step: 0 / {max_steps}")
