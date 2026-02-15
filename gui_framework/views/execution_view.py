@@ -164,6 +164,10 @@ if PYQT_AVAILABLE:
 
             # Play/Start button with themed icon
             self.play_button = QPushButton("Start")
+            try:
+                self.play_button.setProperty("themed", True)
+            except Exception:
+                pass
             self._apply_themed_icon(
                 self.play_button, "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 16
             )
@@ -172,6 +176,10 @@ if PYQT_AVAILABLE:
 
             # Pause button with themed icon
             self.pause_button = QPushButton("Pause")
+            try:
+                self.pause_button.setProperty("themed", True)
+            except Exception:
+                pass
             self._apply_themed_icon(
                 self.pause_button, "fa5s.pause", QStyle.StandardPixmap.SP_MediaPause, 16
             )
@@ -181,6 +189,10 @@ if PYQT_AVAILABLE:
 
             # Resume button with themed icon
             self.resume_button = QPushButton("Resume")
+            try:
+                self.resume_button.setProperty("themed", True)
+            except Exception:
+                pass
             self._apply_themed_icon(
                 self.resume_button, "fa5s.play", QStyle.StandardPixmap.SP_MediaPlay, 16
             )
@@ -190,6 +202,10 @@ if PYQT_AVAILABLE:
 
             # Step button moved next to Resume to match requested layout
             self.step_button = QPushButton("Step")
+            try:
+                self.step_button.setProperty("themed", True)
+            except Exception:
+                pass
             self._apply_themed_icon(
                 self.step_button,
                 "fa5s.step-forward",
@@ -205,6 +221,10 @@ if PYQT_AVAILABLE:
             reset_row = QHBoxLayout()
 
             self.restore_button = QPushButton("Restore")
+            try:
+                self.restore_button.setProperty("themed", True)
+            except Exception:
+                pass
             self._apply_themed_icon(
                 self.restore_button,
                 "fa5s.undo",
@@ -218,6 +238,10 @@ if PYQT_AVAILABLE:
             reset_row.addWidget(self.restore_button)
 
             self.stop_button = QPushButton("Reset Proc")
+            try:
+                self.stop_button.setProperty("themed", True)
+            except Exception:
+                pass
             self._apply_themed_icon(
                 self.stop_button, "fa5s.stop", QStyle.StandardPixmap.SP_MediaStop, 14
             )
@@ -228,6 +252,10 @@ if PYQT_AVAILABLE:
             reset_row.addWidget(self.stop_button)
 
             self.reset_button = QPushButton("Reset All")
+            try:
+                self.reset_button.setProperty("themed", True)
+            except Exception:
+                pass
             self._apply_themed_icon(
                 self.reset_button,
                 "fa5s.sync",
@@ -244,6 +272,10 @@ if PYQT_AVAILABLE:
 
             # Rebuild button (matches legacy)
             self.rebuild_button = QPushButton("Rebuild")
+            try:
+                self.rebuild_button.setProperty("themed", True)
+            except Exception:
+                pass
             self.rebuild_button.setToolTip("Rebuild graph from canvas")
             self.rebuild_button.clicked.connect(self._on_rebuild_clicked)
             layout.addWidget(self.rebuild_button)
@@ -259,6 +291,10 @@ if PYQT_AVAILABLE:
                 icon = _create_themed_icon(fa_name, fallback, size_px)
                 button.setIcon(icon)
                 button.setIconSize(QSize(size_px, size_px))
+                try:
+                    button.setProperty("themed", True)
+                except Exception:
+                    pass
                 # Store icon info for theme updates
                 if not hasattr(self, "_themed_buttons"):
                     self._themed_buttons = []

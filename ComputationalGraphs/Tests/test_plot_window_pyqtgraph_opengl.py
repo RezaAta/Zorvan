@@ -30,7 +30,7 @@ def test_opengl_toggle_recreates_widget():
     app = _create_app()
 
     # Create PlotViewModel with pyqtgraph backend
-    vm = PlotViewModel(max_iterations=10, backend="pyqtgraph")
+    vm = PlotViewModel(backend="pyqtgraph")
     vm.set_nodes(["A", "B"])
 
     # Create PlotView

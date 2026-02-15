@@ -144,27 +144,87 @@ class ColorPreferencesDialog:
                 # Also update the dialog-local theme map so Apply will use the
                 # newly chosen font values even if the user hasn't clicked Save.
                 try:
-                    self.theme[f"{prefix}_font_family"] = font.family()
-                    self.theme[f"{prefix}_font_size"] = str(font.pointSize())
-                    # Try to reuse any friendly weight name that tm.set_font stored;
-                    # fall back to a numeric->name map if needed
-                    weight_name = self.tm.theme.get(f"{prefix}_font_weight", None)
-                    if weight_name is None:
-                        wmap_rev = {
-                            100: "Thin",
-                            200: "Extra-Light",
-                            250: "Extra-Light",
-                            300: "Light",
-                            400: "Normal",
-                            500: "Medium",
-                            600: "DemiBold",
-                            700: "Bold",
-                            800: "Black",
-                        }
-                        weight_name = wmap_rev.get(font.weight(), None)
-                    if weight_name:
-                        self.theme[f"{prefix}_font_weight"] = weight_name
-                    self.theme[f"{prefix}_font_italic"] = bool(font.italic())
+                    # Update the dialog-local theme map (viewmodel) explicitly to ensure
+                    # tests and MVVM views observe the font keys immediately.
+                    try:
+                        # Prefer updating the ViewModel's theme dict directly
+                        if hasattr(self, "_vm") and getattr(self, "_vm") is not None:
+                            vm = self._vm
+                            vm.theme[f"{prefix}_font_family"] = font.family()
+                            vm.theme[f"{prefix}_font_size"] = str(font.pointSize())
+                            weight_name = self.tm.theme.get(
+                                f"{prefix}_font_weight", None
+                            )
+                            if weight_name is None:
+                                wmap_rev = {
+                                    100: "Thin",
+                                    200: "Extra-Light",
+                                    250: "Extra-Light",
+                                    300: "Light",
+                                    400: "Normal",
+                                    500: "Medium",
+                                    600: "DemiBold",
+                                    700: "Bold",
+                                    800: "Black",
+                                }
+                                weight_name = wmap_rev.get(font.weight(), None)
+                            if weight_name:
+                                vm.theme[f"{prefix}_font_weight"] = weight_name
+                            vm.theme[f"{prefix}_font_italic"] = bool(font.italic())
+                            try:
+                                # Notify VM observers
+                                vm.theme_changed += 1
+                            except Exception:
+                                pass
+                        # Also ensure MVVM dialog's viewmodel (if present) is updated
+                        try:
+                            if (
+                                hasattr(self, "_dlg")
+                                and getattr(self, "_dlg") is not None
+                            ):
+                                try:
+                                    dlg_vm = self._dlg.get_viewmodel()
+                                    dlg_vm.theme[f"{prefix}_font_family"] = (
+                                        font.family()
+                                    )
+                                    dlg_vm.theme[f"{prefix}_font_size"] = str(
+                                        font.pointSize()
+                                    )
+                                    if weight_name:
+                                        dlg_vm.theme[f"{prefix}_font_weight"] = (
+                                            weight_name
+                                        )
+                                    dlg_vm.theme[f"{prefix}_font_italic"] = bool(
+                                        font.italic()
+                                    )
+                                    try:
+                                        dlg_vm.theme_changed += 1
+                                    except Exception:
+                                        pass
+                                    # Also ensure the MVVM dialog exposes a `theme` attribute
+                                    # that reflects the VM's theme so legacy callers like
+                                    # `dlg.theme` observe the change immediately.
+                                    try:
+                                        setattr(self._dlg, "theme", dlg_vm.theme)
+                                    except Exception:
+                                        pass
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+
+                    # Also set via the wrapper's dynamic attribute so legacy callers
+                    # that access dlg.theme continue to observe the updated values.
+                    try:
+                        self.theme[f"{prefix}_font_family"] = font.family()
+                        self.theme[f"{prefix}_font_size"] = str(font.pointSize())
+                        if weight_name:
+                            self.theme[f"{prefix}_font_weight"] = weight_name
+                        self.theme[f"{prefix}_font_italic"] = bool(font.italic())
+                    except Exception:
+                        pass
                 except Exception:
                     pass
                 # Refresh the dialog controls to reflect the new font selection

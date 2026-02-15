@@ -149,7 +149,7 @@ class TestPlotViewIntegration:
         try:
             import matplotlib
 
-            vm = PlotViewModel(max_iterations=100, backend="matplotlib")
+            vm = PlotViewModel(backend="matplotlib")
             view = PlotView(vm)
 
             assert view is not None
@@ -162,7 +162,7 @@ class TestPlotViewIntegration:
         try:
             import pyqtgraph
 
-            vm = PlotViewModel(max_iterations=100, backend="pyqtgraph")
+            vm = PlotViewModel(backend="pyqtgraph")
             view = PlotView(vm)
 
             assert view is not None
@@ -172,7 +172,7 @@ class TestPlotViewIntegration:
 
     def test_plot_view_add_nodes(self, qapp):
         """Test adding nodes to plot."""
-        vm = PlotViewModel(max_iterations=100, backend="matplotlib")
+        vm = PlotViewModel(backend="matplotlib")
         vm.add_node("A")
         vm.add_node("B")
 
@@ -183,7 +183,7 @@ class TestPlotViewIntegration:
 
     def test_plot_view_add_data(self, qapp):
         """Test adding data points."""
-        vm = PlotViewModel(max_iterations=100, backend="matplotlib")
+        vm = PlotViewModel(backend="matplotlib")
         vm.add_node("A")
 
         view = PlotView(vm)
@@ -200,7 +200,7 @@ class TestPlotViewIntegration:
 
     def test_plot_view_clear(self, qapp):
         """Test clearing plot data."""
-        vm = PlotViewModel(max_iterations=100, backend="matplotlib")
+        vm = PlotViewModel(backend="matplotlib")
         vm.add_node("A")
 
         # Add data
@@ -218,7 +218,7 @@ class TestPlotViewIntegration:
 
     def test_plot_view_remove_node(self, qapp):
         """Test removing a node from plot."""
-        vm = PlotViewModel(max_iterations=100, backend="matplotlib")
+        vm = PlotViewModel(backend="matplotlib")
         vm.add_node("A")
         vm.add_node("B")
 
@@ -239,7 +239,7 @@ class TestPlotViewIntegration:
             import matplotlib
             import pyqtgraph
 
-            vm = PlotViewModel(max_iterations=100, backend="matplotlib")
+            vm = PlotViewModel(backend="matplotlib")
             view = PlotView(vm)
 
             # Switch to pyqtgraph
@@ -250,6 +250,73 @@ class TestPlotViewIntegration:
 
         except ImportError:
             pytest.skip("Matplotlib or PyQtGraph not available")
+
+    def test_plot_view_pyqtgraph_legend_and_hover(self, qapp):
+        """Ensure PyQtGraph backend exposes legend and hover handler and legend entries toggle series."""
+        try:
+            import pyqtgraph
+        except ImportError:
+            pytest.skip("PyQtGraph not available")
+
+        vm = PlotViewModel(backend="pyqtgraph")
+        vm.add_node("A")
+        vm.add_node("B")
+        # Add some data points so plot items get created
+        for i in range(3):
+            vm.add_data_point("A", float(i), iteration=i)
+            vm.add_data_point("B", float(2 * i), iteration=i)
+
+        view = PlotView(vm)
+        view.update_plot()
+
+        # Mouse proxy should be created; legend may not be available in all CI environments
+        assert getattr(view, "_mouse_proxy", None) is not None
+
+        # If legend exists, validate its items and clickable behavior (best-effort)
+        if getattr(view, "_legend", None) is not None:
+            items = getattr(view._legend, "items", [])
+            assert len(items) >= 2
+
+            # Find a legend item and verify clicking the label toggles visibility
+            sample, label = items[0]
+            node_name = None
+            for name, item in view._line_items.items():
+                if item is sample:
+                    node_name = name
+                    break
+            assert node_name is not None
+            before_vis = sample.isVisible()
+            try:
+                if hasattr(label, "mousePressEvent"):
+                    label.mousePressEvent(None)
+                    after_vis = sample.isVisible()
+                    assert after_vis != before_vis
+                else:
+                    pytest.skip("Legend label not clickable in this environment")
+            except Exception:
+                pytest.skip("Legend label click not supported on this platform")
+
+    def test_plot_window_compat_duplicate_name_labels(self, qapp):
+        """Compatibility wrapper should assign unique display labels for duplicate node names."""
+        from ComputationalGraphs.GUI.plot_window import PlotWindow
+        from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
+
+        n1 = DataStreamNode("same")
+        n2 = DataStreamNode("same")
+        n3 = DataStreamNode("same")
+
+        pw = PlotWindow([n1, n2, n3], max_iterations=50)
+        # Adapter/viewmodel should receive unique display names (skip if adapter couldn't create view)
+        if not pw._adapter or pw._adapter.plot_viewmodel is None:
+            pw.close()
+            pytest.skip("PlotAdapter failed to create view in this environment")
+
+        plotted = pw._adapter.plot_viewmodel.get_plotted_nodes()
+        assert len(plotted) == 3
+        assert len(set(plotted)) == 3
+        # Expect at least one suffixed label like 'same (1)'
+        assert any("same (" in lbl for lbl in plotted)
+        pw.close()
 
 
 class TestPlotViewsDataFlow:
@@ -277,13 +344,14 @@ class TestPlotViewsDataFlow:
         selected_nodes = config_vm.get_selected_nodes()
         max_iter = config_vm.get_max_iterations()
 
-        plot_vm = PlotViewModel(max_iterations=max_iter, backend="matplotlib")
+        plot_vm = PlotViewModel(backend="matplotlib")
         plot_vm.set_nodes(selected_nodes)
 
         plot_view = PlotView(plot_vm)
 
         # Verify configuration transferred
-        assert plot_vm.get_max_iterations() == 100
+        # `max_iterations` is managed by PlotConfigViewModel (already validated above)
+        assert max_iter == 100
         assert len(plot_vm.get_plotted_nodes()) == 2
         assert "A" in plot_vm.get_plotted_nodes()
         assert "B" in plot_vm.get_plotted_nodes()

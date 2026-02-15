@@ -57,10 +57,20 @@ class PlotWindow:
         self.backend = backend
         self.max_iterations = max_iterations
 
-        # Adapter expects node *names*
+        # Adapter expects node *names*/display labels — generate unique display labels for duplicates
         try:
-            node_names = [n.name for n in self._nodes] if self._nodes else []
-            self._adapter._create_plot_window(node_names, max_iterations)
+            self._node_display_map = {}
+            name_counts = {}
+            node_display_names = []
+            for n in self._nodes:
+                base = getattr(n, "name", str(n))
+                cnt = name_counts.get(base, 0)
+                label = base if cnt == 0 else f"{base} ({cnt})"
+                name_counts[base] = cnt + 1
+                node_display_names.append(label)
+                self._node_display_map[n] = label
+
+            self._adapter._create_plot_window(node_display_names, max_iterations)
             self._view = self._adapter.plot_view
         except Exception:
             self._view = None
@@ -77,18 +87,39 @@ class PlotWindow:
 
     def update_plot(self, iteration, active_subgraph=None):
         """Update plot with current node values."""
-        # Collect current node values and forward to adapter
-        data = {n.name: getattr(n, "value", 0) for n in self._nodes}
+        # Collect current node values and forward to adapter using unique display labels
+        data = {
+            self._node_display_map.get(n, getattr(n, "name", str(n))): getattr(
+                n, "value", 0
+            )
+            for n in self._nodes
+        }
         self._adapter.update_plots_batch(data, iteration)
         self._adapter.set_iteration(iteration)
         if active_subgraph is not None:
             self._adapter.set_active_subgraph(active_subgraph)
 
     def add_node(self, node):
-        """Add a node to the plot."""
+        """Add a node to the plot (legacy API).
+
+        This wrapper ensures duplicate node names receive unique display labels
+        so the underlying MVVM plot can show them separately.
+        """
         if node not in self._nodes:
             self._nodes.append(node)
-            self._adapter.add_node(node.name)
+            # Generate a unique display label for this node based on existing labels
+            base = getattr(node, "name", str(node))
+            existing_count = sum(
+                1
+                for v in getattr(self, "_node_display_map", {}).values()
+                if v == base or v.startswith(base + " (")
+            )
+            display_label = (
+                base if existing_count == 0 else f"{base} ({existing_count})"
+            )
+            # Store mapping and notify adapter
+            self._node_display_map[node] = display_label
+            self._adapter.add_node(display_label)
 
     def show(self):
         """Show the plot window."""

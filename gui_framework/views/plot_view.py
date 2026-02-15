@@ -7,6 +7,7 @@ supporting both Matplotlib and PyQtGraph backends with automatic backend switchi
 
 try:
     from PyQt6.QtCore import Qt, QTimer
+    from PyQt6.QtGui import QCursor
     from PyQt6.QtWidgets import (
         QCheckBox,
         QComboBox,
@@ -16,6 +17,7 @@ try:
         QListWidgetItem,
         QPushButton,
         QSpinBox,
+        QToolTip,
         QVBoxLayout,
         QWidget,
     )
@@ -108,6 +110,11 @@ if PYQT_AVAILABLE:
             self.matplotlib_axes = None
             self.pyqtgraph_plot = None
             self._line_items = {}  # node_name -> plot item
+
+            # PyQtGraph extras (legend + hover)
+            self._legend = None
+            self._legend_labels = []
+            self._mouse_proxy = None
 
             # State for legacy features
             self._paused = False
@@ -282,6 +289,30 @@ if PYQT_AVAILABLE:
             self.pyqtgraph_plot.setLabel("left", "Value")
             self.pyqtgraph_plot.setTitle("Node Values Over Time")
 
+            # Legend for PyQtGraph (keeps unique display labels)
+            try:
+                self._legend = self.pyqtgraph_plot.addLegend()
+                self._legend_labels = []
+            except Exception:
+                self._legend = None
+                self._legend_labels = []
+
+            # Mouse hover proxy (for tooltip on nearest point)
+            try:
+                self._mouse_proxy = pg.SignalProxy(
+                    self.pyqtgraph_plot.scene().sigMouseMoved,
+                    rateLimit=60,
+                    slot=self._on_mouse_moved,
+                )
+            except Exception:
+                self._mouse_proxy = None
+
+            # Ensure pan/zoom interactions are enabled
+            try:
+                self.pyqtgraph_plot.setMouseEnabled(x=True, y=True)
+            except Exception:
+                pass
+
             self.plot_widget = self.pyqtgraph_plot
             self.plot_container_layout.addWidget(self.plot_widget)
 
@@ -376,7 +407,21 @@ if PYQT_AVAILABLE:
                 self.matplotlib_canvas.draw()
 
             if self.pyqtgraph_plot:
-                self.pyqtgraph_plot.clear()
+                # Remove legend if present and clear the plot
+                try:
+                    if self._legend is not None:
+                        try:
+                            self.pyqtgraph_plot.removeItem(self._legend)
+                        except Exception:
+                            pass
+                        self._legend = None
+                        self._legend_labels = []
+                except Exception:
+                    pass
+                try:
+                    self.pyqtgraph_plot.clear()
+                except Exception:
+                    pass
 
             self._line_items.clear()
 
@@ -409,11 +454,158 @@ if PYQT_AVAILABLE:
                 )
                 self._line_items[node_name] = line_item
 
+                # Add legend entry (generate unique label if necessary)
+                try:
+                    if self._legend is not None:
+                        unique_label = self._generate_unique_legend_label(node_name)
+                        try:
+                            self._legend.addItem(line_item, unique_label)
+                        except Exception:
+                            # Some Legend implementations may raise; ignore
+                            pass
+
+                        # Make legend label clickable to toggle visibility (best-effort)
+                        try:
+                            for sample, lbl in getattr(self._legend, "items", []):
+                                try:
+                                    text = getattr(lbl, "text", None)
+                                except Exception:
+                                    text = str(lbl)
+                                if text == unique_label:
+                                    # Bind a simple mousePressEvent handler to toggle the curve
+                                    def _make_toggle(name):
+                                        return lambda ev: self._toggle_line_visibility(
+                                            name
+                                        )
+
+                                    try:
+                                        lbl.mousePressEvent = _make_toggle(node_name)
+                                    except Exception:
+                                        pass
+                                    break
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
         def _update_node_list(self):
             """Update the node list widget."""
             self.node_list_widget.clear()
             for node_name in self.get_viewmodel().get_plotted_nodes():
                 self.node_list_widget.addItem(node_name)
+
+        def _generate_unique_legend_label(self, base_label: str) -> str:
+            """Return a unique legend label, tracked in self._legend_labels.
+
+            Appends the chosen label to self._legend_labels to reserve it.
+            """
+            try:
+                existing = getattr(self, "_legend_labels", [])
+                if base_label not in existing:
+                    existing.append(base_label)
+                    return base_label
+                suffix = 1
+                while True:
+                    candidate = f"{base_label} ({suffix})"
+                    if candidate not in existing:
+                        existing.append(candidate)
+                        return candidate
+                    suffix += 1
+            except Exception:
+                return base_label
+
+        def _toggle_line_visibility(self, node_name: str):
+            try:
+                item = self._line_items.get(node_name)
+                if item is not None:
+                    item.setVisible(not item.isVisible())
+            except Exception:
+                pass
+
+        def _on_mouse_moved(self, evt):
+            """Show a tooltip for the nearest data point under the cursor (pyqtgraph).
+
+            Uses the ViewModel data to find the closest point and shows a QToolTip
+            with the format: "Name: <value> (it=<iteration>)" when within a small
+            pixel threshold.
+            """
+            try:
+                if not self.pyqtgraph_plot:
+                    return
+                pos = evt[0]  # SignalProxy wraps the event in a tuple
+                vb = self.pyqtgraph_plot.getPlotItem().vb
+                mousePoint = vb.mapSceneToView(pos)
+                x_view = mousePoint.x()
+                if x_view is None:
+                    try:
+                        QToolTip.hideText()
+                    except Exception:
+                        pass
+                    return
+
+                PIXEL_THRESHOLD = 10.0
+                best = {"name": None, "idx": None, "y": None, "dist": float("inf")}
+
+                # Iterate viewmodel data (node_name -> [PlotDataPoint])
+                all_data = self.get_viewmodel().get_all_plot_data()
+                for node_name, points in all_data.items():
+                    try:
+                        if not points:
+                            continue
+                        # Build arrays of x (iteration) and y (value)
+                        xs = [p.iteration for p in points]
+                        ys = [float(p.value) for p in points]
+                        if not xs:
+                            continue
+                        # Find nearest x index in the series
+                        # Use absolute difference to find nearest iteration
+                        diffs = [abs(x - x_view) for x in xs]
+                        rel_idx = int(diffs.index(min(diffs)))
+                        y_val = ys[rel_idx]
+
+                        # Map this data point to scene coords and compute pixel distance
+                        try:
+                            scene_pt = vb.mapViewToScene(pg.Point(xs[rel_idx], y_val))
+                        except Exception:
+                            try:
+                                scene_pt = vb.mapViewToScene(
+                                    pg.QtCore.QPointF(xs[rel_idx], y_val)
+                                )
+                            except Exception:
+                                continue
+
+                        dx = scene_pt.x() - pos.x()
+                        dy = scene_pt.y() - pos.y()
+                        dist = (dx * dx + dy * dy) ** 0.5
+
+                        if dist < best["dist"]:
+                            best.update(
+                                {
+                                    "name": node_name,
+                                    "idx": rel_idx,
+                                    "y": y_val,
+                                    "dist": dist,
+                                }
+                            )
+                    except Exception:
+                        continue
+
+                if best["name"] is not None and best["dist"] < PIXEL_THRESHOLD:
+                    try:
+                        tooltip = f"{best['name']}: {best['y']:.4f} (it={all_data[best['name']][best['idx']].iteration})"
+                        QToolTip.showText(QCursor.pos(), tooltip)
+                    except Exception:
+                        try:
+                            QToolTip.hideText()
+                        except Exception:
+                            pass
+                else:
+                    try:
+                        QToolTip.hideText()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
 
         def _on_backend_changed(self, index: int):
             """Handle backend combo box change."""
