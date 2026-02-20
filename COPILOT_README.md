@@ -16,13 +16,13 @@ python Experiments/exp_compare_three_approaches.py
 ```
 
 Important files to inspect when debugging or changing behavior:
-- `ComputationalGraphs/Core/Graph.py` – core Graph class and node orchestration
-- `ComputationalGraphs/Core/GraphProcessor.py` – execution engine (concurrent & forward processing)
-- `ComputationalGraphs/Core/MLPGraph.py` – MLP implementation (concurrent, buffers)
-- `ComputationalGraphs/Core/MLPGraphForwardProcessing.py` – MLP (forward processing)
-- `ComputationalGraphs/Core/BackpropGraph.py` and `BackpropGraphForwardProcessing.py` – backprop implementations
-- `ComputationalGraphs/Nodes/ContainerNode.py` – trainable parameter container
-- `ComputationalGraphs/Nodes/BufferNode.py` – timing buffers used by concurrent mode
+- `zorvan/Core/Graph.py` – core Graph class and node orchestration
+- `zorvan/Core/GraphProcessor.py` – execution engine (concurrent & forward processing)
+- `zorvan/Core/MLPGraph.py` – MLP implementation (concurrent, buffers)
+- `zorvan/Core/MLPGraphForwardProcessing.py` – MLP (forward processing)
+- `zorvan/Core/BackpropGraph.py` and `BackpropGraphForwardProcessing.py` – backprop implementations
+- `zorvan/Nodes/ContainerNode.py` – trainable parameter container
+- `zorvan/Nodes/BufferNode.py` – timing buffers used by concurrent mode
 - `.github/copilot-instructions.md` – longer agent instructions and research context
 
 Coding and edit guidelines for assistants:

@@ -4,8 +4,8 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 # Ensure the package imports work - we run from repo root
-from ComputationalGraphs.GUI.plot_window import PlotWindow
-from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
+from zorvan.GUI.plot_window import PlotWindow
+from zorvan.Nodes.DataStreamNode import DataStreamNode
 
 
 def print_labels(pw):

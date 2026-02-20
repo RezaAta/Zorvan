@@ -22,7 +22,7 @@ def test_output_activation_applies_to_output_layer():
 
     # If a Core MLPGraph was returned, its output activation node should be an instance of SigmoidNode
     try:
-        from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+        from zorvan.Nodes.SigmoidNode import SigmoidNode
 
         assert hasattr(g, "outputLayer")
         # outputLayer is list of tuples (AdditionNode, ActivationNode)

@@ -367,7 +367,14 @@ FodyWeavers.xsd
 *.png
 *.egg-info/
 **/*.egg-info/
-ComputationalGraphs.egg-info/
+zorvan.egg-info/
 ComputationalGraph
-\n.venv_old/
-\n.venv_old/
+.venv_old/
+
+# Local logs and crash dumps
+*.log
+*.dmp
+*.stackdump
+
+# Release-export hygiene
+artifacts/

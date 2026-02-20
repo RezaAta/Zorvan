@@ -15,11 +15,11 @@ import tempfile
 
 import pytest
 
-import ComputationalGraphs.Core.CGJsonIO as CGJsonIO
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
+import zorvan.Core.CGJsonIO as CGJsonIO
+from zorvan.Core.Graph import Graph
+from zorvan.Nodes.AdditionNode import AdditionNode
+from zorvan.Nodes.ContainerNode import ContainerNode
+from zorvan.Nodes.MultiplicationNode import MultiplicationNode
 
 
 class TestGraphIdentity:
@@ -352,7 +352,7 @@ class TestProcessingQueue:
 
     def test_add_to_queue(self):
         """Can add graph+iterations to queue."""
-        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+        from zorvan.GUI.graph_runner import GraphRunner
 
         g = Graph(name="Test Graph")
         runner = GraphRunner()
@@ -366,7 +366,7 @@ class TestProcessingQueue:
 
     def test_add_multiple_to_queue(self):
         """Can add multiple items to queue."""
-        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+        from zorvan.GUI.graph_runner import GraphRunner
 
         g1 = Graph(name="Graph A")
         g2 = Graph(name="Graph B")
@@ -384,7 +384,7 @@ class TestProcessingQueue:
 
     def test_clear_queue(self):
         """Can clear the processing queue."""
-        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+        from zorvan.GUI.graph_runner import GraphRunner
 
         g = Graph(name="Test Graph")
         runner = GraphRunner()
@@ -398,7 +398,7 @@ class TestProcessingQueue:
 
     def test_queue_repeat_mode(self):
         """Can set and check queue repeat mode with count."""
-        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+        from zorvan.GUI.graph_runner import GraphRunner
 
         runner = GraphRunner()
 
@@ -426,7 +426,7 @@ class TestPerGraphSnapshots:
 
     def test_save_snapshot_for_graph(self):
         """Can save snapshot for specific graph."""
-        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+        from zorvan.GUI.graph_runner import GraphRunner
 
         g = Graph(name="Test Graph")
         a = ContainerNode("a", value=5)
@@ -448,7 +448,7 @@ class TestPerGraphSnapshots:
 
     def test_separate_snapshots_per_graph(self):
         """Snapshots are kept separate per graph."""
-        from ComputationalGraphs.GUI.graph_runner import GraphRunner
+        from zorvan.GUI.graph_runner import GraphRunner
 
         g1 = Graph(name="Graph A")
         a1 = ContainerNode("a1", value=1)

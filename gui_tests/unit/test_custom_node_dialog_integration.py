@@ -4,10 +4,10 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.combined_node_palette import CombinedNodePalette
-from ComputationalGraphs.GUI.custom_node_manager import get_custom_node_manager
 from gui_framework.viewmodels.dialogs.custom_node_viewmodel import CustomNodeViewModel
 from gui_framework.views.dialogs.custom_node_dialog import CustomNodeDialog
+from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from zorvan.GUI.custom_node_manager import get_custom_node_manager
 
 
 def test_dialog_save_updates_palette():

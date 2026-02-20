@@ -1,13 +1,14 @@
 import sys
+from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 
 sys.path.insert(
     0,
-    r"c:/My Stuff/Uni & Research/Artificial Inteligence/Computational Graph/Implementations/ComputationalGraphs",
+    str(Path(__file__).resolve().parents[1]),
 )
-from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.examples_loader import ExamplesLoader
+from zorvan.GUI.main_window import MainWindow
 
 app = QApplication(sys.argv)
 loader = ExamplesLoader()

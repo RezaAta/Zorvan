@@ -7,8 +7,8 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.theme import get_theme_manager
-from ComputationalGraphs.GUI.theme_widgets import ThemedPushButton, ThemedScrollArea
+from zorvan.GUI.theme import get_theme_manager
+from zorvan.GUI.theme_widgets import ThemedPushButton, ThemedScrollArea
 
 
 def test_themed_push_button_updates_on_theme_change():

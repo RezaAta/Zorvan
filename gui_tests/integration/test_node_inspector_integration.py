@@ -2,8 +2,8 @@ import pytest
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.Nodes.Node import Node
+from zorvan.GUI.main_window import MainWindow
+from zorvan.Nodes.Node import Node
 
 try:
     from gui_framework.views.dialogs.node_properties_dialog import NodePropertiesDialog

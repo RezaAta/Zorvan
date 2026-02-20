@@ -71,13 +71,13 @@ def test_mlp_generator_dialog_creates_graph(qapp):
     assert len(g.nodes) > 20
 
     # Ensure the returned graph implements the Core.Graph API so editor/commands work
-    from ComputationalGraphs.Core.Graph import Graph as CoreGraph
+    from zorvan.Core.Graph import Graph as CoreGraph
 
     assert isinstance(g, CoreGraph)
     assert hasattr(g, "AddNode")
 
     # If we set the graph into a MainWindow, the canvas VM should load nodes/edges
-    from ComputationalGraphs.GUI.main_window import MainWindow
+    from zorvan.GUI.main_window import MainWindow
 
     mw = MainWindow()
     mw.set_graph(g)

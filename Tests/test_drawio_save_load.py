@@ -1,10 +1,10 @@
 import os
 import tempfile
 
-from ComputationalGraphs.Core.DrawioIO import DrawioIO
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.Core.DrawioIO import DrawioIO
+from zorvan.Core.Graph import Graph
+from zorvan.GUI.examples_loader import ExamplesLoader
+from zorvan.GUI.main_window import MainWindow
 
 
 def test_drawio_save_load():
@@ -85,7 +85,7 @@ def test_drawio_save_load_gui_roundtrip():
         # Save file using FileIOController behaviour
         win.file_io_controller.graph = g
         # Use DrawioIO.save directly, passing canvas - CLI-based saving not tested here
-        from ComputationalGraphs.Core.DrawioIO import DrawioIO
+        from zorvan.Core.DrawioIO import DrawioIO
 
         DrawioIO.save(g, tmpname, canvas=win.canvas, preserve_visuals=True)
         # Clear canvas and reload from file through controller

@@ -9,11 +9,9 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
 
-from ComputationalGraphs.Nodes.InitializableContainerNode import (
-    InitializableContainerNode,
-)
 from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
 from gui_framework.views.node_editor_dialog import NodeEditorDialog
+from zorvan.Nodes.InitializableContainerNode import InitializableContainerNode
 
 
 def test_more_details_panel_and_type_position(qtbot):
@@ -64,7 +62,7 @@ def test_more_details_panel_and_type_position(qtbot):
     # Values match the node (gui_pos is formatted)
     assert dlg._widgets["gui_pos"].text() == "x: 10, y: 20"
     # Support both legacy string and new Enum-backed computationType
-    from ComputationalGraphs.Nodes.computation_type import to_value
+    from zorvan.Nodes.computation_type import to_value
 
     assert dlg._widgets["computationType"].text() == to_value(
         getattr(node, "computationType", "")

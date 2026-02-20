@@ -13,7 +13,7 @@ pytestmark = pytest.mark.skipif(
     not PYQT, reason="PyQt6 required for dialog adapter test"
 )
 
-from ComputationalGraphs.GUI.node_editor_dialog import NodeEditorDialog
+from zorvan.GUI.node_editor_dialog import NodeEditorDialog
 
 
 @pytest.fixture(scope="module")

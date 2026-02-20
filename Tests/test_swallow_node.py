@@ -19,9 +19,9 @@ class TestSwallowNodeCommand:
 
     def test_swallow_single_node_in_chain(self):
         """Test swallowing a node in a simple chain: a -> b -> c becomes a -> c."""
-        from ComputationalGraphs.Core.Graph import Graph
-        from ComputationalGraphs.GUI.commands import SwallowNodeCommand
-        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+        from zorvan.Core.Graph import Graph
+        from zorvan.GUI.commands import SwallowNodeCommand
+        from zorvan.Nodes.DisplayNode import DisplayNode
 
         # Create a simple graph: a -> b -> c
         graph = Graph()
@@ -66,9 +66,9 @@ class TestSwallowNodeCommand:
 
     def test_swallow_preserves_multiple_predecessors(self):
         """Test swallowing a node with multiple predecessors."""
-        from ComputationalGraphs.Core.Graph import Graph
-        from ComputationalGraphs.GUI.commands import SwallowNodeCommand
-        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+        from zorvan.Core.Graph import Graph
+        from zorvan.GUI.commands import SwallowNodeCommand
+        from zorvan.Nodes.DisplayNode import DisplayNode
 
         # Create graph: a1 -> b <- a2, b -> c
         graph = Graph()
@@ -109,9 +109,9 @@ class TestSwallowNodeCommand:
 
     def test_swallow_preserves_multiple_successors(self):
         """Test swallowing a node with multiple successors."""
-        from ComputationalGraphs.Core.Graph import Graph
-        from ComputationalGraphs.GUI.commands import SwallowNodeCommand
-        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+        from zorvan.Core.Graph import Graph
+        from zorvan.GUI.commands import SwallowNodeCommand
+        from zorvan.Nodes.DisplayNode import DisplayNode
 
         # Create graph: a -> b -> c1, b -> c2
         graph = Graph()
@@ -152,9 +152,9 @@ class TestSwallowNodeCommand:
 
     def test_swallow_multiple_nodes(self):
         """Test swallowing multiple nodes at once: a -> b -> c -> d, swallow b,c => a -> d."""
-        from ComputationalGraphs.Core.Graph import Graph
-        from ComputationalGraphs.GUI.commands import SwallowNodeCommand
-        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+        from zorvan.Core.Graph import Graph
+        from zorvan.GUI.commands import SwallowNodeCommand
+        from zorvan.Nodes.DisplayNode import DisplayNode
 
         # Create a chain: a -> b -> c -> d
         graph = Graph()
@@ -205,9 +205,9 @@ class TestSwallowNodeCommand:
 
     def test_swallow_avoids_duplicate_edges(self):
         """Test that swallowing doesn't create duplicate edges."""
-        from ComputationalGraphs.Core.Graph import Graph
-        from ComputationalGraphs.GUI.commands import SwallowNodeCommand
-        from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+        from zorvan.Core.Graph import Graph
+        from zorvan.GUI.commands import SwallowNodeCommand
+        from zorvan.Nodes.DisplayNode import DisplayNode
 
         # Create graph where a already connects to c: a -> b -> c, a -> c
         graph = Graph()

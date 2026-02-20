@@ -7,8 +7,8 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
+from zorvan.GUI.graph_canvas import GraphCanvas
+from zorvan.Nodes.AdditionNode import AdditionNode
 
 
 @pytest.fixture

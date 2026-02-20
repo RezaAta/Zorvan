@@ -152,7 +152,7 @@ Created `test_plot.py` for quick testing:
 
 ### Run Test
 ```bash
-cd "c:\My Stuff\Uni & Research\Artificial Inteligence\Computational Graph\Implementations\ComputationalGraphs"
+# from repository root
 python test_plot.py
 ```
 

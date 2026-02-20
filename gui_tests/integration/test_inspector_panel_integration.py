@@ -9,7 +9,7 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
 
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.main_window import MainWindow
 
 
 @pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")

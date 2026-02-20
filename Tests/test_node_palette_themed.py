@@ -6,8 +6,8 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.combined_node_palette import CombinedNodePalette
-from ComputationalGraphs.GUI.theme_widgets import ThemedScrollArea
+from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from zorvan.GUI.theme_widgets import ThemedScrollArea
 
 
 def test_combined_node_palette_uses_themed_components():

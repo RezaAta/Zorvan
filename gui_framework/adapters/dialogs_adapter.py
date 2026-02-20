@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Any, Optional
 from ..events.bus import Event, EventType, get_event_bus
 
 if TYPE_CHECKING:
-    from ComputationalGraphs.GUI.controllers.dialog_controller import DialogController
-    from ComputationalGraphs.GUI.main_window import MainWindow
+    from zorvan.GUI.controllers.dialog_controller import DialogController
+    from zorvan.GUI.main_window import MainWindow
 
 logger = logging.getLogger(__name__)
 

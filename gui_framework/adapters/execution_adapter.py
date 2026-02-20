@@ -12,8 +12,8 @@ from ..events.bus import Event, EventType, get_event_bus
 from ..viewmodels.execution_viewmodel import ExecutionStatus, ExecutionViewModel
 
 if TYPE_CHECKING:
-    from ComputationalGraphs.GUI.graph_runner import GraphRunner
-    from ComputationalGraphs.GUI.main_window import MainWindow
+    from zorvan.GUI.graph_runner import GraphRunner
+    from zorvan.GUI.main_window import MainWindow
 
 logger = logging.getLogger(__name__)
 

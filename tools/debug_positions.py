@@ -2,8 +2,8 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.examples_loader import ExamplesLoader
+from zorvan.GUI.main_window import MainWindow
 
 app = QApplication(sys.argv)
 loader = ExamplesLoader()

@@ -12,8 +12,8 @@ from ..events.bus import Event, EventType, get_event_bus
 from ..viewmodels.examples_loader_viewmodel import ExamplesLoaderViewModel
 
 if TYPE_CHECKING:
-    from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
-    from ComputationalGraphs.GUI.main_window import MainWindow
+    from zorvan.GUI.examples_loader import ExamplesLoader
+    from zorvan.GUI.main_window import MainWindow
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,7 @@ class ExamplesLoaderAdapter:
 
             # Apply to main window if it's a graph
             try:
-                from ComputationalGraphs.Core.Graph import Graph
+                from zorvan.Core.Graph import Graph
 
                 if isinstance(built, Graph):
                     self.main_window.set_graph(built)

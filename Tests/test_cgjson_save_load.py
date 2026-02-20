@@ -5,14 +5,14 @@ import tempfile
 import numpy as np
 import pytest
 
-from ComputationalGraphs.Core.CGJsonIO import load, save
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
+from zorvan.Core.CGJsonIO import load, save
+from zorvan.Core.Graph import Graph
+from zorvan.GUI.examples_loader import ExamplesLoader
 
 # Skip GUI tests when PyQt6 isn't available in the environment
 pytest.importorskip("PyQt6")
 
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.main_window import MainWindow
 
 
 def test_cgjson_save_load_basic():

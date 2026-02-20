@@ -12,8 +12,8 @@ from ..events.bus import Event, EventType, get_event_bus
 from ..viewmodels.combined_node_palette_viewmodel import CombinedNodePaletteViewModel
 
 if TYPE_CHECKING:
-    from ComputationalGraphs.GUI.combined_node_palette import CombinedNodePalette
-    from ComputationalGraphs.GUI.main_window import MainWindow
+    from zorvan.GUI.combined_node_palette import CombinedNodePalette
+    from zorvan.GUI.main_window import MainWindow
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ class PaletteAdapter:
                 return
 
             # Try direct dialog creation
-            from ComputationalGraphs.GUI.custom_node_dialog import CustomNodeDialog
+            from zorvan.GUI.custom_node_dialog import CustomNodeDialog
 
             dlg = CustomNodeDialog(parent=self.main_window)
             dlg.exec()

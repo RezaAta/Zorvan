@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased (PyQTUI)
 
+- Refactor: renamed Python package from `ComputationalGraphs` to `zorvan` and updated all imports and documentation accordingly.  This will become part of v0.1.1.
+
+- Release: Added Zorvan public release assets and governance baseline (`LICENSE`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `SUPPORT.md`, issue templates).
+- Release: Added curated export tooling (`scripts/export_zorvan_release.ps1`) and scope definition (`RELEASE_SCOPE_ZORVAN.md`).
+- Release: Stabilized CI workflow for public launch and added publish guide (`PUBLISH_ZORVAN.md`).
+
 - GUI: Added a numeric speed input (ms/step) `QSpinBox` in the control panel to type the processing speed directly. The numeric input is synced with the existing speed slider and label.
 - GUI: Added copy/cut/paste support in the canvas (keyboard shortcuts: Ctrl+C, Ctrl+V, Ctrl+X). Copy/paste copies visual node items and recreates internal edges between copied nodes. Pasted nodes are centered in the current view and selected.
 - GUI: Added Copy/Cut/Paste actions in the Edit menu with standard shortcuts.
@@ -17,6 +23,6 @@ All notable changes to this project will be documented in this file.
 	 - Grid display and snapping are toggleable from the Visualization panel. Grid rendering is optimized to draw only the visible area.
 
 - GUI: Introduced `ThemeMixin` helper to centralize theme application and simplify widget updates; migrated `NodePalette` to use `ThemeMixin` and added `Tests/test_node_palette_theme.py` to verify theme updates.
-- GUI: Remove debug prints and modal debug dialogs from "Connect to Self" (context menu); replaced with non-intrusive logging and transient status messages. Added `ComputationalGraphs/Tests/test_connect_to_self.py` to assert no modal debug dialogs are shown during connect/disconnect.
-- Core: Removed unused `computationTime` and `computationStructure` helpers from node classes and related setter methods to simplify node internals; added `ComputationalGraphs/Tests/test_basicnode_cleanup.py` to assert no external dependency on these helpers.
+- GUI: Remove debug prints and modal debug dialogs from "Connect to Self" (context menu); replaced with non-intrusive logging and transient status messages. Added `zorvan/Tests/test_connect_to_self.py` to assert no modal debug dialogs are shown during connect/disconnect.
+- Core: Removed unused `computationTime` and `computationStructure` helpers from node classes and related setter methods to simplify node internals; added `zorvan/Tests/test_basicnode_cleanup.py` to assert no external dependency on these helpers.
 (End of changes)

@@ -15,8 +15,8 @@ from PyQt6.QtWidgets import QApplication
 app = QApplication.instance() or QApplication([])
 
 # Import after QApplication so any widget creation works
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.main_window import MainWindow
+from zorvan.GUI.theme import get_theme_manager
 
 # Apply theme to ensure stylesheet tokens are present
 tm = get_theme_manager()

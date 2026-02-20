@@ -10,8 +10,8 @@ This guide helps developers get started with the new MVVM GUI architecture. Whet
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/RezaAta/ComputationalGraphs.git
-cd ComputationalGraphs
+git clone https://github.com/ORG_OR_USER/zorvan.git
+cd zorvan
 
 # 2. Create virtual environment (recommended)
 python -m venv .venv
@@ -26,7 +26,7 @@ pip install -r requirements_dev.txt
 pip install -e .
 
 # 5. Verify installation
-python -c "import ComputationalGraphs; print('✓ Core installed')"
+python -c "import zorvan; print('✓ Core installed')"
 python -c "from PyQt6.QtWidgets import QApplication; print('✓ PyQt6 installed')"
 python -m pytest --version
 ```
@@ -51,7 +51,7 @@ pytest
 # Run specific test categories
 pytest gui_tests/unit/                    # Unit tests (no GUI)
 pytest gui_tests/integration/             # Integration tests (headless)
-pytest ComputationalGraphs/Tests/MLPTests/  # Core MLP tests
+pytest zorvan/Tests/MLPTests/  # Core MLP tests
 
 # Run with coverage
 pytest --cov=gui_framework --cov-report=html
@@ -131,24 +131,24 @@ class CounterViewModel(BaseViewModel):
     ViewModel for a simple counter widget.
     Pure Python, no PyQt dependencies - easily testable.
     """
-    
+
     # Observable property - views will auto-update when this changes
     count = ObservableProperty("count", default=0)
-    
+
     def __init__(self):
         super().__init__()
         self._max_count = 100
-    
+
     def initialize(self) -> None:
         """Called when view is shown"""
         # Subscribe to events if needed
         pass
-    
+
     def cleanup(self) -> None:
         """Called when view is closed"""
         # Cleanup resources
         pass
-    
+
     def increment(self) -> None:
         """User action: increment counter"""
         if self.count < self._max_count:
@@ -160,18 +160,18 @@ class CounterViewModel(BaseViewModel):
                 type=EventType.CUSTOM,
                 payload={"count": self.count}
             ))
-    
+
     def decrement(self) -> None:
         """User action: decrement counter"""
         if self.count > 0:
             self.count -= 1
             self._update_state()
-    
+
     def reset(self) -> None:
         """User action: reset counter"""
         self.count = 0
         self._update_state()
-    
+
     def _update_state(self) -> None:
         """Update central state store"""
         # In real widget, update relevant state slice
@@ -190,46 +190,46 @@ def test_counter_increments():
     """Test counter increments correctly"""
     vm = CounterViewModel()
     vm.initialize()
-    
+
     initial = vm.count
     vm.increment()
-    
+
     assert vm.count == initial + 1
 
 def test_counter_decrements():
     """Test counter decrements correctly"""
     vm = CounterViewModel()
     vm.count = 5
-    
+
     vm.decrement()
-    
+
     assert vm.count == 4
 
 def test_counter_does_not_go_negative():
     """Test counter does not go below zero"""
     vm = CounterViewModel()
     vm.count = 0
-    
+
     vm.decrement()
-    
+
     assert vm.count == 0
 
 def test_counter_respects_max():
     """Test counter does not exceed maximum"""
     vm = CounterViewModel()
     vm.count = 100
-    
+
     vm.increment()
-    
+
     assert vm.count == 100
 
 def test_counter_reset():
     """Test counter resets to zero"""
     vm = CounterViewModel()
     vm.count = 42
-    
+
     vm.reset()
-    
+
     assert vm.count == 0
 
 # Run tests: pytest gui_tests/unit/test_counter_vm.py -v
@@ -250,20 +250,20 @@ class CounterView(BaseView):
     View for counter widget.
     Thin UI layer - all logic in ViewModel.
     """
-    
+
     def __init__(self, viewmodel: CounterViewModel, parent=None):
         super().__init__(viewmodel, parent)
         self._setup_ui()
-    
+
     def _bind_viewmodel(self) -> None:
         """Bind view to viewmodel properties"""
         # Observe count changes
         self._viewmodel.observe_property("count", self._on_count_changed)
-    
+
     def _setup_ui(self) -> None:
         """Setup PyQt UI"""
         layout = QVBoxLayout(self)
-        
+
         # Counter display
         self.label = QLabel("0")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -271,44 +271,44 @@ class CounterView(BaseView):
         font.setPointSize(24)
         self.label.setFont(font)
         layout.addWidget(self.label)
-        
+
         # Buttons
         button_layout = QHBoxLayout()
-        
+
         self.decrement_btn = QPushButton("-")
         self.decrement_btn.clicked.connect(self._on_decrement_clicked)
         button_layout.addWidget(self.decrement_btn)
-        
+
         self.reset_btn = QPushButton("Reset")
         self.reset_btn.clicked.connect(self._on_reset_clicked)
         button_layout.addWidget(self.reset_btn)
-        
+
         self.increment_btn = QPushButton("+")
         self.increment_btn.clicked.connect(self._on_increment_clicked)
         button_layout.addWidget(self.increment_btn)
-        
+
         layout.addLayout(button_layout)
-        
+
         # Initialize display
         self._update_display()
-    
+
     def _on_count_changed(self, old_value: int, new_value: int) -> None:
         """React to count change from viewmodel"""
         self._update_display()
-    
+
     def _update_display(self) -> None:
         """Update label with current count"""
         self.label.setText(str(self._viewmodel.count))
-    
+
     # Event handlers - delegate to viewmodel
     def _on_increment_clicked(self) -> None:
         """Increment button clicked"""
         self._viewmodel.increment()
-    
+
     def _on_decrement_clicked(self) -> None:
         """Decrement button clicked"""
         self._viewmodel.decrement()
-    
+
     def _on_reset_clicked(self) -> None:
         """Reset button clicked"""
         self._viewmodel.reset()
@@ -368,10 +368,10 @@ def test_counter_ui_updates(qapp):
     """Test that UI updates when viewmodel changes"""
     vm = CounterViewModel()
     view = CounterView(vm)
-    
+
     # Increment through viewmodel
     vm.increment()
-    
+
     # UI should update
     assert view.label.text() == "1"
 
@@ -379,13 +379,13 @@ def test_counter_button_clicks(qapp):
     """Test that button clicks update viewmodel"""
     vm = CounterViewModel()
     view = CounterView(vm)
-    
+
     # Click increment button
     view.increment_btn.click()
-    
+
     # Viewmodel should update
     assert vm.count == 1
-    
+
     # UI should also update
     assert view.label.text() == "1"
 
@@ -506,14 +506,14 @@ class MyViewModel(BaseViewModel):
         # 1. Validate input
         if not self._validate(data):
             return
-        
+
         # 2. Update local state
         self._local_state = data
-        
+
         # 3. Update central state
         store = get_store()
         store.update(my_slice=new_state)
-        
+
         # 4. Publish event
         bus = get_event_bus()
         bus.publish(Event(
@@ -533,18 +533,18 @@ class MyViewModel(BaseViewModel):
             StateEvent.GRAPH_CHANGED,
             self._on_graph_changed
         )
-        
+
         # Subscribe to events
         self._event_bus.subscribe(
             EventType.NODE_CREATED,
             self._on_node_created
         )
-    
+
     def _on_graph_changed(self, state_slice):
         """React to graph change"""
         # Update local state from central state
         self._sync_from_state()
-    
+
     def _on_node_created(self, event):
         """React to node creation event"""
         # Update UI or trigger other actions
@@ -557,11 +557,11 @@ class MyViewModel(BaseViewModel):
 class MyViewModel(BaseViewModel):
     # Define observable property
     zoom_level = ObservableProperty("zoom_level", default=1.0)
-    
+
     def __init__(self):
         super().__init__()
         # Property is automatically observable
-    
+
     def set_zoom(self, new_zoom):
         """Update zoom level"""
         # Property setter notifies observers
@@ -574,7 +574,7 @@ class MyView(BaseView):
             "zoom_level",
             self._on_zoom_changed
         )
-    
+
     def _on_zoom_changed(self, old_value, new_value):
         """React to zoom change"""
         # Update UI
@@ -617,18 +617,18 @@ def qapp():
 def test_view_updates_from_viewmodel(qapp):
     vm = MyViewModel()
     view = MyView(vm)
-    
+
     vm.update_value(42)
-    
+
     assert view.label.text() == "42"
 
 # ✓ GOOD: Test user interaction
 def test_button_updates_viewmodel(qapp):
     vm = MyViewModel()
     view = MyView(vm)
-    
+
     view.button.click()
-    
+
     assert vm.some_property == expected_value
 ```
 
@@ -643,11 +643,11 @@ def test_with_mock_store():
     mock_store.get_state.return_value = Mock(
         execution=Mock(is_running=True)
     )
-    
+
     with patch('gui_framework.viewmodels.my_vm.get_store', return_value=mock_store):
         vm = MyViewModel()
         vm.some_action()
-        
+
         # Verify store was updated
         mock_store.update.assert_called_once()
 ```

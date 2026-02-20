@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from ComputationalGraphs.GUI.combined_node_palette import CombinedNodePalette
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_palette_applies_theme_colors():
@@ -15,7 +15,7 @@ def test_palette_applies_theme_colors():
     palette = CombinedNodePalette(parent)
 
     # Use dialog helper to set theme colors to avoid direct signal issues
-    from ComputationalGraphs.GUI.color_preferences import ColorPreferencesDialog
+    from zorvan.GUI.color_preferences import ColorPreferencesDialog
 
     dlg = ColorPreferencesDialog(parent)
     dlg.set_color_for_key("header_bg", "#112233", apply_theme=True)
@@ -42,7 +42,7 @@ def test_palette_applies_theme_colors():
         "Basic Operations": palette._category_panels.get("Basic Operations")
     }
     # Add a node for repaint check
-    from ComputationalGraphs.GUI.combined_node_palette import NodeItemWidget
+    from zorvan.GUI.combined_node_palette import NodeItemWidget
 
     w = NodeItemWidget("AdditionNode", "Addition", "Adds values", palette)
     palette._node_widgets.append((w, "Basic Operations", "addition"))

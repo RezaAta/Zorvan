@@ -1,9 +1,9 @@
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.GUI.node_editor_dialog import NodeEditorDialog
-from ComputationalGraphs.GUI.node_item import NodeItem
+from zorvan.GUI.main_window import MainWindow
+from zorvan.GUI.node_editor_dialog import NodeEditorDialog
+from zorvan.GUI.node_item import NodeItem
 
 pytestmark = pytest.mark.skipif(
     not QApplication.instance() and QApplication([]) is None,
@@ -16,7 +16,7 @@ import logging
 
 def test_edited_value_used_by_processor_but_not_lost_in_runtime(qtbot, caplog):
     # Enable debug-level logs for Node assignments to trace resets
-    caplog.set_level(logging.DEBUG, logger="ComputationalGraphs.Nodes.Node")
+    caplog.set_level(logging.DEBUG, logger="zorvan.Nodes.Node")
 
     """Reproduce reported behavior: edit a node value, start run, ensure processor uses edited value
     and after run the GUI display matches the runtime value (no surprise reset to 0)."""
@@ -27,7 +27,7 @@ def test_edited_value_used_by_processor_but_not_lost_in_runtime(qtbot, caplog):
     qtbot.addWidget(mw)
 
     # Create a dummy node that returns its value on Operation
-    from ComputationalGraphs.Nodes.BasicNode import BasicNode
+    from zorvan.Nodes.BasicNode import BasicNode
 
     class ProbeBasicNode(BasicNode):
         def __init__(self):

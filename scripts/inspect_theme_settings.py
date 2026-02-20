@@ -1,4 +1,4 @@
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.theme import get_theme_manager
 
 m = get_theme_manager()
 name = "__inspect_test__"

@@ -1,4 +1,4 @@
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.main_window import MainWindow
 
 
 def test_step_progress_bar_presence_and_updates():
@@ -24,7 +24,7 @@ def test_step_progress_bar_presence_and_updates():
     assert win.step_label.text() == "Step: 0 / 20"
 
     # The progress widget should be themed: chunk color should match accent
-    from ComputationalGraphs.GUI.theme import get_theme_manager
+    from zorvan.GUI.theme import get_theme_manager
 
     tm = get_theme_manager()
     accent = tm.get_color("accent").name()

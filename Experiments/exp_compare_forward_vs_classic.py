@@ -12,13 +12,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ClassicMLP import ClassicMLP
-from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
-    BackpropGraphForwardProcessing,
-)
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from zorvan.Core.BackpropGraphForwardProcessing import BackpropGraphForwardProcessing
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 print("=" * 70)
 print("CONTROLLED COMPARISON: Forward Processing vs Classic MLP")

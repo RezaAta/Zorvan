@@ -22,7 +22,6 @@ from ClassicMLP import ClassicMLP
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
 from Experiments.HybridTempPredictionComparison import (
     build_graph_mlp,
     copy_weights_to_classic,
@@ -30,6 +29,7 @@ from Experiments.HybridTempPredictionComparison import (
     graph_predict_single,
     train_graph_mlp_with_mse_history,
 )
+from zorvan.Core.GraphProcessor import GraphProcessor
 
 logger = logging.getLogger(__name__)
 

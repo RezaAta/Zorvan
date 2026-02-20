@@ -20,7 +20,7 @@ import sys
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.main_window import MainWindow
 
 
 def main(argv=None):
@@ -49,7 +49,7 @@ def main(argv=None):
 
     # Apply theme if available
     try:
-        from ComputationalGraphs.GUI.theme import get_theme_manager
+        from zorvan.GUI.theme import get_theme_manager
 
         tm = get_theme_manager()
         tm.apply_theme(app)

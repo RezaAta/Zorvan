@@ -18,20 +18,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ClassicMLP import ClassicMLP
-from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode as DNode
-from ComputationalGraphs.Nodes.DivisionNode import DivisionNode
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.MaxNode import MaxNode
-from ComputationalGraphs.Nodes.MinNode import MinNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
-from ComputationalGraphs.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
-from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
-from ComputationalGraphs.Nodes.SubtractionNode import SubtractionNode
+from zorvan.Core.BackpropGraph import BackpropGraph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.Nodes.AdditionNode import AdditionNode
+from zorvan.Nodes.DisplayNode import DisplayNode
+from zorvan.Nodes.DisplayNode import DisplayNode as DNode
+from zorvan.Nodes.DivisionNode import DivisionNode
+from zorvan.Nodes.LinearNode import LinearNode
+from zorvan.Nodes.MaxNode import MaxNode
+from zorvan.Nodes.MinNode import MinNode
+from zorvan.Nodes.MultiplicationNode import MultiplicationNode
+from zorvan.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
+from zorvan.Nodes.ReLUNode import ReLUNode
+from zorvan.Nodes.SubtractionNode import SubtractionNode
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ def train_graph_mlp(X, y, epochs=80, itersPerEpoch=4, mlp=None):
     backprop = BackpropGraph(mlp, learningRate=0.001)
     backprop.BuildBackprop()
 
-    from ComputationalGraphs.Core.Graph import Graph
+    from zorvan.Core.Graph import Graph
 
     full = Graph()
     for node in mlp.nodes:
@@ -188,7 +188,7 @@ def train_graph_mlp_with_mse_history(
     backprop = BackpropGraph(mlp, learningRate=learning_rate)
     backprop.BuildBackprop()
 
-    from ComputationalGraphs.Core.Graph import Graph
+    from zorvan.Core.Graph import Graph
 
     full = Graph()
     for node in mlp.nodes:
@@ -244,8 +244,8 @@ def train_graph_mlp_with_mse_history(
 
 def build_hybrid_from_trained_mlp(mlpGraph, setpoint=22.0):
     # Build a Graph that uses the trained mlpGraph nodes and attaches FIS
-    from ComputationalGraphs.Core.Graph import Graph
-    from ComputationalGraphs.Nodes import (
+    from zorvan.Core.Graph import Graph
+    from zorvan.Nodes import (
         AdditionNode,
         BufferNode,
         DisplayNode,

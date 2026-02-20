@@ -25,10 +25,8 @@ def tournament_selection(pop, fitnesses, k=3):
     for _ in range(2):
         # Diagnostic counter (per-tournament)
         try:
-            from ComputationalGraphs.Nodes.BulkTournamentNode import TOURNAMENTS_RUN
-            from ComputationalGraphs.Nodes.BulkTournamentNode import (
-                TOURNAMENTS_RUN as _dummy,
-            )
+            from zorvan.Nodes.BulkTournamentNode import TOURNAMENTS_RUN
+            from zorvan.Nodes.BulkTournamentNode import TOURNAMENTS_RUN as _dummy
         except Exception:
             # If import fails (unlikely), skip diagnostic increment
             _dummy = None

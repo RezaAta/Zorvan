@@ -2,7 +2,7 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_apply_theme_sets_stylesheet():
@@ -16,7 +16,7 @@ def test_apply_theme_sets_stylesheet():
         # Fallback: apply the template manually so tests remain robust in varied envs
         import os
 
-        from ComputationalGraphs.GUI import theme as theme_mod
+        from zorvan.GUI import theme as theme_mod
 
         base_dir = os.path.dirname(theme_mod.__file__)
         template_path = os.path.join(base_dir, "styles_template.qss")

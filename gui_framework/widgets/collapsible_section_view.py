@@ -124,7 +124,7 @@ class CollapsibleSectionView(BaseView):
         """Apply theme styling to the toggle button."""
         try:
             # Try to use theme manager if available
-            from ComputationalGraphs.GUI.theme import get_theme_manager
+            from zorvan.GUI.theme import get_theme_manager
 
             tm = get_theme_manager()
             header = tm.get_color("header_bg", "#239483").name()

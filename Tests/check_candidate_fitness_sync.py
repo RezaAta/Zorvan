@@ -1,10 +1,10 @@
 import random
 
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Nodes.BufferNode import BufferNode
-from ComputationalGraphs.Nodes.DeJongSphereNode import DeJongSphereNode
-from ComputationalGraphs.Nodes.PopulationNode import PopulationNode
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Nodes.BufferNode import BufferNode
+from zorvan.Nodes.DeJongSphereNode import DeJongSphereNode
+from zorvan.Nodes.PopulationNode import PopulationNode
 
 
 def sphere_function(x):

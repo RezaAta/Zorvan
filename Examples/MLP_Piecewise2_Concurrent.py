@@ -14,13 +14,13 @@ piecewise function:
 
 import numpy as np
 
-from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Nodes.BufferNode import BufferNode
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
+from zorvan.Core.BackpropGraph import BackpropGraph
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.Nodes.BufferNode import BufferNode
+from zorvan.Nodes.LinearNode import LinearNode
+from zorvan.Nodes.ReLUNode import ReLUNode
 
 
 def piecewise_function(x):

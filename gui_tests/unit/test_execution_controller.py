@@ -1,4 +1,4 @@
-from ComputationalGraphs.GUI.controllers.execution_controller import ExecutionController
+from zorvan.GUI.controllers.execution_controller import ExecutionController
 
 
 class DummyLabel:

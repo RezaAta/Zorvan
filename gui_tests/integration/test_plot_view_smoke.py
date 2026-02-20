@@ -31,8 +31,8 @@ pytestmark = pytest.mark.skipif(
     reason="PyQt6 and Pillow required for smoke test",
 )
 
-from ComputationalGraphs.GUI.plot_view import PlotView
 from gui_framework.viewmodels.plot_viewmodel import PlotViewModel
+from zorvan.GUI.plot_view import PlotView
 
 
 @pytest.fixture(scope="module")

@@ -9,9 +9,9 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
 
-from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
 from gui_framework.views.node_editor_dialog import NodeEditorDialog
+from zorvan.Nodes.DataStreamNode import DataStreamNode
 
 
 def test_spinbox_updates_do_not_crash_on_rapid_changes(qtbot):

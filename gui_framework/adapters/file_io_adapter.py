@@ -12,8 +12,8 @@ from ..events.bus import Event, EventType, get_event_bus
 from ..viewmodels.file_io_viewmodel import FileIOViewModel
 
 if TYPE_CHECKING:
-    from ComputationalGraphs.GUI.controllers.file_io_controller import FileIOController
-    from ComputationalGraphs.GUI.main_window import MainWindow
+    from zorvan.GUI.controllers.file_io_controller import FileIOController
+    from zorvan.GUI.main_window import MainWindow
 
 logger = logging.getLogger(__name__)
 

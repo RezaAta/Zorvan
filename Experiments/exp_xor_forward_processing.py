@@ -1,4 +1,4 @@
-# Moved from ComputationalGraphs/Tests/MLPTests/TestingForwardProcessingOnXOR.py
+# Moved from zorvan/Tests/MLPTests/TestingForwardProcessingOnXOR.py
 # Renamed to Experiments/exp_xor_forward_processing.py
 
 """
@@ -11,14 +11,12 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
-    BackpropGraphForwardProcessing,
-)
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from zorvan.Core.BackpropGraphForwardProcessing import BackpropGraphForwardProcessing
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
+from zorvan.Nodes.LinearNode import LinearNode
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 print("=" * 70)
 print("Testing MLPGraphForwardProcessing on XOR Problem")

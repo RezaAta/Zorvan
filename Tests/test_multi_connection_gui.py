@@ -9,8 +9,8 @@ from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
-from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
+from zorvan.GUI.graph_canvas import GraphCanvas
+from zorvan.Nodes.DataStreamNode import DataStreamNode
 
 
 def test_multi_connection_basic(qtbot=None):

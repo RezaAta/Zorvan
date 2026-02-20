@@ -13,15 +13,13 @@ import time
 
 import numpy as np
 
-from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
-    BackpropGraphForwardProcessing,
-)
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from zorvan.Core.BackpropGraph import BackpropGraph
+from zorvan.Core.BackpropGraphForwardProcessing import BackpropGraphForwardProcessing
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
+from zorvan.Nodes.LinearNode import LinearNode
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 print("=" * 80)
 print("BIAS IMPLEMENTATION TESTS")

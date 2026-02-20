@@ -2,9 +2,9 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.Nodes.BufferNode import BufferNode
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+from zorvan.GUI.main_window import MainWindow
+from zorvan.Nodes.BufferNode import BufferNode
+from zorvan.Nodes.DisplayNode import DisplayNode
 
 app = QApplication(sys.argv)
 window = MainWindow()
@@ -19,7 +19,7 @@ disp_item = window.canvas.add_node_item(disp, x=200, y=0)
 buff_item = window.canvas.add_node_item(buff, x=400, y=0)
 edge = window.canvas.add_edge_item(disp, buff)
 print("before: buff.predecessors =", buff.predecessors)
-from ComputationalGraphs.GUI.predecessors_dialog import PredecessorsDialog
+from zorvan.GUI.predecessors_dialog import PredecessorsDialog
 
 dlg = PredecessorsDialog(buff_item, window.canvas)
 print("dlg count init =", dlg.list_widget.count())

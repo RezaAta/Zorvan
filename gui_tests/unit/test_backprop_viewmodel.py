@@ -1,8 +1,8 @@
 import pytest
 
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 from gui_framework.viewmodels.dialogs.backprop_viewmodel import BackpropViewModel
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 
 def test_backprop_viewmodel_add_remove():

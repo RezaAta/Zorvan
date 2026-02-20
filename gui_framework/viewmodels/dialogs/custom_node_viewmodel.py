@@ -171,7 +171,7 @@ class CustomNodeViewModel(BaseViewModel):
     def get_definition(self):
         """Return a CustomNodeDefinition-like object built from current fields."""
         try:
-            from ComputationalGraphs.GUI.custom_node_manager import CustomNodeDefinition
+            from zorvan.GUI.custom_node_manager import CustomNodeDefinition
 
             return CustomNodeDefinition(
                 type_name=self._type_name,
@@ -213,9 +213,7 @@ class CustomNodeViewModel(BaseViewModel):
         """
         definition = self.get_definition()
         try:
-            from ComputationalGraphs.GUI.custom_node_manager import (
-                get_custom_node_manager,
-            )
+            from zorvan.GUI.custom_node_manager import get_custom_node_manager
 
             mgr = get_custom_node_manager()
             return mgr.add_definition(definition)

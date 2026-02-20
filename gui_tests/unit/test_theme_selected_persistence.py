@@ -1,4 +1,4 @@
-from ComputationalGraphs.GUI.theme import ThemeManager, get_theme_manager
+from zorvan.GUI.theme import ThemeManager, get_theme_manager
 
 
 def test_selected_theme_persistence():
@@ -19,7 +19,7 @@ def test_selected_theme_persistence():
     # Simulate restart by forcing a new manager instance
     try:
         # Reset the module-level singleton
-        import ComputationalGraphs.GUI.theme as theme_mod
+        import zorvan.GUI.theme as theme_mod
 
         if hasattr(theme_mod, "_manager"):
             try:

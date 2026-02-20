@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.color_preferences import ColorPreferencesDialog
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.color_preferences import ColorPreferencesDialog
+from zorvan.GUI.main_window import MainWindow
 
 
 def test_speed_slider_has_track_and_updates_with_theme():

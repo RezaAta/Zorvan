@@ -3,8 +3,8 @@ import random
 import numpy as np
 
 from ClassicMLP import ClassicMLP
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
 from Experiments.HybridTempPredictionComparison import copy_weights_to_classic
+from zorvan.Core.MLPGraph import MLPGraph
 
 
 def test_bias_initialization_and_copy():

@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 from PyQt6.QtCore import QPoint, QPointF, Qt
 from PyQt6.QtGui import QWheelEvent
@@ -6,9 +7,9 @@ from PyQt6.QtWidgets import QApplication
 
 sys.path.insert(
     0,
-    r"c:/My Stuff/Uni & Research/Artificial Inteligence/Computational Graph/Implementations/ComputationalGraphs",
+    str(Path(__file__).resolve().parents[1]),
 )
-from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
+from zorvan.GUI.graph_canvas import GraphCanvas
 
 app = QApplication([])
 canvas = GraphCanvas()

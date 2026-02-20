@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.graph_canvas import SubgraphControlButton
+from zorvan.GUI.graph_canvas import SubgraphControlButton
 
 
 def test_subgraph_control_button_initializes_with_fa_or_text():

@@ -1,4 +1,4 @@
-# Moved from ComputationalGraphs/Tests/MLPTests/TestingOnIris.py
+# Moved from zorvan/Tests/MLPTests/TestingOnIris.py
 # Renamed to Experiments/exp_testing_on_iris.py
 
 import matplotlib.pyplot as plt
@@ -7,11 +7,11 @@ from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 
-from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from zorvan.Core.BackpropGraph import BackpropGraph
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 # Step 1: Load and preprocess the Iris dataset
 iris = load_iris()

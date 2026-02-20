@@ -2,7 +2,7 @@ import sys
 
 from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
 
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.main_window import MainWindow
 
 """
 DEPRECATED: list_control_panel_buttons.py

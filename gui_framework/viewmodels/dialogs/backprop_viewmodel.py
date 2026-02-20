@@ -5,9 +5,9 @@ from typing import Optional
 from gui_framework.viewmodels.base import BaseViewModel, ObservableProperty
 
 try:
-    from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-    from ComputationalGraphs.Core.Graph import Graph
-    from ComputationalGraphs.Core.MLPGraph import MLPGraph
+    from zorvan.Core.BackpropGraph import BackpropGraph
+    from zorvan.Core.Graph import Graph
+    from zorvan.Core.MLPGraph import MLPGraph
 
     BACKPROP_AVAILABLE = True
 except Exception:

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and support
+    url: https://github.com/ORG_OR_USER/zorvan/discussions
+    about: Ask usage questions and general support topics in Discussions.

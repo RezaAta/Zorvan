@@ -9,9 +9,7 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
 
-from ComputationalGraphs.GUI.combined_node_palette_adapter import (
-    CombinedNodePaletteAdapter,
-)
+from zorvan.GUI.combined_node_palette_adapter import CombinedNodePaletteAdapter
 
 
 @pytest.fixture(scope="module")

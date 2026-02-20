@@ -1,4 +1,4 @@
-# Contributing to ComputationalGraphs
+# Contributing to Zorvan
 
 Thanks for contributing! This project uses a set of policies and tools to keep code quality high and a predictable workflow. Follow the steps below to make your contribution smooth and consistent.
 

@@ -298,8 +298,8 @@ class TestPlotViewIntegration:
 
     def test_plot_window_compat_duplicate_name_labels(self, qapp):
         """Compatibility wrapper should assign unique display labels for duplicate node names."""
-        from ComputationalGraphs.GUI.plot_window import PlotWindow
-        from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
+        from zorvan.GUI.plot_window import PlotWindow
+        from zorvan.Nodes.DataStreamNode import DataStreamNode
 
         n1 = DataStreamNode("same")
         n2 = DataStreamNode("same")

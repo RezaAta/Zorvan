@@ -30,11 +30,11 @@ The current GUI uses a controller pattern, which is already better than monolith
        │
        ├─> 16 Controllers (mixed view/logic)
        │   ├─> ExecutionController
-       │   ├─> FileIOController  
+       │   ├─> FileIOController
        │   └─> ... (others)
        │
        ├─> GraphCanvas (2606 LOC, view+logic mixed)
-       ├─> NodePalette  
+       ├─> NodePalette
        └─> Graph (Model)
 ```
 
@@ -155,11 +155,11 @@ class StateStore:
         self._history: List[AppState] = [self._state]
         self._history_index: int = 0
         self._subscribers: Dict[StateEvent, List[Callable]] = {}
-        
+
     def get_state(self) -> AppState:
         """Get current immutable state snapshot"""
         return self._state
-    
+
     def update(self, **changes) -> None:
         """
         Update state immutably.
@@ -170,21 +170,21 @@ class StateStore:
             **{**self._state.__dict__, **changes}
         )
         self._state = new_state
-        
+
         # Add to history (for time-travel debugging)
         self._history = self._history[:self._history_index + 1]
         self._history.append(new_state)
         self._history_index += 1
-        
+
         # Notify subscribers
         self._notify_subscribers(changes.keys())
-    
+
     def subscribe(self, event: StateEvent, callback: Callable) -> None:
         """Subscribe to state changes"""
         if event not in self._subscribers:
             self._subscribers[event] = []
         self._subscribers[event].append(callback)
-    
+
     def undo(self) -> bool:
         """Time-travel: go back one state"""
         if self._history_index > 0:
@@ -193,7 +193,7 @@ class StateStore:
             self._notify_all_subscribers()
             return True
         return False
-    
+
     def redo(self) -> bool:
         """Time-travel: go forward one state"""
         if self._history_index < len(self._history) - 1:
@@ -238,15 +238,15 @@ class EventType(Enum):
     NODE_DELETED = "node_deleted"
     NODE_SELECTED = "node_selected"
     EDGE_CREATED = "edge_created"
-    
+
     # Execution Events
     EXECUTION_STEP_COMPLETE = "execution_step_complete"
     GRAPH_RESET = "graph_reset"
-    
+
     # File Events
     GRAPH_LOADED = "graph_loaded"
     GRAPH_SAVED = "graph_saved"
-    
+
     # Theme Events
     THEME_UPDATED = "theme_updated"
 
@@ -265,28 +265,28 @@ class EventBus:
     def __init__(self):
         self._subscribers: Dict[EventType, List[Callable]] = {}
         self._event_queue: List[Event] = []
-        
+
     def subscribe(self, event_type: EventType, callback: Callable) -> None:
         """Subscribe to event"""
         if event_type not in self._subscribers:
             self._subscribers[event_type] = []
         self._subscribers[event_type].append(callback)
-    
+
     def unsubscribe(self, event_type: EventType, callback: Callable) -> None:
         """Unsubscribe from event"""
         if event_type in self._subscribers:
             self._subscribers[event_type].remove(callback)
-    
+
     def publish(self, event: Event) -> None:
         """Publish event (synchronous)"""
         if event.type in self._subscribers:
             for callback in self._subscribers[event.type]:
                 callback(event)
-    
+
     def publish_async(self, event: Event) -> None:
         """Queue event for async processing"""
         self._event_queue.append(event)
-    
+
     def process_queue(self) -> None:
         """Process queued events (call from main loop)"""
         while self._event_queue:
@@ -321,12 +321,12 @@ class ObservableProperty:
         self.name = f"_{name}"
         self.default = default
         self.observers: List[Callable] = []
-    
+
     def __get__(self, obj, objtype=None):
         if obj is None:
             return self
         return getattr(obj, self.name, self.default)
-    
+
     def __set__(self, obj, value):
         old_value = getattr(obj, self.name, self.default)
         setattr(obj, self.name, value)
@@ -343,24 +343,24 @@ class BaseViewModel(ABC):
         self._store = get_store()
         self._event_bus = get_event_bus()
         self._property_observers: Dict[str, List[Callable]] = {}
-        
+
     def observe_property(self, prop_name: str, callback: Callable) -> None:
         """Observe property changes (for view binding)"""
         if prop_name not in self._property_observers:
             self._property_observers[prop_name] = []
         self._property_observers[prop_name].append(callback)
-    
+
     def notify_property_changed(self, prop_name: str, old_value: Any, new_value: Any) -> None:
         """Notify observers of property change"""
         if prop_name in self._property_observers:
             for callback in self._property_observers[prop_name]:
                 callback(old_value, new_value)
-    
+
     @abstractmethod
     def initialize(self) -> None:
         """Initialize view-model (called after construction)"""
         pass
-    
+
     @abstractmethod
     def cleanup(self) -> None:
         """Cleanup resources (called before destruction)"""
@@ -368,22 +368,22 @@ class BaseViewModel(ABC):
 
 class CanvasViewModel(BaseViewModel):
     """Example: Canvas view-model"""
-    
+
     zoom_level = ObservableProperty("zoom_level", 1.0)
-    
+
     def __init__(self):
         super().__init__()
         self.selected_nodes: List[str] = []
-        
+
     def initialize(self) -> None:
         # Subscribe to state changes
-        self._store.subscribe(StateEvent.SELECTION_CHANGED, 
+        self._store.subscribe(StateEvent.SELECTION_CHANGED,
                             self._on_selection_changed)
-        
+
     def cleanup(self) -> None:
         # Unsubscribe (if needed)
         pass
-        
+
     def select_node(self, node_id: str) -> None:
         """User action: select node"""
         self.selected_nodes.append(node_id)
@@ -391,13 +391,13 @@ class CanvasViewModel(BaseViewModel):
         state = self._store.get_state()
         self._store.update(
             canvas=state.canvas.__class__(
-                **{**state.canvas.__dict__, 
+                **{**state.canvas.__dict__,
                    "selected_nodes": self.selected_nodes}
             )
         )
         # Publish event
         self._event_bus.publish(Event(EventType.NODE_SELECTED, node_id))
-    
+
     def _on_selection_changed(self, state_slice: Any) -> None:
         """React to selection change from other sources"""
         # Update local state if needed
@@ -424,7 +424,7 @@ class BaseView(QWidget, ABC):
         super().__init__(parent)
         self._viewmodel = viewmodel
         self._bind_viewmodel()
-        
+
     @abstractmethod
     def _bind_viewmodel(self) -> None:
         """
@@ -432,17 +432,17 @@ class BaseView(QWidget, ABC):
         Called once during construction.
         """
         pass
-    
+
     @abstractmethod
     def _setup_ui(self) -> None:
         """Setup PyQt UI (called after binding)"""
         pass
-    
+
     def showEvent(self, event):
         """View becomes visible"""
         super().showEvent(event)
         self._viewmodel.initialize()
-    
+
     def closeEvent(self, event):
         """View closes"""
         self._viewmodel.cleanup()
@@ -450,22 +450,22 @@ class BaseView(QWidget, ABC):
 
 class CanvasView(BaseView):
     """Example: Canvas view"""
-    
+
     def __init__(self, viewmodel: CanvasViewModel, parent=None):
         super().__init__(viewmodel, parent)
         self._setup_ui()
-    
+
     def _bind_viewmodel(self) -> None:
         """Bind to view-model"""
         # Observe zoom changes
-        self._viewmodel.observe_property("zoom_level", 
+        self._viewmodel.observe_property("zoom_level",
                                         self._on_zoom_changed)
-    
+
     def _setup_ui(self) -> None:
         """Setup PyQt UI"""
         # Create QGraphicsScene, etc.
         pass
-    
+
     def _on_zoom_changed(self, old_value: float, new_value: float) -> None:
         """React to zoom change"""
         # Update QGraphicsView transform
@@ -492,8 +492,8 @@ class WidgetRegistry:
         self._viewmodels: Dict[str, Type[BaseViewModel]] = {}
         self._views: Dict[str, Type[BaseView]] = {}
         self._factories: Dict[str, Callable] = {}
-        
-    def register_widget(self, 
+
+    def register_widget(self,
                        name: str,
                        viewmodel_cls: Type[BaseViewModel],
                        view_cls: Type[BaseView],
@@ -503,7 +503,7 @@ class WidgetRegistry:
         self._views[name] = view_cls
         if factory:
             self._factories[name] = factory
-    
+
     def create_widget(self, name: str, **kwargs) -> tuple:
         """
         Create widget instance.
@@ -511,18 +511,18 @@ class WidgetRegistry:
         """
         if name not in self._viewmodels:
             raise ValueError(f"Widget '{name}' not registered")
-        
+
         # Use factory if provided
         if name in self._factories:
             return self._factories[name](**kwargs)
-        
+
         # Default creation
         vm_cls = self._viewmodels[name]
         view_cls = self._views[name]
         viewmodel = vm_cls()
         view = view_cls(viewmodel, **kwargs)
         return viewmodel, view
-    
+
     def get_registered_widgets(self) -> list:
         """Get list of registered widget names"""
         return list(self._viewmodels.keys())
@@ -558,19 +558,19 @@ class WindowManager:
         self._windows: Dict[str, QMainWindow] = {}
         self._active_window: Optional[str] = None
         self._registry = get_widget_registry()
-        
+
     def register_main_window(self, name: str, window: QMainWindow) -> None:
         """Register a main window"""
         self._windows[name] = window
         if self._active_window is None:
             self._active_window = name
-    
+
     def show_window(self, name: str) -> None:
         """Show a registered window"""
         if name in self._windows:
             self._windows[name].show()
             self._active_window = name
-    
+
     def close_window(self, name: str) -> None:
         """Close a registered window"""
         if name in self._windows:
@@ -578,13 +578,13 @@ class WindowManager:
             del self._windows[name]
             if self._active_window == name:
                 self._active_window = None
-    
+
     def get_active_window(self) -> Optional[QMainWindow]:
         """Get currently active window"""
         if self._active_window:
             return self._windows.get(self._active_window)
         return None
-    
+
     def shutdown(self) -> None:
         """Shutdown application"""
         for window in self._windows.values():
@@ -613,7 +613,7 @@ def get_window_manager(app: QApplication = None) -> WindowManager:
 # gui_framework/execution/worker.py
 
 from PyQt6.QtCore import QThread, pyqtSignal
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.GraphProcessor import GraphProcessor
 
 class ExecutionWorker(QThread):
     """
@@ -623,37 +623,37 @@ class ExecutionWorker(QThread):
     step_completed = pyqtSignal(int)  # iteration number
     execution_finished = pyqtSignal()
     execution_error = pyqtSignal(str)  # error message
-    
+
     def __init__(self, graph, processor_type: str, max_iterations: int):
         super().__init__()
         self.graph = graph
         self.processor_type = processor_type
         self.max_iterations = max_iterations
         self._stop_requested = False
-        
+
     def run(self):
         """Execute in worker thread"""
         try:
             processor = GraphProcessor(self.graph)
-            
+
             for i in range(self.max_iterations):
                 if self._stop_requested:
                     break
-                    
+
                 # Execute one step
                 if self.processor_type == "concurrent":
                     processor.ComputeGraph(iterations=1)
                 else:
                     processor.ForwardProcessing(iterations=1)
-                
+
                 # Emit progress
                 self.step_completed.emit(i + 1)
-            
+
             self.execution_finished.emit()
-            
+
         except Exception as e:
             self.execution_error.emit(str(e))
-    
+
     def stop(self):
         """Request stop"""
         self._stop_requested = True
@@ -791,7 +791,7 @@ Existing code that depends on old GUI APIs will use adapters:
 ```python
 # gui_framework/adapters/legacy_adapter.py
 
-from ComputationalGraphs.GUI.main_window import MainWindow as OldMainWindow
+from zorvan.GUI.main_window import MainWindow as OldMainWindow
 from gui_framework.window.manager import get_window_manager
 
 class LegacyMainWindowAdapter:
@@ -802,14 +802,14 @@ class LegacyMainWindowAdapter:
     def __init__(self):
         self._window_manager = get_window_manager()
         self._main_window = self._window_manager.get_active_window()
-        
+
     def set_graph(self, graph):
         """Old API: set graph"""
         # Delegate to new StateStore
         from gui_framework.state.store import get_store
         store = get_store()
         store.update(graph=graph)
-    
+
     # ... other adapter methods
 ```
 
@@ -825,7 +825,7 @@ USE_NEW_GUI = False  # Feature flag
 if USE_NEW_GUI:
     from gui_framework.views.canvas_view import CanvasView as Canvas
 else:
-    from ComputationalGraphs.GUI.graph_canvas import GraphCanvas as Canvas
+    from zorvan.GUI.graph_canvas import GraphCanvas as Canvas
 ```
 
 ## Testing Strategy
@@ -843,9 +843,9 @@ from gui_framework.viewmodels.canvas_vm import CanvasViewModel
 def test_select_node_updates_state():
     vm = CanvasViewModel()
     vm.initialize()
-    
+
     vm.select_node("node1")
-    
+
     assert "node1" in vm.selected_nodes
     # Verify state store updated
     from gui_framework.state.store import get_store
@@ -877,10 +877,10 @@ def qapp():
 def test_canvas_node_creation(qapp):
     vm = CanvasViewModel()
     view = CanvasView(vm)
-    
+
     # Simulate node creation
     vm.create_node("AdditionNode", x=100, y=100)
-    
+
     # Verify node appears in view
     # ...
 ```
@@ -898,10 +898,10 @@ def test_app_launches():
     from PyQt6.QtWidgets import QApplication
     import os
     os.environ['QT_QPA_PLATFORM'] = 'offscreen'
-    
+
     app = QApplication([])
     manager = get_window_manager(app)
-    
+
     # Should not crash
     assert manager is not None
 ```
@@ -920,15 +920,15 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
-    
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
@@ -945,24 +945,24 @@ jobs:
           libegl1 \
           libgl1 \
           libdbus-1-3
-    
+
     - name: Install Python dependencies
       run: |
         pip install -r requirements.txt
         pip install -r requirements_gui.txt
         pip install -r requirements_dev.txt
         pip install -e .
-    
+
     - name: Run unit tests (no GUI)
       run: |
         pytest gui_tests/unit/ -v
-    
+
     - name: Run integration tests (headless)
       run: |
         export QT_QPA_PLATFORM=offscreen
         export QT_DEBUG_PLUGINS=0
         pytest gui_tests/integration/ -v
-    
+
     - name: Run smoke tests
       run: |
         export QT_QPA_PLATFORM=offscreen
@@ -1020,16 +1020,16 @@ from PyQt6.QtCore import Qt
 
 class AccessibleView(BaseView):
     """Base class with accessibility features"""
-    
+
     def _setup_accessibility(self):
         """Setup accessibility features"""
         # Set accessible name/description
         self.setAccessibleName("Graph Canvas")
         self.setAccessibleDescription("Interactive computational graph editor")
-        
+
         # Enable keyboard focus
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        
+
         # Set role
         # Qt automatically handles screen readers
 ```
@@ -1046,18 +1046,18 @@ Use Sphinx with autodoc:
 class CanvasViewModel(BaseViewModel):
     """
     View-model for the graph canvas.
-    
+
     Manages canvas state including:
     - Node/edge selection
     - Zoom and pan
     - Clipboard operations
-    
+
     Example:
         >>> vm = CanvasViewModel()
         >>> vm.initialize()
         >>> vm.select_node("node1")
         >>> vm.zoom_level = 1.5
-    
+
     Attributes:
         zoom_level (float): Current zoom level (1.0 = 100%)
         selected_nodes (List[str]): List of selected node IDs
@@ -1110,16 +1110,15 @@ def safe_file_path(user_path: str) -> Path:
 
 This MVVM architecture provides:
 
-✅ **Testability**: Pure Python view-models, no GUI in unit tests  
-✅ **Modularity**: Plugin registry, clear boundaries  
-✅ **Maintainability**: Explicit state flow, event-driven  
-✅ **Backward Compatibility**: Adapter pattern preserves old APIs  
-✅ **Performance**: Worker threads, optimized rendering  
-✅ **Accessibility**: Keyboard navigation, screen reader support  
+✅ **Testability**: Pure Python view-models, no GUI in unit tests
+✅ **Modularity**: Plugin registry, clear boundaries
+✅ **Maintainability**: Explicit state flow, event-driven
+✅ **Backward Compatibility**: Adapter pattern preserves old APIs
+✅ **Performance**: Worker threads, optimized rendering
+✅ **Accessibility**: Keyboard navigation, screen reader support
 
 Next steps:
 1. Review and approve this architecture
 2. Begin Phase 1: Foundation implementation
 3. Create proof-of-concept widget
 4. Iterate based on feedback
-

@@ -1,6 +1,8 @@
-# ComputationalGraphs
+# Zorvan
 
-ComputationalGraphs is a repository for implementing computational graph architectures and experiments across different modeling paradigms (MLP, ANFIS, Fuzzy Systems, Evolutionary Algorithms).
+Zorvan is a repository for implementing computational graph architectures and experiments across different modeling paradigms (MLP, ANFIS, Fuzzy Systems, Evolutionary Algorithms).
+
+> Note: internal Python package/module paths have been renamed to `zorvan` starting with v0.1.0.
 
 ## 🚀 Quick Start
 
@@ -26,3 +28,5 @@ python Examples/exp_xor_classic_mlp.py
 ## 🔧 Development
 
 See `AGENT_POLICY.md` for agent usage guidance and contribution rules. Use `CONTRIBUTING.md` for guidelines, and run `scripts/run_checks.ps1` to validate code locally.
+
+For public launch steps, see `PUBLISH_ZORVAN.md` and `ZORVAN_RELEASE_PLAN.md`.

@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.combined_node_palette import CombinedNodePalette
+from zorvan.GUI.combined_node_palette import CombinedNodePalette
 
 
 def test_combined_palette_populates_from_parent_categories():

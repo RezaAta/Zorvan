@@ -257,7 +257,7 @@ pw = create_plot_window(nodes, max_iterations, parent, backend='matplotlib')
 
 ### Quick Test (test_plot_ux.py)
 ```bash
-cd "c:\My Stuff\Uni & Research\Artificial Inteligence\Computational Graph\Implementations\ComputationalGraphs"
+# from repository root
 python test_plot_ux.py
 ```
 

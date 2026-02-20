@@ -5,10 +5,7 @@ import pytest
 
 pytest.importorskip("PyQt6")
 
-from ComputationalGraphs.GUI.custom_node_manager import (
-    CustomNodeDefinition,
-    CustomNodeManager,
-)
+from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
 
 
 def test_remove_definition_persists(tmp_path):

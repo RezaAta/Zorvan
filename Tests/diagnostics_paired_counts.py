@@ -5,10 +5,10 @@ classic_results, graph_results = run_comparison_trials(
     num_trials=3, pop_size=21, generations=10, num_elites=1, genome_length=5
 )
 
-from ComputationalGraphs.Nodes.BulkTournamentNode import TOURNAMENTS_RUN
+from zorvan.Nodes.BulkTournamentNode import TOURNAMENTS_RUN
 
 # Import counters
-from ComputationalGraphs.Nodes.SingleInputCrossover import CHILDREN_PRODUCED
+from zorvan.Nodes.SingleInputCrossover import CHILDREN_PRODUCED
 
 print("\nDiagnostics:")
 print(f"BulkTournamentNode TOURNAMENTS_RUN = {TOURNAMENTS_RUN}")

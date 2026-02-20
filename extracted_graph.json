@@ -662,7 +662,7 @@
         "forcedBatchProcessing": false,
         "inputCount": 1,
         "computationType": "basic",
-        "derivative": "<class 'ComputationalGraphs.Nodes.LinearNodeDerivative.LinearNodeDerivative'>",
+        "derivative": "<class 'zorvan.Nodes.LinearNodeDerivative.LinearNodeDerivative'>",
         "id": "m"
       },
       "visuals": {

@@ -100,11 +100,11 @@ class MLPGeneratorViewModel(BaseViewModel):
 
         # Attempt to construct a real Core MLPGraph so weights/biases/buffers are generated
         try:
-            from ComputationalGraphs.Core.MLPGraph import MLPGraph
-            from ComputationalGraphs.Nodes.LinearNode import LinearNode
-            from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
-            from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
-            from ComputationalGraphs.Nodes.TanhNode import TanhNode
+            from zorvan.Core.MLPGraph import MLPGraph
+            from zorvan.Nodes.LinearNode import LinearNode
+            from zorvan.Nodes.ReLUNode import ReLUNode
+            from zorvan.Nodes.SigmoidNode import SigmoidNode
+            from zorvan.Nodes.TanhNode import TanhNode
 
             # Map activation names to node classes
             activation_map = {
@@ -170,8 +170,8 @@ class MLPGeneratorViewModel(BaseViewModel):
             # Try to convert to a Core.Graph if available so the returned object
             # integrates well with the rest of the application (AddNode API, ids, adjacency matrix)
             try:
-                from ComputationalGraphs.Core.Graph import Graph as CoreGraph
-                from ComputationalGraphs.Nodes.BasicNode import BasicNode
+                from zorvan.Core.Graph import Graph as CoreGraph
+                from zorvan.Nodes.BasicNode import BasicNode
 
                 class PlaceholderNode(BasicNode):
                     def __init__(self, name):

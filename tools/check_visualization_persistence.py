@@ -4,8 +4,8 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
 sys.path.insert(0, "..")
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.main_window import MainWindow
+from zorvan.GUI.theme import get_theme_manager
 
 app = QApplication.instance() or QApplication([])
 

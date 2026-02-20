@@ -1,8 +1,8 @@
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.color_preferences import ColorPreferencesDialog
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.color_preferences import ColorPreferencesDialog
+from zorvan.GUI.main_window import MainWindow
 
 
 def test_dock_bg_applies_to_control_and_console():
@@ -20,7 +20,7 @@ def test_dock_bg_applies_to_control_and_console():
         pass
 
     # The control & console docks should reflect the current panel_bg value
-    from ComputationalGraphs.GUI.theme import get_theme_manager
+    from zorvan.GUI.theme import get_theme_manager
 
     tm = get_theme_manager()
     current = tm.theme.get("panel_bg")

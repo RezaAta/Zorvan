@@ -1,8 +1,8 @@
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QMenu
 
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.GUI.controllers.dialog_controller import DialogController
+from zorvan.Core.Graph import Graph
+from zorvan.GUI.controllers.dialog_controller import DialogController
 
 
 class DummyMainWindow(QObject):

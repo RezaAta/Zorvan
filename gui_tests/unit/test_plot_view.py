@@ -16,8 +16,8 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT_AVAILABLE, reason="PyQt6 not available")
 
-from ComputationalGraphs.GUI.plot_view import PlotView
 from gui_framework.viewmodels.plot_viewmodel import PlotViewModel
+from zorvan.GUI.plot_view import PlotView
 
 
 @pytest.fixture(scope="module")

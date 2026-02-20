@@ -6,8 +6,8 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.GUI.theme_widgets import ThemedPushButton, ThemedScrollArea
+from zorvan.GUI.main_window import MainWindow
+from zorvan.GUI.theme_widgets import ThemedPushButton, ThemedScrollArea
 
 
 def test_control_panel_uses_themed_scroll_and_buttons():
@@ -31,7 +31,7 @@ def test_control_panel_uses_themed_scroll_and_buttons():
     assert isinstance(mw.clear_ann_colors_btn, ThemedPushButton)
 
     # Speed slider should be a themed slider when available
-    from ComputationalGraphs.GUI.theme_widgets import (
+    from zorvan.GUI.theme_widgets import (
         ThemedCheckBox,
         ThemedComboBox,
         ThemedSlider,
@@ -64,7 +64,7 @@ def test_control_panel_uses_themed_scroll_and_buttons():
 
 def test_play_button_is_themed_and_hover_applies():
     app = QApplication.instance() or QApplication([])
-    from ComputationalGraphs.GUI.theme import get_theme_manager
+    from zorvan.GUI.theme import get_theme_manager
 
     tm = get_theme_manager()
     # Ensure theme is applied so QSS contains hover rules

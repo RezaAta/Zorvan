@@ -8,7 +8,7 @@ HAS_PYQT = getattr(node_editor_dialog, "HAS_PYQT", False)
 
 @pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 not available")
 def test_mean_squared_node_data_roundtrip():
-    from ComputationalGraphs.Nodes.MeanSquaredNode import MeanSquaredNode
+    from zorvan.Nodes.MeanSquaredNode import MeanSquaredNode
 
     ms = MeanSquaredNode(name="ms", data=[0.1, 0.2])
     vm = NodeEditorViewModel(ms)

@@ -1,4 +1,4 @@
-from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
+from zorvan.GUI.examples_loader import ExamplesLoader
 
 loader = ExamplesLoader()
 for c in loader.get_categories():

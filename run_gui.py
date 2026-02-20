@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.main_window import MainWindow
 
 logging.basicConfig(level=logging.INFO)
 
@@ -24,7 +24,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setApplicationName("Zorvan")
-    app.setOrganizationName("ComputationalGraphs")
+    app.setOrganizationName("Zorvan")
 
     # Set application icon
     icon_path = os.path.join(os.path.dirname(__file__), "assets", "zorvan_icon.png")
@@ -35,14 +35,14 @@ def main():
     try:
         # Prefer the theme manager which will use a template if present
         try:
-            from ComputationalGraphs.GUI.theme import get_theme_manager
+            from zorvan.GUI.theme import get_theme_manager
 
             tm = get_theme_manager()
             tm.apply_theme(app)
         except Exception:
             # Fallback to legacy static stylesheet
             style_path = os.path.join(
-                os.path.dirname(__file__), "ComputationalGraphs", "GUI", "styles.qss"
+                os.path.dirname(__file__), "zorvan", "GUI", "styles.qss"
             )
             if os.path.exists(style_path):
                 with open(style_path, "r", encoding="utf-8") as f:

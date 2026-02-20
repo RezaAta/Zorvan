@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from ComputationalGraphs.GUI.combined_node_palette import CombinedNodePalette
+from zorvan.GUI.combined_node_palette import CombinedNodePalette
 
 
 def test_categories_default_state():

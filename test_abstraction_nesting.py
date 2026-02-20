@@ -8,13 +8,13 @@ and that both compression and abstraction work together seamlessly.
 
 import pytest
 
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Nodes.AbstractNode import AbstractNode
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.CompressedNode import CompressedNode
-from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Nodes.AbstractNode import AbstractNode
+from zorvan.Nodes.AdditionNode import AdditionNode
+from zorvan.Nodes.CompressedNode import CompressedNode
+from zorvan.Nodes.DataStreamNode import DataStreamNode
+from zorvan.Nodes.MultiplicationNode import MultiplicationNode
 
 
 class TestAbstractionNesting:

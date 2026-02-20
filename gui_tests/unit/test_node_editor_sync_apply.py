@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(
     not PYQT, reason="PyQt6 required for NodeEditorDialog tests"
 )
 
-from ComputationalGraphs.GUI.node_editor_dialog import NodeEditorDialog
+from zorvan.GUI.node_editor_dialog import NodeEditorDialog
 
 
 class DummyNode:

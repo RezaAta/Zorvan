@@ -8,9 +8,9 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.GUI.node_item import NodeItem
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+from zorvan.GUI.main_window import MainWindow
+from zorvan.GUI.node_item import NodeItem
+from zorvan.Nodes.DisplayNode import DisplayNode
 
 
 class ManualUITest(unittest.TestCase):

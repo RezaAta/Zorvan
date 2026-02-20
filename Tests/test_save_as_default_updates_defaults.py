@@ -1,7 +1,7 @@
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_save_as_default_updates_defaults():
@@ -16,7 +16,7 @@ def test_save_as_default_updates_defaults():
         pass
 
     # Reset manager
-    import ComputationalGraphs.GUI.theme as theme_module
+    import zorvan.GUI.theme as theme_module
 
     try:
         theme_module._manager = None

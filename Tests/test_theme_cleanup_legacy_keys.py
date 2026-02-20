@@ -1,4 +1,4 @@
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_save_theme_removes_legacy_keys(tmp_path, monkeypatch):

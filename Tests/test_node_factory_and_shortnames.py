@@ -1,5 +1,5 @@
-from ComputationalGraphs.GUI.node_factory import create_node
-from ComputationalGraphs.GUI.node_short_names import get_short_name
+from zorvan.GUI.node_factory import create_node
+from zorvan.GUI.node_short_names import get_short_name
 
 
 def test_short_name_initializable_container():

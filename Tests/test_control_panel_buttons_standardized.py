@@ -2,7 +2,7 @@ import sys
 
 from PyQt6.QtWidgets import QApplication, QPushButton
 
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.main_window import MainWindow
 
 
 def ensure_app():

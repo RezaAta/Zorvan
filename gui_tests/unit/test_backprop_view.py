@@ -9,10 +9,10 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for dialog view tests")
 
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 from gui_framework.viewmodels.dialogs.backprop_viewmodel import BackpropViewModel
 from gui_framework.views.dialogs.backprop_dialog import BackpropDialog
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 
 @pytest.fixture(scope="module")

@@ -1,7 +1,7 @@
 import pytest
 from PyQt6.QtGui import QFont
 
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_set_and_get_font_persistence():

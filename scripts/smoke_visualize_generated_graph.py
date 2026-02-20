@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QApplication
 
 # Ensure project root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from ComputationalGraphs.GUI.mlp_dialog import MLPGeneratorDialog
+from zorvan.GUI.mlp_dialog import MLPGeneratorDialog
 
 app = QApplication.instance() or QApplication([])
 
@@ -33,10 +33,8 @@ print("Generated graph node count:", len(getattr(g, "nodes", [])))
 print("Node names:", [n.name for n in getattr(g, "nodes", [])])
 
 # Try visualize using GraphBuilderController
-from ComputationalGraphs.GUI.controllers.graph_builder_controller import (
-    GraphBuilderController,
-)
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.controllers.graph_builder_controller import GraphBuilderController
+from zorvan.GUI.main_window import MainWindow
 
 mw = MainWindow()
 controller = GraphBuilderController(mw)

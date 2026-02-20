@@ -22,8 +22,8 @@ import importlib.util
 from pathlib import Path
 
 if PYQT_AVAILABLE:
-    from ComputationalGraphs.GUI.main_window import MainWindow
-    from ComputationalGraphs.GUI.plot_window import PlotWindow
+    from zorvan.GUI.main_window import MainWindow
+    from zorvan.GUI.plot_window import PlotWindow
 else:
     MainWindow = None
     PlotWindow = None

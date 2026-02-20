@@ -1,5 +1,5 @@
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
+from zorvan.Core.Graph import Graph
+from zorvan.Nodes.ContainerNode import ContainerNode
 
 
 def test_set_subgraph_color_by_object_and_id():

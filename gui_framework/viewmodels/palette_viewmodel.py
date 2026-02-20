@@ -93,7 +93,7 @@ class PaletteViewModel(BaseViewModel):
             if repo_root not in sys.path:
                 sys.path.insert(0, repo_root)
 
-            from ComputationalGraphs.GUI.node_registry import get_node_categories
+            from zorvan.GUI.node_registry import get_node_categories
 
             categories_data = get_node_categories()
 

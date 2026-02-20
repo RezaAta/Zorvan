@@ -21,9 +21,9 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 try:
+    from gui_framework.state.store import StateEvent, get_store
     from gui_framework.viewmodels.theme_viewmodel import ThemeViewModel
-    from gui_framework.state.store import get_store
-    from gui_framework.state.store import StateEvent
+
     HAS_NEW_FRAMEWORK = True
 except ImportError:
     HAS_NEW_FRAMEWORK = False
@@ -32,36 +32,46 @@ except ImportError:
 get_theme_manager = None
 try:
     # Try direct import first (when installed as package)
-    from ComputationalGraphs.GUI.theme import get_theme_manager
+    from zorvan.GUI.theme import get_theme_manager
 except ImportError:
     try:
         # Try relative import (when running from repo root)
-        import sys
         import os
+        import sys
+
         # Add parent directory to path if not already there
-        parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        parent_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..")
+        )
         if parent_dir not in sys.path:
             sys.path.insert(0, parent_dir)
-        from ComputationalGraphs.GUI.theme import get_theme_manager
+        from zorvan.GUI.theme import get_theme_manager
     except ImportError:
         # Last resort: define a dummy function
         def get_theme_manager():
             """Dummy function when ThemeManager is not available."""
+
             class DummyManager:
                 def __init__(self):
                     self.theme = {}
+
                 def get_color(self, key, fallback="#000000"):
                     return fallback
+
                 @property
                 def theme_changed(self):
                     class DummySignal:
                         def connect(self, *args):
                             pass
+
                         def disconnect(self, *args):
                             pass
+
                         def emit(self):
                             pass
+
                     return DummySignal()
+
             return DummyManager()
 
 

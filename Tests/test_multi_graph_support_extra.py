@@ -1,7 +1,7 @@
 import pytest
 
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
+from zorvan.Core.Graph import Graph
+from zorvan.Nodes.ContainerNode import ContainerNode
 
 
 def test_remove_subgraph_clears_node_subgraph_id():

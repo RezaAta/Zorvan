@@ -16,8 +16,8 @@ except Exception as e:
 
 from pathlib import Path
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.GUI.plot_window import PlotWindow
+from zorvan.GUI.main_window import MainWindow
+from zorvan.GUI.plot_window import PlotWindow
 
 BASE = Path(__file__).resolve().parents[1] / "gui_tests" / "baselines"
 BASE.mkdir(parents=True, exist_ok=True)

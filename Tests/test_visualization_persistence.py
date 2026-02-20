@@ -5,8 +5,8 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.main_window import MainWindow
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_visualization_colors_persist_across_restarts(tmp_path):
@@ -25,7 +25,7 @@ def test_visualization_colors_persist_across_restarts(tmp_path):
     vc.apply_node_colors()
 
     # Direct check that QSettings contain persisted values
-    from ComputationalGraphs.GUI.theme import get_theme_manager
+    from zorvan.GUI.theme import get_theme_manager
 
     tm = get_theme_manager()
     assert (

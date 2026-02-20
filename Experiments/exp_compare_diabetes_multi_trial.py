@@ -25,12 +25,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from ClassicMLP import ClassicMLP
-from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from zorvan.Core.BackpropGraph import BackpropGraph
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.Nodes.LinearNode import LinearNode
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 
 def prepare_data(test_size=0.2, random_state=42):

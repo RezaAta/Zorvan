@@ -1,4 +1,4 @@
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_theme_named_crud(tmp_path):

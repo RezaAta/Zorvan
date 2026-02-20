@@ -1,15 +1,6 @@
 import numpy as np
 
 from ClassicMLP import ClassicMLP
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.Nodes.DivisionNode import DivisionNode
-from ComputationalGraphs.Nodes.MaxNode import MaxNode
-from ComputationalGraphs.Nodes.MinNode import MinNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
-from ComputationalGraphs.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
 from Experiments.HybridTempPredictionComparison import (
     build_graph_mlp,
     build_hybrid_from_trained_mlp,
@@ -21,11 +12,20 @@ from Experiments.HybridTempPredictionComparison import (
     generate_dataset_samples,
     run_compare_multiple,
 )
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.Nodes.AdditionNode import AdditionNode
+from zorvan.Nodes.DisplayNode import DisplayNode
+from zorvan.Nodes.DivisionNode import DivisionNode
+from zorvan.Nodes.MaxNode import MaxNode
+from zorvan.Nodes.MinNode import MinNode
+from zorvan.Nodes.MultiplicationNode import MultiplicationNode
+from zorvan.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
 
 
 def build_fis_graph(error_val, delta_val):
     """Construct a small standalone FIS graph and return the graph and output node."""
-    from ComputationalGraphs.Core.Graph import Graph
+    from zorvan.Core.Graph import Graph
 
     full = Graph()
     err_in = DisplayNode("ErrIn", value=error_val)

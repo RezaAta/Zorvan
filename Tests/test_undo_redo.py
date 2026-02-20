@@ -18,17 +18,17 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.GUI.commands import (
+from zorvan.Core.Graph import Graph
+from zorvan.GUI.commands import (
     AddEdgeCommand,
     AddNodeCommand,
     MoveNodesCommand,
     RemoveItemsCommand,
     ReplaceNodeCommand,
 )
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
+from zorvan.Nodes.AdditionNode import AdditionNode
+from zorvan.Nodes.ContainerNode import ContainerNode
+from zorvan.Nodes.MultiplicationNode import MultiplicationNode
 
 
 @pytest.fixture(scope="module")
@@ -45,7 +45,7 @@ def setup_canvas(app):
     """Create a GraphCanvas with a Graph for testing."""
     from PyQt6.QtGui import QUndoStack
 
-    from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
+    from zorvan.GUI.graph_canvas import GraphCanvas
 
     canvas = GraphCanvas()
     graph = Graph()

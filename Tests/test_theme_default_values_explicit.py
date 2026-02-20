@@ -1,7 +1,7 @@
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_explicit_default_values_are_set(tmp_path):
@@ -30,7 +30,7 @@ def test_explicit_default_values_are_set(tmp_path):
 
     # Recreate manager to pick up cleared QSettings
     try:
-        import ComputationalGraphs.GUI.theme as theme_module
+        import zorvan.GUI.theme as theme_module
 
         theme_module._manager = None
     except Exception:

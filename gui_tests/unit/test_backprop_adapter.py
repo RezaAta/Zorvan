@@ -9,8 +9,8 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter test")
 
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.GUI.backprop_dialog import BackpropDialog
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.GUI.backprop_dialog import BackpropDialog
 
 
 @pytest.fixture(scope="module")
@@ -20,7 +20,7 @@ def qapp():
 
 
 def test_backprop_adapter_constructs_and_generates(qapp):
-    from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+    from zorvan.Nodes.SigmoidNode import SigmoidNode
 
     mlp = MLPGraph(
         numInputs=2,

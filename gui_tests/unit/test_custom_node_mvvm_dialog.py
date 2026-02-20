@@ -22,7 +22,7 @@ def test_mvvm_dialog_saves_definition(monkeypatch):
 
     # Patch the manager factory
     try:
-        import ComputationalGraphs.GUI.custom_node_manager as mgr_mod
+        import zorvan.GUI.custom_node_manager as mgr_mod
 
         monkeypatch.setattr(mgr_mod, "get_custom_node_manager", lambda: StubManager())
     except Exception:

@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.main_window import MainWindow
+from zorvan.GUI.theme import get_theme_manager
 
 app = QApplication.instance() or QApplication([])
 get_theme_manager()  # ensure manager is initialized
@@ -29,7 +29,7 @@ print("ThemeManager.theme node_default:", get_theme_manager().theme.get("node_de
 
 # Now instantiate ColorPreferences dialog and simulate applying without user interaction
 try:
-    from ComputationalGraphs.GUI.color_preferences import ColorPreferencesDialog
+    from zorvan.GUI.color_preferences import ColorPreferencesDialog
 
     dlg = ColorPreferencesDialog(None)
     dlg.set_color_for_key("node_default", "#445566", apply_theme=True)

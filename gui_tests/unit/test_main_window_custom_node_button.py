@@ -4,7 +4,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.main_window import MainWindow
 
 
 def test_main_window_create_opens_custom_dialog(monkeypatch):
@@ -21,7 +21,7 @@ def test_main_window_create_opens_custom_dialog(monkeypatch):
             called["ok"] = True
 
     try:
-        import ComputationalGraphs.GUI.custom_node_dialog_adapter as cad
+        import zorvan.GUI.custom_node_dialog_adapter as cad
 
         monkeypatch.setattr(cad, "CustomNodeDialogAdapter", StubAdapter)
     except Exception:

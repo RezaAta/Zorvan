@@ -2,11 +2,11 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.GUI.graph_canvas import GraphCanvas
-from ComputationalGraphs.Nodes.BufferNode import BufferNode
-from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
+from zorvan.Core.Graph import Graph
+from zorvan.GUI.graph_canvas import GraphCanvas
+from zorvan.Nodes.BufferNode import BufferNode
+from zorvan.Nodes.DataStreamNode import DataStreamNode
+from zorvan.Nodes.DisplayNode import DisplayNode
 
 app = QApplication(sys.argv)
 

@@ -16,9 +16,7 @@ class CombinedNodePaletteView(QWidget):
         self.vm = vm
         # Lazy initialization of the legacy palette widget so we can bind
         try:
-            from ComputationalGraphs.GUI.combined_node_palette import (
-                CombinedNodePalette,
-            )
+            from zorvan.GUI.combined_node_palette import CombinedNodePalette
 
             self._palette = CombinedNodePalette(parent)
         except Exception:

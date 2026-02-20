@@ -7,9 +7,9 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.node_item import NodeItem
-from ComputationalGraphs.Nodes.BufferNode import BufferNode
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from zorvan.GUI.node_item import NodeItem
+from zorvan.Nodes.BufferNode import BufferNode
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 
 def run_test():

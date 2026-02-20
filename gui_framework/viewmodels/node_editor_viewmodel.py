@@ -6,8 +6,8 @@ for use in dialogs. Pure Python and testable.
 import ast
 from typing import Any, Dict, Optional
 
-from ComputationalGraphs.Nodes.computation_type import to_value
 from gui_framework.viewmodels.base import BaseViewModel, ObservableProperty
+from zorvan.Nodes.computation_type import to_value
 
 
 class NodeEditorViewModel(BaseViewModel):

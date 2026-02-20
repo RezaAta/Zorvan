@@ -8,8 +8,8 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.Nodes.BufferNode import BufferNode
+from zorvan.GUI.main_window import MainWindow
+from zorvan.Nodes.BufferNode import BufferNode
 
 
 def test_apply_node_colors_clears_ann_override():

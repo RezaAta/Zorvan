@@ -2,7 +2,7 @@
 Lightweight layout utilities for the new GUI framework.
 
 This module wraps or falls back to the legacy layout algorithms found in
-`ComputationalGraphs.GUI.layouts` when available, and provides simple
+`zorvan.GUI.layouts` when available, and provides simple
 fallbacks otherwise. The goal is to offer a small, testable API for the
 Canvas ViewModel to request node positions using a named layout.
 """
@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Tuple
 
 try:
     # Prefer reusing legacy implementation when available
-    from ComputationalGraphs.GUI import layouts as legacy_layouts  # type: ignore
+    from zorvan.GUI import layouts as legacy_layouts  # type: ignore
 
     LEGACY_AVAILABLE = True
 except Exception:

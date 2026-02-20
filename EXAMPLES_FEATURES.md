@@ -279,10 +279,10 @@ Key points:
 
 Example:
 ```python
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Nodes.DataStreamNode import DataStreamNode
+from zorvan.Nodes.AdditionNode import AdditionNode
 
 graph = Graph()
 a = DataStreamNode('a', data=[1,2,3])

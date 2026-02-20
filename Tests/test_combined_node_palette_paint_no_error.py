@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from ComputationalGraphs.GUI.combined_node_palette import NodeItemWidget
+from zorvan.GUI.combined_node_palette import NodeItemWidget
 
 
 def test_node_item_paint_executes_without_error():

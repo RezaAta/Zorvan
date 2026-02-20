@@ -1,8 +1,8 @@
 import numpy as np
 
-from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
-from ComputationalGraphs.Nodes.TanhDerivativeNode import TanhDerivativeNode
-from ComputationalGraphs.Nodes.TanhNode import TanhNode
+from zorvan.Nodes.DataStreamNode import DataStreamNode
+from zorvan.Nodes.TanhDerivativeNode import TanhDerivativeNode
+from zorvan.Nodes.TanhNode import TanhNode
 
 
 def test_tanh_node_operation():
@@ -34,8 +34,8 @@ def test_tanh_derivative_node_operation():
 
 
 def test_tanh_and_derivative_in_graph_manual_processing():
-    from ComputationalGraphs.Core.Graph import Graph
-    from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+    from zorvan.Core.Graph import Graph
+    from zorvan.Core.GraphProcessor import GraphProcessor
 
     input_values = [0, 1, -1, 2, -2]
     input_node = DataStreamNode(name="input", data=input_values)

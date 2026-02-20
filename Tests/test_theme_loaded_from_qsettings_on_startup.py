@@ -1,8 +1,8 @@
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from ComputationalGraphs.GUI.main_window import MainWindow
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.main_window import MainWindow
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_theme_loaded_from_qsettings_applies_to_ui_on_startup():
@@ -15,7 +15,7 @@ def test_theme_loaded_from_qsettings_applies_to_ui_on_startup():
     s.setValue("theme/accent", "#00ff00")
 
     # Ensure singleton will be re-created to pick up fresh settings
-    import ComputationalGraphs.GUI.theme as theme_module
+    import zorvan.GUI.theme as theme_module
 
     try:
         theme_module._manager = None

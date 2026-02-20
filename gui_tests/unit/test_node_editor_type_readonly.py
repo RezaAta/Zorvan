@@ -9,11 +9,9 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
 
-from ComputationalGraphs.Nodes.InitializableContainerNode import (
-    InitializableContainerNode,
-)
 from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
 from gui_framework.views.node_editor_dialog import NodeEditorDialog
+from zorvan.Nodes.InitializableContainerNode import InitializableContainerNode
 
 
 def test_node_editor_shows_type_readonly(qtbot):

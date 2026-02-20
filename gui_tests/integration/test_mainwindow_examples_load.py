@@ -7,7 +7,7 @@ try:
 except Exception:
     HAS_PYQT = False
 
-from ComputationalGraphs.GUI.main_window import MainWindow
+from zorvan.GUI.main_window import MainWindow
 
 
 @pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 not installed")

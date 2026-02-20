@@ -21,7 +21,7 @@ class CombinedNodePaletteViewModel(BaseViewModel):
     def initialize(self):
         # Load categories from registry
         try:
-            from ComputationalGraphs.GUI.node_registry import get_node_categories
+            from zorvan.GUI.node_registry import get_node_categories
 
             self._categories = get_node_categories()
         except Exception:

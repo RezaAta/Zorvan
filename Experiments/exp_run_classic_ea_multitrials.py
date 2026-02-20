@@ -1,4 +1,4 @@
-# Moved from ComputationalGraphs/Tests/EATests/RunClassicEA_MultipleTrials.py
+# Moved from zorvan/Tests/EATests/RunClassicEA_MultipleTrials.py
 # Renamed to Experiments/exp_run_classic_ea_multitrials.py
 
 """

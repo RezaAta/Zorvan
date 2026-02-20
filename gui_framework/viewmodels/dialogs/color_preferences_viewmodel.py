@@ -2,8 +2,8 @@
 
 from typing import Dict, List
 
-from ComputationalGraphs.GUI.theme import _is_test_env, get_theme_manager
 from gui_framework.viewmodels.base import BaseViewModel, ObservableProperty
+from zorvan.GUI.theme import _is_test_env, get_theme_manager
 
 
 class ColorPreferencesViewModel(BaseViewModel):

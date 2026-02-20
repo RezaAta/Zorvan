@@ -9,7 +9,7 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
 
-from ComputationalGraphs.GUI.mlp_dialog import MLPGeneratorDialog
+from zorvan.GUI.mlp_dialog import MLPGeneratorDialog
 
 
 @pytest.fixture(scope="module")
@@ -44,7 +44,7 @@ def test_mlp_dialog_adapter_constructs_and_generates(qapp):
 
     # The adapter should return a Graph with Core API (AddNode etc.)
     try:
-        from ComputationalGraphs.Core.Graph import Graph as CoreGraph
+        from zorvan.Core.Graph import Graph as CoreGraph
 
         assert isinstance(g, CoreGraph)
     except Exception:

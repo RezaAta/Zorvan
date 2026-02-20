@@ -1,11 +1,11 @@
-# Moved from ComputationalGraphs/Tests/MLPTests/1x1x1Test.py
+# Moved from zorvan/Tests/MLPTests/1x1x1Test.py
 # Renamed to Experiments/exp_mlp_1x1x1.py
 
 import matplotlib.pyplot as plt
 
-from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
+from zorvan.Core.BackpropGraph import BackpropGraph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraph import MLPGraph
 
 testMLPGraph = MLPGraph(1, 1, 1, hiddenLayerSizes=[1])
 

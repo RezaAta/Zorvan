@@ -1,4 +1,4 @@
-# Moved from ComputationalGraphs/Tests/MLPTests/TestingOnHousePricePrediction.py
+# Moved from zorvan/Tests/MLPTests/TestingOnHousePricePrediction.py
 # Renamed to Experiments/exp_testing_on_house_price.py
 
 import matplotlib.pyplot as plt
@@ -7,13 +7,13 @@ from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from ComputationalGraphs.Core.BackpropGraph import BackpropGraph
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraph import MLPGraph
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.ReLUNode import ReLUNode
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from zorvan.Core.BackpropGraph import BackpropGraph
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.Nodes.LinearNode import LinearNode
+from zorvan.Nodes.ReLUNode import ReLUNode
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 # Load housing dataset
 data = fetch_california_housing()

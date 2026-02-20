@@ -1,4 +1,4 @@
-# Moved from ComputationalGraphs/Tests/EATests/TestingOnDejongSphereFunction.py
+# Moved from zorvan/Tests/EATests/TestingOnDejongSphereFunction.py
 # Renamed to Experiments/exp_graph_ea_dejong_sphere.py
 
 """
@@ -7,17 +7,17 @@ Graph-based EA running on DeJong Sphere Function.
 
 import matplotlib.pyplot as plt
 
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Nodes.BufferNode import BufferNode
-from ComputationalGraphs.Nodes.BulkTournamentNode import BulkTournamentNode
-from ComputationalGraphs.Nodes.DeJongSphereNode import DeJongSphereNode
-from ComputationalGraphs.Nodes.ElitismNode import ElitismNode
-from ComputationalGraphs.Nodes.ExtractListElement import ExtractListElement
-from ComputationalGraphs.Nodes.MutationNode import MutaionNode
-from ComputationalGraphs.Nodes.PopulationNode import PopulationNode
-from ComputationalGraphs.Nodes.SequencerNode import SequencerNode
-from ComputationalGraphs.Nodes.SingleInputCrossover import SingleInputCrossover
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Nodes.BufferNode import BufferNode
+from zorvan.Nodes.BulkTournamentNode import BulkTournamentNode
+from zorvan.Nodes.DeJongSphereNode import DeJongSphereNode
+from zorvan.Nodes.ElitismNode import ElitismNode
+from zorvan.Nodes.ExtractListElement import ExtractListElement
+from zorvan.Nodes.MutationNode import MutaionNode
+from zorvan.Nodes.PopulationNode import PopulationNode
+from zorvan.Nodes.SequencerNode import SequencerNode
+from zorvan.Nodes.SingleInputCrossover import SingleInputCrossover
 
 
 def run_graph_ea(

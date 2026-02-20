@@ -1,4 +1,4 @@
-# Moved from ComputationalGraphs/Tests/MLPTests/DebugForwardBufferActivation.py
+# Moved from zorvan/Tests/MLPTests/DebugForwardBufferActivation.py
 # Renamed to Experiments/exp_debug_forward_buffer_activation.py
 
 """
@@ -9,14 +9,12 @@ and prints buffer contents.
 
 import time
 
-from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
-    BackpropGraphForwardProcessing,
-)
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from zorvan.Core.BackpropGraphForwardProcessing import BackpropGraphForwardProcessing
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
+from zorvan.Nodes.LinearNode import LinearNode
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 # Small XOR dataset
 X_train = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]

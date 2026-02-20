@@ -2,11 +2,8 @@ import pytest
 
 pytest.importorskip("PyQt6")
 
-from ComputationalGraphs.GUI.custom_node_manager import (
-    CustomNodeDefinition,
-    get_custom_node_manager,
-)
-from ComputationalGraphs.GUI.node_factory import create_node, is_registered
+from zorvan.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
+from zorvan.GUI.node_factory import create_node, is_registered
 
 
 def test_custom_node_registered_and_creatable(tmp_path):

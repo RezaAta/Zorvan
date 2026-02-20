@@ -1,9 +1,9 @@
 import pytest
 
-from ComputationalGraphs.GUI.theme import get_theme_manager
 from gui_framework.viewmodels.dialogs.color_preferences_viewmodel import (
     ColorPreferencesViewModel,
 )
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_set_color_and_apply(tmp_path):

@@ -9,9 +9,9 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
 
-from ComputationalGraphs.Nodes.PopulationNode import PopulationNode
 from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
 from gui_framework.views.node_editor_dialog import NodeEditorDialog
+from zorvan.Nodes.PopulationNode import PopulationNode
 
 
 def test_population_node_editor_shows_actions(qtbot):

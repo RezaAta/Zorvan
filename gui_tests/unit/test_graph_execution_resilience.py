@@ -9,10 +9,10 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
 
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.GUI.graph_runner import GraphRunner
-from ComputationalGraphs.Nodes.DataStreamNode import DataStreamNode
 from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
+from zorvan.Core.Graph import Graph
+from zorvan.GUI.graph_runner import GraphRunner
+from zorvan.Nodes.DataStreamNode import DataStreamNode
 
 
 def test_edit_node_value_then_run_does_not_emit_clear_errors(qtbot):

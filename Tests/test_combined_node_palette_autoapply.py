@@ -1,10 +1,7 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from ComputationalGraphs.GUI.combined_node_palette import (
-    CombinedNodePalette,
-    NodeItemWidget,
-)
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.combined_node_palette import CombinedNodePalette, NodeItemWidget
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_palette_auto_applies_theme_on_construction():

@@ -1,15 +1,15 @@
 import os
 import runpy
 
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.DisplayNode import DisplayNode
-from ComputationalGraphs.Nodes.DivisionNode import DivisionNode
-from ComputationalGraphs.Nodes.MaxNode import MaxNode
-from ComputationalGraphs.Nodes.MinNode import MinNode
-from ComputationalGraphs.Nodes.MultiplicationNode import MultiplicationNode
-from ComputationalGraphs.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Nodes.AdditionNode import AdditionNode
+from zorvan.Nodes.DisplayNode import DisplayNode
+from zorvan.Nodes.DivisionNode import DivisionNode
+from zorvan.Nodes.MaxNode import MaxNode
+from zorvan.Nodes.MinNode import MinNode
+from zorvan.Nodes.MultiplicationNode import MultiplicationNode
+from zorvan.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
 
 exp_ns = runpy.run_path(
     os.path.join(os.path.dirname(__file__), "HybridTempPredictionComparison.py")

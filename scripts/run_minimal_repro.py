@@ -6,9 +6,7 @@ try:
     print("Constructing QApplication")
     app = QApplication([])
     print("Importing filter")
-    from ComputationalGraphs.GUI.controllers.control_panel_builder import (
-        _IconHoverFilter,
-    )
+    from zorvan.GUI.controllers.control_panel_builder import _IconHoverFilter
 
     print("Imported filter OK")
     btn = QPushButton()

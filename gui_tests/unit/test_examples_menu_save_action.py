@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QMenu
 
-from ComputationalGraphs.GUI.controllers.dialog_controller import DialogController
-from ComputationalGraphs.GUI.examples_loader import ExamplesLoader
 from gui_framework.services.examples_repository import ExamplesRepository
+from zorvan.GUI.controllers.dialog_controller import DialogController
+from zorvan.GUI.examples_loader import ExamplesLoader
 
 
 class DummyMainWindow:

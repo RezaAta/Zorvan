@@ -18,15 +18,13 @@ import pytest
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
-    BackpropGraphForwardProcessing,
-)
-from ComputationalGraphs.Core.Graph import Graph
-from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
-from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
-from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
-from ComputationalGraphs.Nodes.LinearNode import LinearNode
-from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
+from zorvan.Core.BackpropGraphForwardProcessing import BackpropGraphForwardProcessing
+from zorvan.Core.Graph import Graph
+from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
+from zorvan.Nodes.AdditionNode import AdditionNode
+from zorvan.Nodes.LinearNode import LinearNode
+from zorvan.Nodes.SigmoidNode import SigmoidNode
 
 
 class TestSequenceFinderLinearChain:

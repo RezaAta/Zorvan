@@ -20,7 +20,7 @@ install_requires = read_requirements()
 
 
 setup(
-    name="ComputationalGraphs",
+    name="zorvan",
     version="0.1.0",
     packages=find_packages(),
     # Export some useful top-level scripts as modules so they are importable
@@ -30,10 +30,9 @@ setup(
         "ClassicEATestOnDeJongSphereFunction",
         "ClassicFuzzySystemOnFanControlProblem",
     ],
-    description="A python package to create and run computational graphs.",
-    author="Reza Ataei",
-    author_email="reza.a1999@yahoo.com",
-    url="https://github.com/RezaAta/ComputationalGraphs.git",
+    description="A Python framework for building and running computational graphs.",
+    author="Zorvan contributors",
+    url="https://github.com/ORG_OR_USER/zorvan",
     python_requires=">=3.8",
     install_requires=install_requires,
     include_package_data=True,

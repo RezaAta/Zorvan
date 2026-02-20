@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from ComputationalGraphs.GUI.color_preferences import ColorPreferencesDialog
-from ComputationalGraphs.GUI.combined_node_palette import CombinedNodePalette
-from ComputationalGraphs.GUI.theme import get_theme_manager
+from zorvan.GUI.color_preferences import ColorPreferencesDialog
+from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from zorvan.GUI.theme import get_theme_manager
 
 
 def test_list_bg_preference_updates_palette():

@@ -1,5 +1,5 @@
-from ComputationalGraphs.Nodes.PopulationNode import PopulationNode
 from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
+from zorvan.Nodes.PopulationNode import PopulationNode
 
 
 def test_population_node_exposes_expected_parameters_and_actions():

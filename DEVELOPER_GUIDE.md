@@ -67,7 +67,7 @@ pre-commit run --all-files
 
 ### Experiments vs Tests
 
-- **Tests:** short, deterministic, and automated assertions that verify program behavior. Place tests under `Tests/` or `ComputationalGraphs/Tests/` and run them with `pytest`.
+- **Tests:** short, deterministic, and automated assertions that verify program behavior. Place tests under `Tests/` or `zorvan/Tests/` and run them with `pytest`.
 - **Experiments:** long-running or exploratory scripts used for scientific comparisons, plotting, or benchmarking. Place experiments under `Experiments/` (or `Examples/` when tightly coupled to an example). Prefer prefixing such scripts with `exp_` (e.g., `exp_my_experiment.py`) to make them easy to find and to avoid pytest collection. Experiments are not part of the automated `pytest` run by default; see `EXPERIMENTS.md` for conventions.
 
 ## Test Templates

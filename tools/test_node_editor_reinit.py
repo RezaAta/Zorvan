@@ -4,10 +4,8 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from ComputationalGraphs.GUI.node_editor_dialog import NodeEditorDialog
-from ComputationalGraphs.Nodes.InitializableContainerNode import (
-    InitializableContainerNode,
-)
+from zorvan.GUI.node_editor_dialog import NodeEditorDialog
+from zorvan.Nodes.InitializableContainerNode import InitializableContainerNode
 
 
 def main():
