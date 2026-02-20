@@ -14,7 +14,7 @@ These concise rules help AI coding agents make productive, correct edits in this
   - Full test suite: `pytest -q`
 
 - Big picture: Node-centric computational graphs. Nodes are active actors; Graphs orchestrate nodes.
-- Processing modes: `concurrent` (buffers) vs `forward` (active node propagation). They are distinct — don’t mix models without a design change.
+- Processing modes: `concurrent` (buffers + all nodes per iteration) vs `forward` (static sequence replay). They are distinct — don't mix models without a design change.
 - Key files: `ComputationalGraphs/Core/Graph.py`, `GraphProcessor.py`, `MLPGraph.py`, `MLPGraphForwardProcessing.py`, `BackpropGraph.py`, `BackpropGraphForwardProcessing.py`.
 - Important nodes: `ContainerNode` (weights), `BufferNode` (timing), `DataStreamNode` (inputs), `MultiplicationNode`, activations.
 - Conventions & gotchas:
@@ -48,12 +48,12 @@ If a change touches the core execution model or timing (concurrent vs forward), 
 - **Solution**: BufferNodes for synchronization (introduces gradient delay issue - see Known Issues)
 
 ### 2. Forward Processing (`ForwardProcessing`)
-**Inspiration**: Non-deterministic automata with active node propagation
+**Inspiration**: Deterministic execution with dependency-based ordering
 
-- **How**: Only "active nodes" (whose predecessors completed) compute per iteration (1 computation per active node)
-- **Philosophy**: Sequential propagation where each iteration processes nodes whose predecessors have completed
-- **Source node reactivation**: Source nodes (no predecessors) are automatically reactivated when needed by successors in cycles
-- **Advantage**: No buffers needed, eliminates gradient delay problem
+- **How**: Pre-computes a static execution sequence via `find_execution_sequence()` once at graph load, then replays that sequence for each training epoch without modification
+- **Philosophy**: Build a dependency-aware execution plan upfront, then execute deterministically and repeatedly. No dynamic activation — order is fixed.
+- **Sequence Construction**: Starting from `starting_nodes`, adds successors whose ALL predecessors are already in the processed set. Respects `stopping_nodes` as compile-time filters (prevent successors from being added to sequence).
+- **Key Advantage**: No buffers needed, eliminates gradient delay problem, completely deterministic execution order, O(1) step lookup
 - **Status**: Current implementation focus for neural network training
 
 **Critical:** MLPGraph/BackpropGraph use concurrent mode. MLPGraphForwardProcessing/BackpropGraphForwardProcessing use forward processing mode. These are **fundamentally different execution models** - see `ARCHITECTURE_COMPARISON.md`.
@@ -70,7 +70,7 @@ Node naming follows convention: `A1`, `A2` (Abstract), `C1`, `C2` (Compressed), 
 ### Important Terminology
 
 - **Starting nodes**: User-selected nodes active at iteration 0 (may or may not have predecessors). Set via `graph.starting_nodes`.
-- **Source nodes**: Nodes with no predecessors (`len(node.predecessors) == 0`). Automatically reactivated in forward processing when needed by successors.
+- **Source nodes**: Nodes with no predecessors (`len(node.predecessors) == 0`). In forward processing, marked as 'processed' via `PrepareForForwardProcessing()` so their values are available to starting nodes during sequence execution.
 
 ### Graph Structure
 
@@ -158,44 +158,31 @@ weightNode.AddPreNode(dW)  # Accumulates updates automatically
 
 **Why this matters**: Atomicity enables clean graph traversal and makes node behavior predictable. If you need multiple outputs, create multiple nodes. This constraint forces modular design and supports the node-centric philosophy.
 
-### 6. Source Node Reactivation in Cycles (Forward Processing)
+### 6. Stopping Nodes in Forward Processing
 
-**Problem**: In cyclic graphs (e.g., `a->b->c->d->b`), source nodes like DataStreamNode never get reactivated because they have no predecessors to trigger them.
+**What they do**: `stopping_nodes` are a compile-time filter during sequence computation. When `find_execution_sequence()` builds the static execution sequence, it does NOT add successors of nodes in the `stopping_nodes` set.
 
-**Solution**: Automatic source node reactivation when needed by successors.
+**Effect**: Nodes in `stopping_nodes` execute normally (as part of the sequence), but they act as a "cutoff point" where downstream successors are excluded from the sequence.
 
-**Algorithm**:
-```python
-# When checking if successor is ready:
-if successor has unprocessed predecessors:
-    if any unprocessed predecessor is a source node (no predecessors):
-        # Reactivate ALL source predecessors immediately
-        add them to next_active list
-        # Next iteration: sources compute, then successor can become ready
-
-# Additionally, when no active nodes remain but unprocessed nodes exist:
-for each unprocessed node:
-    if ALL its unprocessed predecessors are source nodes:
-        # Reactivate those source nodes
-        # This handles cases where cycles prevent normal activation
-```
+**Use case**: Partition graph execution — e.g., run only forward pass nodes and exclude backprop nodes if you set backprop nodes as stopping nodes.
 
 **Example**:
-```
-Iteration 1: d processes, wants to activate b
-             b has predecessor a (source, unprocessed)
-             → a added to active list
-Iteration 2: a processes (updates its DataStream value)
-             → b now added to active list (all predecessors ready)
-Iteration 3: b processes with updated value from a
+```python
+# Graph: Input -> Mult -> Activation -> BackpropGradient -> WeightUpdate
+
+# Without stopping:
+sequence = [...]: Input, Mult, Activation, BackpropGradient, WeightUpdate
+
+# With Activation as stopping node:
+graph.stopping_nodes = [activation_node]
+sequence = [...]: Input, Mult, Activation  # BackpropGradient excluded!
 ```
 
-**Limitation**: Nodes with circular dependencies on non-source nodes (e.g., `a->b->a` where neither is a source) cannot be resolved automatically. For such cases:
-- Use ContainerNodes with initial values to break the cycle
-- Include feedback nodes in `starting_nodes` to process them first
-- Add a "warmup" iteration to initialize the cycle
+**Default**: `graph.stopping_nodes = []` (empty) — all successors are included in the sequence.
 
-**Key behavior**: 1-iteration delay for source reactivation, but uniform across network. Source nodes automatically update when their successors need them in cycles.
+**Limitation**: For true cyclic graphs (e.g., `a->b->c->a`), forward processing cannot automatically handle them. The sequence finder will skip unadded non-source nodes. For cycles:
+- Ensure at least one node in the cycle path is a source node
+- Or manually construct the sequence using `set_manual_processing_sequence()`
 
 ## Development Workflows
 

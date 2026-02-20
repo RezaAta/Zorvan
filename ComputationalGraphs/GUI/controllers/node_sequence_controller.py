@@ -6,7 +6,8 @@ This controller manages the Forward Processing starting/stopping nodes and
 Manual Processing sequence configuration.
 """
 
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QListWidgetItem, QMessageBox
 
 
 class NodeSequenceController:
@@ -557,3 +558,52 @@ class NodeSequenceController:
             except Exception:
                 step_label = f"Step {i}"
             self.manual_sequence_list.addItem(step_label)
+
+    # --- Forward Sequence Display ---
+
+    @property
+    def forward_sequence_list(self):
+        """Access the forward sequence list widget."""
+        return getattr(self.main_window, "forward_sequence_list", None)
+
+    def display_forward_sequence(self, sequence):
+        """Display a forward processing sequence in the UI list.
+
+        Args:
+            sequence: List of lists, where each inner list is a step of nodes.
+        """
+        forward_list = self.forward_sequence_list
+        if forward_list is None:
+            return
+
+        forward_list.clear()
+
+        def _add_visible_item(text: str):
+            item = QListWidgetItem(text)
+            try:
+                item.setForeground(QColor("#e6e6e6"))
+            except Exception:
+                pass
+            forward_list.addItem(item)
+
+        if not sequence:
+            _add_visible_item("(No forward sequence computed)")
+            _add_visible_item("Tip: Ensure Processor Type is 'Forward Processing'.")
+            return
+
+        for i, step_nodes in enumerate(sequence):
+            try:
+                labels = [
+                    (
+                        n.name
+                        if hasattr(n, "name")
+                        else (n.id if hasattr(n, "id") else str(n))
+                    )
+                    for n in step_nodes
+                ]
+                step_label = f"Step {i}: " + ", ".join(labels)
+            except Exception:
+                step_label = f"Step {i}"
+            _add_visible_item(step_label)
+
+        self.status_bar.showMessage(f"Forward sequence has {len(sequence)} step(s)")

@@ -18,9 +18,15 @@ import pytest
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
+    BackpropGraphForwardProcessing,
+)
 from ComputationalGraphs.Core.Graph import Graph
 from ComputationalGraphs.Core.GraphProcessor import GraphProcessor
+from ComputationalGraphs.Core.MLPGraphForwardProcessing import MLPGraphForwardProcessing
 from ComputationalGraphs.Nodes.AdditionNode import AdditionNode
+from ComputationalGraphs.Nodes.LinearNode import LinearNode
+from ComputationalGraphs.Nodes.SigmoidNode import SigmoidNode
 
 
 class TestSequenceFinderLinearChain:
@@ -258,6 +264,78 @@ class TestForwardProcessingExecution:
         """ForwardProcessing should report correct step count."""
         result = self.processor.ForwardProcessing(iterations=1)
         assert result["steps_per_iteration"] == 2  # a, then b
+
+
+class TestSequenceFinderXORManualParity:
+    """Ensure automatic sequence matches XOR manual example ordering."""
+
+    def setup_method(self):
+        self.graph = Graph()
+
+        mlp_graph = MLPGraphForwardProcessing(
+            numInputs=2,
+            numOutputs=1,
+            numHiddenLayers=1,
+            hiddenLayerSizes=[2],
+            activationFunction=SigmoidNode,
+            outputLayerType=LinearNode,
+        )
+        mlp_graph.BuildMLP()
+
+        X_train = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]
+        y_train = [[0.0], [1.0], [1.0], [0.0]]
+        mlp_graph.LoadData(X_train, y_train)
+
+        backprop_graph = BackpropGraphForwardProcessing(mlp_graph, learningRate=0.5)
+        backprop_graph.BuildBackprop()
+
+        for node in mlp_graph.nodes:
+            self.graph.AddNode(node)
+        for node in backprop_graph.nodes:
+            self.graph.AddNode(node)
+
+        self.graph.starting_nodes = list(mlp_graph.starting_nodes)
+        self.graph.stopping_nodes = list(getattr(mlp_graph, "stopping_nodes", []))
+        self.graph.UpdateAdjacencyMatrix()
+
+        self.processor = GraphProcessor(self.graph)
+
+    def test_sequence_matches_manual_xor_steps(self):
+        expected_steps = [
+            ["Add_L0N0", "Add_L0N1"],
+            ["Act_L0N0", "Act_L0N1"],
+            ["Mul_H0N0y0", "Mul_H0N1y0", "D_H0N0", "D_H0N1"],
+            ["Add_y0"],
+            ["y0"],
+            ["Error_y0", "D_y0"],
+            ["EG_y0"],
+            ["LRMult_y0", "WG_H0N0W0", "WG_H0N1W0"],
+            ["dW_H0N0y0", "dW_H0N1y0", "WGS_H0N0", "WGS_H0N1"],
+            ["EG_H0N0", "EG_H0N1", "W_H0N0y0", "W_H0N1y0"],
+            ["LRMult_H0N0", "LRMult_H0N1"],
+            ["dW_x0H0N0", "dW_x0H0N1", "dW_x1H0N0", "dW_x1H0N1"],
+            ["W_x0H0N0", "W_x0H0N1", "W_x1H0N0", "W_x1H0N1"],
+            ["x0", "x1", "L_y0"],
+        ]
+
+        self.processor.mark_source_nodes_as_processed()
+        self.processor.mark_container_nodes_as_processed()
+
+        seq_result = self.processor.find_execution_sequence(
+            starting_nodes=self.graph.starting_nodes,
+            stopping_nodes=self.graph.stopping_nodes,
+            include_remaining_source_nodes=True,
+        )
+
+        starting_set = set(self.graph.starting_nodes)
+        filtered_sequence = []
+        for step in seq_result["sequence"]:
+            filtered_step = [n for n in step if n not in starting_set]
+            if filtered_step:
+                filtered_sequence.append(filtered_step)
+
+        actual_step_names = [[node.name for node in step] for step in filtered_sequence]
+        assert actual_step_names == expected_steps
 
 
 if __name__ == "__main__":

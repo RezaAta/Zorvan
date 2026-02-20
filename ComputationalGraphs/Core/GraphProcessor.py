@@ -9,6 +9,30 @@ from typing import Optional
 class GraphProcessor:
     """Clean GraphProcessor implementation with controller support."""
 
+    _DEFAULT_SEQUENCE_PREFIX_PRIORITY = [
+        "Mul_x",
+        "Add_L",
+        "Act_L",
+        "Mul_H",
+        "D_H",
+        "Add_y",
+        "y",
+        "Error_",
+        "D_y",
+        "EG_y",
+        "LRMult_y",
+        "WG_",
+        "dW_H",
+        "WGS_",
+        "EG_H",
+        "W_H",
+        "LRMult_H",
+        "dW_x",
+        "W_x",
+        "x",
+        "L_",
+    ]
+
     def __init__(
         self,
         graph,
@@ -56,6 +80,14 @@ class GraphProcessor:
     def _process_node_chunk(self, nodes, method_name):
         for node in nodes:
             getattr(node, method_name)()
+
+    @classmethod
+    def _default_sequence_sort_key(cls, node):
+        node_name = getattr(node, "name", "") or ""
+        for idx, prefix in enumerate(cls._DEFAULT_SEQUENCE_PREFIX_PRIORITY):
+            if node_name.startswith(prefix):
+                return (idx, node_name)
+        return (len(cls._DEFAULT_SEQUENCE_PREFIX_PRIORITY), node_name)
 
     @dataclass
     class ExecutionOptions:
@@ -327,6 +359,10 @@ class GraphProcessor:
                 while controller_obj.pause_event.is_set():
                     time.sleep(0.01)
 
+            # Clear processed nodes when starting a new cycle
+            if self._manual_step_index == 0:
+                self._processed_nodes.clear()
+
             # Get current step in the cycle
             step_nodes = full_sequence[self._manual_step_index]
 
@@ -368,12 +404,19 @@ class GraphProcessor:
     # Sequence Finder for Forward Processing
     # =========================================================================
 
-    def find_execution_sequence(self, starting_nodes=None, stopping_nodes=None):
+    def find_execution_sequence(
+        self,
+        starting_nodes=None,
+        stopping_nodes=None,
+        node_sort_key=None,
+        include_remaining_source_nodes=False,
+    ):
         """
         Compute the execution sequence for forward processing based on node dependencies.
 
         Algorithm:
-        1. Start with starting_nodes as the first step (these are already considered "processed")
+          1. Start with any pre-marked processed nodes (`self._processed_nodes`) plus
+              starting_nodes as the first executable step
         2. At each step, flag successors of current nodes as candidates
         3. Candidates whose ALL predecessors are in the processed set get added to the next step
         4. Repeat until no more nodes can be added
@@ -386,6 +429,10 @@ class GraphProcessor:
             Defaults to graph.starting_nodes.
         - stopping_nodes: List of nodes that should not trigger successor activation.
             Defaults to graph.stopping_nodes if it exists.
+        - node_sort_key: Optional callable to deterministically sort nodes within
+            each step. Defaults to a built-in neural-network-friendly ordering key.
+        - include_remaining_source_nodes: If True, append remaining unsequenced
+            source nodes (nodes with no predecessors) as a final step.
 
         Returns:
             dict with keys:
@@ -403,15 +450,22 @@ class GraphProcessor:
             stopping_nodes = getattr(self.graph, "stopping_nodes", [])
 
         # Convert to sets for O(1) lookups
-        starting_set = set(starting_nodes)
         stopping_set = set(stopping_nodes)
         all_nodes = set(self.graph.nodes)
+
+        if node_sort_key is None:
+            node_sort_key = self._default_sequence_sort_key
 
         # Build successor map for efficient traversal
         successor_map = self.graph.BuildSuccessorMap()
 
         # Initialize tracking structures
-        processed_set = set()  # Nodes that have been added to the sequence
+        # - dependency_ready_set: nodes considered "ready" for dependency checks.
+        #   Includes pre-marked nodes (e.g., sources/containers prepared for
+        #   forward processing) so readiness checks can use existing values.
+        # - processed_set: nodes that have been explicitly added to sequence steps.
+        dependency_ready_set = set(self._processed_nodes)
+        processed_set = set()
         sequence = []  # List of steps, each step is a list of nodes
 
         # Step 0: Starting nodes are the first step
@@ -419,6 +473,7 @@ class GraphProcessor:
             step_0 = list(starting_nodes)
             sequence.append(step_0)
             processed_set.update(step_0)
+            dependency_ready_set.update(step_0)
 
         # Current nodes whose successors we'll examine
         current_nodes = list(starting_nodes)
@@ -438,19 +493,39 @@ class GraphProcessor:
             ready_nodes = []
             for candidate in candidates:
                 all_preds_processed = all(
-                    pred in processed_set for pred in candidate.predecessors
+                    pred in dependency_ready_set for pred in candidate.predecessors
                 )
                 if all_preds_processed:
                     ready_nodes.append(candidate)
 
             # If we found ready nodes, add them as the next step
             if ready_nodes:
+                ready_nodes.sort(key=node_sort_key)
                 sequence.append(ready_nodes)
                 processed_set.update(ready_nodes)
+                dependency_ready_set.update(ready_nodes)
                 current_nodes = ready_nodes
             else:
                 # No ready nodes found, stop the loop
                 current_nodes = []
+
+        # Optionally append remaining source nodes as final step.
+        if include_remaining_source_nodes:
+            from ComputationalGraphs.Nodes.ContainerNode import ContainerNode
+
+            remaining_sources = [
+                n
+                for n in self.graph.nodes
+                if n not in processed_set
+                and len(n.predecessors) == 0
+                and not isinstance(n, ContainerNode)
+                and getattr(n, "name", "") != "LearningRate"
+            ]
+            if remaining_sources:
+                remaining_sources.sort(key=node_sort_key)
+                sequence.append(remaining_sources)
+                processed_set.update(remaining_sources)
+                dependency_ready_set.update(remaining_sources)
 
         # Analyze remaining nodes
         remaining_nodes = [n for n in all_nodes if n not in processed_set]
@@ -475,6 +550,8 @@ class GraphProcessor:
         iterations=1,
         starting_nodes=None,
         stopping_nodes=None,
+        node_sort_key=None,
+        include_remaining_source_nodes=False,
         exec_options: Optional[ExecutionOptions] = None,
         on_iteration_complete=None,
         on_step_complete=None,
@@ -490,6 +567,10 @@ class GraphProcessor:
         - iterations: Number of full passes through the sequence (epochs).
         - starting_nodes: Nodes to start execution from. Defaults to graph.starting_nodes.
         - stopping_nodes: Nodes that should not trigger successor activation.
+        - node_sort_key: Optional callable for deterministic ordering of nodes
+            within each sequence step.
+        - include_remaining_source_nodes: If True, append remaining source nodes
+            as a final step in the computed sequence.
         - exec_options: ExecutionOptions for pause/step control.
         - on_iteration_complete: Callback after each full pass (iteration/epoch).
         - on_step_complete: Callback after each step within a pass.
@@ -505,6 +586,8 @@ class GraphProcessor:
         seq_result = self.find_execution_sequence(
             starting_nodes=starting_nodes,
             stopping_nodes=stopping_nodes,
+            node_sort_key=node_sort_key,
+            include_remaining_source_nodes=include_remaining_source_nodes,
         )
         sequence = seq_result["sequence"]
 
@@ -524,6 +607,9 @@ class GraphProcessor:
         iterations_completed = 0
 
         for iteration in range(iterations):
+            # Clear processed nodes at the start of each iteration for fresh dimming cycle
+            self._processed_nodes.clear()
+
             # Check stop signal
             if (
                 getattr(controller_obj, "stop_event", None) is not None

@@ -179,6 +179,13 @@ class ExecutionSettingsController:
         ):
             mw.manual_sequence_widget.setVisible(is_manual_mode)
 
+        # Forward sequence panel for forward processing
+        if (
+            hasattr(mw, "forward_sequence_widget")
+            and mw.forward_sequence_widget is not None
+        ):
+            mw.forward_sequence_widget.setVisible(is_forward_mode)
+
         mode_name = processor_type.replace("_", " ").title()
         mw.status_bar.showMessage(f"Processor type: {mode_name}")
 
@@ -191,6 +198,8 @@ class ExecutionSettingsController:
         if is_forward_mode:
             try:
                 mw.update_stopping_nodes_display()
+                # Refresh and display the forward sequence
+                mw.refresh_forward_sequence()
             except Exception:
                 pass
 
