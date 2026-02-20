@@ -1336,6 +1336,32 @@ class MainWindow(QMainWindow):
         """Load the current graph.manual_processing_sequence into the UI list."""
         self.node_sequence_controller.load_manual_sequence_from_graph()
 
+    def refresh_forward_sequence(self):
+        """Refresh and display the forward processing sequence."""
+        if not self.graph_runner:
+            return
+
+        try:
+            if (
+                hasattr(self, "processor_combo")
+                and self.processor_combo is not None
+                and self.processor_combo.currentIndex() == 0
+                and hasattr(self, "forward_sequence_widget")
+                and self.forward_sequence_widget is not None
+            ):
+                self.forward_sequence_widget.setVisible(True)
+        except Exception:
+            pass
+
+        # Force recompute the forward sequence
+        self.graph_runner._compute_forward_sequence()
+
+        # Display it in the UI
+        if hasattr(self.graph_runner, "_forward_sequence"):
+            self.node_sequence_controller.display_forward_sequence(
+                self.graph_runner._forward_sequence or []
+            )
+
     def remove_from_starting_nodes(self):
         """Remove selected nodes from starting nodes list."""
         self.node_sequence_controller.remove_from_starting_nodes()

@@ -51,6 +51,8 @@ class GraphRunner(QObject):
         # Forward processing sequence (computed by find_execution_sequence)
         self._forward_sequence = None
         self._forward_step_index = 0
+        self._forward_sequence_topology_version = None
+        self._last_sequence_notice = None
 
         # === Phase 2: Processing Queue ===
         # Queue of (graph/subgraph, iterations) tuples to execute sequentially
@@ -96,6 +98,11 @@ class GraphRunner(QObject):
                     self.graph_processor.mark_source_nodes_as_processed()
                 except Exception:
                     pass
+            if hasattr(self.graph_processor, "mark_container_nodes_as_processed"):
+                try:
+                    self.graph_processor.mark_container_nodes_as_processed()
+                except Exception:
+                    pass
 
         # Compute forward processing sequence if in forward mode
         if self.processor_type == "forward":
@@ -138,11 +145,25 @@ class GraphRunner(QObject):
         """
         self._forward_sequence = None
         self._forward_step_index = 0
+        self._forward_sequence_topology_version = None
 
         if not self.graph_processor:
             return
 
         try:
+            # Ensure dependency-ready set includes source and container nodes
+            # (forward MLP requires initialized ContainerNodes/weights to be ready).
+            if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
+                try:
+                    self.graph_processor.mark_source_nodes_as_processed()
+                except Exception:
+                    pass
+            if hasattr(self.graph_processor, "mark_container_nodes_as_processed"):
+                try:
+                    self.graph_processor.mark_container_nodes_as_processed()
+                except Exception:
+                    pass
+
             # Get starting and stopping nodes from the graph
             starting_nodes = getattr(self.graph, "starting_nodes", None)
             stopping_nodes = getattr(self.graph, "stopping_nodes", None)
@@ -153,6 +174,9 @@ class GraphRunner(QObject):
             )
 
             self._forward_sequence = result.get("sequence", [])
+            self._forward_sequence_topology_version = getattr(
+                self.graph, "topology_version", None
+            )
 
             # Log sequence info for debugging
             if result.get("remaining_non_source_nodes"):
@@ -165,6 +189,118 @@ class GraphRunner(QObject):
         except Exception as e:
             print(f"[ForwardProcessing] Error computing sequence: {e}")
             self._forward_sequence = []
+
+        # Update UI to display the sequence (if parent main_window is available)
+        try:
+            main_window = self.parent()
+            if main_window and hasattr(main_window, "node_sequence_controller"):
+                main_window.node_sequence_controller.display_forward_sequence(
+                    self._forward_sequence or []
+                )
+        except Exception:
+            pass  # Silently fail if UI update doesn't work
+
+    def _emit_sequence_note(self, message):
+        """Display a lightweight sequence note in status bar and stdout."""
+        try:
+            if self._last_sequence_notice == message:
+                return
+            self._last_sequence_notice = message
+            parent = self.parent()
+            if parent is not None and hasattr(parent, "status_bar"):
+                parent.status_bar.showMessage(message, 6000)
+        except Exception:
+            pass
+        try:
+            print(f"[Sequence] {message}")
+        except Exception:
+            pass
+
+    def _refresh_manual_sequence_from_topology(self):
+        """Regenerate manual sequence from current topology and assign it to graph."""
+        if not self.graph_processor or not self.graph:
+            return False
+        try:
+            self.graph_processor.mark_source_nodes_as_processed()
+        except Exception:
+            pass
+        try:
+            self.graph_processor.mark_container_nodes_as_processed()
+        except Exception:
+            pass
+
+        starting_nodes = getattr(self.graph, "starting_nodes", None)
+        stopping_nodes = getattr(self.graph, "stopping_nodes", None)
+        result = self.graph_processor.find_execution_sequence(
+            starting_nodes=starting_nodes,
+            stopping_nodes=stopping_nodes,
+            include_remaining_source_nodes=True,
+        )
+        sequence = result.get("sequence", [])
+        starting_set = set(starting_nodes or [])
+        filtered_sequence = []
+        for step in sequence:
+            filtered = [n for n in step if n not in starting_set]
+            if filtered:
+                filtered_sequence.append(filtered)
+
+        self.graph.set_manual_processing_sequence(filtered_sequence, strict=True)
+        return True
+
+    def _ensure_sequences_fresh(self):
+        """Ensure forward/manual sequences are in sync with current graph topology."""
+        if not self.graph or not self.graph_processor:
+            return
+
+        current_topology_version = getattr(self.graph, "topology_version", None)
+
+        if self.processor_type == "forward":
+            stale = (
+                self._forward_sequence is None
+                or self._forward_sequence_topology_version is None
+                or (
+                    current_topology_version is not None
+                    and self._forward_sequence_topology_version
+                    != current_topology_version
+                )
+            )
+            if stale:
+                self._compute_forward_sequence()
+                self._emit_sequence_note(
+                    "Forward sequence refreshed automatically after graph topology change."
+                )
+            return
+
+        if self.processor_type == "manual":
+            manual_seq = getattr(self.graph, "manual_processing_sequence", None)
+            if not manual_seq:
+                return
+            seq_version = getattr(self.graph, "manual_sequence_topology_version", None)
+
+            if seq_version is None:
+                self._emit_sequence_note(
+                    "Manual sequence freshness is unknown (legacy sequence); renew if behavior looks off."
+                )
+                return
+
+            if (
+                current_topology_version is None
+                or seq_version == current_topology_version
+            ):
+                return
+
+            try:
+                refreshed = self._refresh_manual_sequence_from_topology()
+            except Exception as exc:
+                self._emit_sequence_note(
+                    f"Manual sequence is stale and auto-refresh failed: {exc}"
+                )
+                return
+
+            if refreshed:
+                self._emit_sequence_note(
+                    "Manual sequence was stale and has been regenerated from topology."
+                )
 
     def save_graph_snapshot(self):
         """Capture the current graph state as a snapshot for later restoration.
@@ -371,6 +507,7 @@ class GraphRunner(QObject):
         # Update adjacency matrix
         try:
             self.graph.UpdateAdjacencyMatrix()
+            self._ensure_sequences_fresh()
         except Exception as e:
             self.error_occurred.emit(f"Graph update failed: {str(e)}")
             self.is_running = False
@@ -557,6 +694,7 @@ class GraphRunner(QObject):
         # Update adjacency matrix
         try:
             self.graph.UpdateAdjacencyMatrix()
+            self._ensure_sequences_fresh()
         except Exception as e:
             self.error_occurred.emit(f"Graph update failed: {str(e)}")
             self.is_running = False
@@ -608,6 +746,15 @@ class GraphRunner(QObject):
                         # Respect pause
                         while controller.pause_event.is_set():
                             time.sleep(0.01)
+
+                        # Clear processed nodes at the start of each iteration (when cycling back to step 0)
+                        if self._forward_step_index == 0 and iterations_run > 0:
+                            self.graph_processor._processed_nodes.clear()
+                            # Emit signal so GUI can refresh and show all nodes lit
+                            self.step_completed.emit(self.current_step)
+                            # Small delay to let GUI update before processing starts
+                            if self.step_interval > 0:
+                                time.sleep(min(50, self.step_interval) / 1000.0)
 
                         # Get current step in the sequence
                         step_nodes = sequence[self._forward_step_index]
@@ -673,6 +820,22 @@ class GraphRunner(QObject):
                         # Respect pause
                         while controller.pause_event.is_set():
                             time.sleep(0.01)
+
+                        # Check if we're at cycle start and clear for visual reset
+                        at_cycle_start = (
+                            hasattr(self.graph_processor, "_manual_step_index")
+                            and self.graph_processor._manual_step_index == 0
+                            and iterations_run > 0
+                        )
+
+                        if at_cycle_start:
+                            # Clear processed nodes for fresh dimming cycle
+                            self.graph_processor._processed_nodes.clear()
+                            # Emit update so GUI refreshes and shows all nodes lit
+                            self.step_completed.emit(self.current_step)
+                            # Small delay to let GUI update before processing starts
+                            if self.step_interval > 0:
+                                time.sleep(min(50, self.step_interval) / 1000.0)
 
                         # Execute one manual processing iteration (uses graph.manual_processing_sequence)
                         self.graph_processor.ManualProcessing(
@@ -840,6 +1003,7 @@ class GraphRunner(QObject):
             return
 
         try:
+            self._ensure_sequences_fresh()
             if self.processor_type in ("forward", "manual"):
                 # Manual/Forward Processing execution
                 # Execute one iteration using ManualProcessing
@@ -1027,6 +1191,11 @@ class GraphRunner(QObject):
             if hasattr(self.graph_processor, "mark_source_nodes_as_processed"):
                 try:
                     self.graph_processor.mark_source_nodes_as_processed()
+                except Exception:
+                    pass
+            if hasattr(self.graph_processor, "mark_container_nodes_as_processed"):
+                try:
+                    self.graph_processor.mark_container_nodes_as_processed()
                 except Exception:
                     pass
 

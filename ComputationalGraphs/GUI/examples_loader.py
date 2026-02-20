@@ -114,6 +114,16 @@ class ExamplesLoader:
             "Minimal MLP with forward processing (no buffers)",
             self._build_simple_mlp_forward,
         )
+        nn_forward.add_example(
+            "Diabetes Prediction - Forward",
+            "Regression on Diabetes dataset with forward processing (same dataset pipeline as concurrent)",
+            self._build_diabetes_mlp_forward,
+        )
+        nn_forward.add_example(
+            "XOR Problem (2-2-1) - Forward (Bias)",
+            "XOR forward-processing MLP with explicit bias nodes enabled",
+            self._build_xor_mlp_forward_bias,
+        )
         self.categories["neural_networks_forward"] = nn_forward
 
         # Manual Processing Neural Network Examples
@@ -1066,47 +1076,18 @@ class ExamplesLoader:
 
         fullGraph.UpdateAdjacencyMatrix()
 
-        # Apply an explicit manual processing sequence determined from the graph structure.
-        # If any expected node name is missing, fall back to the sequence finder.
-        node_by_name = {n.name: n for n in fullGraph.nodes}
-
-        expected_steps = [
-            ["Mul_x0H0", "Mul_x0H1", "Mul_x1H0", "Mul_x1H1"],
-            ["Add_L0N0", "Add_L0N1"],
-            ["Act_L0N0", "Act_L0N1"],
-            ["Mul_H0N0y0", "Mul_H0N1y0", "D_H0N0", "D_H0N1"],
-            ["Add_y0"],
-            ["y0"],
-            ["Error_y0", "D_y0"],
-            ["EG_y0"],
-            ["LRMult_y0", "WG_H0N0W0", "WG_H0N1W0"],
-            ["dW_H0N0y0", "dW_H0N1y0", "WGS_H0N0", "WGS_H0N1"],
-            ["EG_H0N0", "EG_H0N1", "W_H0N0y0", "W_H0N1y0"],
-            ["LRMult_H0N0", "LRMult_H0N1"],
-            ["dW_x0H0N0", "dW_x0H0N1", "dW_x1H0N0", "dW_x1H0N1"],
-            ["W_x0H0N0", "W_x0H0N1", "W_x1H0N0", "W_x1H0N1"],
-            ["x0", "x1", "L_y0"],
-        ]
-
-        sequence = []
-        missing = []
-        for step_names in expected_steps:
-            step_nodes = [node_by_name[n] for n in step_names if n in node_by_name]
-            if len(step_nodes) != len(step_names):
-                missing.extend([n for n in step_names if n not in node_by_name])
-            if step_nodes:
-                sequence.append(step_nodes)
-
-        if missing:
-            # Fallback: compute sequence automatically if our hard-coded list doesn't match
-            processor = GraphProcessor(fullGraph, verbose=False)
-            processor.mark_source_nodes_as_processed()
-            processor.mark_container_nodes_as_processed()
-            seq_result = processor.find_execution_sequence(
-                starting_nodes=fullGraph.starting_nodes,
-                stopping_nodes=fullGraph.stopping_nodes,
-            )
-            sequence = seq_result.get("sequence", [])
+        # Compute sequence automatically from topology.
+        # GraphProcessor.find_execution_sequence applies deterministic
+        # intra-step ordering so this aligns with the manual XOR walkthrough.
+        processor = GraphProcessor(fullGraph, verbose=False)
+        processor.mark_source_nodes_as_processed()
+        processor.mark_container_nodes_as_processed()
+        seq_result = processor.find_execution_sequence(
+            starting_nodes=fullGraph.starting_nodes,
+            stopping_nodes=fullGraph.stopping_nodes,
+            include_remaining_source_nodes=True,
+        )
+        sequence = seq_result.get("sequence", [])
 
         # Remove starting nodes from the manual sequence to avoid duplicate execution
         starting_set = set(getattr(fullGraph, "starting_nodes", []))
@@ -1598,6 +1579,123 @@ class ExamplesLoader:
         fullGraph.UpdateAdjacencyMatrix()
 
         # Store reference to mlpGraph for potential access later
+        fullGraph._mlp_graph = mlpGraph
+        fullGraph._backprop_graph = backprop_graph
+
+        return fullGraph
+
+    def _build_diabetes_mlp_forward(self) -> Graph:
+        """Build Diabetes regression MLP with forward processing.
+
+        Uses the same dataset preparation as the concurrent diabetes example
+        (IQR outlier filtering + standard scaling), then runs with
+        MLPGraphForwardProcessing.
+        """
+        import numpy as np
+        from sklearn.datasets import load_diabetes
+        from sklearn.preprocessing import StandardScaler
+
+        from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
+            BackpropGraphForwardProcessing,
+        )
+        from ComputationalGraphs.Core.MLPGraphForwardProcessing import (
+            MLPGraphForwardProcessing,
+        )
+        from ComputationalGraphs.Nodes.LinearNode import LinearNode
+
+        data = load_diabetes()
+        inputData = data.data
+        targetData = data.target
+
+        q1 = np.percentile(targetData, 25, axis=0)
+        q3 = np.percentile(targetData, 75, axis=0)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+        non_outlier_mask = (targetData >= lower_bound) & (targetData <= upper_bound)
+        inputData = inputData[non_outlier_mask.flatten()]
+        targetData = targetData[non_outlier_mask.flatten()]
+
+        targetData = targetData.reshape(-1, 1)
+        scaler = StandardScaler()
+        inputData = scaler.fit_transform(inputData)
+
+        X = inputData.tolist()  # forward mode expects (samples, features)
+        y = targetData.tolist()  # (samples, outputs)
+
+        mlpGraph = MLPGraphForwardProcessing(
+            numInputs=inputData.shape[1],
+            numOutputs=1,
+            numHiddenLayers=3,
+            hiddenLayerSizes=[8, 4, 2],
+            activationFunction=SigmoidNode,
+            outputLayerType=LinearNode,
+        )
+        mlpGraph.BuildMLP()
+        mlpGraph.LoadData(X, y)
+
+        backprop_graph = BackpropGraphForwardProcessing(mlpGraph, learningRate=0.00001)
+        backprop_graph.BuildBackprop()
+
+        mlpGraph.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X))
+
+        fullGraph = Graph()
+        for node in mlpGraph.nodes:
+            fullGraph.AddNode(node)
+        for node in backprop_graph.nodes:
+            fullGraph.AddNode(node)
+        for eb in mlpGraph.errorBuffers:
+            if eb not in fullGraph.nodes:
+                fullGraph.AddNode(eb)
+        for mse in mlpGraph.mseNodes:
+            if mse not in fullGraph.nodes:
+                fullGraph.AddNode(mse)
+
+        fullGraph.starting_nodes = list(mlpGraph.starting_nodes)
+        fullGraph.stopping_nodes = list(getattr(mlpGraph, "stopping_nodes", []))
+        fullGraph.UpdateAdjacencyMatrix()
+        fullGraph._mlp_graph = mlpGraph
+        fullGraph._backprop_graph = backprop_graph
+
+        return fullGraph
+
+    def _build_xor_mlp_forward_bias(self) -> Graph:
+        """Build XOR MLP with forward processing and explicit bias nodes enabled."""
+        from ComputationalGraphs.Core.BackpropGraphForwardProcessing import (
+            BackpropGraphForwardProcessing,
+        )
+        from ComputationalGraphs.Core.MLPGraphForwardProcessing import (
+            MLPGraphForwardProcessing,
+        )
+        from ComputationalGraphs.Nodes.LinearNode import LinearNode
+
+        mlpGraph = MLPGraphForwardProcessing(
+            numInputs=2,
+            numOutputs=1,
+            numHiddenLayers=1,
+            hiddenLayerSizes=[2],
+            activationFunction=SigmoidNode,
+            outputLayerType=LinearNode,
+        )
+        mlpGraph.add_bias = True
+        mlpGraph.BuildMLP()
+
+        X = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]
+        y = [[0.0], [1.0], [1.0], [0.0]]
+        mlpGraph.LoadData(X, y)
+
+        backprop_graph = BackpropGraphForwardProcessing(mlpGraph, learningRate=0.5)
+        backprop_graph.BuildBackprop()
+
+        fullGraph = Graph()
+        for node in mlpGraph.nodes:
+            fullGraph.AddNode(node)
+        for node in backprop_graph.nodes:
+            fullGraph.AddNode(node)
+
+        fullGraph.starting_nodes = list(mlpGraph.starting_nodes)
+        fullGraph.stopping_nodes = list(getattr(mlpGraph, "stopping_nodes", []))
+        fullGraph.UpdateAdjacencyMatrix()
         fullGraph._mlp_graph = mlpGraph
         fullGraph._backprop_graph = backprop_graph
 

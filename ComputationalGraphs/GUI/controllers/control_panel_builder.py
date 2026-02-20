@@ -691,6 +691,9 @@ class ControlPanelBuilder:
         # Manual sequence widget
         self._build_manual_sequence_widget(layout)
 
+        # Forward sequence widget
+        self._build_forward_sequence_widget(layout)
+
         layout.addWidget(QLabel(""))  # Spacer
 
         # Play/Pause/Step/Reset buttons
@@ -1043,6 +1046,65 @@ class ControlPanelBuilder:
         group.addLayout(btn_row3)
 
         parent_layout.addWidget(mw.manual_sequence_widget)
+
+    def _build_forward_sequence_widget(self, parent_layout):
+        """Build forward processing sequence display widget."""
+        mw = self.mw
+        mw.forward_sequence_widget = QWidget()
+        mw.forward_sequence_widget.setVisible(False)
+        group = QVBoxLayout(mw.forward_sequence_widget)
+        group.setContentsMargins(0, 0, 0, 0)
+        if ThemedLabel is not None:
+            group.addWidget(ThemedLabel("<b>Forward Sequence</b>"))
+        else:
+            group.addWidget(QLabel("<b>Forward Sequence</b>"))
+
+        mw.forward_sequence_list = QListWidget()
+        mw.forward_sequence_list.setMinimumHeight(120)
+        mw.forward_sequence_list.setMaximumHeight(300)
+        try:
+            from ..theme import get_theme_manager
+
+            tm = get_theme_manager()
+        except Exception:
+            tm = None
+        if tm is not None:
+            list_bg = tm.get_color("list_bg", "#313335").name()
+            border = tm.get_color("border", "#555555").name()
+            text = tm.get_color("text_primary", "#e6e6e6").name()
+            mw.forward_sequence_list.setStyleSheet(
+                f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; color: {text}; }}"
+            )
+            try:
+                tm.theme_changed.connect(
+                    lambda: mw.forward_sequence_list.setStyleSheet(
+                        f"QListWidget {{ background-color: {tm.get_color('list_bg').name()}; border: 1px solid {tm.get_color('border').name()}; color: {tm.get_color('text_primary', '#e6e6e6').name()}; }}"
+                    )
+                )
+            except Exception:
+                pass
+        else:
+            mw.forward_sequence_list.setStyleSheet(
+                "QListWidget { background-color: #2a2a2a; border: 1px solid #555; color: #e6e6e6; }"
+            )
+        group.addWidget(mw.forward_sequence_list)
+
+        btn_row = QHBoxLayout()
+        mw.refresh_forward_sequence_btn = _create_standard_button(
+            mw,
+            "Refresh Sequence",
+            "fa5s.sync",
+            QStyle.StandardPixmap.SP_BrowserReload,
+            14,
+        )
+        mw.refresh_forward_sequence_btn.setToolTip(
+            "Recompute forward processing sequence"
+        )
+        mw.refresh_forward_sequence_btn.clicked.connect(mw.refresh_forward_sequence)
+        btn_row.addWidget(mw.refresh_forward_sequence_btn)
+        group.addLayout(btn_row)
+
+        parent_layout.addWidget(mw.forward_sequence_widget)
 
     def _build_execution_buttons(self, parent_layout):
         """Build play/pause/step/reset buttons.

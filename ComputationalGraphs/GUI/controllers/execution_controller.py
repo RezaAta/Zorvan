@@ -610,7 +610,7 @@ class ExecutionController:
             # Optionally dim nodes that are marked as 'processed'
             if (
                 self.main_window.dim_processed_check.isChecked()
-                and self.graph_runner.processor_type == "forward"
+                and self.graph_runner.processor_type in ("forward", "manual")
             ):
                 self._apply_processed_node_dimming()
         else:
@@ -703,10 +703,12 @@ class ExecutionController:
     def _apply_processed_node_dimming(self):
         """Apply dimming to processed nodes in forward processing mode."""
         gp = getattr(self.graph_runner, "graph_processor", None)
-        if gp and hasattr(gp, "_node_status"):
-            processed_nodes = {
-                n for n, s in gp._node_status.items() if s == "processed"
-            }
+        if gp:
+            processed_nodes = set(getattr(gp, "_processed_nodes", set()) or set())
+            if not processed_nodes and hasattr(gp, "_node_status"):
+                processed_nodes = {
+                    n for n, s in gp._node_status.items() if s == "processed"
+                }
             active_set = set(self.graph_runner.active_nodes)
             for node, node_item in self.canvas.node_items.items():
                 if node in active_set:

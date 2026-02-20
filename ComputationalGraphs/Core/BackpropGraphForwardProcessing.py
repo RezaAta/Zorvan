@@ -55,6 +55,13 @@ class BackpropGraphForwardProcessing(Graph):
         self._CreateBiasRecalculationLayers()
         self.UpdateAdjacencyMatrix()
 
+        # Clear stopping_nodes so weight successors (gradients) can be sequenced
+        # MLPGraph populates stopping_nodes with weights for forward-only execution,
+        # but with backprop built, we need the full graph including gradient flows
+        self.stopping_nodes = []
+        if hasattr(self.mlp_graph, "stopping_nodes"):
+            self.mlp_graph.stopping_nodes = []
+
     def _CreateLRNode(self):
         """Create learning rate node."""
         # Learning rate is a constant hyperparameter for forward processing

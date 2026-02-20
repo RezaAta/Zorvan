@@ -25,6 +25,8 @@ class Graph:
         # Each item in the list represents the set of nodes to process at a single iteration.
         # Accepts Node objects, node ids (strings), or node indices (ints).
         self.manual_processing_sequence = None
+        self.manual_sequence_topology_version = None
+        self.topology_version = 0
 
         # Multi-graph identity and subgraph bookkeeping
         self.graph_id = uuid.uuid4().hex
@@ -41,6 +43,10 @@ class Graph:
         self.compressed_counter = 1
         self.basic_counter = 0  # Using alphabet positions for basic nodes
         self.basic_suffix_counter = 1  # Used when a-z are all used up
+
+    def _mark_topology_changed(self):
+        """Increment topology version when graph structure changes."""
+        self.topology_version += 1
 
     def GenerateIdForNode(self, node):
         """
@@ -84,6 +90,7 @@ class Graph:
 
     def AddNode(self, *nodeObjects):
         """Add an existing node object to the graph."""
+        added_any = False
         for nodeObject in nodeObjects:
             nodeObject.id = self.GenerateIdForNode(
                 nodeObject
@@ -107,8 +114,12 @@ class Graph:
                     self.adjacencyMatrix[pred_index][
                         node_index
                     ] = 1  # Connection from predecessor to new node
+            added_any = True
+        if added_any:
+            self._mark_topology_changed()
 
     def ConnectPreNode(self, node, *preNodes):
+        changed = False
         for preNode in preNodes:
             """Manually connect a predecessor to a node and update the adjacency matrix."""
             node.AddPreNode(preNode)  # Add the predecessor to the node's list
@@ -119,6 +130,9 @@ class Graph:
             self.adjacencyMatrix[preNode_index][
                 node_index
             ] = 1  # Connection from predecessor to node
+            changed = True
+        if changed:
+            self._mark_topology_changed()
 
     def DisconnectPreNode(self, node, *preNodes):
         """Disconnect predecessor(s) from a node and update the adjacency matrix."""
@@ -196,9 +210,11 @@ class Graph:
                 if predecessor in self.nodes:
                     pred_index = self.nodes.index(predecessor)
                     self.adjacencyMatrix[pred_index][i] = 1  # Mark the connection
+            self._mark_topology_changed()
 
     def RemoveNode(self, *identifiers):
         """Remove nodes from the graph by object, id, or index."""
+        removed_any = False
         for identifier in identifiers:
             # identify the node to remove based on its type (index, id, or object)
             nodeToRemove = self.__IdentifyNode(identifier)
@@ -216,8 +232,11 @@ class Graph:
                 # Remove the node from the graph and the id-to-node dictionary
                 self.nodes.remove(nodeToRemove)
                 del self.idToNodeDictionary[nodeToRemove.id]
+                removed_any = True
             else:
                 raise ValueError(f"Node '{nodeToRemove}' not found in the graph.")
+        if removed_any:
+            self._mark_topology_changed()
 
     def __repr__(self):
         return f"Graph with {len(self.nodes)} nodes."
@@ -1003,6 +1022,7 @@ class Graph:
         """
         if sequence is None:
             self.manual_processing_sequence = None
+            self.manual_sequence_topology_version = None
             return
 
         resolved_sequence = []
@@ -1062,10 +1082,12 @@ class Graph:
                 resolved_sequence.append(step_list)
 
         self.manual_processing_sequence = resolved_sequence
+        self.manual_sequence_topology_version = self.topology_version
 
     def clear_manual_processing_sequence(self):
         """Clear any previously set manual processing sequence."""
         self.manual_processing_sequence = None
+        self.manual_sequence_topology_version = None
 
     # =========================================================================
     # Abstraction methods - grouping disjoint nodes with same predecessors/successors
