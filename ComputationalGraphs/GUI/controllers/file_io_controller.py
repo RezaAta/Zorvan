@@ -191,6 +191,42 @@ class FileIOController:
         self.main_window.update_starting_nodes_display()
         self.main_window.update_stopping_nodes_display()
 
+        # Ensure execution controls and processor are reset when a new file is loaded
+        # (mirrors behavior of New -> keeps UI predictable and stops any running processor)
+        try:
+            self.main_window.reset_graph()
+        except Exception:
+            pass
+
+        # Process any pending Qt events to flush stale step_completed signals
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            QApplication.processEvents()
+        except Exception:
+            pass
+
+        # Explicitly ensure step counter displays 0 (guard against stale queued signals)
+        try:
+            max_steps = self.main_window.max_steps_spin.value()
+            self.main_window.step_label.setText(f"Step: 0 / {max_steps}")
+            if (
+                hasattr(self.main_window, "step_progress")
+                and self.main_window.step_progress
+            ):
+                self.main_window.step_progress.setValue(0)
+                self.main_window.step_progress.setMaximum(max_steps)
+        except Exception:
+            pass
+
+        # Force UI refresh so step counter displays immediately
+        try:
+            from PyQt6.QtWidgets import QApplication
+
+            QApplication.processEvents()
+        except Exception:
+            pass
+
         # Update graph selector for multi-graph support
         try:
             self.main_window.update_graph_selector()

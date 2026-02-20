@@ -218,7 +218,8 @@ class DialogController:
             # Load the new graph and synchronize canvas and runner
             self.main_window.set_graph(example_graph)
 
-            # DON'T reset when loading - it clears DataStreamNode data!
+            # NOTE: perform a full reset for examples so execution controls reflect
+            # the freshly-loaded graph (this intentionally clears processor state)
 
             # Visualize the graph on canvas (log timing)
             vis_t0 = time.time()
@@ -239,6 +240,42 @@ class DialogController:
             print(
                 f"[GUI] Visualization complete for example: {name} (duration: {vis_t1 - vis_t0:.3f}s)"
             )
+
+            # Reset execution controls and processor so the UI is in a stopped/default state
+            try:
+                self.main_window.reset_graph()
+            except Exception:
+                pass
+
+            # Process any pending Qt events to flush stale step_completed signals
+            try:
+                from PyQt6.QtWidgets import QApplication
+
+                QApplication.processEvents()
+            except Exception:
+                pass
+
+            # Explicitly ensure step counter displays 0 (guard against stale queued signals)
+            try:
+                max_steps = self.main_window.max_steps_spin.value()
+                self.main_window.step_label.setText(f"Step: 0 / {max_steps}")
+                if (
+                    hasattr(self.main_window, "step_progress")
+                    and self.main_window.step_progress
+                ):
+                    self.main_window.step_progress.setValue(0)
+                    self.main_window.step_progress.setMaximum(max_steps)
+            except Exception:
+                pass
+
+            # Force UI refresh so step counter displays immediately
+            try:
+                from PyQt6.QtWidgets import QApplication
+
+                QApplication.processEvents()
+            except Exception:
+                pass
+
             try:
                 self.main_window.status_bar.showMessage(
                     f"Loaded example: {name} (build {build_t1 - build_t0:.3f}s, vis {vis_t1 - vis_t0:.3f}s)"

@@ -535,7 +535,24 @@ class ExecutionController:
             self._set_stopped_state()
 
     def on_step_completed(self, step):
-        """Handle step completion callback from GraphRunner."""
+        """Handle step completion callback from GraphRunner.
+
+        Guard against stale/queued step events that can arrive after the runner
+        has been stopped or after a full reset has been performed. If the
+        GraphRunner is not running and the iteration counter is already zero,
+        treat incoming step events as stale and ignore them.
+        """
+        # Ignore stale step events delivered after a stop/reset
+        try:
+            if (
+                not getattr(self.graph_runner, "is_running", False)
+                and getattr(self.graph_runner, "current_step", 0) == 0
+            ):
+                return
+        except Exception:
+            # Fall back to normal processing if introspection fails
+            pass
+
         # Update step label to show current / max
         try:
             max_steps = (
