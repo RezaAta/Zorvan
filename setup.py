@@ -23,13 +23,6 @@ setup(
     name="zorvan",
     version="0.1.0",
     packages=find_packages(),
-    # Export some useful top-level scripts as modules so they are importable
-    # after `pip install -e .` (tests reference them as plain imports).
-    py_modules=[
-        "ClassicMLP",
-        "ClassicEATestOnDeJongSphereFunction",
-        "ClassicFuzzySystemOnFanControlProblem",
-    ],
     description="A Python framework for building and running computational graphs.",
     author="Zorvan contributors",
     url="https://github.com/ORG_OR_USER/zorvan",

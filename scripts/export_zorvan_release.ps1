@@ -22,9 +22,7 @@ if (-not (Test-Path $destRoot)) {
 }
 
 $includeDirs = @(
-    "ComputationalGraphs",
-    "Examples",
-    "Experiments",
+    "zorvan",
     "scripts",
     ".github"
 )

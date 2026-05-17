@@ -5,8 +5,6 @@ This file defines what should be exported from `MVVM-UI-Migration` into the publ
 ## Include (public)
 
 - `zorvan/`
-- `Examples/`
-- `Experiments/`
 - `scripts/`
 - `.github/workflows/`
 - `.github/PULL_REQUEST_TEMPLATE.md`
