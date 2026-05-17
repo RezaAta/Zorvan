@@ -822,19 +822,14 @@ class ThemeManager(QObject):
                     # safely set the stylesheet string and emit the theme_changed signal
                     # so observers update their local state without iterating widgets.
                     if is_test:
+                        # In test mode we avoid calling QApplication.setStyleSheet()
+                        # because even minimal stylesheet application can cause native
+                        # crashes in pytest/pytestqt environments on Windows.
                         try:
-                            app.setStyleSheet(s)
+                            self._last_applied_stylesheet = s
                         except Exception:
                             pass
-                        # In test-safe mode we avoid emitting theme_changed to prevent
-                        # calling into potentially-stale widget slots which may cause
-                        # native crashes in test harnesses. Tests should assert on the
-                        # stylesheet or call refresh helpers explicitly when needed.
-                        try:
-                            app.processEvents()
-                        except Exception:
-                            pass
-                        return True
+                        return False
 
                     # For normal (non-test) runs, perform a deferred application of
                     # the stylesheet and font to reduce the chance of stepping on

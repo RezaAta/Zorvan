@@ -12,9 +12,10 @@ def test_combined_palette_updates_on_custom_node_add():
     app = QApplication.instance() or QApplication([])
     mgr = get_custom_node_manager()
 
-    # Ensure test cleanliness
-    if mgr.get_definition("TestNodeA"):
-        mgr.remove_definition("TestNodeA")
+    # Ensure test cleanliness: remove any preloaded custom nodes from the
+    # default library and any leftovers from earlier tests.
+    for node_type in list(mgr.get_type_names()):
+        mgr.remove_definition(node_type)
 
     pal = CombinedNodePalette()
 

@@ -592,6 +592,22 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
+        # Ensure the legacy GraphCanvas is populated from the Graph model so
+        # visualization overlays (ANN / colorize) have node items to operate on.
+        try:
+            if (
+                hasattr(self, "graph_builder_controller")
+                and self.graph_builder_controller
+                and getattr(graph, "nodes", None)
+            ):
+                try:
+                    self.graph_builder_controller.visualize_graph_on_canvas(graph)
+                except Exception:
+                    # Don't block set_graph on visualization failures
+                    pass
+        except Exception:
+            pass
+
         # Reapply visualization overlays/preferences for the new graph
         try:
             # If ANN coloring is enabled, ensure canvas applies ANN colors for the new nodes

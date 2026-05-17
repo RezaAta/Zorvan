@@ -38,6 +38,8 @@ class MLPGraphForwardProcessing(Graph):
         hiddenLayerSizes=None,
         outputLayerType=LinearNode,
         initializer=None,
+        add_bias=True,
+        use_bias=None,
     ):
         """
         Initialize MLP for forward processing (no buffers).
@@ -56,6 +58,10 @@ class MLPGraphForwardProcessing(Graph):
         self.numOutputs = numOutputs
         self.numHiddenLayers = numHiddenLayers
         self.activationFunction = activationFunction
+        # Backwards compatibility: if caller provided `use_bias`, prefer it
+        if use_bias is not None:
+            add_bias = use_bias
+        self.add_bias = add_bias
         # Hidden activation functions: allow single class or list
         if hiddenActivationFunctions is None:
             self.hiddenActivationFunctions = [activationFunction] * numHiddenLayers

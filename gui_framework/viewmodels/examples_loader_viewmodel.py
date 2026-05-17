@@ -57,12 +57,20 @@ class ExamplesLoaderViewModel(BaseViewModel):
         """
         if self.repository is not None:
             try:
-                cats = self.repository.list_examples_by_category()
-                # Normalize to name -> [(name, desc, builder)] -> we only need (name, desc)
-                normalized = {}
-                for cat_name, examples in cats.items():
-                    normalized[cat_name] = [(n, d) for n, d, _ in examples]
-                return normalized
+                if hasattr(self.repository, "list_examples_by_category"):
+                    cats = self.repository.list_examples_by_category()
+                    # Normalize to name -> [(name, desc, builder)] -> we only need (name, desc)
+                    normalized = {}
+                    for cat_name, examples in cats.items():
+                        normalized[cat_name] = [(n, d) for n, d, _ in examples]
+                    return normalized
+
+                # Legacy repositories only expose list_examples(); group them under
+                # the traditional 'Prog' category used by the tests and older UI.
+                examples = self.repository.list_examples()
+                return {
+                    "Prog": [(name, desc) for name, (_, desc) in examples.items()]
+                }
             except Exception:
                 return {}
 

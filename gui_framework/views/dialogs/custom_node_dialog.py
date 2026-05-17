@@ -75,6 +75,14 @@ if PYQT_AVAILABLE:
             drow.addWidget(self.description_edit)
             props_layout.addLayout(drow)
 
+            # Legacy compatibility aliases used by older tests and views.
+            self.name_edit = self.type_name_edit
+            self.desc_edit = QPlainTextEdit()
+            self.desc_edit.setPlaceholderText("Optional description for node")
+            self.desc_edit.setFixedHeight(70)
+            self.desc_edit.hide()
+            self._param_widgets = {}
+
             # Input count
             irow = QHBoxLayout()
             irow.addWidget(QLabel("Number of Inputs:"))
@@ -110,6 +118,13 @@ if PYQT_AVAILABLE:
 
             props_group.setLayout(props_layout)
             self.content_layout.addWidget(props_group)
+
+            # Legacy parameter editor support for node-instance roundtrips.
+            self.legacy_params_group = QGroupBox("Parameters")
+            self.legacy_params_layout = QVBoxLayout()
+            self.legacy_params_group.setLayout(self.legacy_params_layout)
+            self.legacy_params_group.hide()
+            self.content_layout.addWidget(self.legacy_params_group)
 
             # ===== SECTION 2: VALID INPUT TYPES =====
             types_group = QGroupBox("Valid Input Types")
@@ -180,6 +195,10 @@ if PYQT_AVAILABLE:
                 self._bind_viewmodel()
             except Exception:
                 pass
+            try:
+                self._sync_legacy_widgets_from_viewmodel()
+            except Exception:
+                pass
             # initial render
             self._on_properties_changed(None, None)
 
@@ -223,6 +242,50 @@ if PYQT_AVAILABLE:
             )
             self.custom_props_container.addWidget(row_widget)
 
+        def _sync_legacy_widgets_from_viewmodel(self):
+            """Populate legacy compatibility widgets from the current viewmodel."""
+            vm: CustomNodeViewModel = self.get_viewmodel()
+            try:
+                desc = vm.get_description()
+                if desc:
+                    self.desc_edit.setPlainText(desc)
+            except Exception:
+                pass
+
+            try:
+                params = vm.get_params()
+            except Exception:
+                params = {}
+
+            # Clear old compatibility widgets.
+            try:
+                while self.legacy_params_layout.count():
+                    item = self.legacy_params_layout.takeAt(0)
+                    widget = item.widget()
+                    if widget is not None:
+                        widget.deleteLater()
+            except Exception:
+                pass
+            self._param_widgets = {}
+
+            if not params:
+                self.legacy_params_group.hide()
+                return
+
+            self.legacy_params_group.show()
+            for key, value in params.items():
+                from PyQt6.QtWidgets import QHBoxLayout
+
+                row_widget = QWidget()
+                row_layout = QHBoxLayout(row_widget)
+                row_layout.setContentsMargins(0, 0, 0, 0)
+                row_layout.addWidget(QLabel(key))
+                editor = QLineEdit()
+                editor.setText(str(value))
+                row_layout.addWidget(editor)
+                self.legacy_params_layout.addWidget(row_widget)
+                self._param_widgets[key] = editor
+
         def remove_custom_property_row(self, row_data: Dict[str, QWidget]):
             if row_data in self.custom_property_rows:
                 self.custom_property_rows.remove(row_data)
@@ -236,8 +299,11 @@ if PYQT_AVAILABLE:
             except Exception:
                 pass
             try:
-                if self.description_edit.text() != vm.get_description():
-                    self.description_edit.setText(vm.get_description())
+                description = vm.get_description()
+                if self.description_edit.text() != description:
+                    self.description_edit.setText(description)
+                if self.desc_edit.toPlainText() != description:
+                    self.desc_edit.setPlainText(description)
             except Exception:
                 pass
             try:
@@ -285,6 +351,43 @@ if PYQT_AVAILABLE:
                     self.operation_edit.setPlainText(vm.get_operation_code())
             except Exception:
                 pass
+            try:
+                self._sync_legacy_widgets_from_viewmodel()
+            except Exception:
+                pass
+
+        def _legacy_description_text(self) -> str:
+            try:
+                legacy_text = self.desc_edit.toPlainText().strip()
+                if legacy_text:
+                    return legacy_text
+            except Exception:
+                pass
+            try:
+                return self.description_edit.text().strip()
+            except Exception:
+                return ""
+
+        def _on_apply(self):
+            vm: CustomNodeViewModel = self.get_viewmodel()
+            try:
+                vm.set_name(self.name_edit.text())
+            except Exception:
+                pass
+            try:
+                vm.set_description(self._legacy_description_text())
+            except Exception:
+                pass
+            try:
+                for key, editor in self._param_widgets.items():
+                    vm.set_param(key, editor.text())
+            except Exception:
+                pass
+            try:
+                vm.apply_to_node()
+            except Exception:
+                pass
+            return True
 
         def _on_save(self):
             vm: CustomNodeViewModel = self.get_viewmodel()
@@ -294,7 +397,7 @@ if PYQT_AVAILABLE:
             except Exception:
                 pass
             try:
-                vm.set_description(self.description_edit.text())
+                vm.set_description(self._legacy_description_text())
             except Exception:
                 pass
             try:

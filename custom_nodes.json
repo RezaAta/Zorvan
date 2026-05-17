@@ -1,4 +1,18 @@
 {
   "version": 1,
-  "custom_nodes": []
+  "custom_nodes": [
+    {
+      "type_name": "T",
+      "input_count": 2,
+      "batch_size": 2,
+      "inclusive": true,
+      "forced_batch_processing": false,
+      "valid_input_types": [
+        "numeric"
+      ],
+      "operation_code": "return input1 + input2",
+      "description": "D",
+      "custom_properties": []
+    }
+  ]
 }

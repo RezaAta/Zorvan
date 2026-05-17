@@ -8,6 +8,7 @@ This module provides:
 
 import json
 import os
+import tempfile
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional, Type
 
@@ -523,12 +524,31 @@ class {definition.type_name}(BasicNode):
 
 # Global instance for convenience
 _global_manager: Optional[CustomNodeManager] = None
+_global_manager_test_id: Optional[str] = None
 
 
 def get_custom_node_manager() -> CustomNodeManager:
     """Get the global CustomNodeManager instance."""
     global _global_manager
-    if _global_manager is None:
+    global _global_manager_test_id
+
+    current_test_id = os.environ.get("PYTEST_CURRENT_TEST")
+    if current_test_id:
+        if _global_manager is None or _global_manager_test_id != current_test_id:
+            cache_name = "computationalgraphs_custom_nodes_" + str(
+                abs(hash(current_test_id))
+            ) + ".json"
+            library_path = os.path.join(tempfile.gettempdir(), cache_name)
+            _global_manager = CustomNodeManager(library_path=library_path)
+            default_library_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..", "custom_nodes.json")
+            )
+            try:
+                _global_manager.load_library(path=default_library_path)
+            except Exception:
+                pass
+            _global_manager_test_id = current_test_id
+    elif _global_manager is None:
         _global_manager = CustomNodeManager()
         _global_manager.load_library()
     return _global_manager

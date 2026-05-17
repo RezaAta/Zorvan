@@ -27,6 +27,7 @@ class CustomNodeViewModel(BaseViewModel):
     def __init__(self, definition: Optional[object] = None):
         super().__init__()
         # Core fields mirroring CustomNodeDefinition
+        self._node_ref = None
         self._type_name: str = ""
         self._input_count: int = 2
         self._batch_size: int = 2
@@ -41,11 +42,15 @@ class CustomNodeViewModel(BaseViewModel):
         self._params: Dict[str, ParamInfo] = {}
 
         if definition is not None:
-            # Accept either a CustomNodeDefinition or a simple node-like object
-            try:
-                self.load_from_definition(definition)
-            except Exception:
+            # Prefer node-like objects with params; fall back to definition-like
+            # objects used by the custom-node editor.
+            if hasattr(definition, "params") and not hasattr(definition, "type_name"):
                 self.load_from_node(definition)
+            else:
+                try:
+                    self.load_from_definition(definition)
+                except Exception:
+                    self.load_from_node(definition)
 
     def initialize(self):
         return True
@@ -56,6 +61,7 @@ class CustomNodeViewModel(BaseViewModel):
     def load_from_definition(self, d):
         """Load fields from a CustomNodeDefinition-like object."""
         try:
+            self._node_ref = None
             self._type_name = getattr(d, "type_name", getattr(d, "name", ""))
             self._input_count = int(getattr(d, "input_count", 2))
             self._batch_size = int(getattr(d, "batch_size", 2))
@@ -74,6 +80,7 @@ class CustomNodeViewModel(BaseViewModel):
 
     def load_from_node(self, node):
         """Compatibility loader for node-like objects with params and name/description."""
+        self._node_ref = node
         self._type_name = getattr(node, "name", "")
         self._description = str(getattr(node, "description", ""))
         self._params = {}
@@ -88,6 +95,12 @@ class CustomNodeViewModel(BaseViewModel):
         self.properties_changed += 1
 
     # Accessors and mutators for all fields
+    def get_name(self) -> str:
+        return self.get_type_name()
+
+    def set_name(self, v: str):
+        self.set_type_name(v)
+
     def get_type_name(self) -> str:
         return self._type_name
 
@@ -150,6 +163,29 @@ class CustomNodeViewModel(BaseViewModel):
         if d != self._description:
             self._description = d
             self.properties_changed += 1
+
+    def apply_to_node(self) -> bool:
+        """Apply the current view-model values back to the loaded node object."""
+        node = self._node_ref
+        if node is None:
+            return False
+
+        try:
+            node.name = self._type_name
+        except Exception:
+            pass
+        try:
+            node.description = self._description
+        except Exception:
+            pass
+        try:
+            if not hasattr(node, "params") or node.params is None:
+                node.params = {}
+            for key, param in self._params.items():
+                node.params[key] = param.value
+        except Exception:
+            pass
+        return True
 
     def get_custom_properties(self) -> List[Dict[str, Any]]:
         return list(self._custom_properties)

@@ -100,6 +100,10 @@ class PlotViewModel(BaseViewModel):
         """Get buffer size setting."""
         return self._buffer_size
 
+    def get_max_iterations(self) -> int:
+        """Legacy alias used by the plot view for x-axis bounds."""
+        return self._buffer_size
+
     def set_backend(self, backend: str):
         """Set plot backend.
 

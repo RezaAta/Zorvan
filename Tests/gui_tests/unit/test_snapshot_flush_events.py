@@ -10,7 +10,7 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for this test")
 
-from zorvan.zorvan.GUI.graph_runner import GraphRunner
+from zorvan.GUI.graph_runner import GraphRunner
 
 
 class DummyNode:
