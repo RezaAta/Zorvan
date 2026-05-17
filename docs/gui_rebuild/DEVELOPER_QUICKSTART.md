@@ -35,7 +35,7 @@ python -m pytest --version
 
 ```bash
 # Launch GUI
-python run_gui.py
+python run_new_ui.py
 
 # If you see libEGL errors on Linux:
 export QT_QPA_PLATFORM=offscreen  # For headless testing
@@ -797,7 +797,7 @@ git push origin gui/rebuild/feature-name
 - [Feature Inventory](FEATURE_INVENTORY.md)
 - [Target Architecture](TARGET_ARCHITECTURE.md)
 - [Migration Plan](MIGRATION_PLAN.md)
-- [GUI README](../../GUI_README.md)
+- [GUI README](../GUI_README.md)
 
 ### External Resources
 - [PyQt6 Documentation](https://www.riverbankcomputing.com/static/Docs/PyQt6/)
@@ -838,7 +838,7 @@ from gui_framework.window.manager import get_window_manager
 
 ```bash
 # Run GUI
-python run_gui.py
+python run_new_ui.py
 
 # Run all tests
 pytest

@@ -6,7 +6,7 @@ Quick run commands (PowerShell):
 
 ```powershell
 # Run the GUI
-python run_gui.py
+python run_new_ui.py
 
 # Run a small XOR test
 python Examples/exp_xor_classic_mlp.py

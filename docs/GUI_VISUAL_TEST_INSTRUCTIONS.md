@@ -25,7 +25,7 @@ This ensures starting nodes (first layer Mult) can immediately access both input
 
 ### Step 1: Launch the GUI
 ```powershell
-python run_gui.py
+python run_new_ui.py
 ```
 
 ### Step 2: Load the XOR Example

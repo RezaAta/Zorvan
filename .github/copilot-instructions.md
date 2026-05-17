@@ -9,8 +9,8 @@ These concise rules help AI coding agents make productive, correct edits in this
     .\.venv\Scripts\Activate.ps1
     .\scripts\bootstrap.ps1
     ```
-  - Run GUI: `python run_gui.py`
-  - Quick tests: `python Examples/exp_xor_classic_mlp.py`, `python Experiments/exp_compare_three_approaches.py`
+  - Run GUI: `python run_new_ui.py`
+  - Quick tests: `pytest -q`
   - Full test suite: `pytest -q`
 
 - Big picture: Node-centric computational graphs. Nodes are active actors; Graphs orchestrate nodes.
@@ -30,11 +30,11 @@ These concise rules help AI coding agents make productive, correct edits in this
   - Avoid moving node-local logic into a central controller—nodes are actors.
 
 - Integration & testing:
-  - GUI: `run_gui.py` and `ComputationalGraphs/GUI/` for visual debugging.
+  - GUI: `run_new_ui.py` and `ComputationalGraphs/GUI/` for visual debugging.
   - Examples: `Examples/` and the `Compare*` scripts provide representative workflows.
   - Run `pytest -q`; GUI tests require `requirements_gui.txt` and Xvfb on CI for headless runs.
 
-- Contribution notes: follow `AGENT_POLICY.md` and `DEVELOPER_GUIDE.md` (TDD, small commits, `git cz`, pre-commit hooks).
+- Contribution notes: follow `docs/AGENT_POLICY.md` and `docs/DEVELOPER_GUIDE.md` (TDD, small commits, `git cz`, pre-commit hooks).
 
 If a change touches the core execution model or timing (concurrent vs forward), open an issue and get design approval before implementing.
 
@@ -56,7 +56,7 @@ If a change touches the core execution model or timing (concurrent vs forward), 
 - **Key Advantage**: No buffers needed, eliminates gradient delay problem, completely deterministic execution order, O(1) step lookup
 - **Status**: Current implementation focus for neural network training
 
-**Critical:** MLPGraph/BackpropGraph use concurrent mode. MLPGraphForwardProcessing/BackpropGraphForwardProcessing use forward processing mode. These are **fundamentally different execution models** - see `ARCHITECTURE_COMPARISON.md`.
+**Critical:** MLPGraph/BackpropGraph use concurrent mode. MLPGraphForwardProcessing/BackpropGraphForwardProcessing use forward processing mode. These are **fundamentally different execution models** - see `docs/ARCHITECTURE_COMPARISON.md`.
 
 ### Node Hierarchy
 
@@ -206,7 +206,7 @@ python test_branch_processing_fix.py
 
 ```powershell
 # Launch GUI for visual testing
-python run_gui.py
+python run_new_ui.py
 ```
 
 **Testing Forward Processing in GUI**:
@@ -221,13 +221,13 @@ python run_gui.py
 - Switching to forward processing mode
 - Resetting the graph
 
-See `GUI_VISUAL_TEST_INSTRUCTIONS.md` for detailed testing procedures.
+See `docs/GUI_VISUAL_TEST_INSTRUCTIONS.md` for detailed testing procedures.
 
 ### GUI Development
 
 ```powershell
 # Launch GUI (recently added - has known issues to be fixed)
-python run_gui.py
+python run_new_ui.py
 
 # GUI is PyQt6-based, structure:
 # - ComputationalGraphs/GUI/main_window.py: Main application
@@ -465,10 +465,10 @@ ComputationalGraphs/
 
 ## Documentation References
 
-- `ARCHITECTURE_COMPARISON.md`: Deep dive into concurrent vs forward processing execution
-- `GUI_README.md`: Visual editor usage and features
-- `EXAMPLES_FEATURES.md`: Pre-built examples and automation tools
-- `PLOTTING_FEATURE.md`: Real-time visualization capabilities
+- `docs/ARCHITECTURE_COMPARISON.md`: Deep dive into concurrent vs forward processing execution
+- `docs/GUI_README.md`: Visual editor usage and features
+- `docs/EXAMPLES_FEATURES.md`: Pre-built examples and automation tools
+- `docs/PLOTTING_FEATURE.md`: Real-time visualization capabilities
 
 ## Model Hybridization Approach
 

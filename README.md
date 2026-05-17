@@ -8,25 +8,21 @@ Zorvan is a repository for implementing computational graph architectures and ex
 
 ```powershell
 # Run visual editor
-python run_gui.py
-
-# Run examples
-python Experiments/exp_compare_three_approaches.py
-python Examples/exp_xor_classic_mlp.py
+python run_new_ui.py
 ```
 
 ## 📚 Documentation
 
-- **[GUI README](GUI_README.md)** - Visual editor features and usage
+- **[GUI README](docs/GUI_README.md)** - Visual editor features and usage
 - **[GUI Rebuild Project](docs/gui_rebuild/)** - Modern MVVM architecture migration (in progress)
-- **[Examples Features](EXAMPLES_FEATURES.md)** - Pre-built example graphs
-- **[Architecture Comparison](ARCHITECTURE_COMPARISON.md)** - Concurrent vs Forward processing
-- **[Copilot Guide](COPILOT_README.md)** - Agent usage and conventions
+- **[Examples Features](docs/EXAMPLES_FEATURES.md)** - Pre-built example graphs
+- **[Architecture Comparison](docs/ARCHITECTURE_COMPARISON.md)** - Concurrent vs Forward processing
+- **[Copilot Guide](docs/COPILOT_README.md)** - Agent usage and conventions
 - **[Contributing](CONTRIBUTING.md)** - Development guidelines
-- **[Developer Guide](DEVELOPER_GUIDE.md)** - TDD, pre-commit hooks, git-cz
+- **[Developer Guide](docs/DEVELOPER_GUIDE.md)** - TDD, pre-commit hooks, git-cz
 
 ## 🔧 Development
 
-See `AGENT_POLICY.md` for agent usage guidance and contribution rules. Use `CONTRIBUTING.md` for guidelines, and run `scripts/run_checks.ps1` to validate code locally.
+See `docs/AGENT_POLICY.md` for agent usage guidance and contribution rules. Use `CONTRIBUTING.md` for guidelines, and run `scripts/run_checks.ps1` to validate code locally.
 
 For public launch steps, see `PUBLISH_ZORVAN.md` and `ZORVAN_RELEASE_PLAN.md`.

@@ -11,7 +11,7 @@ pip install -r requirements_gui.txt
 ## Running the GUI
 
 ```bash
-python run_gui.py
+python run_new_ui.py
 ```
 
 ## Features

@@ -158,7 +158,7 @@ python test_plot.py
 
 Or use the regular GUI:
 ```bash
-python run_gui.py
+python run_new_ui.py
 ```
 
 ## Known Limitations & Future Enhancements

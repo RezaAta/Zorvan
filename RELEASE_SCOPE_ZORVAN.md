@@ -6,34 +6,26 @@ This file defines what should be exported from `MVVM-UI-Migration` into the publ
 
 - `zorvan/`
 - `scripts/`
+- `docs/`
 - `.github/workflows/`
 - `.github/PULL_REQUEST_TEMPLATE.md`
 - `.github/ISSUE_TEMPLATE/`
 - `README.md`
 - `CHANGELOG.md`
 - `CONTRIBUTING.md`
-- `DEVELOPER_GUIDE.md`
-- `AGENT_POLICY.md`
-- `ARCHITECTURE_COMPARISON.md`
-- `EXAMPLES_FEATURES.md`
-- `GUI_README.md`
-- `GUI_VISUAL_TEST_INSTRUCTIONS.md`
-- `EXPERIMENTS.md`
-- `PLOTTING_FEATURE.md`
-- `PLOTTING_UX_IMPROVEMENTS.md`
-- `COPILOT_README.md`
+- `LICENSE`
+- `CODE_OF_CONDUCT.md`
+- `SECURITY.md`
+- `SUPPORT.md`
 - `requirements.txt`
 - `requirements_dev.txt`
 - `requirements_gui.txt`
 - `pytest.ini`
 - `pyproject.toml`
 - `setup.py`
-- `run_gui.py`
 - `run_new_ui.py`
-- `LICENSE`
-- `CODE_OF_CONDUCT.md`
-- `SECURITY.md`
-- `SUPPORT.md`
+- `PUBLISH_ZORVAN.md`
+- `RELEASE_SCOPE_ZORVAN.md`
 - `ZORVAN_RELEASE_PLAN.md`
 
 ## Exclude (private/dev-only)

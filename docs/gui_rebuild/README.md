@@ -300,9 +300,9 @@ class LegacyAdapter:
 ## Resources
 
 ### Internal
-- [GUI README](../../GUI_README.md) - Current GUI documentation
-- [Examples Features](../../EXAMPLES_FEATURES.md) - Examples documentation
-- [Visual Test Instructions](../../GUI_VISUAL_TEST_INSTRUCTIONS.md) - Testing guide
+- [GUI README](../GUI_README.md) - Current GUI documentation
+- [Examples Features](../EXAMPLES_FEATURES.md) - Examples documentation
+- [Visual Test Instructions](../GUI_VISUAL_TEST_INSTRUCTIONS.md) - Testing guide
 
 ### External
 - [PyQt6 Documentation](https://www.riverbankcomputing.com/static/Docs/PyQt6/)

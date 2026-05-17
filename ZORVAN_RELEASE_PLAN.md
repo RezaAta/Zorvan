@@ -48,7 +48,7 @@ Required baseline files:
    - `pytest -q Tests/test_sequence_finder.py`
    - `pytest -q`
 2. Run GUI smoke test:
-   - `python run_gui.py`
+   - `python run_new_ui.py`
 3. Ensure GitHub Actions CI passes on release branch.
 
 ## Phase 6 — New Public Repository Creation
