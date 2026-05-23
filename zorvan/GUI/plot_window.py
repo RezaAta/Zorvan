@@ -70,7 +70,12 @@ class PlotWindow:
                 node_display_names.append(label)
                 self._node_display_map[n] = label
 
-            self._adapter._create_plot_window(node_display_names, max_iterations)
+            self._adapter._create_plot_window(node_display_names)
+            if self._adapter.plot_viewmodel is not None:
+                try:
+                    self._adapter.plot_viewmodel.set_buffer_size(max_iterations)
+                except Exception:
+                    pass
             self._view = self._adapter.plot_view
         except Exception:
             self._view = None

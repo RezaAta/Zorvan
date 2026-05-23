@@ -9,7 +9,7 @@ Options:
     --maximize         Start the main window maximized
     --debug            Enable debug logging to the console
 
-This script is intentionally lightweight and serves as the canonical launcher for the 
+This script is intentionally lightweight and serves as the canonical launcher for the
 new UI. It provides some convenience options useful during Phase-5 manual QA.
 """
 

@@ -1,0 +1,1351 @@
+=== unit ===
+conftest.py
+--- top lines ---
+import pytest
+# Session-scoped, autouse fixture to ensure a single QApplication exists for all
+# GUI tests. Some tests create module-scoped qapp fixtures which can trigger
+# Qt shutdown between modules and cause intermittent native crashes on Windows
+# when later tests interact with non-GUI code. Keeping a global app alive for
+# the whole pytest session avoids that tear-down and prevents spurious crashes.
+try:
+    from PyQt6.QtWidgets import QApplication
+
+test_activation_adapter.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
+from zorvan.GUI.activation_dialog import ActivationDialog
+tests: test_activation_adapter_constructs_and_returns_selection
+
+test_activation_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for view tests")
+from gui_framework.viewmodels.dialogs.activation_viewmodel import ActivationViewModel
+tests: test_activation_dialog_populates_and_selects
+
+test_activation_viewmodel.py
+--- top lines ---
+from gui_framework.viewmodels.dialogs.activation_viewmodel import ActivationViewModel
+def test_activation_vm_basic():
+    vm = ActivationViewModel()
+    vm.initialize()
+    assert "Sigmoid" in vm.get_available()
+    assert vm.get_selected() is None
+    vm.set_selected("ReLU")
+    assert vm.get_selected() == "ReLU"
+tests: test_activation_vm_basic
+
+test_backprop_adapter.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter test")
+from zorvan.Core.MLPGraph import MLPGraph
+tests: test_backprop_adapter_constructs_and_generates
+
+test_backprop_config_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for view tests")
+from gui_framework.viewmodels.dialogs.backprop_config_viewmodel import (
+tests: test_backprop_config_view_binds_to_vm
+
+test_backprop_config_viewmodel.py
+--- top lines ---
+from gui_framework.viewmodels.dialogs.backprop_config_viewmodel import (
+    BackpropConfigViewModel,
+)
+def test_backprop_config_viewmodel_basic():
+    vm = BackpropConfigViewModel(learning_rate=0.02, use_forward=True)
+    assert vm.get_learning_rate() == 0.02
+    assert vm.get_use_forward() is True
+    vm.set_learning_rate(0.05)
+tests: test_backprop_config_viewmodel_basic
+
+test_backprop_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for dialog view tests")
+from gui_framework.viewmodels.dialogs.backprop_viewmodel import BackpropViewModel
+tests: test_backprop_dialog_add
+
+test_backprop_viewmodel.py
+--- top lines ---
+import pytest
+from gui_framework.viewmodels.dialogs.backprop_viewmodel import BackpropViewModel
+from zorvan.Core.MLPGraph import MLPGraph
+from zorvan.Nodes.SigmoidNode import SigmoidNode
+def test_backprop_viewmodel_add_remove():
+    mlp = MLPGraph(
+        numInputs=2,
+        numOutputs=1,
+tests: test_backprop_viewmodel_add_remove
+
+test_base_viewmodel.py
+--- top lines ---
+"""
+Unit tests for base ViewModel.
+Tests BaseViewModel and ObservableProperty implementation.
+"""
+import pytest
+from gui_framework.viewmodels.base import BaseViewModel, ObservableProperty
+class ConcreteViewModel(BaseViewModel):
+    """Concrete implementation for testing."""
+classes: ConcreteViewModel, TestObservableProperty, TestBaseViewModel
+
+test_canvas_commands.py
+--- top lines ---
+"""
+Unit tests for Canvas Commands (Stage 3).
+Tests the command system for undo/redo support without requiring PyQt.
+"""
+import pytest
+from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
+class MockNode:
+    """Mock computational graph node for testing."""
+classes: MockNode, MockGraph, TestMoveNodesCommand, TestDeleteItemsCommand
+
+test_canvas_layout_integration.py
+--- top lines ---
+from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
+class SimpleNode:
+    def __init__(self, name, preds=None):
+        self.name = name
+        self.predecessors = preds or []
+class SimpleGraph:
+    def __init__(self, nodes):
+        self.nodes = nodes
+classes: SimpleNode, SimpleGraph
+tests: test_canvas_apply_grid_layout_updates_positions
+
+test_canvas_viewmodel.py
+--- top lines ---
+"""
+Unit tests for CanvasViewModel.
+Tests the pure Python logic for canvas rendering state management
+without requiring PyQt or a GUI.
+"""
+import pytest
+from unittest.mock import Mock
+from gui_framework.viewmodels.canvas_viewmodel import (
+classes: MockNode, MockGraph, TestCanvasViewport, TestCanvasViewModelInit, TestGraphLoading, TestViewportManagement, TestNodePositions, TestNodeColors
+
+test_collapsible_section_viewmodel.py
+--- top lines ---
+"""
+Unit tests for CollapsibleSection ViewModel.
+Tests the CollapsibleSectionViewModel pure Python logic.
+"""
+import pytest
+from gui_framework.widgets.collapsible_section_viewmodel import CollapsibleSectionViewModel
+class TestCollapsibleSectionViewModel:
+    """Tests for CollapsibleSectionViewModel."""
+classes: TestCollapsibleSectionViewModel
+
+test_color_preferences_dialog_themes_ui.py
+--- top lines ---
+from gui_framework.viewmodels.dialogs.color_preferences_viewmodel import (
+    ColorPreferencesViewModel,
+)
+from gui_framework.views.dialogs.color_preferences_dialog import ColorPreferencesDialog
+def test_dialog_populates_named_themes():
+    vm = ColorPreferencesViewModel()
+    name = "__ui_test_theme__"
+    try:
+tests: test_dialog_populates_named_themes
+
+test_color_preferences_named_theme_viewmodel.py
+--- top lines ---
+from gui_framework.viewmodels.dialogs.color_preferences_viewmodel import (
+    ColorPreferencesViewModel,
+)
+def test_viewmodel_named_theme_crud():
+    vm = ColorPreferencesViewModel()
+    name = "__vm_test_theme__"
+    try:
+        vm.delete_named_theme(name)
+tests: test_viewmodel_named_theme_crud
+
+test_color_preferences_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for view tests")
+from gui_framework.viewmodels.dialogs.color_preferences_viewmodel import (
+tests: test_color_view_updates_buttons_and_applies
+
+test_color_preferences_viewmodel.py
+--- top lines ---
+import pytest
+from gui_framework.viewmodels.dialogs.color_preferences_viewmodel import (
+    ColorPreferencesViewModel,
+)
+from zorvan.GUI.theme import get_theme_manager
+def test_set_color_and_apply(tmp_path):
+    tm = get_theme_manager()
+    vm = ColorPreferencesViewModel()
+tests: test_set_color_and_apply
+
+test_combined_node_palette_adapter.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
+from zorvan.GUI.combined_node_palette_adapter import CombinedNodePaletteAdapter
+tests: test_combined_palette_adapter_constructs
+
+test_combined_node_palette_view.py
+--- top lines ---
+import pytest
+pytest.importorskip("PyQt6")
+from PyQt6.QtWidgets import QApplication, QPushButton
+from gui_framework.viewmodels.combined_node_palette_viewmodel import (
+    CombinedNodePaletteViewModel,
+)
+from gui_framework.views.combined_node_palette_view import CombinedNodePaletteView
+def test_create_triggers_vm_with_underlying_palette():
+tests: test_create_triggers_vm_with_underlying_palette, test_fallback_create_button_shown_and_triggers_vm
+
+test_combined_node_palette_viewmodel.py
+--- top lines ---
+from gui_framework.viewmodels.combined_node_palette_viewmodel import (
+    CombinedNodePaletteViewModel,
+)
+def test_combined_palette_loads_categories():
+    vm = CombinedNodePaletteViewModel()
+    vm.initialize()
+    cats = vm.get_categories()
+    assert isinstance(cats, dict)
+tests: test_combined_palette_loads_categories, test_search_text_updates
+
+test_combined_palette_context_menu_rightclick.py
+--- top lines ---
+import pytest
+pytest.importorskip("PyQt6")
+from PyQt6.QtCore import QPoint
+from PyQt6.QtGui import QContextMenuEvent
+from PyQt6.QtWidgets import QApplication, QMenu
+from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from zorvan.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
+def test_right_click_triggers_context_menu(monkeypatch):
+tests: test_right_click_triggers_context_menu
+
+test_combined_palette_custom_context_menu.py
+--- top lines ---
+import pytest
+pytest.importorskip("PyQt6")
+from PyQt6.QtWidgets import QApplication
+from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from zorvan.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
+def test_custom_node_delete_via_palette(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    mgr = get_custom_node_manager()
+tests: test_custom_node_delete_via_palette, test_custom_node_edit_via_palette
+
+test_custom_node_adapter.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter test")
+from zorvan.GUI.custom_node_dialog_adapter import CustomNodeDialogAdapter
+classes: DummyDef
+tests: test_adapter_constructs_and_execs
+
+test_custom_node_dialog_integration.py
+--- top lines ---
+import pytest
+pytest.importorskip("PyQt6")
+from PyQt6.QtWidgets import QApplication
+from gui_framework.viewmodels.dialogs.custom_node_viewmodel import CustomNodeViewModel
+from gui_framework.views.dialogs.custom_node_dialog import CustomNodeDialog
+from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from zorvan.GUI.custom_node_manager import get_custom_node_manager
+def test_dialog_save_updates_palette():
+tests: test_dialog_save_updates_palette
+
+test_custom_node_manager_indentation.py
+--- top lines ---
+import pytest
+pytest.importorskip("PyQt6")
+from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+def test_operation_code_with_leading_blank_and_tabs_is_valid():
+    mgr = CustomNodeManager(library_path=None)
+    code = "\n\treturn input1 + input2"
+    d = CustomNodeDefinition(type_name="TestNode", input_count=2, operation_code=code)
+    # validate should succeed (we normalize dedent)
+tests: test_operation_code_with_leading_blank_and_tabs_is_valid, test_invalid_operation_shows_snippet
+
+test_custom_node_manager_save_failure.py
+--- top lines ---
+import pytest
+pytest.importorskip("PyQt6")
+from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+def test_add_definition_raises_if_save_fails(monkeypatch, tmp_path):
+    lib_file = tmp_path / "custom_nodes_fail.json"
+    mgr = CustomNodeManager(library_path=str(lib_file))
+    # Force save_library to return False
+    monkeypatch.setattr(mgr, "save_library", lambda: False)
+tests: test_add_definition_raises_if_save_fails
+
+test_custom_node_mvvm_dialog.py
+--- top lines ---
+import pytest
+pytest.importorskip("PyQt6")
+from PyQt6.QtWidgets import QApplication
+from gui_framework.viewmodels.dialogs.custom_node_viewmodel import CustomNodeViewModel
+from gui_framework.views.dialogs.custom_node_dialog import CustomNodeDialog
+def test_mvvm_dialog_saves_definition(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    # Track if add_definition is called with expected type
+tests: test_mvvm_dialog_saves_definition
+
+test_custom_node_palette_refresh.py
+--- top lines ---
+import pytest
+pytest.importorskip("PyQt6")
+from PyQt6.QtWidgets import QApplication
+from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from zorvan.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
+def test_combined_palette_updates_on_custom_node_add():
+    app = QApplication.instance() or QApplication([])
+    mgr = get_custom_node_manager()
+tests: test_combined_palette_updates_on_custom_node_add
+
+test_custom_node_persistence.py
+--- top lines ---
+import json
+import tempfile
+from pathlib import Path
+import pytest
+pytest.importorskip("PyQt6")
+from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+def test_add_definition_persists_to_library(tmp_path):
+    lib_file = tmp_path / "custom_nodes_test.json"
+tests: test_add_definition_persists_to_library, test_load_library_reads_definitions
+
+test_custom_node_registration_and_create.py
+--- top lines ---
+import pytest
+pytest.importorskip("PyQt6")
+from zorvan.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
+from zorvan.GUI.node_factory import create_node, is_registered
+def test_custom_node_registered_and_creatable(tmp_path):
+    mgr = get_custom_node_manager()
+    # Ensure clean state
+    if mgr.get_definition("QuickNode"):
+tests: test_custom_node_registered_and_creatable
+
+test_custom_node_remove_persistence.py
+--- top lines ---
+import json
+from pathlib import Path
+import pytest
+pytest.importorskip("PyQt6")
+from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+def test_remove_definition_persists(tmp_path):
+    lib_file = tmp_path / "custom_nodes_rm.json"
+    mgr = CustomNodeManager(library_path=str(lib_file))
+tests: test_remove_definition_persists
+
+test_custom_node_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for dialog view tests")
+from gui_framework.viewmodels.dialogs.custom_node_viewmodel import CustomNodeViewModel
+classes: DummyNode
+tests: test_custom_node_view_roundtrip
+
+test_custom_node_viewmodel.py
+--- top lines ---
+import pytest
+from gui_framework.viewmodels.dialogs.custom_node_viewmodel import CustomNodeViewModel
+class DummyNode:
+    def __init__(self):
+        self.name = "MyNode"
+        self.description = "A test node"
+        self.params = {"alpha": 1.0, "beta": "x"}
+def test_load_and_apply():
+classes: DummyNode
+tests: test_load_and_apply
+
+test_dialog_controller_examples.py
+--- top lines ---
+from PyQt6.QtCore import QObject
+from PyQt6.QtWidgets import QMenu
+from zorvan.Core.Graph import Graph
+from zorvan.GUI.controllers.dialog_controller import DialogController
+class DummyMainWindow(QObject):
+    def __init__(self, repo):
+        super().__init__()
+        self.examples_repository = repo
+classes: DummyMainWindow, DummyRepo
+tests: test_populate_examples_menu_uses_repository, test_load_example_triggers_full_reset
+
+test_event_bus.py
+--- top lines ---
+"""
+Unit tests for event bus.
+Tests the EventBus publish-subscribe implementation.
+"""
+import pytest
+from gui_framework.events.bus import Event, EventBus, EventType, get_event_bus
+class TestEvent:
+    """Tests for Event dataclass."""
+classes: TestEvent, TestEventBus, TestGetEventBus, TestEventTypes
+
+test_examples_loader_viewmodel.py
+--- top lines ---
+from gui_framework.viewmodels.examples_loader_viewmodel import ExamplesLoaderViewModel
+class DummyRepo:
+    def __init__(self):
+        self._examples = {
+            "ex1": (lambda: "built1", "Example 1"),
+            "ex2": (lambda: "built2", "Example 2"),
+        }
+    def list_examples(self):
+classes: DummyRepo
+tests: test_examples_list_returns_items, test_examples_list_uses_repository_when_provided, test_list_examples_by_category_vm, test_build_example_uses_repo
+
+test_examples_repository.py
+--- top lines ---
+from gui_framework.services.examples_repository import ExamplesRepository
+def test_examples_repository_lists_and_builds():
+    repo = ExamplesRepository()
+    examples = repo.list_examples()
+    # Should return a dict (may be empty depending on environment)
+    assert isinstance(examples, dict)
+    # Attempt to build any example if present
+    for name, (builder, desc) in list(examples.items())[:3]:
+tests: test_examples_repository_lists_and_builds
+
+test_examples_repository_layout.py
+--- top lines ---
+import json
+from gui_framework.services.examples_repository import ExamplesRepository
+from zorvan.GUI.examples_loader import ExamplesLoader
+def test_save_and_load_layout(tmp_path):
+    fp = tmp_path / "layouts.json"
+    repo = ExamplesRepository(storage_path=str(fp))
+    # Build a sample graph using ExamplesLoader
+    loader = ExamplesLoader()
+tests: test_save_and_load_layout, test_apply_layout_to_graph_via_dialog_controller
+
+test_execution_controller.py
+--- top lines ---
+from zorvan.GUI.controllers.execution_controller import ExecutionController
+class DummyLabel:
+    def __init__(self, text=""):
+        self.text = text
+    def setText(self, s):
+        self.text = s
+class DummyProgress:
+    def __init__(self):
+classes: DummyLabel, DummyProgress, DummySpin, DummyCanvas, DummyGraphRunner, DummyMain
+tests: test_on_step_completed_ignores_stale_event_after_reset, test_on_step_completed_updates_when_running
+
+test_execution_view.py
+--- top lines ---
+"""
+Unit tests for ExecutionView.
+Tests the PyQt6 view layer binding to ExecutionViewModel.
+"""
+import pytest
+from unittest.mock import Mock, MagicMock, patch
+import sys
+# Create minimal PyQt6 stubs for testing without GUI
+classes: TestExecutionView
+
+test_execution_viewmodel.py
+--- top lines ---
+"""
+Unit tests for ExecutionViewModel.
+Tests the pure Python logic of execution control without any GUI dependencies.
+"""
+import pytest
+from gui_framework.viewmodels.execution_viewmodel import ExecutionViewModel, ExecutionStatus
+from gui_framework.events.bus import Event, EventType
+class TestExecutionViewModel:
+classes: TestExecutionViewModel
+
+test_file_io_controller.py
+--- top lines ---
+from unittest.mock import MagicMock
+from zorvan.Core.Graph import Graph
+from zorvan.GUI.controllers.file_io_controller import FileIOController
+class DummyCanvas:
+    def __init__(self):
+        self.scene = MagicMock()
+        self.node_items = {}
+        self.edge_items = {}
+classes: DummyCanvas, DummyStatusBar, DummyMainWindow
+tests: test_apply_loaded_graph_resets_execution_controls
+
+test_file_io_viewmodel.py
+--- top lines ---
+"""
+Unit tests for FileIOViewModel.
+Tests the pure Python logic of file I/O management without any GUI dependencies.
+"""
+import pytest
+from gui_framework.viewmodels.file_io_viewmodel import FileIOViewModel
+from gui_framework.events.bus import EventType
+class TestFileIOViewModel:
+classes: TestFileIOViewModel
+
+test_graph_execution_resilience.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
+from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
+tests: test_edit_node_value_then_run_does_not_emit_clear_errors
+
+test_inspector_adapter.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
+from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
+classes: Node, Graph
+tests: test_inspector_adapter_constructs_and_updates
+
+test_inspector_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for view tests")
+from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
+classes: Node, Graph
+tests: test_inspector_view_populates
+
+test_inspector_viewmodel.py
+--- top lines ---
+from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
+from gui_framework.viewmodels.inspector_viewmodel import InspectorViewModel
+class Node:
+    def __init__(self, name, x=0, y=0):
+        self.name = name
+        self.x = x
+        self.y = y
+        self.predecessors = []
+classes: Node, Graph
+tests: test_inspector_updates_on_selection, test_inspector_set_property_updates_canvas_and_graph
+
+test_layouts.py
+--- top lines ---
+import math
+from gui_framework.layouts import apply_layout
+class SimpleNode:
+    def __init__(self, name, preds=None):
+        self.name = name
+        self.predecessors = preds or []
+def get_preds(node):
+    return node.predecessors
+classes: SimpleNode
+tests: test_apply_grid_layout_returns_positions, test_apply_circular_layout_positions_on_circle, test_apply_layout_with_predecessors_nonempty
+
+test_layouts_adapter.py
+--- top lines ---
+def test_layouts_adapter_sets_ui_and_calls_controller():
+    import types
+    from gui_framework.adapters.layouts_adapter import LayoutsAdapter
+    class DummyCombo:
+        def __init__(self):
+            self._index = 0
+        def setCurrentIndex(self, idx):
+            self._index = idx
+tests: test_layouts_adapter_sets_ui_and_calls_controller
+
+test_layouts_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+@pytest.mark.skipif(not PYQT, reason="PyQt6 not available")
+def test_layouts_view_apply_calls_viewmodel():
+tests: test_layouts_view_apply_calls_viewmodel, test_mlp_layered_removed_from_combo
+
+test_learning_rate_adapter.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
+from zorvan.GUI.learning_rate_dialog import LearningRateDialog
+classes: DummyNode
+tests: test_learning_rate_adapter_constructs_and_applies
+
+test_learning_rate_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for view tests")
+from gui_framework.viewmodels.dialogs.learning_rate_viewmodel import (
+tests: test_learning_rate_dialog_binds
+
+test_learning_rate_viewmodel.py
+--- top lines ---
+from gui_framework.viewmodels.dialogs.learning_rate_viewmodel import (
+    LearningRateViewModel,
+)
+def test_learning_rate_vm_basic():
+    vm = LearningRateViewModel(0.05)
+    vm.initialize()
+    assert vm.get_value() == 0.05
+    vm.set_value(0.1)
+tests: test_learning_rate_vm_basic
+
+test_main_window_custom_node_button.py
+--- top lines ---
+import pytest
+pytest.importorskip("PyQt6")
+from PyQt6.QtWidgets import QApplication
+from zorvan.GUI.main_window import MainWindow
+def test_main_window_create_opens_custom_dialog(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    mw = MainWindow()
+    called = {"ok": False}
+tests: test_main_window_create_opens_custom_dialog
+
+test_mlp_dialog_adapter.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
+from zorvan.GUI.mlp_dialog import MLPGeneratorDialog
+tests: test_mlp_dialog_adapter_constructs_and_generates
+
+test_mlp_generator_viewmodel.py
+--- top lines ---
+from gui_framework.viewmodels.mlp_generator_viewmodel import MLPGeneratorViewModel
+def test_mlp_generator_creates_graph_structure():
+    gen = MLPGeneratorViewModel()
+    g = gen.generate(num_inputs=2, hidden_layers=[3, 2], num_outputs=1)
+    assert hasattr(g, "nodes")
+    names = [n.name for n in g.nodes]
+    # expect input nodes x0,x1 and outputs y0
+    assert "x0" in names and "x1" in names and "y0" in names
+tests: test_mlp_generator_creates_graph_structure, test_output_activation_applies_to_output_layer
+
+test_new_graph_dialog.py
+--- top lines ---
+import pytest
+from gui_framework.viewmodels.dialogs.new_graph_viewmodel import NewGraphViewModel
+try:
+    from gui_framework.views.dialogs.new_graph_dialog import NewGraphDialog
+    PYQT = True
+except Exception:
+    PYQT = False
+def test_new_graph_viewmodel_basic():
+tests: test_new_graph_viewmodel_basic, test_new_graph_dialog_bindings
+
+test_node_editor_adapter.py
+--- top lines ---
+"""Test that legacy import path delegates to MVVM NodeEditorDialog when available."""
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(
+classes: DummyNode
+tests: test_node_editor_adapter_constructs_and_execs
+
+test_node_editor_dialog_population.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
+from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
+tests: test_population_node_editor_shows_actions
+
+test_node_editor_large_data_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication, QTextEdit
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
+from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
+classes: DummyNode
+tests: test_large_value_and_inputs_use_textedit
+
+test_node_editor_more_details.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
+from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
+tests: test_more_details_panel_and_type_position
+
+test_node_editor_spinbox_reentrancy.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication, QSpinBox
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
+from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
+tests: test_spinbox_updates_do_not_crash_on_rapid_changes
+
+test_node_editor_sync_apply.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(
+    not PYQT, reason="PyQt6 required for NodeEditorDialog tests"
+classes: DummyNode
+tests: test_spinbox_applies_immediately
+
+test_node_editor_textedit_dynamic.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
+from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
+classes: SmallNode, LargeNode
+tests: test_textedit_resizes_for_content
+
+test_node_editor_type_readonly.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
+from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
+tests: test_node_editor_shows_type_readonly
+
+test_node_editor_value_edit.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(
+    not PYQT, reason="PyQt6 required for NodeEditorDialog tests"
+classes: DummyNode
+tests: test_set_value_via_viewmodel, test_set_value_via_dialog
+
+test_node_editor_value_preserve.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(
+    not PYQT, reason="PyQt6 required for some NodeEditorDialog tests"
+classes: DummyNode
+tests: test_viewmodel_preserves_value_on_empty_assignment, test_dialog_vm_preserves_value_on_empty_apply, test_dialog_ok_ignores_empty_value
+
+test_node_editor_viewmodel.py
+--- top lines ---
+from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
+class X:
+    def __init__(self):
+        self.name = "X"
+        self.value = 42
+        self.flag = True
+def test_load_and_edit_node_properties():
+    x = X()
+classes: X
+tests: test_load_and_edit_node_properties
+
+test_node_factory_additions.py
+--- top lines ---
+def test_elitism_node_registered_and_creatable():
+    from zorvan.GUI.node_factory import create_node, is_registered
+    assert is_registered("ElitismNode") is True
+    n = create_node("ElitismNode", name_hint="test")
+    assert n is not None
+    assert getattr(n, "name", "").startswith("Elitism")
+def test_linear_derivative_name_not_duplicated():
+    from zorvan.GUI.node_factory import create_node
+tests: test_elitism_node_registered_and_creatable, test_linear_derivative_name_not_duplicated, test_elitism_factory_name_sanitized, test_elitism_factory_name_with_prefix_hint
+
+test_node_properties_dialog.py
+--- top lines ---
+import pytest
+from gui_framework.viewmodels.dialogs.node_properties_viewmodel import (
+    NodePropertiesViewModel,
+)
+try:
+    from gui_framework.views.dialogs.node_properties_dialog import NodePropertiesDialog
+    PYQT = True
+except Exception:
+tests: test_node_properties_viewmodel_basic, test_node_properties_dialog_bindings
+
+test_palette_viewmodel.py
+--- top lines ---
+"""
+Tests for PaletteViewModel
+Tests palette state management, node loading, search/filter, and category expansion.
+"""
+import pytest
+from gui_framework.viewmodels.palette_viewmodel import PaletteViewModel, NodeInfo
+from gui_framework.state.store import StateStore
+from gui_framework.state.models import AppState, PaletteState
+classes: TestPaletteViewModelInitialization, TestPaletteViewModelSearch, TestPaletteViewModelCategories, TestPaletteViewModelNodeInfo, TestPaletteViewModelStateStore, TestPaletteViewModelEvents, TestPaletteViewModelObservableProperties
+
+test_plot_adapter.py
+--- top lines ---
+"""
+Unit tests for PlotAdapter: ensure plot window creation, data update, and closing work.
+"""
+import os
+import pytest
+# Headless mode for tests
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+try:
+classes: DummyNode
+tests: test_plot_adapter_create_and_update, test_plot_adapter_batch_updates
+
+test_plot_config_view.py
+--- top lines ---
+"""Unit tests for PlotConfigView (PyQt6 dialog) binding to PlotConfigViewModel."""
+import pytest
+from PyQt6.QtCore import Qt
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT_AVAILABLE = True
+except Exception:
+    PYQT_AVAILABLE = False
+tests: test_plot_config_view_initial_population, test_select_all_and_none_buttons, test_filter_changes_populate_visible_nodes
+
+test_plot_config_viewmodel.py
+--- top lines ---
+"""
+Tests for PlotConfigViewModel - Pure Python plot configuration logic.
+Tests node selection, filtering, and configuration without PyQt.
+"""
+import pytest
+from gui_framework.viewmodels.plot_config_viewmodel import PlotConfigViewModel, NodeInfo
+class TestPlotConfigViewModelInitialization:
+    """Test PlotConfigViewModel initialization."""
+classes: TestPlotConfigViewModelInitialization, TestPlotConfigViewModelNodeManagement, TestPlotConfigViewModelSelection, TestPlotConfigViewModelFiltering, TestPlotConfigViewModelMaxIterations, TestPlotConfigViewModelObservableProperties
+
+test_plot_view.py
+--- top lines ---
+"""Unit tests for the PyQt6 PlotView that binds to PlotViewModel.
+Requires PyQt6; tests are skipped if PyQt6 is not available.
+"""
+from pathlib import Path
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT_AVAILABLE = True
+tests: test_plot_view_initializes_and_displays_nodes, test_plot_view_updates_on_data
+
+test_plot_viewmodel.py
+--- top lines ---
+"""
+Tests for PlotViewModel - Pure Python plot data management.
+Tests plot data collection, node management, backend selection without PyQt.
+"""
+import pytest
+from gui_framework.viewmodels.plot_viewmodel import PlotDataPoint, PlotViewModel
+class TestPlotViewModelInitialization:
+    """Test PlotViewModel initialization."""
+classes: TestPlotViewModelInitialization, TestPlotViewModelConfiguration, TestPlotViewModelNodeManagement, TestPlotViewModelDataManagement, TestPlotViewModelStatistics, TestPlotViewModelObservableProperties
+
+test_predecessors_view.py
+--- top lines ---
+"""PyQt-based unit tests for PredecessorsDialog view."""
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required")
+classes: DummyNode, DummyCanvas, NodeItem
+tests: test_predecessors_dialog_renders_and_disconnects
+
+test_predecessors_viewmodel.py
+--- top lines ---
+"""Unit tests for PredecessorsViewModel."""
+from gui_framework.viewmodels.dialogs.predecessors_viewmodel import (
+    PredecessorsViewModel,
+)
+class DummyEdge:
+    def __init__(
+        self, src=None, tgt=None, source_node_item=None, target_node_item=None
+    ):
+classes: DummyEdge, DummyNode, DummyCanvas, DummyGraph
+tests: test_refresh_collects_predecessors_from_graph_and_canvas, test_disconnect_removes_graph_and_canvas_edges
+
+test_progress_bar_theming.py
+--- top lines ---
+try:
+    from PyQt6.QtWidgets import QApplication
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+import pytest
+pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
+from zorvan.GUI.theme import get_theme_manager
+tests: test_progress_bar_uses_accent_color
+
+test_replace_node_adapter.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter test")
+from zorvan.GUI.replace_node_dialog import ReplaceNodeDialog
+tests: test_replace_node_adapter_constructs_and_execs
+
+test_replace_node_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for view tests")
+from gui_framework.viewmodels.dialogs.replace_node_viewmodel import ReplaceNodeViewModel
+tests: test_replace_node_view_populates_and_selects
+
+test_replace_node_viewmodel.py
+--- top lines ---
+import pytest
+from gui_framework.viewmodels.dialogs.replace_node_viewmodel import ReplaceNodeViewModel
+def sample_registry():
+    return {
+        "Basic": {
+            "description": "Basic nodes",
+            "nodes": [
+                ("AdditionNode", "Addition", "Adds"),
+tests: test_filtering_and_selection
+
+test_save_layout_action.py
+--- top lines ---
+from PyQt6.QtWidgets import QWidget
+from gui_framework.services.examples_repository import ExamplesRepository
+from zorvan.GUI.controllers.dialog_controller import DialogController
+from zorvan.GUI.examples_loader import ExamplesLoader
+class DummyCanvas:
+    def __init__(self, graph):
+        self.scene = type("S", (), {"clear": lambda self: None})()
+        self.node_items = {}
+classes: DummyCanvas, StubMain
+tests: test_save_current_example_layout
+
+test_snapshot_flush_events.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtCore import QTimer
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for this test")
+classes: DummyNode, DummyGraph
+tests: test_save_snapshot_processes_pending_qtimer
+
+test_state_models.py
+--- top lines ---
+"""
+Unit tests for state models.
+Tests the immutable state dataclasses.
+"""
+import pytest
+from gui_framework.state.models import AppState, CanvasState, ExecutionState, ThemeState
+class TestExecutionState:
+    """Tests for ExecutionState dataclass."""
+classes: TestExecutionState, TestCanvasState, TestThemeState, TestAppState
+
+test_state_store.py
+--- top lines ---
+"""
+Unit tests for state store.
+Tests the StateStore implementation including immutability,
+subscriptions, and time-travel debugging.
+"""
+import pytest
+from gui_framework.state.models import AppState, CanvasState, ExecutionState
+from gui_framework.state.store import StateEvent, StateStore, get_store
+classes: TestStateStore, TestGetStore, TestStateEventNotifications
+
+test_subgraph_icons.py
+--- top lines ---
+from PyQt6.QtWidgets import QApplication
+from zorvan.GUI.graph_canvas import SubgraphControlButton
+def test_subgraph_control_button_initializes_with_fa_or_text():
+    # Ensure a QApplication exists (tests may run headless but creating an app is safe)
+    app = QApplication.instance() or QApplication([])
+    # Create with a FontAwesome-like identifier; should not raise and should either
+    # produce a pixmap item (if qtawesome available) or fall back to a text item.
+    btn = SubgraphControlButton("fa5s.trash", lambda: None)
+tests: test_subgraph_control_button_initializes_with_fa_or_text, test_subgraph_control_button_text_icon
+
+test_theme_mixin.py
+--- top lines ---
+"""
+Unit tests for ThemeMixin (new MVVM-compatible version).
+Tests both legacy and new StateStore modes.
+"""
+import pytest
+from unittest.mock import Mock, MagicMock
+import sys
+# Mock PyQt6 for testing
+classes: MockWidget, TestThemeMixinLegacyMode, TestThemeMixinStateStoreMode, TestThemeMixinCompatibility, TestThemeMixinErrorHandling
+
+test_theme_named_crud.py
+--- top lines ---
+from zorvan.GUI.theme import get_theme_manager
+def test_theme_named_crud(tmp_path):
+    tm = get_theme_manager()
+    name = "__test_theme__"
+    # Ensure clean start
+    try:
+        tm.delete_named_theme(name)
+    except Exception:
+tests: test_theme_named_crud, test_theme_get_selected_none
+
+test_theme_selected_persistence.py
+--- top lines ---
+from zorvan.GUI.theme import ThemeManager, get_theme_manager
+def test_selected_theme_persistence():
+    tm = get_theme_manager()
+    name = "__selected_persist__"
+    try:
+        tm.delete_named_theme(name)
+    except Exception:
+        pass
+tests: test_selected_theme_persistence, test_delete_selected_clears_selection
+
+test_theme_viewmodel.py
+--- top lines ---
+"""
+Unit tests for ThemeViewModel.
+Tests the pure Python logic of theme management without any GUI dependencies.
+"""
+import pytest
+from gui_framework.viewmodels.theme_viewmodel import ThemeViewModel
+from gui_framework.events.bus import EventType
+from gui_framework.state.models import ThemeState
+classes: TestThemeViewModel
+
+test_toolbar_stylesheet_applies.py
+--- top lines ---
+from PyQt6.QtWidgets import QApplication
+from zorvan.GUI.theme import get_theme_manager
+def test_toolbar_text_color_in_stylesheet():
+    app = QApplication.instance() or QApplication([])
+    tm = get_theme_manager()
+    # Use a distinct text color to detect in stylesheet
+    tm.set_theme({"text": "#123456", "header_bg": "#abcdef"}, persist=False)
+    # Apply theme (in test mode apply_theme sets stylesheet and emits theme_changed)
+tests: test_toolbar_text_color_in_stylesheet
+
+test_user_value_preserved_during_play.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    PYQT = True
+except Exception:
+    PYQT = False
+pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for this test")
+import time
+tests: test_user_value_preserved_while_playing
+
+test_value_persistence_on_run.py
+--- top lines ---
+import pytest
+from PyQt6.QtWidgets import QApplication
+from zorvan.GUI.main_window import MainWindow
+from zorvan.GUI.node_editor_dialog import NodeEditorDialog
+from zorvan.GUI.node_item import NodeItem
+pytestmark = pytest.mark.skipif(
+    not QApplication.instance() and QApplication([]) is None,
+    reason="PyQt6 required for this test",
+tests: test_edited_value_used_by_processor_but_not_lost_in_runtime
+
+test_views_import.py
+--- top lines ---
+import pytest
+import gui_framework.views.examples_loader_view as examples_loader_view
+import gui_framework.views.inspector_view as inspector_view
+import gui_framework.views.node_editor_dialog as node_editor_dialog
+def test_inspector_view_import_behaviour():
+    if not inspector_view.HAS_PYQT:
+        with pytest.raises(ImportError):
+            inspector_view.InspectorView()
+tests: test_inspector_view_import_behaviour, test_node_editor_dialog_import_behaviour, test_examples_loader_view_import_behaviour
+
+test_widget_registry.py
+--- top lines ---
+"""
+Unit tests for widget registry.
+Tests WidgetRegistry plugin system.
+"""
+import pytest
+from gui_framework.registry.widget_registry import WidgetRegistry, get_widget_registry
+from gui_framework.viewmodels.base import BaseViewModel
+# Mock classes for testing
+classes: MockViewModel, MockView, TestWidgetRegistry, TestGetWidgetRegistry
+
+test_window_manager.py
+--- top lines ---
+"""
+Unit tests for window manager.
+Tests WindowManager coordination (without actual PyQt windows).
+"""
+import pytest
+from unittest.mock import Mock
+from gui_framework.window.manager import WindowManager, get_window_manager
+class MockWindow:
+classes: MockWindow, TestWindowManager
+
+=== integration ===
+__init__.py
+--- top lines ---
+
+
+test_ann_reapply_on_set_graph.py
+--- top lines ---
+"""
+Integration test: verify that ANN colorization is reapplied when a new graph is set while ANN mode is enabled.
+"""
+import os
+import pytest
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+try:
+    from PyQt6.QtWidgets import QApplication
+tests: test_ann_colors_applied_on_set_graph
+
+test_backprop_config_dialog_gui.py
+--- top lines ---
+"""
+Integration tests for BackpropConfigDialog.
+"""
+import os
+import pytest
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+try:
+    from PyQt6.QtWidgets import QApplication
+tests: test_backprop_config_dialog_accepts
+
+test_canvas_rendering.py
+--- top lines ---
+"""
+Integration tests for CanvasView (headless mode).
+Tests the rendering logic of CanvasView without requiring a display.
+Uses QT_QPA_PLATFORM=offscreen for headless testing.
+"""
+import os
+import pytest
+# Set up headless mode before importing PyQt
+classes: MockNode, MockGraph, TestCanvasViewInit, TestNodeRendering, TestEdgeRendering, TestViewportControl, TestNodeVisualization, TestSceneManagement
+
+test_examples_loader_view.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+from gui_framework.viewmodels.examples_loader_viewmodel import ExamplesLoaderViewModel
+from gui_framework.views.examples_loader_view import ExamplesLoaderView
+classes: DummyRepo
+tests: test_examples_loader_view_loads_and_displays_preview
+
+test_generate_two_mlps_ann_persists.py
+--- top lines ---
+"""
+Integration test to reproduce the report: generate MLP twice and ensure ANN colors
+remain applied to the second generated graph.
+"""
+import os
+import pytest
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+try:
+tests: test_generate_multiple_mlps_ann_colors_persist
+
+test_gui_smoke.py
+--- top lines ---
+"""
+Simple headless smoke tests for New UI main window.
+Runs in offscreen mode and ensures the MainWindow constructs and shows without raising.
+"""
+import os
+import pytest
+# Ensure headless mode set before importing PyQt
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+tests: test_main_window_constructs, test_run_new_ui_imports
+
+test_inspector_panel_integration.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
+from zorvan.GUI.main_window import MainWindow
+tests: test_inspector_panel_updates_on_selection
+
+test_mainwindow_examples_load.py
+--- top lines ---
+import pytest
+try:
+    from PyQt6.QtWidgets import QApplication
+    HAS_PYQT = True
+except Exception:
+    HAS_PYQT = False
+from zorvan.GUI.main_window import MainWindow
+@pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 not installed")
+tests: test_mainwindow_loads_example_and_visualizes
+
+test_mlp_generator_dialog_gui.py
+--- top lines ---
+"""
+Integration tests for new MLPGeneratorDialog in MVVM UI.
+"""
+import os
+import pytest
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+try:
+    from PyQt6.QtWidgets import QApplication
+tests: test_mlp_generator_dialog_creates_graph
+
+test_new_graph_dialog_integration.py
+--- top lines ---
+import pytest
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication
+from zorvan.GUI.main_window import MainWindow
+try:
+    from gui_framework.views.dialogs.new_graph_dialog import NewGraphDialog
+    PYQT = True
+except Exception:
+tests: test_new_graph_dialog_from_menu
+
+test_node_inspector_integration.py
+--- top lines ---
+import pytest
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication
+from zorvan.GUI.main_window import MainWindow
+from zorvan.Nodes.Node import Node
+try:
+    from gui_framework.views.dialogs.node_properties_dialog import NodePropertiesDialog
+    PYQT = True
+tests: test_inspect_node_from_menu
+
+test_plot_views.py
+--- top lines ---
+"""
+Integration tests for Plot Views (headless mode).
+Tests the plot view components without requiring a display.
+Uses QT_QPA_PLATFORM=offscreen for headless testing.
+"""
+import os
+import pytest
+# Set up headless mode before importing PyQt
+classes: TestPlotConfigViewIntegration, TestPlotViewIntegration, TestPlotViewsDataFlow
+

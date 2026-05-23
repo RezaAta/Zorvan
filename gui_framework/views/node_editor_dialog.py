@@ -242,6 +242,18 @@ if HAS_PYQT:
 
         def _on_properties_changed(self, old, new):
             # Rebuild form
+            # If the dialog is showing a different node than before, force fresh values
+            try:
+                try:
+                    current_name = self.vm.get_name()
+                except Exception:
+                    current_name = self.vm.get_properties().get("name", None)
+                if getattr(self, "_last_node_id", None) != current_name:
+                    # mark to force reading fresh values from VM (don't preserve prev widget text)
+                    self._force_fresh_values = True
+                    self._last_node_id = current_name
+            except Exception:
+                pass
             # Preserve current widget textual values so user edits are not lost on refresh
             # UNLESS _force_fresh_values is True (after actions like regenerate_population)
             prev_values = {}
