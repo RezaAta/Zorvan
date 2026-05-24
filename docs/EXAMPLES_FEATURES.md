@@ -3,6 +3,9 @@
 ## Overview
 Successfully added Examples menu and MLP/Backpropagation automation tools to your ComputationalGraphs GUI.
 
+> Note: The files in `zorvan/Examples/` are user-facing usage examples and demos, not part of the automated test suite.
+
+
 ## New Files Created
 
 ### 1. `examples_loader.py`

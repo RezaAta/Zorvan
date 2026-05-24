@@ -39,18 +39,6 @@ def main():
     print("Labels after add_node:")
     print_labels(pw)
 
-    # Remove a node - set the combo to the second node and remove
-    # Find index of n2 in current nodes
-    if n2 in pw.nodes:
-        idx = pw.nodes.index(n2)
-        pw.node_combo.setCurrentIndex(idx)
-        print(f"\nRemoving node at index {idx} (name={n2.name}):")
-        pw.remove_selected_node()
-        print("Labels after remove_selected_node:")
-        print_labels(pw)
-    else:
-        print("Node to remove not found in pw.nodes")
-
     # Clean up and exit
     pw.close()
     app.quit()

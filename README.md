@@ -11,7 +11,16 @@ Zorvan is a repository for implementing computational graph architectures and ex
 python run_new_ui.py
 ```
 
-## 📚 Documentation
+## � Example Usage Scripts
+The `zorvan/Examples/` folder contains user-facing demo scripts, not automated tests. Run them from the repository root so that `zorvan` is on `PYTHONPATH`, for example:
+
+```powershell
+python zorvan/Examples/FibonacciExample.py
+```
+
+The examples now also adjust `sys.path` automatically so they work from other working directories.
+
+## �📚 Documentation
 
 - **[GUI README](docs/GUI_README.md)** - Visual editor features and usage
 - **[GUI Rebuild Project](docs/gui_rebuild/)** - Modern MVVM architecture migration (in progress)

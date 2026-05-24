@@ -5,6 +5,13 @@ into a combined `Graph` and runs concurrent training similar to the
 existing MLP examples.
 """
 
+import pathlib
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from zorvan.Core.BackpropAnfisGraph import BackpropAnfisGraph
 from zorvan.Core.Graph import Graph
 from zorvan.Core.GraphProcessor import GraphProcessor

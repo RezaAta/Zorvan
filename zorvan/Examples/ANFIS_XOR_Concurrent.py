@@ -10,6 +10,13 @@ Training: simple finite-difference gradient descent applied to ContainerNode par
 This avoids changing existing fuzzy nodes and does not modify repo backprop graphs.
 """
 
+import pathlib
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from zorvan.Core.Graph import Graph
 from zorvan.Core.GraphProcessor import GraphProcessor
 from zorvan.Nodes import (
