@@ -83,7 +83,7 @@ Complete inventory of all GUI features in the ComputationalGraphs visual editor.
 | New graph | Create empty graph | `controllers/file_io_controller.py` | - | P0 | ✅ |
 | Open graph | Load from file | `controllers/file_io_controller.py` | Multiple | P0 | ✅ |
 | Save graph | Save to file | `controllers/file_io_controller.py` | Multiple | P0 | ✅ |
-| DrawIO format | .drawio/.xml with visual preservation | `Core/DrawioIO.py`, `controllers/file_io_controller.py` | `test_drawio_save_load.py` | P0 | ✅ |
+| DrawIO format | .drawio/.xml save-only export with visual preservation (legacy, deprecated) | `Core/DrawioIO.py`, `controllers/file_io_controller.py` | Legacy tests removed | P0 | ⚠️ Deprecated |
 | CGJson format | .cgjson computational graph format | `Core/CGJsonIO.py`, `controllers/file_io_controller.py` | `test_cgjson_save_load.py` | P0 | ✅ |
 | Auto-save | Periodic auto-save (if enabled) | - | - | P2 | ❌ |
 | Recent files | MRU list in File menu | - | - | P2 | ❌ |

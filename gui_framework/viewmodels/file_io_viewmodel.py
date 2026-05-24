@@ -172,15 +172,6 @@ class FileIOViewModel(BaseViewModel):
         except Exception:
             return ""
 
-    def is_drawio_file(self) -> bool:
-        """Check if current file is a Draw.io file.
-
-        Returns:
-            True if current file is .drawio or .xml
-        """
-        ext = self.get_file_extension().lower()
-        return ext in [".drawio", ".xml"]
-
     def is_cgjson_file(self) -> bool:
         """Check if current file is a CGJson file.
 

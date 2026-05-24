@@ -155,31 +155,6 @@ class TestFileIOViewModel:
 
         vm.cleanup()
 
-    def test_is_drawio_file(self):
-        """Test detecting Draw.io files."""
-        vm = FileIOViewModel()
-        vm.initialize()
-
-        # Reset state
-        vm._store.update(file_path=None)
-
-        # No file
-        assert vm.is_drawio_file() is False
-
-        # Draw.io file
-        vm.set_current_file("/path/to/file.drawio")
-        assert vm.is_drawio_file() is True
-
-        # XML file
-        vm.set_current_file("/path/to/file.xml")
-        assert vm.is_drawio_file() is True
-
-        # Other file
-        vm.set_current_file("/path/to/file.cgjson")
-        assert vm.is_drawio_file() is False
-
-        vm.cleanup()
-
     def test_is_cgjson_file(self):
         """Test detecting CGJson files."""
         vm = FileIOViewModel()

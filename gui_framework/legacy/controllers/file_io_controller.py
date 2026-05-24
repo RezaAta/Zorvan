@@ -54,6 +54,14 @@ class FileIOController:
         """Access the status bar from main window."""
         return self.main_window.status_bar
 
+    def _show_drawio_deprecated_warning(self):
+        QMessageBox.information(
+            self.main_window,
+            "Deprecated Format",
+            "Draw.io import/export is deprecated and will be removed in a future release. "
+            "Use Computational Graph (.cgjson/.cgz) instead.",
+        )
+
     def new_graph(self):
         """Create a new empty graph."""
         reply = QMessageBox.question(
@@ -89,23 +97,27 @@ class FileIOController:
             self.main_window,
             "Open Graph",
             "",
-            "Computational Graph (.cgjson *.cgz);;Draw.io XML (*.drawio *.xml);;Python Files (*.py);;All Files (*)",
+            "Computational Graph (.cgjson *.cgz);;Python Files (*.py);;All Files (*)",
         )
 
         if filename:
             try:
                 self.status_bar.showMessage(f"Opening {filename}...")
 
-                if filename.lower().endswith((".drawio", ".xml")):
-                    self._load_drawio(filename)
-                elif filename.lower().endswith((".cgjson", ".cgz", ".json")):
+                if filename.lower().endswith((".cgjson", ".cgz", ".json")):
                     self._load_cgjson(filename)
+                elif filename.lower().endswith((".drawio", ".xml")):
+                    QMessageBox.information(
+                        self.main_window,
+                        "Unsupported Format",
+                        "Draw.io import is no longer supported. Use Computational Graph (.cgjson/.cgz) files instead.",
+                    )
                 else:
                     QMessageBox.information(
                         self.main_window,
                         "Not Implemented",
                         "Opening Python-constructed graph files (*.py) is not supported yet.\n"
-                        "Use Draw.io XML format (*.drawio, *.xml) for saving/loading the GUI.",
+                        "Use Computational Graph (.cgjson/.cgz) for saving/loading the GUI.",
                     )
             except Exception as e:
                 QMessageBox.critical(
@@ -120,7 +132,7 @@ class FileIOController:
             self.main_window,
             "Save Graph",
             "",
-            "Computational Graph (.cgjson *.cgz);;Draw.io XML (*.drawio *.xml);;Python Files (*.py);;All Files (*)",
+            "Computational Graph (.cgjson *.cgz);;Draw.io XML (*.drawio *.xml) [deprecated];;Python Files (*.py);;All Files (*)",
         )
 
         if filename:
@@ -134,6 +146,7 @@ class FileIOController:
                 self.status_bar.showMessage(f"Saving to {filename}...")
 
                 if filename.lower().endswith((".drawio", ".xml")):
+                    self._show_drawio_deprecated_warning()
                     # When saving from GUI, prefer to preserve canvas visuals (positions and colors)
                     DrawioIO.save(
                         self.graph,
@@ -162,11 +175,6 @@ class FileIOController:
                     "Save Error",
                     f"Failed to save file {filename}: {e}",
                 )
-
-    def _load_drawio(self, filename):
-        """Load a Draw.io format graph."""
-        graph = DrawioIO.load(filename)
-        self._apply_loaded_graph(graph, filename)
 
     def _load_cgjson(self, filename):
         """Load a CGJson format graph."""
@@ -326,7 +334,7 @@ class FileIOController:
             self.main_window,
             "Import Graph",
             "",
-            "Computational Graph (*.cgjson *.cgz);;Draw.io XML (*.drawio *.xml);;All Files (*)",
+            "Computational Graph (*.cgjson *.cgz);;All Files (*)",
         )
 
         if not filename:
@@ -337,9 +345,13 @@ class FileIOController:
 
             # Load the graph
             if filename.lower().endswith((".drawio", ".xml")):
-                imported_graph = DrawioIO.load(filename)
-            else:
-                imported_graph = CGJsonIO.load(filename)
+                QMessageBox.information(
+                    self.main_window,
+                    "Unsupported Format",
+                    "Draw.io import is no longer supported. Use Computational Graph (.cgjson/.cgz) files instead.",
+                )
+                return
+            imported_graph = CGJsonIO.load(filename)
 
             if not imported_graph or not imported_graph.nodes:
                 QMessageBox.warning(

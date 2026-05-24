@@ -529,7 +529,7 @@ ComputationalGraphs/GUI/controllers/file_io_controller.py
 **Implementation**:
 1. Extract file operations → `FileIOViewModel`
 2. Integrate with StateStore for graph state
-3. Keep existing `DrawioIO` and `CGJsonIO` as-is
+3. Keep existing `DrawioIO` and `CGJsonIO` as-is for now; DrawioIO is legacy/deprecated and slated for removal
 4. Add event notifications for file operations
 5. Update menu actions to use new viewmodel
 

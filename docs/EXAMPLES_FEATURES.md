@@ -219,7 +219,7 @@ Installed via `requirements_gui.txt`:
 
 Potential improvements:
 - [ ] Save examples as .drawio files
-- [x] Save examples as .drawio files (preserve canvas node positions, colors and labels when saved from GUI)
+- [x] Save examples as .drawio files (legacy Draw.io export is deprecated; CGJson is preferred)
 - [ ] Import examples from user folder
 - [ ] More layout algorithms (tree, radial)
 - [ ] Example preview thumbnails

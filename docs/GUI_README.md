@@ -77,7 +77,7 @@ Interactive workspace for building your computational graph:
 #### File Menu
 - **New**: Create a new empty graph
 - **Open**: Load a graph from file
-- **Save**: Save current graph to file — when saving via the GUI, the current node positions, labels, colors and sizes are preserved into the Draw.io (.drawio/.xml) file so re-loading that file will re-create the same visual layout
+- **Save**: Save current graph to file — legacy Draw.io (.drawio/.xml) export is deprecated. Use CGJson (.cgjson/.cgz) for supported graph persistence.
 - **Exit**: Close the application
 
 #### Edit Menu

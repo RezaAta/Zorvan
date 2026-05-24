@@ -1,6 +1,13 @@
+"""Legacy Draw.io I/O support.
+
+This module is deprecated and will be removed in a future release.
+Use CGJsonIO for graph persistence and GUI file operations.
+"""
+
 import base64
 import inspect
 import subprocess
+import warnings
 import xml.etree.ElementTree as ET
 import zlib
 
@@ -60,6 +67,15 @@ def get_node_attributes(node):
 
 class DrawioIO:
     @staticmethod
+    def _warn_deprecated():
+        warnings.warn(
+            "DrawioIO is deprecated and will be removed in a future release. "
+            "Use CGJsonIO for graph persistence instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+    @staticmethod
     def compute_layout(graph: Graph, rankdir="LR"):
         dot = ["digraph G {", f"  graph [rankdir={rankdir}];"]
         for node in graph.nodes:
@@ -103,6 +119,7 @@ class DrawioIO:
         attributes), the node positions and colors will be embedded into the saved Draw.io file.
         Otherwise, a Graphviz (dot) layout is used to compute positions.
         """
+        DrawioIO._warn_deprecated()
         # If preserve_visuals requested, try to obtain positions from canvas or node attributes
         raw = None
         if preserve_visuals:
@@ -349,6 +366,7 @@ class DrawioIO:
 
     @staticmethod
     def load(filename: str) -> Graph:
+        DrawioIO._warn_deprecated()
         tree = ET.parse(filename)
         mxroot = tree.getroot()
         # Try compressed diagram text first (common draw.io format)
@@ -467,6 +485,7 @@ class DrawioIO:
 
     @staticmethod
     def generate_template_graph(filename: str, cell_size=(80, 80)):
+        DrawioIO._warn_deprecated()
         graph = Graph()
         for node_type, cls in NODE_TYPE_MAP.items():
             node = cls(name=node_type)
