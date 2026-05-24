@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import get_theme_manager
 
 
 def test_toolbar_text_color_in_stylesheet():

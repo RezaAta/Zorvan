@@ -19,7 +19,7 @@ def fake_icon(name, color=None):
 qta.icon = fake_icon
 sys.modules["qtawesome"] = qta
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow
 
 win = MainWindow()
 play = win.play_btn

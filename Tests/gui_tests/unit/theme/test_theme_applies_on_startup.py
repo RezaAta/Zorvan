@@ -1,9 +1,9 @@
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.controllers import control_panel_builder
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import control_panel_builder
+from gui_framework.legacy import MainWindow
+from gui_framework.legacy import get_theme_manager
 
 
 def test_persisted_theme_applies_on_mainwindow_startup():

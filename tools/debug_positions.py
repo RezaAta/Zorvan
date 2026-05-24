@@ -2,8 +2,7 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.examples_loader import ExamplesLoader
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import ExamplesLoader, MainWindow
 
 app = QApplication(sys.argv)
 loader = ExamplesLoader()

@@ -5,7 +5,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.plot_window import PlotWindow, create_plot_window
+from gui_framework.legacy import PlotWindow, create_plot_window
 
 
 def test_create_plot_window_matplotlib_fallback():

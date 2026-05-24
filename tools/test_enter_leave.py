@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QApplication, QPushButton
 if QApplication.instance() is None:
     app = QApplication([])
 
-from zorvan.GUI.controllers.control_panel_builder import _IconHoverFilter
+from gui_framework.legacy import _IconHoverFilter
 
 
 # Fake TM
@@ -21,7 +21,7 @@ class FakeTM:
 
 
 fake_tm = FakeTM("#112233")
-import zorvan.GUI.theme as theme_mod
+import gui_framework.legacy as theme_mod
 
 theme_mod.get_theme_manager = lambda: fake_tm
 

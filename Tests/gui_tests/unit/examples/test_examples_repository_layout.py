@@ -1,7 +1,7 @@
 import json
 
 from gui_framework.services.examples_repository import ExamplesRepository
-from zorvan.GUI.examples_loader import ExamplesLoader
+from gui_framework.legacy import ExamplesLoader
 
 
 def test_save_and_load_layout(tmp_path):
@@ -30,7 +30,7 @@ def test_save_and_load_layout(tmp_path):
 
 def test_apply_layout_to_graph_via_dialog_controller(tmp_path, monkeypatch):
     # Ensure DialogController applies layout to a built graph
-    from zorvan.GUI.controllers.dialog_controller import DialogController
+    from gui_framework.legacy import DialogController
 
     fp = tmp_path / "layouts2.json"
     repo = ExamplesRepository(storage_path=str(fp))

@@ -16,9 +16,12 @@ class CombinedNodePaletteView(QWidget):
         self.vm = vm
         # Lazy initialization of the legacy palette widget so we can bind
         try:
-            from zorvan.GUI.combined_node_palette import CombinedNodePalette
+            from gui_framework.legacy import CombinedNodePalette
 
-            self._palette = CombinedNodePalette(parent)
+            if CombinedNodePalette is not None:
+                self._palette = CombinedNodePalette(parent)
+            else:
+                raise ImportError("Legacy CombinedNodePalette not available")
         except Exception:
             # Fall back to an empty QWidget for headless tests
             self._palette = QWidget(parent)

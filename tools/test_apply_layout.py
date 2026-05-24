@@ -7,8 +7,7 @@ sys.path.insert(
     0,
     str(Path(__file__).resolve().parents[1]),
 )
-from zorvan.GUI.examples_loader import ExamplesLoader
-from zorvan.GUI.graph_canvas import GraphCanvas
+from gui_framework.legacy import ExamplesLoader, GraphCanvas
 
 app = QApplication([])
 loader = ExamplesLoader()

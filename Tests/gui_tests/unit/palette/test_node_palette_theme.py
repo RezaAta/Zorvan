@@ -1,8 +1,8 @@
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import CombinedNodePalette
+from gui_framework.legacy import get_theme_manager
 
 
 def test_combined_palette_updates_on_theme_change():

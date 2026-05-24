@@ -7,7 +7,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow
 from zorvan.Nodes.AdditionNode import AdditionNode
 from zorvan.Nodes.MultiplicationNode import MultiplicationNode
 
@@ -47,7 +47,7 @@ def test_replace_multiple_selected_nodes(monkeypatch):
             return "MultiplicationNode"
 
     monkeypatch.setattr(
-        "zorvan.GUI.replace_node_dialog.ReplaceNodeDialog",
+        "gui_framework.legacy.ReplaceNodeDialog",
         StubReplaceDialog,
     )
 
@@ -93,7 +93,7 @@ def test_replace_single_shows_node_editor(monkeypatch):
             return "MultiplicationNode"
 
     monkeypatch.setattr(
-        "zorvan.GUI.replace_node_dialog.ReplaceNodeDialog",
+        "gui_framework.legacy.ReplaceNodeDialog",
         StubReplaceDialog,
     )
 
@@ -109,7 +109,7 @@ def test_replace_single_shows_node_editor(monkeypatch):
             return True
 
     monkeypatch.setattr(
-        "zorvan.GUI.node_editor_dialog.NodeEditorDialog",
+        "gui_framework.legacy.NodeEditorDialog",
         StubNodeEditorDialog,
     )
 

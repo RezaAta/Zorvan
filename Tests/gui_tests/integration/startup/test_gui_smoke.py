@@ -18,7 +18,7 @@ except Exception:
     PYQT_AVAILABLE = False
 
 if PYQT_AVAILABLE:
-    from zorvan.GUI.main_window import MainWindow
+    from gui_framework import MainWindow
 
 
 pytestmark = pytest.mark.skipif(not PYQT_AVAILABLE, reason="PyQt6 not available")

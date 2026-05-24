@@ -126,7 +126,7 @@ def test_mse_nodes_no_duplicates_forward():
 
     def test_examples_loader_no_duplicate_mse_nodes():
         # Ensure GUI loader's builders do not create duplicate MS nodes in the combined graph
-        from zorvan.GUI.examples_loader import ExamplesLoader
+        from gui_framework.legacy import ExamplesLoader
 
         loader = ExamplesLoader()
         # We'll test a handful of builders that produce full graphs

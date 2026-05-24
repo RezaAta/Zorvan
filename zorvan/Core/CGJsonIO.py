@@ -123,7 +123,7 @@ def save(graph: Graph, filename: str, canvas=None, compress=True):
     # If custom nodes are used, embed their definitions
     if custom_nodes_used:
         try:
-            from zorvan.GUI.custom_node_manager import get_custom_node_manager
+            from gui_framework.legacy import get_custom_node_manager
 
             manager = get_custom_node_manager()
             for type_name in custom_nodes_used:
@@ -264,7 +264,7 @@ def save(graph: Graph, filename: str, canvas=None, compress=True):
 def _find_node_class(typename: str):
     # First try custom nodes
     try:
-        from zorvan.GUI.custom_node_manager import get_custom_node_manager
+        from gui_framework.legacy import get_custom_node_manager
 
         manager = get_custom_node_manager()
         custom_class = manager.get_node_class(typename)
@@ -312,7 +312,7 @@ def load(filename: str) -> Graph:
     custom_nodes_data = doc.get("custom_nodes", [])
     if custom_nodes_data:
         try:
-            from zorvan.GUI.custom_node_manager import (
+            from gui_framework.legacy import (
                 CustomNodeDefinition,
                 get_custom_node_manager,
             )

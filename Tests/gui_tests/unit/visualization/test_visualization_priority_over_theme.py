@@ -8,8 +8,8 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import MainWindow
+from gui_framework.legacy import get_theme_manager
 from zorvan.Nodes.BufferNode import BufferNode
 
 

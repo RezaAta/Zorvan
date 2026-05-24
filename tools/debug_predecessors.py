@@ -2,7 +2,7 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow, PredecessorsDialog
 from zorvan.Nodes.BufferNode import BufferNode
 from zorvan.Nodes.DisplayNode import DisplayNode
 
@@ -19,7 +19,9 @@ disp_item = window.canvas.add_node_item(disp, x=200, y=0)
 buff_item = window.canvas.add_node_item(buff, x=400, y=0)
 edge = window.canvas.add_edge_item(disp, buff)
 print("before: buff.predecessors =", buff.predecessors)
-from zorvan.GUI.predecessors_dialog import PredecessorsDialog
+
+# Use compatible legacy wrapper
+from gui_framework.legacy import PredecessorsDialog
 
 dlg = PredecessorsDialog(buff_item, window.canvas)
 print("dlg count init =", dlg.list_widget.count())

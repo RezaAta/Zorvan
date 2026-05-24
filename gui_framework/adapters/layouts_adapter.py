@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, Optional
 from ..events.bus import Event, EventType, get_event_bus
 
 if TYPE_CHECKING:
-    from zorvan.GUI.controllers.graph_layout_controller import GraphLayoutController
-    from zorvan.GUI.main_window import MainWindow
+    from .legacy import GraphLayoutController
+    from gui_framework.main_window import MainWindow
 
 logger = logging.getLogger(__name__)
 

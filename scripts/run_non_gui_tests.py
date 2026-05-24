@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Run non-GUI tests by scanning the Tests/ tree and excluding files
-that import PyQt6 or reference zorvan.GUI.
+that import PyQt6 or reference gui_framework.legacy.
 
 Usage: python scripts/run_non_gui_tests.py
 """
@@ -25,8 +25,8 @@ exclude_patterns = [
     re.compile(p)
     for p in (
         r"\bPyQt6\b",
-        r"zorvan\.GUI",
-        r"from\s+zorvan\.GUI",
+        r"gui_framework\.legacy",
+        r"from\s+gui_framework\.legacy",
         r"\bgui_framework\b",
     )
 ]

@@ -15,7 +15,7 @@ from gui_framework.viewmodels.dialogs.node_editor_viewmodel import (
     NodeEditorViewModel as DialogNodeEditorViewModel,
 )
 from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
-from zorvan.GUI.node_editor_dialog import NodeEditorDialog
+from gui_framework.legacy import NodeEditorDialog
 
 
 class DummyNode:

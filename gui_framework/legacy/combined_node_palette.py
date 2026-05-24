@@ -263,7 +263,7 @@ class NodeItemWidget(QWidget, ThemeMixin):
         if palette is None:
             return
         try:
-            from zorvan.GUI.custom_node_manager import get_custom_node_manager
+            from gui_framework.legacy.custom_node_manager import get_custom_node_manager
 
             manager = get_custom_node_manager()
             if self.node_type not in manager.get_type_names():
@@ -617,8 +617,8 @@ class CombinedNodePalette(QDockWidget, ThemeMixin):
     def _edit_custom_node(self, node_type: str):
         """Open edit dialog for a custom node type and save changes."""
         try:
-            from zorvan.GUI.custom_node_dialog import CustomNodeDialog
-            from zorvan.GUI.custom_node_manager import get_custom_node_manager
+            from gui_framework.legacy.custom_node_dialog import CustomNodeDialog
+            from gui_framework.legacy.custom_node_manager import get_custom_node_manager
 
             manager = get_custom_node_manager()
             definition = manager.get_definition(node_type)
@@ -642,7 +642,7 @@ class CombinedNodePalette(QDockWidget, ThemeMixin):
         try:
             from PyQt6.QtWidgets import QMessageBox
 
-            from zorvan.GUI.custom_node_manager import get_custom_node_manager
+            from gui_framework.legacy.custom_node_manager import get_custom_node_manager
 
             reply = QMessageBox.question(
                 self,

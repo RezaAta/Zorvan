@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QWidget
 
 from gui_framework.services.examples_repository import ExamplesRepository
-from zorvan.GUI.controllers.dialog_controller import DialogController
-from zorvan.GUI.examples_loader import ExamplesLoader
+from gui_framework.legacy import DialogController
+from gui_framework.legacy import ExamplesLoader
 
 
 class DummyCanvas:

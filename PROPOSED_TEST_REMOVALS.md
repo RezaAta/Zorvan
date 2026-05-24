@@ -29,14 +29,14 @@ This document lists tests that look obsolete, brittle, or depend on removed reso
 - Reason: These tests depend on pixel rendering, event timing, or 3rd-party backends (matplotlib / pyqtgraph) and are flaky on CI or different platforms.
 - Recommendation: Mark them as `@pytest.mark.flaky` or `skipif` unless `VISUAL_REGRESSION` env var is set. Alternatively, rewrite to verify internal state or component outputs (data structures) instead of screenshots.
 
-5) Legacy/duplicate tests referencing `zorvan.GUI` vs `gui_framework`
-- Notes: The codebase contains both `zorvan.GUI` modules and a newer `gui_framework` package. Many tests exercise the older API or both packages. If `zorvan.GUI` is being deprecated, tests should be migrated, not kept duplicative.
+5) Legacy/duplicate tests referencing the legacy GUI package vs `gui_framework`
+- Notes: The codebase contains both the legacy GUI package and a newer `gui_framework` package. Many tests exercise the older API or both packages. If the legacy GUI package is being deprecated, tests should be migrated, not kept duplicative.
 - Recommendation: Produce a migration plan (not automatic removal). Any tests that exist only to validate legacy code you plan to delete can be listed for removal after the corresponding code is removed.
 
 General cleanup rules I followed to propose candidates
 - Tests referencing missing files or external artifact baselines are high-priority removal/migration candidates.
 - GUI screenshot / visual-regression tests are brittle and should be optional (kept but excluded from default CI).
-- Do not delete tests purely because they import `zorvan.GUI` — only when the underlying code is being removed.
+- Do not delete tests purely because they exercise the legacy GUI package — only when the underlying code is being removed.
 
 Next steps (suggested)
 1. Review the above candidates and confirm which to (a) remove, (b) relocate to `visual-regression/`, or (c) migrate to unit-style tests.

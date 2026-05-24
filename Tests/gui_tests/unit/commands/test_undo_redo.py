@@ -19,7 +19,7 @@ from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QApplication
 
 from zorvan.Core.Graph import Graph
-from zorvan.GUI.commands import (
+from gui_framework.legacy import (
     AddEdgeCommand,
     AddNodeCommand,
     MoveNodesCommand,
@@ -45,7 +45,7 @@ def setup_canvas(app):
     """Create a GraphCanvas with a Graph for testing."""
     from PyQt6.QtGui import QUndoStack
 
-    from zorvan.GUI.graph_canvas import GraphCanvas
+    from gui_framework.legacy import GraphCanvas
 
     canvas = GraphCanvas()
     graph = Graph()

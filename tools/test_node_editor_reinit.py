@@ -4,7 +4,7 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.node_editor_dialog import NodeEditorDialog
+from gui_framework.legacy import NodeEditorDialog
 from zorvan.Nodes.InitializableContainerNode import InitializableContainerNode
 
 

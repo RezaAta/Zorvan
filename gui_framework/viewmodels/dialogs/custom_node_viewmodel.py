@@ -207,9 +207,10 @@ class CustomNodeViewModel(BaseViewModel):
     def get_definition(self):
         """Return a CustomNodeDefinition-like object built from current fields."""
         try:
-            from zorvan.GUI.custom_node_manager import CustomNodeDefinition
+            from gui_framework.legacy import CustomNodeDefinition
 
-            return CustomNodeDefinition(
+            if CustomNodeDefinition is not None:
+                return CustomNodeDefinition(
                 type_name=self._type_name,
                 input_count=self._input_count,
                 batch_size=self._batch_size,
@@ -249,10 +250,12 @@ class CustomNodeViewModel(BaseViewModel):
         """
         definition = self.get_definition()
         try:
-            from zorvan.GUI.custom_node_manager import get_custom_node_manager
+            from gui_framework.legacy import get_custom_node_manager_safe as get_custom_node_manager
 
             mgr = get_custom_node_manager()
-            return mgr.add_definition(definition)
+            if mgr is not None:
+                return mgr.add_definition(definition)
+            return False
         except Exception as e:
             raise
 

@@ -77,7 +77,7 @@ def test_mlp_generator_dialog_creates_graph(qapp):
     assert hasattr(g, "AddNode")
 
     # If we set the graph into a MainWindow, the canvas VM should load nodes/edges
-    from zorvan.GUI.main_window import MainWindow
+    from gui_framework.legacy import MainWindow
 
     mw = MainWindow()
     mw.set_graph(g)

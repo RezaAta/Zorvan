@@ -47,7 +47,7 @@ except ImportError:
 def _get_accent_color() -> str:
     """Get the current accent color from the theme manager."""
     try:
-        from zorvan.GUI.theme import get_theme_manager
+        from gui_framework.theme import get_theme_manager
 
         tm = get_theme_manager()
         return tm.get_color("accent", "#4a86e8").name()
@@ -305,7 +305,7 @@ if PYQT_AVAILABLE:
         def _connect_theme_updates(self):
             """Connect to theme manager to refresh icons on theme change."""
             try:
-                from zorvan.GUI.theme import get_theme_manager
+                from gui_framework.theme import get_theme_manager
 
                 tm = get_theme_manager()
                 tm.theme_changed.connect(self._refresh_icons)

@@ -2,7 +2,7 @@ import pytest
 
 pytest.importorskip("PyQt6")
 
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+from gui_framework.legacy import CustomNodeDefinition, CustomNodeManager
 
 
 def test_operation_code_with_leading_blank_and_tabs_is_valid():

@@ -399,7 +399,7 @@ class NodePalette(QDockWidget, ThemeMixin):
 
     def refresh_custom_nodes(self):
         """Refresh custom nodes list from manager."""
-        from zorvan.GUI.custom_node_manager import get_custom_node_manager
+        from gui_framework.legacy.custom_node_manager import get_custom_node_manager
 
         manager = get_custom_node_manager()
         custom_types = manager.get_type_names()
@@ -419,8 +419,8 @@ class NodePalette(QDockWidget, ThemeMixin):
 
     def on_create_custom_node(self):
         """Open dialog to create a new custom node."""
-        from zorvan.GUI.custom_node_dialog import CustomNodeDialog
-        from zorvan.GUI.custom_node_manager import get_custom_node_manager
+        from gui_framework.legacy.custom_node_dialog import CustomNodeDialog
+        from gui_framework.legacy.custom_node_manager import get_custom_node_manager
 
         dialog = CustomNodeDialog(parent=self)
         if dialog.exec():
@@ -495,7 +495,7 @@ class NodePalette(QDockWidget, ThemeMixin):
             return
 
         # Only allow editing/deleting for custom nodes
-        from zorvan.GUI.custom_node_manager import get_custom_node_manager
+        from gui_framework.legacy.custom_node_manager import get_custom_node_manager
 
         manager = get_custom_node_manager()
         if node_type not in manager.get_type_names():
@@ -508,7 +508,7 @@ class NodePalette(QDockWidget, ThemeMixin):
         menu.addAction(delete_action)
 
         def on_edit():
-            from zorvan.GUI.custom_node_dialog import CustomNodeDialog
+            from gui_framework.legacy.custom_node_dialog import CustomNodeDialog
 
             definition = manager.get_definition(node_type)
             dialog = CustomNodeDialog(parent=self, existing_definition=definition)

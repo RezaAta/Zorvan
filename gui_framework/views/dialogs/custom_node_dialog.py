@@ -469,9 +469,9 @@ if PYQT_AVAILABLE:
 
             # On success, show a confirmation including the library path when possible
             try:
-                from zorvan.GUI.custom_node_manager import get_custom_node_manager
+                from gui_framework.legacy import get_custom_node_manager_safe
 
-                mgr = get_custom_node_manager()
+                mgr = get_custom_node_manager_safe()
                 lib_path = getattr(mgr, "library_path", None)
                 if lib_path:
                     from PyQt6.QtWidgets import QMessageBox

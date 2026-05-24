@@ -1,5 +1,5 @@
-from zorvan.GUI.node_factory import create_node
-from zorvan.GUI.node_short_names import get_short_name
+from gui_framework.legacy import create_node
+from gui_framework.legacy import get_short_name
 
 
 def test_short_name_initializable_container():

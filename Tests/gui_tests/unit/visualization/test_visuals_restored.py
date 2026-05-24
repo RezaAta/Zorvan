@@ -9,8 +9,8 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.examples_loader import ExamplesLoader
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import ExamplesLoader
+from gui_framework.legacy import MainWindow
 
 
 class VisualsRestoredTest(unittest.TestCase):

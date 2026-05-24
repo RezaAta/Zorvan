@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.graph_canvas import GraphCanvas
+from gui_framework.legacy import GraphCanvas
 
 
 def test_default_grid_and_snap():

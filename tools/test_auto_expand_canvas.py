@@ -2,7 +2,7 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.graph_canvas import GraphCanvas
+from gui_framework.legacy import GraphCanvas
 from zorvan.Nodes.DisplayNode import DisplayNode
 
 app = QApplication([])
@@ -28,7 +28,7 @@ ni2 = canvas2.node_items
 # simulate direct add
 node = DisplayNode(name="big")
 ni_item = None
-from zorvan.GUI.node_item import NodeItem
+from gui_framework.legacy import NodeItem
 
 ni_item = NodeItem(node, 5000, 3000)
 canvas2.scene.addItem(ni_item)

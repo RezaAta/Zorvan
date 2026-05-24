@@ -9,7 +9,7 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
 
-from zorvan.GUI.mlp_dialog import MLPGeneratorDialog
+from gui_framework.legacy import MLPGeneratorDialog
 
 
 @pytest.fixture(scope="module")

@@ -2,7 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from gui_framework.legacy import CombinedNodePalette
 
 
 def test_create_delegates_to_parent_palette():

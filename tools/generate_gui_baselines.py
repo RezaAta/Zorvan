@@ -16,9 +16,7 @@ except Exception as e:
 
 from pathlib import Path
 
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.plot_window import PlotWindow
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import MainWindow, PlotWindow, get_theme_manager
 
 BASE = Path(__file__).resolve().parents[1] / "Tests" / "gui_tests" / "baselines"
 BASE.mkdir(parents=True, exist_ok=True)

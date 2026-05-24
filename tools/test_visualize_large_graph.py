@@ -7,8 +7,7 @@ sys.path.insert(
     0,
     str(Path(__file__).resolve().parents[1]),
 )
-from zorvan.GUI.examples_loader import ExamplesLoader
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import ExamplesLoader, MainWindow
 
 app = QApplication(sys.argv)
 loader = ExamplesLoader()

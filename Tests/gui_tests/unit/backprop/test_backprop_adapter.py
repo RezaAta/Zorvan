@@ -10,7 +10,7 @@ except Exception:
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter test")
 
 from zorvan.Core.MLPGraph import MLPGraph
-from zorvan.GUI.backprop_dialog import BackpropDialog
+from gui_framework.legacy import BackpropDialog
 
 
 @pytest.fixture(scope="module")

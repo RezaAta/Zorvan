@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from zorvan.GUI.combined_node_palette import CombinedNodePalette, NodeItemWidget
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import CombinedNodePalette, NodeItemWidget
+from gui_framework.legacy import get_theme_manager
 
 
 def test_palette_auto_applies_theme_on_construction():

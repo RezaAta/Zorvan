@@ -8,7 +8,7 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow
 from zorvan.Nodes.AdditionNode import AdditionNode
 from zorvan.Nodes.MultiplicationNode import MultiplicationNode
 
@@ -44,7 +44,7 @@ def test_create_node_and_connect_on_drop(monkeypatch):
             return "MultiplicationNode"
 
     monkeypatch.setattr(
-        "zorvan.GUI.replace_node_dialog.ReplaceNodeDialog",
+        "gui_framework.legacy.ReplaceNodeDialog",
         StubReplaceDialog,
     )
 
@@ -104,7 +104,7 @@ def test_drop_create_cancelled_does_not_create(monkeypatch):
             return None
 
     monkeypatch.setattr(
-        "zorvan.GUI.replace_node_dialog.ReplaceNodeDialog",
+        "gui_framework.legacy.ReplaceNodeDialog",
         StubReplaceDialogCancel,
     )
 
@@ -156,7 +156,7 @@ def test_create_node_and_connect_from_selected_multiple_nodes(monkeypatch):
             return "MultiplicationNode"
 
     monkeypatch.setattr(
-        "zorvan.GUI.replace_node_dialog.ReplaceNodeDialog",
+        "gui_framework.legacy.ReplaceNodeDialog",
         StubReplaceDialog,
     )
 

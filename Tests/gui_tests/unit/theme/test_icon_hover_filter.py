@@ -5,7 +5,7 @@ from PyQt6.QtCore import QEvent
 from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import QApplication, QPushButton
 
-from zorvan.GUI.controllers.control_panel_builder import _IconHoverFilter
+from gui_framework.legacy import _IconHoverFilter
 
 
 def ensure_app():
@@ -27,7 +27,7 @@ def test_icon_hover_uses_theme_color(monkeypatch):
     fake_tm = FakeTM("#112233")
 
     # Monkeypatch the theme manager factory
-    import zorvan.GUI.theme as theme_mod
+    from gui_framework.legacy import theme as theme_mod
 
     monkeypatch.setattr(theme_mod, "get_theme_manager", lambda: fake_tm)
 
@@ -67,7 +67,7 @@ def test_icon_hover_fallback_derived_from_base(monkeypatch):
     ensure_app()
 
     # Make get_theme_manager raise so fallback path is used
-    import zorvan.GUI.theme as theme_mod
+    from gui_framework.legacy import theme as theme_mod
 
     def raise_err():
         raise RuntimeError("no theme")

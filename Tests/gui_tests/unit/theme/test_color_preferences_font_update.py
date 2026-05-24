@@ -2,8 +2,8 @@ import pytest
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFontDialog
 
-from zorvan.GUI.color_preferences import ColorPreferencesDialog
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import ColorPreferencesDialog
+from gui_framework.legacy import get_theme_manager
 
 
 def test_choose_font_updates_button_and_theme(monkeypatch):

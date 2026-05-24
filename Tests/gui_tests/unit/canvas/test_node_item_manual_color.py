@@ -8,8 +8,8 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.graph_canvas import GraphCanvas
-from zorvan.GUI.node_item import NodeItem
+from gui_framework.legacy import GraphCanvas
+from gui_framework.legacy import NodeItem
 from zorvan.Nodes.BufferNode import BufferNode
 
 
@@ -34,7 +34,7 @@ def test_manual_color_init_and_ann_apply():
     mw = None
     try:
         # Create a MainWindow to access visualization controller for clear testing
-        from zorvan.GUI.main_window import MainWindow
+        from gui_framework.legacy import MainWindow
 
         mw = MainWindow()
         # Transfer node item to the main window canvas for full UI integration

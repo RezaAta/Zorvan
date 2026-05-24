@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from zorvan.GUI.combined_node_palette import NodeItemWidget
+from gui_framework.legacy import NodeItemWidget
 
 
 def test_node_item_size_and_paint_callable():

@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from zorvan.GUI.color_preferences import ColorPreferencesDialog
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from gui_framework.legacy import ColorPreferencesDialog
+from gui_framework.legacy import CombinedNodePalette
 
 
 def test_dock_bg_preference_updates_palette_body():

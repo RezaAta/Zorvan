@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition
+from gui_framework.legacy.custom_node_manager import CustomNodeDefinition
 
 
 class CustomNodeDialog(QDialog):
@@ -396,8 +396,8 @@ class CustomNodeDialog(QDialog):
         else None.
         """
         try:
-            from zorvan.GUI.custom_node_manager import get_custom_node_manager
-            from zorvan.GUI.node_factory import is_builtin_node
+            from gui_framework.legacy.custom_node_manager import get_custom_node_manager
+            from gui_framework.legacy.node_factory import is_builtin_node
 
             manager = get_custom_node_manager()
             # Create flow: no existing_definition -> creating new node

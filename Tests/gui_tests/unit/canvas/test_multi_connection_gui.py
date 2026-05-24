@@ -9,7 +9,7 @@ from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.graph_canvas import GraphCanvas
+from gui_framework.legacy import GraphCanvas
 from zorvan.Nodes.DataStreamNode import DataStreamNode
 
 

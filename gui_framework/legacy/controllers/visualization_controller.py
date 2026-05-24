@@ -141,7 +141,7 @@ class VisualizationController:
             pass
         # Also clear any user-applied default color overrides so nodes revert to theme defaults
         try:
-            from zorvan.GUI.theme import get_theme_manager
+            from gui_framework.legacy.theme import get_theme_manager
 
             for node_item in self.canvas.node_items.values():
                 try:
@@ -300,7 +300,7 @@ class VisualizationController:
         )
         # Persist visualization color defaults so they are applied on next startup
         try:
-            from zorvan.GUI.theme import get_theme_manager
+            from gui_framework.legacy.theme import get_theme_manager
 
             tm = get_theme_manager()
             try:
@@ -332,7 +332,7 @@ class VisualizationController:
 
     def apply_node_colors_selected(self):
         """Apply selected colors only to currently selected node items on the canvas."""
-        from zorvan.GUI.node_item import NodeItem
+        from gui_framework.legacy.node_item import NodeItem
 
         selected_items = self.canvas.scene.selectedItems()
         node_items = [item for item in selected_items if isinstance(item, NodeItem)]

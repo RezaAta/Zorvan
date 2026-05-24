@@ -8,7 +8,7 @@ sys.path.insert(
     0,
     str(Path(__file__).resolve().parents[1]),
 )
-from zorvan.GUI.graph_canvas import GraphCanvas
+from gui_framework.legacy import GraphCanvas
 from zorvan.Nodes.DisplayNode import DisplayNode
 
 app = QApplication([])

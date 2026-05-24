@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for this test")
 
 import time
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow
 
 
 def test_user_value_preserved_while_playing(qtbot):

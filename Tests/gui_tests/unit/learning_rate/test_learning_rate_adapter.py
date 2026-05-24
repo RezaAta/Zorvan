@@ -9,7 +9,7 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
 
-from zorvan.GUI.learning_rate_dialog import LearningRateDialog
+from gui_framework.legacy import LearningRateDialog
 
 
 class DummyNode:

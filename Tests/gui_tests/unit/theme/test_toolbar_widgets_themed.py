@@ -6,8 +6,8 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.theme_widgets import ThemedLabel, ThemedPushButton
+from gui_framework.legacy import MainWindow
+from gui_framework.legacy import ThemedLabel, ThemedPushButton
 
 
 def test_toolbar_widgets_are_themed_when_available():

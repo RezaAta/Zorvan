@@ -1530,7 +1530,7 @@ class GraphCanvas(QGraphicsView):
             # If a known built-in node was created, add it. Otherwise, try factory
             if not node:
                 try:
-                    from zorvan.GUI.node_factory import (
+                    from gui_framework.legacy.node_factory import (
                         create_node as factory_create_node,
                     )
 

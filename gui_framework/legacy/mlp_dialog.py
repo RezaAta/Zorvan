@@ -25,7 +25,7 @@ from zorvan.Nodes.TanhNode import TanhNode
 
 """
 Thin adapter that exposes the MVVM `MLPGeneratorDialog` under the legacy import path.
-This keeps existing code that imports `zorvan.GUI.MLPGeneratorDialog` working
+This keeps existing code that imports `gui_framework.legacy.MLPGeneratorDialog` working
 while we migrate to the MVVM implementation in `gui_framework.views.dialogs`.
 """
 

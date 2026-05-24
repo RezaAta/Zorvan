@@ -20,7 +20,8 @@ import sys
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.main_window import MainWindow
+from gui_framework.window.manager import get_window_manager
 
 
 def main(argv=None):
@@ -49,7 +50,7 @@ def main(argv=None):
 
     # Apply theme if available
     try:
-        from zorvan.GUI.theme import get_theme_manager
+        from gui_framework.theme import get_theme_manager
 
         tm = get_theme_manager()
         tm.apply_theme(app)
@@ -68,15 +69,16 @@ def main(argv=None):
             pass
 
     window = MainWindow()
+    manager = get_window_manager(app)
 
     # Optionally maximize
     if args.maximize:
         try:
             window.showMaximized()
         except Exception:
-            window.show()
+            manager.show_window("main")
     else:
-        window.show()
+        manager.show_window("main")
 
     # Optionally load an example (best-effort)
     if args.example:

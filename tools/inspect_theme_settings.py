@@ -1,4 +1,4 @@
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import get_theme_manager
 
 m = get_theme_manager()
 name = "__inspect_test__"

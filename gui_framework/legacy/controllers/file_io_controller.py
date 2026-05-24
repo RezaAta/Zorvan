@@ -252,7 +252,7 @@ class FileIOController:
         Only saves nodes that are selected and edges between them.
         External edges (to nodes outside selection) are not included.
         """
-        from zorvan.GUI.node_item import NodeItem
+        from gui_framework.legacy.node_item import NodeItem
 
         # Get selected node items
         selected_items = [
@@ -368,7 +368,7 @@ class FileIOController:
         Args:
             imported_graph: The Graph object to merge (already has nodes connected)
         """
-        from zorvan.GUI.node_item import NodeItem
+        from gui_framework.legacy.node_item import NodeItem
 
         # Calculate offset: find bottom of existing nodes
         existing_bottom = 0

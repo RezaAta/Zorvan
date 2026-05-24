@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.mlp_dialog import MLPGeneratorDialog
+from gui_framework.legacy import MLPGeneratorDialog
 from zorvan.Nodes.TanhNode import TanhNode
 
 

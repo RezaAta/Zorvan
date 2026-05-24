@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
 
 from PyQt6.QtCore import QSettings
 
-from zorvan.GUI import theme as theme_module
+from gui_framework.legacy import theme as theme_module
 
 
 def test_defaults_honor_saved_qsettings(tmp_path):

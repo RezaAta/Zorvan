@@ -4,7 +4,7 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 # Ensure the package imports work - we run from repo root
-from zorvan.GUI.plot_window import PlotWindow
+from gui_framework.legacy import PlotWindow
 from zorvan.Nodes.DataStreamNode import DataStreamNode
 
 

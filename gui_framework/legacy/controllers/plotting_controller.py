@@ -105,7 +105,7 @@ class PlottingController:
 
     def add_selected_to_plot(self):
         """Add currently selected node(s) in the canvas to the plot window."""
-        from zorvan.GUI.node_item import NodeItem
+        from gui_framework.legacy.node_item import NodeItem
 
         mw = self.main_window
         selected_items = self.canvas.scene.selectedItems()

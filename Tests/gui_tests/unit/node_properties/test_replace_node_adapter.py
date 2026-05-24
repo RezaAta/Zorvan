@@ -9,7 +9,7 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter test")
 
-from zorvan.GUI.replace_node_dialog import ReplaceNodeDialog
+from gui_framework.legacy import ReplaceNodeDialog
 
 
 @pytest.fixture(scope="module")

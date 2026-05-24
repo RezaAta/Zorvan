@@ -60,8 +60,8 @@ class GraphBuilderController:
             # Import node_item here to avoid circular import
             import networkx as nx
 
-            from zorvan.GUI.edge_item import EdgeItem
-            from zorvan.GUI.node_item import NodeItem
+            from gui_framework.legacy.edge_item import EdgeItem
+            from gui_framework.legacy.node_item import NodeItem
 
             # Clear existing canvas items first
             self.canvas.scene.clear()

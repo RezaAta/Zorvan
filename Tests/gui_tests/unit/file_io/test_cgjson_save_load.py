@@ -7,12 +7,12 @@ import pytest
 
 from zorvan.Core.CGJsonIO import load, save
 from zorvan.Core.Graph import Graph
-from zorvan.GUI.examples_loader import ExamplesLoader
+from gui_framework.legacy import ExamplesLoader
 
 # Skip GUI tests when PyQt6 isn't available in the environment
 pytest.importorskip("PyQt6")
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow
 
 
 def test_cgjson_save_load_basic():

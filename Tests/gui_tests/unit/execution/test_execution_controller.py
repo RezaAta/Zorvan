@@ -1,4 +1,4 @@
-from zorvan.GUI.controllers.execution_controller import ExecutionController
+from gui_framework.legacy import ExecutionController
 
 
 class DummyLabel:

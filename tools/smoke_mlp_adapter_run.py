@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QApplication
 
 # ensure repo root on path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from zorvan.GUI.mlp_dialog import MLPGeneratorDialog
+from gui_framework.legacy import MLPGeneratorDialog
 
 app = QApplication.instance() or QApplication([])
 dlg = MLPGeneratorDialog()

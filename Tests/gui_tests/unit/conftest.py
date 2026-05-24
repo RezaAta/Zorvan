@@ -15,7 +15,7 @@ try:
         # Ensure a ThemeManager exists and applies a minimal stylesheet in test
         # mode so tests that check app.styleSheet() observe expected rules.
         try:
-            from zorvan.GUI.theme import get_theme_manager
+            from gui_framework.legacy import get_theme_manager
 
             try:
                 get_theme_manager()
@@ -57,13 +57,15 @@ try:
         try:
             import sys
 
-            mod = sys.modules.get("zorvan.GUI.controllers.control_panel_builder")
-            if mod is not None and hasattr(mod, "_REGISTERED_ICON_BUTTONS"):
-                try:
-                    regs = getattr(mod, "_REGISTERED_ICON_BUTTONS") or []
-                    regs_info = f"registered_count={len(regs)}"
-                except Exception:
-                    regs_info = "registered_unavailable"
+            legacy = sys.modules.get("gui_framework.legacy")
+            if legacy is not None and getattr(legacy, "control_panel_builder", None) is not None:
+                mod = legacy.control_panel_builder
+                if hasattr(mod, "_REGISTERED_ICON_BUTTONS"):
+                    try:
+                        regs = getattr(mod, "_REGISTERED_ICON_BUTTONS") or []
+                        regs_info = f"registered_count={len(regs)}"
+                    except Exception:
+                        regs_info = "registered_unavailable"
         except Exception:
             regs_info = "no_registry"
 

@@ -2,7 +2,7 @@ import pytest
 
 pytest.importorskip("PyQt6")
 
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+from gui_framework.legacy import CustomNodeDefinition, CustomNodeManager
 
 
 def test_add_definition_raises_if_save_fails(monkeypatch, tmp_path):

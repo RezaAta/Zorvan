@@ -6,7 +6,7 @@ This module provides a thin wrapper for backward compatibility.
 For new code, use:
 - gui_framework.views.plot_view.PlotView for the MVVM view
 - gui_framework.adapters.plot_adapter.PlotAdapter for the adapter
-- zorvan.GUI.plot_window.PlotWindow for legacy compatibility
+- gui_framework.legacy.plot_window.PlotWindow for legacy compatibility
 """
 
 from .plot_window import PlotWindow

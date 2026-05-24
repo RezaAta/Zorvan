@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import CombinedNodePalette
+from gui_framework.legacy import get_theme_manager
 
 
 def luminance(qcolor):
@@ -23,7 +23,7 @@ def test_list_bg_is_dimmer_than_panel_bg():
     palette = CombinedNodePalette(parent)
 
     # Set panel_bg only (do not explicitly set list_bg) and apply theme
-    from zorvan.GUI.color_preferences import ColorPreferencesDialog
+    from gui_framework.legacy import ColorPreferencesDialog
 
     dlg = ColorPreferencesDialog(parent)
     dlg.set_color_for_key("panel_bg", "#3c3f41", apply_theme=True)

@@ -22,8 +22,7 @@ except Exception as e:
     print("PyQt6 not available:", e)
     sys.exit(1)
 
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.plot_window import PlotWindow
+from gui_framework.legacy import MainWindow, PlotWindow
 
 BASE = Path(__file__).resolve().parents[1] / "gui_tests" / "baselines"
 BASE.mkdir(parents=True, exist_ok=True)

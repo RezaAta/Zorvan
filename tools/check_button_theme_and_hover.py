@@ -15,8 +15,7 @@ from PyQt6.QtWidgets import QApplication
 app = QApplication.instance() or QApplication([])
 
 # Import after QApplication so any widget creation works
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import MainWindow, get_theme_manager
 
 # Apply theme to ensure stylesheet tokens are present
 tm = get_theme_manager()

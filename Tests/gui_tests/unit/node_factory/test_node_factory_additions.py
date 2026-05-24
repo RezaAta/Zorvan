@@ -1,5 +1,5 @@
 def test_elitism_node_registered_and_creatable():
-    from zorvan.GUI.node_factory import create_node, is_registered
+    from gui_framework.legacy import create_node, is_registered
 
     assert is_registered("ElitismNode") is True
     n = create_node("ElitismNode", name_hint="test")
@@ -8,7 +8,7 @@ def test_elitism_node_registered_and_creatable():
 
 
 def test_linear_derivative_name_not_duplicated():
-    from zorvan.GUI.node_factory import create_node
+    from gui_framework.legacy import create_node
 
     n = create_node("LinearNodeDerivative", name_hint="Linear'")
     assert n is not None
@@ -16,7 +16,7 @@ def test_linear_derivative_name_not_duplicated():
 
 
 def test_elitism_factory_name_sanitized():
-    from zorvan.GUI.node_factory import create_node
+    from gui_framework.legacy import create_node
 
     # If name_hint is derived from class name (ElitismNode), the created name
     # should be 'Elitism' (or a variant) and NOT 'Elitism_ElitismNode'
@@ -28,7 +28,7 @@ def test_elitism_factory_name_sanitized():
 
 
 def test_elitism_factory_name_with_prefix_hint():
-    from zorvan.GUI.node_factory import create_node
+    from gui_framework.legacy import create_node
 
     # If name_hint equals the prefix, we should get the prefix only
     n = create_node("ElitismNode", name_hint="Elitism")

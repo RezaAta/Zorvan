@@ -1,6 +1,6 @@
 """Diagnose weight stacking issue in MLP Layout."""
 
-from zorvan.GUI.layouts import MLPLayoutEngine
+from gui_framework.legacy import MLPLayoutEngine
 
 
 class MockNode:

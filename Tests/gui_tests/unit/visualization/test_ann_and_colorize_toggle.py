@@ -7,7 +7,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow
 
 
 def test_ann_and_colorize_mutual_exclusion():

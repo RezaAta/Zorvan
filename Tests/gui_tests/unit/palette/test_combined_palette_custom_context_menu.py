@@ -4,8 +4,8 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
+from gui_framework.legacy import CombinedNodePalette
+from gui_framework.legacy import CustomNodeDefinition, get_custom_node_manager
 
 
 def test_custom_node_delete_via_palette(monkeypatch):
@@ -32,7 +32,7 @@ def test_custom_node_delete_via_palette(monkeypatch):
     # Simulate confirmation dialog yes by patching QMessageBox.question
     from PyQt6.QtWidgets import QMessageBox
 
-    import zorvan.GUI.custom_node_manager as mgr_mod
+    from gui_framework.legacy import custom_node_manager as mgr_mod
 
     monkeypatch.setattr(
         QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes
@@ -77,7 +77,7 @@ def test_custom_node_edit_via_palette(monkeypatch):
             self.definition = new
             return True
 
-    import zorvan.GUI.custom_node_dialog as cnd
+    from gui_framework.legacy import custom_node_dialog as cnd
 
     monkeypatch.setattr(cnd, "CustomNodeDialog", StubDialog)
 

@@ -12,8 +12,8 @@ from ..events.bus import Event, EventType, get_event_bus
 from ..viewmodels.combined_node_palette_viewmodel import CombinedNodePaletteViewModel
 
 if TYPE_CHECKING:
-    from zorvan.GUI.combined_node_palette import CombinedNodePalette
-    from zorvan.GUI.main_window import MainWindow
+    from .legacy import CombinedNodePalette
+    from gui_framework.main_window import MainWindow
 
 logger = logging.getLogger(__name__)
 
@@ -88,10 +88,11 @@ class PaletteAdapter:
                 return
 
             # Try direct dialog creation
-            from zorvan.GUI.custom_node_dialog import CustomNodeDialog
+            from gui_framework.legacy import CustomNodeDialog
 
-            dlg = CustomNodeDialog(parent=self.main_window)
-            dlg.exec()
+            if CustomNodeDialog is not None:
+                dlg = CustomNodeDialog(parent=self.main_window)
+                dlg.exec()
 
         except Exception as e:
             logger.warning("Failed to open custom node dialog: %s", e)

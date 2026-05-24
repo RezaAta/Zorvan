@@ -5,8 +5,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.predecessors_dialog import PredecessorsDialog
+from gui_framework.legacy import MainWindow, PredecessorsDialog
 from zorvan.Nodes.BufferNode import BufferNode
 from zorvan.Nodes.DataStreamNode import DataStreamNode
 from zorvan.Nodes.DisplayNode import DisplayNode

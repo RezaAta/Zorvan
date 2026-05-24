@@ -2,7 +2,7 @@ import pytest
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow
 from zorvan.Nodes.Node import Node
 
 try:

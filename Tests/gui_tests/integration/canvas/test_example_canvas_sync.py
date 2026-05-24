@@ -5,7 +5,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow
 
 
 def test_examples_canvas_sync_xor_concurrent():

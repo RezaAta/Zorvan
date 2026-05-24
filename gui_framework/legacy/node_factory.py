@@ -233,7 +233,7 @@ def _import_node_class(node_type: str) -> Optional[Type]:
     # Special case: custom node marked with "__custom__" module path
     if module_path == "__custom__":
         try:
-            from zorvan.GUI.custom_node_manager import get_custom_node_manager
+            from gui_framework.legacy.custom_node_manager import get_custom_node_manager
 
             manager = get_custom_node_manager()
             cls = manager.get_node_class(node_type)

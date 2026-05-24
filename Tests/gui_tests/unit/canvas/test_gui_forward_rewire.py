@@ -11,7 +11,7 @@ import pytest as _pytest
 from PyQt6.QtWidgets import QApplication
 
 from zorvan.Core.Graph import Graph
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow
 from zorvan.Nodes.BufferNode import BufferNode
 from zorvan.Nodes.DataStreamNode import DataStreamNode
 from zorvan.Nodes.DisplayNode import DisplayNode
@@ -49,7 +49,7 @@ def test_gui_forward_rewire_buffer():
     assert 999 in buff.buffer
 
     # Now disconnect via PredecessorsDialog
-    from zorvan.GUI.predecessors_dialog import PredecessorsDialog
+    from gui_framework.legacy import PredecessorsDialog
 
     dlg = PredecessorsDialog(buff_item, window.canvas)
     # Find the predecessor(s) and remove the first one

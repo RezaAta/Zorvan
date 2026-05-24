@@ -1,4 +1,4 @@
-from zorvan.GUI.node_registry import get_node_categories
+from gui_framework.legacy import get_node_categories
 
 cats = get_node_categories()
 print("categories count:", len(cats))

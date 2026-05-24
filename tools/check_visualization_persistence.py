@@ -4,8 +4,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
 sys.path.insert(0, "..")
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import MainWindow, get_theme_manager
 
 app = QApplication.instance() or QApplication([])
 

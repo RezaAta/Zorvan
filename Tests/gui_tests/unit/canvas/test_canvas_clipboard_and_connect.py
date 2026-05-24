@@ -7,7 +7,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.graph_canvas import GraphCanvas
+from gui_framework.legacy import GraphCanvas
 from zorvan.Nodes.DisplayNode import DisplayNode
 
 

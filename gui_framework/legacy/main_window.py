@@ -187,7 +187,7 @@ class MainWindow(QMainWindow):
 
         # Initialize custom node manager early (before UI setup)
         try:
-            from zorvan.GUI.custom_node_manager import get_custom_node_manager
+            from gui_framework.legacy.custom_node_manager import get_custom_node_manager
 
             self.custom_node_manager = get_custom_node_manager()
             self.custom_node_manager.register_with_factory()
@@ -680,7 +680,7 @@ class MainWindow(QMainWindow):
             def _open_custom_node_dialog():
                 # Try MVVM-based adapter first, fallback to legacy dialog
                 try:
-                    from zorvan.GUI.custom_node_dialog_adapter import (
+                    from gui_framework.legacy.custom_node_dialog_adapter import (
                         CustomNodeDialogAdapter,
                     )
 
@@ -695,7 +695,7 @@ class MainWindow(QMainWindow):
                     pass
 
                 try:
-                    from zorvan.GUI.custom_node_dialog import CustomNodeDialog
+                    from gui_framework.legacy.custom_node_dialog import CustomNodeDialog
 
                     dlg = CustomNodeDialog(parent=self)
                     dlg.exec()

@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from zorvan.GUI.examples_loader import ExamplesLoader
+from gui_framework.legacy import ExamplesLoader
 
 
 def assert_equal_region_counts(xvals):

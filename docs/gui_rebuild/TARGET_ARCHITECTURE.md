@@ -791,7 +791,7 @@ Existing code that depends on old GUI APIs will use adapters:
 ```python
 # gui_framework/adapters/legacy_adapter.py
 
-from zorvan.GUI.main_window import MainWindow as OldMainWindow
+from gui_framework.legacy import MainWindow as OldMainWindow
 from gui_framework.window.manager import get_window_manager
 
 class LegacyMainWindowAdapter:
@@ -825,7 +825,7 @@ USE_NEW_GUI = False  # Feature flag
 if USE_NEW_GUI:
     from gui_framework.views.canvas_view import CanvasView as Canvas
 else:
-    from zorvan.GUI.graph_canvas import GraphCanvas as Canvas
+    from gui_framework.legacy import GraphCanvas as Canvas
 ```
 
 ## Testing Strategy

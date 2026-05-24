@@ -5,7 +5,7 @@ import pytest
 
 pytest.importorskip("PyQt6")
 
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+from gui_framework.legacy import CustomNodeDefinition, CustomNodeManager
 
 
 def test_remove_definition_persists(tmp_path):

@@ -8,8 +8,8 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.node_item import NodeItem
+from gui_framework.legacy import MainWindow
+from gui_framework.legacy import NodeItem
 from zorvan.Nodes.DisplayNode import DisplayNode
 
 

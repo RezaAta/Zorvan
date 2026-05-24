@@ -22,8 +22,7 @@ if ROOT not in sys.path:
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.node_editor_dialog import NodeEditorDialog
+from gui_framework.legacy import MainWindow, NodeEditorDialog
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("repro_change_while_running")

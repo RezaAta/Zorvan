@@ -2,7 +2,7 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QMenu
 
 from zorvan.Core.Graph import Graph
-from zorvan.GUI.controllers.dialog_controller import DialogController
+from gui_framework.legacy import DialogController
 
 
 class DummyMainWindow(QObject):

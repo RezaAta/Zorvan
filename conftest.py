@@ -88,7 +88,7 @@ def pytest_sessionstart(session):
             except Exception:
                 pass
             try:
-                from zorvan.GUI.theme import get_theme_manager
+                from gui_framework.legacy import get_theme_manager
 
                 try:
                     manager = get_theme_manager()
@@ -132,7 +132,7 @@ def _ensure_minimal_qss_per_test():
             app = QApplication.instance() or None
             if app is not None:
                 try:
-                    from zorvan.GUI.theme import get_theme_manager
+                    from gui_framework.legacy import get_theme_manager
 
                     mgr = get_theme_manager()
                     hover = mgr.get_color("button_hover", "#5a5a5a").name()

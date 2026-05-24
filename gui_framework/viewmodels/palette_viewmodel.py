@@ -83,19 +83,9 @@ class PaletteViewModel(BaseViewModel):
     def _load_categories(self) -> None:
         """Load node categories from node_registry."""
         try:
-            # Import node_registry from GUI package
-            import os
-            import sys
+            from gui_framework.legacy import get_node_categories_safe
 
-            # Get absolute path to repository root
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            repo_root = os.path.abspath(os.path.join(current_dir, "..", ".."))
-            if repo_root not in sys.path:
-                sys.path.insert(0, repo_root)
-
-            from zorvan.GUI.node_registry import get_node_categories
-
-            categories_data = get_node_categories()
+            categories_data = get_node_categories_safe()
 
             # Convert to NodeInfo objects
             for category_name, category_data in categories_data.items():

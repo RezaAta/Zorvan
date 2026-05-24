@@ -1,4 +1,4 @@
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import get_theme_manager
 
 
 def test_save_theme_removes_legacy_keys(tmp_path, monkeypatch):

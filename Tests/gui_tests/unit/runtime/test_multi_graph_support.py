@@ -352,7 +352,7 @@ class TestProcessingQueue:
 
     def test_add_to_queue(self):
         """Can add graph+iterations to queue."""
-        from zorvan.GUI.graph_runner import GraphRunner
+        from gui_framework.legacy import GraphRunner
 
         g = Graph(name="Test Graph")
         runner = GraphRunner()
@@ -366,7 +366,7 @@ class TestProcessingQueue:
 
     def test_add_multiple_to_queue(self):
         """Can add multiple items to queue."""
-        from zorvan.GUI.graph_runner import GraphRunner
+        from gui_framework.legacy import GraphRunner
 
         g1 = Graph(name="Graph A")
         g2 = Graph(name="Graph B")
@@ -384,7 +384,7 @@ class TestProcessingQueue:
 
     def test_clear_queue(self):
         """Can clear the processing queue."""
-        from zorvan.GUI.graph_runner import GraphRunner
+        from gui_framework.legacy import GraphRunner
 
         g = Graph(name="Test Graph")
         runner = GraphRunner()
@@ -398,7 +398,7 @@ class TestProcessingQueue:
 
     def test_queue_repeat_mode(self):
         """Can set and check queue repeat mode with count."""
-        from zorvan.GUI.graph_runner import GraphRunner
+        from gui_framework.legacy import GraphRunner
 
         runner = GraphRunner()
 
@@ -426,7 +426,7 @@ class TestPerGraphSnapshots:
 
     def test_save_snapshot_for_graph(self):
         """Can save snapshot for specific graph."""
-        from zorvan.GUI.graph_runner import GraphRunner
+        from gui_framework.legacy import GraphRunner
 
         g = Graph(name="Test Graph")
         a = ContainerNode("a", value=5)
@@ -448,7 +448,7 @@ class TestPerGraphSnapshots:
 
     def test_separate_snapshots_per_graph(self):
         """Snapshots are kept separate per graph."""
-        from zorvan.GUI.graph_runner import GraphRunner
+        from gui_framework.legacy import GraphRunner
 
         g1 = Graph(name="Graph A")
         a1 = ContainerNode("a1", value=1)

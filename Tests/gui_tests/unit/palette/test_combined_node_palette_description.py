@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
-from zorvan.GUI.node_short_names import get_short_name
+from gui_framework.legacy import CombinedNodePalette
+from gui_framework.legacy import get_short_name
 
 
 def test_palette_uses_short_names_and_shows_description():

@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.main_window import CollapsibleSection, MainWindow
+from gui_framework.legacy import CollapsibleSection, MainWindow
 
 
 def test_control_panel_styles_and_processing_queue_icon():

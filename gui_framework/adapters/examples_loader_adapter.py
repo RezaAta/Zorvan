@@ -12,8 +12,8 @@ from ..events.bus import Event, EventType, get_event_bus
 from ..viewmodels.examples_loader_viewmodel import ExamplesLoaderViewModel
 
 if TYPE_CHECKING:
-    from zorvan.GUI.examples_loader import ExamplesLoader
-    from zorvan.GUI.main_window import MainWindow
+    from gui_framework.examples_loader import ExamplesLoader
+    from gui_framework.main_window import MainWindow
 
 logger = logging.getLogger(__name__)
 

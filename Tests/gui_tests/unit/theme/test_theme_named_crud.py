@@ -1,4 +1,4 @@
-from zorvan.GUI.theme import get_theme_manager
+from gui_framework.legacy import get_theme_manager
 
 
 def test_theme_named_crud(tmp_path):

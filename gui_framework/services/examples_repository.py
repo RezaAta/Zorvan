@@ -5,7 +5,7 @@ API for the UI to list and build examples in a testable way.
 from typing import Callable, Dict, Tuple
 
 try:
-    from zorvan.GUI.examples_loader import ExamplesLoader as LegacyExamplesLoader
+    from gui_framework.examples_loader import ExamplesLoader as LegacyExamplesLoader
 except Exception:  # pragma: no cover - best-effort import
     LegacyExamplesLoader = None
 

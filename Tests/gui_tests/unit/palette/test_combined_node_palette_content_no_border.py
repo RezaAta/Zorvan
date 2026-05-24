@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
+from gui_framework.legacy import CombinedNodePalette
 
 
 def test_category_content_has_no_border():

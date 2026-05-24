@@ -3,7 +3,7 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 from zorvan.Core.Graph import Graph
-from zorvan.GUI.graph_canvas import GraphCanvas
+from gui_framework.legacy import GraphCanvas
 from zorvan.Nodes.BufferNode import BufferNode
 from zorvan.Nodes.DataStreamNode import DataStreamNode
 from zorvan.Nodes.DisplayNode import DisplayNode

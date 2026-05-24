@@ -9,9 +9,9 @@ from PyQt6.QtWidgets import QApplication
 
 from zorvan.Core.Graph import Graph
 from zorvan.Core.GraphProcessor import GraphProcessor
-from zorvan.GUI.graph_canvas import GraphCanvas
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.replace_node_dialog import ReplaceNodeDialog
+from gui_framework.legacy import GraphCanvas
+from gui_framework.legacy import MainWindow
+from gui_framework.legacy import ReplaceNodeDialog
 from zorvan.Nodes.AdditionNode import AdditionNode
 from zorvan.Nodes.BufferNode import BufferNode
 from zorvan.Nodes.DataStreamNode import DataStreamNode
@@ -124,7 +124,7 @@ def test_predecessors_dialog_disconnect():
     assert disp in buff.predecessors
 
     # Open predecessors dialog and disconnect
-    from zorvan.GUI.predecessors_dialog import PredecessorsDialog
+    from gui_framework.legacy import PredecessorsDialog
 
     dlg = PredecessorsDialog(buff_item, window.canvas)
     dlg.disconnect_pred(disp)
@@ -154,7 +154,7 @@ def test_predecessors_dialog_updates_on_external_delete():
     edge = window.canvas.add_edge_item(disp, buff)
 
     assert disp in buff.predecessors
-    from zorvan.GUI.predecessors_dialog import PredecessorsDialog
+    from gui_framework.legacy import PredecessorsDialog
 
     dlg = PredecessorsDialog(buff_item, window.canvas)
     # Initially, should have one predecessor
@@ -195,7 +195,7 @@ def test_predecessors_dialog_disconnect():
     assert disp in buff.predecessors
 
     # Open predecessors dialog and disconnect disp programmatically
-    from zorvan.GUI.predecessors_dialog import PredecessorsDialog
+    from gui_framework.legacy import PredecessorsDialog
 
     dlg = PredecessorsDialog(buff_item, canvas)
     dlg.disconnect_pred(disp)

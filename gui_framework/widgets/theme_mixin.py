@@ -32,7 +32,7 @@ except ImportError:
 get_theme_manager = None
 try:
     # Try direct import first (when installed as package)
-    from zorvan.GUI.theme import get_theme_manager
+    from gui_framework.theme import get_theme_manager
 except ImportError:
     try:
         # Try relative import (when running from repo root)
@@ -45,7 +45,7 @@ except ImportError:
         )
         if parent_dir not in sys.path:
             sys.path.insert(0, parent_dir)
-        from zorvan.GUI.theme import get_theme_manager
+        from gui_framework.theme import get_theme_manager
     except ImportError:
         # Last resort: define a dummy function
         def get_theme_manager():

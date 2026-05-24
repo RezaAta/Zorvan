@@ -14,7 +14,7 @@ except ImportError:
     PYQT_AVAILABLE = False
 
 if PYQT_AVAILABLE:
-    from zorvan.GUI.plot_window import PlotWindow
+    from gui_framework.legacy import PlotWindow
     from zorvan.Nodes.DataStreamNode import DataStreamNode
 
 

@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.GUI.color_preferences import ColorPreferencesDialog
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import ColorPreferencesDialog
+from gui_framework.legacy import MainWindow
 
 
 def test_speed_slider_has_track_and_updates_with_theme():

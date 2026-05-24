@@ -21,9 +21,9 @@ class CombinedNodePaletteViewModel(BaseViewModel):
     def initialize(self):
         # Load categories from registry
         try:
-            from zorvan.GUI.node_registry import get_node_categories
+            from gui_framework.legacy import get_node_categories_safe
 
-            self._categories = get_node_categories()
+            self._categories = get_node_categories_safe()
         except Exception:
             self._categories = {}
         self._mark_initialized()

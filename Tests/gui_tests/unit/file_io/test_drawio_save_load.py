@@ -3,8 +3,8 @@ import tempfile
 
 from zorvan.Core.DrawioIO import DrawioIO
 from zorvan.Core.Graph import Graph
-from zorvan.GUI.examples_loader import ExamplesLoader
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import ExamplesLoader
+from gui_framework.legacy import MainWindow
 
 
 def test_drawio_save_load():

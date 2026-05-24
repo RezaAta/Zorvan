@@ -1,22 +1,17 @@
 """
 Lightweight layout utilities for the new GUI framework.
 
-This module wraps or falls back to the legacy layout algorithms found in
-`zorvan.GUI.layouts` when available, and provides simple
-fallbacks otherwise. The goal is to offer a small, testable API for the
-Canvas ViewModel to request node positions using a named layout.
+This module wraps or falls back to legacy layout algorithms when available,
+and provides simple fallbacks otherwise. The goal is to offer a small,
+testable API for the Canvas ViewModel to request node positions using a
+named layout.
 """
 
 from typing import Any, Callable, Dict, List, Tuple
 
-try:
-    # Prefer reusing legacy implementation when available
-    from zorvan.GUI import layouts as legacy_layouts  # type: ignore
+from .legacy import legacy_layouts
 
-    LEGACY_AVAILABLE = True
-except Exception:
-    legacy_layouts = None
-    LEGACY_AVAILABLE = False
+LEGACY_AVAILABLE = legacy_layouts is not None
 
 # Optional dependency networkx for force/spring layout
 try:

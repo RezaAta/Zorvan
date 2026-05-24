@@ -7,7 +7,7 @@ try:
 except Exception:
     HAS_PYQT = False
 
-from zorvan.GUI.main_window import MainWindow
+from gui_framework.legacy import MainWindow
 
 
 @pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 not installed")

@@ -1,4 +1,4 @@
-from zorvan.GUI.examples_loader import ExamplesLoader
+from gui_framework.legacy import ExamplesLoader
 
 
 def build_anfis():

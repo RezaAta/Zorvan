@@ -3,8 +3,8 @@ from PyQt6.QtWidgets import QApplication, QPushButton
 
 print("TEST_IMPORT: test_icon_accent_updates import start")
 
-from zorvan.GUI.color_preferences import ColorPreferencesDialog
-from zorvan.GUI.controllers.control_panel_builder import _apply_icon
+from gui_framework.legacy import ColorPreferencesDialog
+from gui_framework.legacy import _apply_icon
 
 
 def _icon_color_hex(btn: QPushButton) -> str:
@@ -35,7 +35,7 @@ def test_accent_changes_icon_color():
 
     # Ensure initial handler has run at least once so the deterministic attribute is set
     try:
-        from zorvan.GUI.controllers.control_panel_builder import _ICON_REAPPLY_HANDLERS
+        from gui_framework.legacy import _ICON_REAPPLY_HANDLERS
 
         for h in list(_ICON_REAPPLY_HANDLERS):
             try:

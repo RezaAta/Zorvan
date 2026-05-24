@@ -135,7 +135,7 @@ def get_node_categories():
     """
     cats = deepcopy(NODE_CATEGORIES)
     try:
-        from zorvan.GUI.custom_node_manager import get_custom_node_manager
+        from gui_framework.legacy.custom_node_manager import get_custom_node_manager
 
         manager = get_custom_node_manager()
         custom_types = manager.get_type_names()
