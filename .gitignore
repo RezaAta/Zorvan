@@ -278,6 +278,11 @@ ServiceFabricBackup/
 # Microsoft Fakes
 FakesAssemblies/
 
+# Temporary/debug artifacts generated during local development
+crash_tail.txt
+pytest_unit_output.txt
+temp_*.py
+
 # GhostDoc plugin setting file
 *.GhostDoc.xml
 
