@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from .theme import get_theme_manager, _is_test_env
+from .theme import _is_test_env, get_theme_manager
 
 # Adapter: delegate to MVVM Color Preferences dialog
 try:

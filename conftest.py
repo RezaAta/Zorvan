@@ -153,4 +153,3 @@ def _ensure_minimal_qss_per_test():
         except Exception:
             pass
     yield
-

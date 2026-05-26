@@ -6,8 +6,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import MainWindow
-from gui_framework.legacy import ThemedPushButton, ThemedScrollArea
+from gui_framework.legacy import MainWindow, ThemedPushButton, ThemedScrollArea
 
 
 def test_control_panel_uses_themed_scroll_and_buttons():

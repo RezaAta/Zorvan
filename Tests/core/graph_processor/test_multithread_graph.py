@@ -25,7 +25,11 @@ def test_graph_processor_with_multiple_workers_matches_single_thread():
     graph_single = build_test_graph(16)
     graph_multi = build_test_graph(16)
 
-    GraphProcessor(graph_single, max_workers=1, verbose=False).ComputeGraph(iterations=10)
-    GraphProcessor(graph_multi, max_workers=16, verbose=False).ComputeGraph(iterations=10)
+    GraphProcessor(graph_single, max_workers=1, verbose=False).ComputeGraph(
+        iterations=10
+    )
+    GraphProcessor(graph_multi, max_workers=16, verbose=False).ComputeGraph(
+        iterations=10
+    )
 
     assert get_graph_values(graph_single) == get_graph_values(graph_multi)

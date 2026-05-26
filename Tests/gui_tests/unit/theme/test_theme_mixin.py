@@ -4,20 +4,21 @@ Unit tests for ThemeMixin (new MVVM-compatible version).
 Tests both legacy and new StateStore modes.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock
 import sys
+from unittest.mock import MagicMock, Mock
+
+import pytest
 
 # Mock PyQt6 for testing
-if 'PyQt6' not in sys.modules:
-    sys.modules['PyQt6'] = MagicMock()
-    sys.modules['PyQt6.QtCore'] = MagicMock()
-    sys.modules['PyQt6.QtGui'] = MagicMock()
-    sys.modules['PyQt6.QtWidgets'] = MagicMock()
+if "PyQt6" not in sys.modules:
+    sys.modules["PyQt6"] = MagicMock()
+    sys.modules["PyQt6.QtCore"] = MagicMock()
+    sys.modules["PyQt6.QtGui"] = MagicMock()
+    sys.modules["PyQt6.QtWidgets"] = MagicMock()
 
-from gui_framework.widgets.theme_mixin import ThemeMixin
-from gui_framework.viewmodels.theme_viewmodel import ThemeViewModel
 from gui_framework.state.models import ThemeState
+from gui_framework.viewmodels.theme_viewmodel import ThemeViewModel
+from gui_framework.widgets.theme_mixin import ThemeMixin
 
 
 class MockWidget(ThemeMixin):
@@ -60,8 +61,8 @@ class TestThemeMixinLegacyMode:
         # Should have theme_manager
         tm = widget.get_theme_manager()
         assert tm is not None
-        assert hasattr(tm, 'theme')
-        assert hasattr(tm, 'get_color')
+        assert hasattr(tm, "theme")
+        assert hasattr(tm, "get_color")
 
     def test_legacy_disconnect(self):
         """Test disconnect_theme works in legacy mode."""
@@ -94,8 +95,8 @@ class TestThemeMixinStateStoreMode:
         vm = widget.theme_viewmodel
         assert vm is not None
         assert isinstance(vm, ThemeViewModel)
-        assert hasattr(vm, 'get_color')
-        assert hasattr(vm, 'get_font')
+        assert hasattr(vm, "get_color")
+        assert hasattr(vm, "get_font")
 
     def test_theme_viewmodel_provides_colors(self):
         """Test theme_viewmodel provides color access."""
@@ -127,7 +128,7 @@ class TestThemeMixinStateStoreMode:
         new_theme_state = ThemeState(
             colors={"bg": "#ff0000", "text": "#00ff00"},
             fonts={"ui_font_family": "Arial"},
-            current_theme="test"
+            current_theme="test",
         )
         widget._state_store.update(theme=new_theme_state)
 

@@ -139,13 +139,16 @@ class ThemeViewModel(BaseViewModel):
         """
         return {
             "family": self.fonts.get(
-                f"{prefix}_font_family", self.DEFAULT_FONTS.get(f"{prefix}_font_family", "Oswald")
+                f"{prefix}_font_family",
+                self.DEFAULT_FONTS.get(f"{prefix}_font_family", "Oswald"),
             ),
             "size": self.fonts.get(
-                f"{prefix}_font_size", self.DEFAULT_FONTS.get(f"{prefix}_font_size", "12")
+                f"{prefix}_font_size",
+                self.DEFAULT_FONTS.get(f"{prefix}_font_size", "12"),
             ),
             "weight": self.fonts.get(
-                f"{prefix}_font_weight", self.DEFAULT_FONTS.get(f"{prefix}_font_weight", "Medium")
+                f"{prefix}_font_weight",
+                self.DEFAULT_FONTS.get(f"{prefix}_font_weight", "Medium"),
             ),
         }
 
@@ -172,11 +175,18 @@ class ThemeViewModel(BaseViewModel):
         self._event_bus.publish(
             Event(
                 type=EventType.THEME_FONT_CHANGED,
-                payload={"font_changed": prefix, "family": family, "size": size, "weight": weight},
+                payload={
+                    "font_changed": prefix,
+                    "family": family,
+                    "size": size,
+                    "weight": weight,
+                },
             )
         )
 
-    def set_theme(self, colors: Dict[str, str], fonts: Dict[str, str], theme_name: str = "custom"):
+    def set_theme(
+        self, colors: Dict[str, str], fonts: Dict[str, str], theme_name: str = "custom"
+    ):
         """Set complete theme.
 
         Args:

@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Tuple
 class ExecutionState:
     """
     Immutable execution state.
-    
+
     Attributes:
         is_running: Whether graph execution is currently running
         is_paused: Whether execution is paused
@@ -23,6 +23,7 @@ class ExecutionState:
         processor_type: Type of processor ("concurrent" or "forward")
         auto_prepare: Whether to auto-prepare forward processing
     """
+
     is_running: bool = False
     is_paused: bool = False
     current_iteration: int = 0
@@ -36,7 +37,7 @@ class ExecutionState:
 class CanvasState:
     """
     Immutable canvas state.
-    
+
     Attributes:
         zoom_level: Current zoom level (1.0 = 100%)
         pan_x: Horizontal pan offset
@@ -46,6 +47,7 @@ class CanvasState:
         grid_visible: Whether grid is visible
         grid_snap: Whether grid snapping is enabled
     """
+
     zoom_level: float = 1.0
     pan_x: float = 0.0
     pan_y: float = 0.0
@@ -59,12 +61,13 @@ class CanvasState:
 class ThemeState:
     """
     Immutable theme state.
-    
+
     Attributes:
         colors: Dictionary of color name to hex color value
         fonts: Dictionary of font name to font family/size
         current_theme: Name of current theme
     """
+
     colors: Dict[str, str] = field(default_factory=dict)
     fonts: Dict[str, str] = field(default_factory=dict)
     current_theme: str = "default"
@@ -74,11 +77,12 @@ class ThemeState:
 class PaletteState:
     """
     Immutable palette state.
-    
+
     Attributes:
         search_text: Current search/filter text
         expanded_categories: List of expanded category names
     """
+
     search_text: str = ""
     expanded_categories: List[str] = field(default_factory=list)
 
@@ -87,9 +91,9 @@ class PaletteState:
 class AppState:
     """
     Complete immutable application state.
-    
+
     This is the root state object containing all application state slices.
-    
+
     Attributes:
         graph: The computational graph model (not frozen)
         execution: Execution state slice
@@ -98,6 +102,7 @@ class AppState:
         palette: Palette state slice
         file_path: Current file path (None if unsaved)
     """
+
     graph: Any = None
     execution: ExecutionState = field(default_factory=ExecutionState)
     canvas: CanvasState = field(default_factory=CanvasState)

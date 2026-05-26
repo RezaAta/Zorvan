@@ -1,8 +1,7 @@
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from gui_framework.legacy import MainWindow
-from gui_framework.legacy import get_theme_manager
+from gui_framework.legacy import MainWindow, get_theme_manager
 
 
 def test_theme_loaded_from_qsettings_applies_to_ui_on_startup():

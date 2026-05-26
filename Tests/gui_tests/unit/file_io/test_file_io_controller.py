@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
-from zorvan.Core.Graph import Graph
 from gui_framework.legacy import FileIOController
+from zorvan.Core.Graph import Graph
 
 
 class DummyCanvas:

@@ -4,10 +4,9 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
+from gui_framework.legacy import CombinedNodePalette, get_custom_node_manager
 from gui_framework.viewmodels.dialogs.custom_node_viewmodel import CustomNodeViewModel
 from gui_framework.views.dialogs.custom_node_dialog import CustomNodeDialog
-from gui_framework.legacy import CombinedNodePalette
-from gui_framework.legacy import get_custom_node_manager
 
 
 def test_dialog_save_updates_palette():

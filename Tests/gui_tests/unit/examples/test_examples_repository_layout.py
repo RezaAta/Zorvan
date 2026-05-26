@@ -1,7 +1,7 @@
 import json
 
-from gui_framework.services.examples_repository import ExamplesRepository
 from gui_framework.legacy import ExamplesLoader
+from gui_framework.services.examples_repository import ExamplesRepository
 
 
 def test_save_and_load_layout(tmp_path):

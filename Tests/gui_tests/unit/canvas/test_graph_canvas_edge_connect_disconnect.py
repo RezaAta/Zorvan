@@ -7,11 +7,9 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
+from gui_framework.legacy import GraphCanvas, MainWindow, ReplaceNodeDialog
 from zorvan.Core.Graph import Graph
 from zorvan.Core.GraphProcessor import GraphProcessor
-from gui_framework.legacy import GraphCanvas
-from gui_framework.legacy import MainWindow
-from gui_framework.legacy import ReplaceNodeDialog
 from zorvan.Nodes.AdditionNode import AdditionNode
 from zorvan.Nodes.BufferNode import BufferNode
 from zorvan.Nodes.DataStreamNode import DataStreamNode

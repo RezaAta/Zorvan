@@ -58,7 +58,10 @@ try:
             import sys
 
             legacy = sys.modules.get("gui_framework.legacy")
-            if legacy is not None and getattr(legacy, "control_panel_builder", None) is not None:
+            if (
+                legacy is not None
+                and getattr(legacy, "control_panel_builder", None) is not None
+            ):
                 mod = legacy.control_panel_builder
                 if hasattr(mod, "_REGISTERED_ICON_BUTTONS"):
                     try:

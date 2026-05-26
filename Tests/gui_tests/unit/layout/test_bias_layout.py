@@ -1,5 +1,4 @@
-from gui_framework.legacy import ExamplesLoader
-from gui_framework.legacy import MLPLayoutEngine
+from gui_framework.legacy import ExamplesLoader, MLPLayoutEngine
 
 
 def test_bias_and_db_placement():

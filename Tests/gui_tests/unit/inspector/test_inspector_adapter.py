@@ -9,8 +9,8 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
 
-from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
 from gui_framework.legacy import InspectorPane
+from gui_framework.viewmodels.canvas_viewmodel import CanvasViewModel
 
 
 class Node:

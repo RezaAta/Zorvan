@@ -6,9 +6,9 @@ Tests the pure Python logic of theme management without any GUI dependencies.
 
 import pytest
 
-from gui_framework.viewmodels.theme_viewmodel import ThemeViewModel
 from gui_framework.events.bus import EventType
 from gui_framework.state.models import ThemeState
+from gui_framework.viewmodels.theme_viewmodel import ThemeViewModel
 
 
 class TestThemeViewModel:
@@ -342,7 +342,7 @@ class TestThemeViewModel:
         theme_state = ThemeState(
             colors={"bg": "#123456", "text": "#fedcba"},
             fonts={"ui_font_family": "Comic Sans"},
-            current_theme="loaded"
+            current_theme="loaded",
         )
         vm._store.update(theme=theme_state)
 

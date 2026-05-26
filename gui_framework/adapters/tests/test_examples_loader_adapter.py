@@ -1,7 +1,6 @@
 from gui_framework.adapters.examples_loader_adapter import ExamplesLoaderAdapter
 from gui_framework.events.bus import EventType, get_event_bus
 from gui_framework.services.examples_repository import ExamplesRepository
-
 from zorvan.Core.Graph import Graph
 
 
@@ -72,7 +71,9 @@ def test_examples_loader_adapter_build_example_publishes_and_applies_graph():
         graph = Graph()
         repository = ExamplesRepository()
         repository.build = lambda name: graph if name == "demo" else None
-        main_window = DummyMainWindow(repository=repository, examples_loader=DummyExampleLoader())
+        main_window = DummyMainWindow(
+            repository=repository, examples_loader=DummyExampleLoader()
+        )
 
         adapter = ExamplesLoaderAdapter(main_window)
 
@@ -87,7 +88,9 @@ def test_examples_loader_adapter_build_example_publishes_and_applies_graph():
 
 def test_examples_loader_adapter_legacy_load_example_uses_legacy_loader():
     repository = ExamplesRepository()
-    main_window = DummyMainWindow(repository=repository, examples_loader=DummyExampleLoader())
+    main_window = DummyMainWindow(
+        repository=repository, examples_loader=DummyExampleLoader()
+    )
 
     adapter = ExamplesLoaderAdapter(main_window)
 

@@ -6,8 +6,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import MainWindow
-from gui_framework.legacy import ThemedLabel, ThemedPushButton
+from gui_framework.legacy import MainWindow, ThemedLabel, ThemedPushButton
 
 
 def test_toolbar_widgets_are_themed_when_available():

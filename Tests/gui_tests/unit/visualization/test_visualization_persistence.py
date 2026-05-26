@@ -5,8 +5,7 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import MainWindow
-from gui_framework.legacy import get_theme_manager
+from gui_framework.legacy import MainWindow, get_theme_manager
 
 
 def test_visualization_colors_persist_across_restarts(tmp_path):

@@ -12,8 +12,9 @@ from ..events.bus import Event, EventType, get_event_bus
 from ..viewmodels.execution_viewmodel import ExecutionStatus, ExecutionViewModel
 
 if TYPE_CHECKING:
-    from .legacy import GraphRunner
     from gui_framework.main_window import MainWindow
+
+    from .legacy import GraphRunner
 
 logger = logging.getLogger(__name__)
 

@@ -6,8 +6,7 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import _create_standard_button
-from gui_framework.legacy import get_theme_manager
+from gui_framework.legacy import _create_standard_button, get_theme_manager
 
 
 def _pixmap_color_hex(pm: QPixmap):
@@ -42,9 +41,7 @@ def test_icon_recolors_on_accent_change():
         tm.apply_theme()
         # Force any registered handlers to run to ensure deterministic reapply in tests
         try:
-            from gui_framework.legacy import (
-                _ICON_REAPPLY_HANDLERS,
-            )
+            from gui_framework.legacy import _ICON_REAPPLY_HANDLERS
 
             for h in list(_ICON_REAPPLY_HANDLERS):
                 try:

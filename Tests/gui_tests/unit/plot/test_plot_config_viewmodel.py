@@ -5,7 +5,8 @@ Tests node selection, filtering, and configuration without PyQt.
 """
 
 import pytest
-from gui_framework.viewmodels.plot_config_viewmodel import PlotConfigViewModel, NodeInfo
+
+from gui_framework.viewmodels.plot_config_viewmodel import NodeInfo, PlotConfigViewModel
 
 
 class TestPlotConfigViewModelInitialization:
@@ -18,7 +19,7 @@ class TestPlotConfigViewModelInitialization:
         assert vm.get_max_iterations() == 100
         assert vm.get_available_nodes() == []
         assert vm.get_selected_nodes() == []
-        assert vm.get_filter() == 'all'
+        assert vm.get_filter() == "all"
 
     def test_custom_max_iterations(self):
         """Test initialization with custom max iterations."""
@@ -134,11 +135,13 @@ class TestPlotConfigViewModelSelection:
     def test_get_selected_nodes(self):
         """Test getting list of selected nodes."""
         vm = PlotConfigViewModel()
-        vm.load_nodes([
-            NodeInfo(name="A", node_id="A"),
-            NodeInfo(name="B", node_id="B"),
-            NodeInfo(name="C", node_id="C"),
-        ])
+        vm.load_nodes(
+            [
+                NodeInfo(name="A", node_id="A"),
+                NodeInfo(name="B", node_id="B"),
+                NodeInfo(name="C", node_id="C"),
+            ]
+        )
 
         vm.select_node("B")
         vm.select_node("A")
@@ -150,11 +153,13 @@ class TestPlotConfigViewModelSelection:
     def test_select_all_visible(self):
         """Test selecting all visible nodes."""
         vm = PlotConfigViewModel()
-        vm.load_nodes([
-            NodeInfo(name="A", node_id="A"),
-            NodeInfo(name="B", node_id="B"),
-            NodeInfo(name="C", node_id="C"),
-        ])
+        vm.load_nodes(
+            [
+                NodeInfo(name="A", node_id="A"),
+                NodeInfo(name="B", node_id="B"),
+                NodeInfo(name="C", node_id="C"),
+            ]
+        )
 
         vm.select_all_visible()
 
@@ -166,7 +171,9 @@ class TestPlotConfigViewModelSelection:
     def test_deselect_all(self):
         """Test deselecting all nodes."""
         vm = PlotConfigViewModel()
-        vm.load_nodes([NodeInfo(name="A", node_id="A"), NodeInfo(name="B", node_id="B")])
+        vm.load_nodes(
+            [NodeInfo(name="A", node_id="A"), NodeInfo(name="B", node_id="B")]
+        )
         vm.select_node("A")
         vm.select_node("B")
 
@@ -179,7 +186,9 @@ class TestPlotConfigViewModelSelection:
     def test_get_selection_count(self):
         """Test getting selection count."""
         vm = PlotConfigViewModel()
-        vm.load_nodes([NodeInfo(name="A", node_id="A"), NodeInfo(name="B", node_id="B")])
+        vm.load_nodes(
+            [NodeInfo(name="A", node_id="A"), NodeInfo(name="B", node_id="B")]
+        )
 
         assert vm.get_selection_count() == 0
 
@@ -225,7 +234,7 @@ class TestPlotConfigViewModelFiltering:
         ]
         vm.load_nodes(nodes)
 
-        vm.set_filter('mother')
+        vm.set_filter("mother")
 
         filtered = vm.get_filtered_nodes()
         assert len(filtered) == 2
@@ -243,7 +252,7 @@ class TestPlotConfigViewModelFiltering:
         ]
         vm.load_nodes(nodes)
 
-        vm.set_filter('SG1')
+        vm.set_filter("SG1")
 
         filtered = vm.get_filtered_nodes()
         assert len(filtered) == 2
@@ -258,7 +267,7 @@ class TestPlotConfigViewModelFiltering:
         changes = []
         vm.observe_property("filter_changed", lambda old, new: changes.append(new))
 
-        vm.set_filter('mother')
+        vm.set_filter("mother")
 
         assert len(changes) == 1
 
@@ -270,7 +279,7 @@ class TestPlotConfigViewModelFiltering:
         changes = []
         vm.observe_property("filter_changed", lambda old, new: changes.append(new))
 
-        vm.set_filter('all')  # Already 'all'
+        vm.set_filter("all")  # Already 'all'
 
         assert len(changes) == 0
 
@@ -284,7 +293,7 @@ class TestPlotConfigViewModelFiltering:
         ]
         vm.load_nodes(nodes)
 
-        vm.set_filter('mother')  # Only A and C visible
+        vm.set_filter("mother")  # Only A and C visible
         vm.select_all_visible()
 
         assert vm.is_node_selected("A")
@@ -303,7 +312,7 @@ class TestPlotConfigViewModelFiltering:
 
         options = vm.get_filter_options()
 
-        assert options == ['all', 'mother', 'SG1', 'SG2']
+        assert options == ["all", "mother", "SG1", "SG2"]
 
 
 class TestPlotConfigViewModelMaxIterations:
@@ -343,7 +352,9 @@ class TestPlotConfigViewModelObservableProperties:
     def test_selection_changed_observable(self):
         """Test selection_changed triggers observers."""
         vm = PlotConfigViewModel()
-        vm.load_nodes([NodeInfo(name="A", node_id="A"), NodeInfo(name="B", node_id="B")])
+        vm.load_nodes(
+            [NodeInfo(name="A", node_id="A"), NodeInfo(name="B", node_id="B")]
+        )
 
         observed = []
         vm.observe_property("selection_changed", lambda old, new: observed.append(new))
@@ -362,6 +373,6 @@ class TestPlotConfigViewModelObservableProperties:
         observed = []
         vm.observe_property("filter_changed", lambda old, new: observed.append(new))
 
-        vm.set_filter('mother')
+        vm.set_filter("mother")
 
         assert len(observed) == 1

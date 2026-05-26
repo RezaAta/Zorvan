@@ -5,9 +5,9 @@ import tempfile
 import numpy as np
 import pytest
 
+from gui_framework.legacy import ExamplesLoader
 from zorvan.Core.CGJsonIO import load, save
 from zorvan.Core.Graph import Graph
-from gui_framework.legacy import ExamplesLoader
 
 # Skip GUI tests when PyQt6 isn't available in the environment
 pytest.importorskip("PyQt6")

@@ -1348,4 +1348,3 @@ import os
 import pytest
 # Set up headless mode before importing PyQt
 classes: TestPlotConfigViewIntegration, TestPlotViewIntegration, TestPlotViewsDataFlow
-

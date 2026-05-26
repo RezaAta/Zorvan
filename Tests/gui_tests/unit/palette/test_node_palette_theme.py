@@ -1,8 +1,7 @@
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import CombinedNodePalette
-from gui_framework.legacy import get_theme_manager
+from gui_framework.legacy import CombinedNodePalette, get_theme_manager
 
 
 def test_combined_palette_updates_on_theme_change():

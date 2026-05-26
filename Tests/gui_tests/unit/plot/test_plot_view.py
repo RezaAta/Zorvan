@@ -16,8 +16,8 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not PYQT_AVAILABLE, reason="PyQt6 not available")
 
-from gui_framework.viewmodels.plot_viewmodel import PlotViewModel
 from gui_framework.legacy import PlotView
+from gui_framework.viewmodels.plot_viewmodel import PlotViewModel
 
 
 @pytest.fixture(scope="module")

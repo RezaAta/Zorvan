@@ -1,9 +1,7 @@
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import control_panel_builder
-from gui_framework.legacy import MainWindow
-from gui_framework.legacy import get_theme_manager
+from gui_framework.legacy import MainWindow, control_panel_builder, get_theme_manager
 
 
 def test_persisted_theme_applies_on_mainwindow_startup():

@@ -12,8 +12,9 @@ from ..events.bus import Event, EventType, get_event_bus
 from ..viewmodels.combined_node_palette_viewmodel import CombinedNodePaletteViewModel
 
 if TYPE_CHECKING:
-    from .legacy import CombinedNodePalette
     from gui_framework.main_window import MainWindow
+
+    from .legacy import CombinedNodePalette
 
 logger = logging.getLogger(__name__)
 

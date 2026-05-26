@@ -65,58 +65,58 @@ ViewModels should be tested without any PyQt dependencies. These tests are fast 
 ```python
 class TestMyViewModel:
     """Test suite for MyViewModel."""
-    
+
     def test_initialization(self):
         """Test ViewModel initializes with correct defaults."""
         vm = MyViewModel()
         vm.initialize()
-        
+
         assert vm.some_property == expected_value
-        
+
         vm.cleanup()
-    
+
     def test_observable_property(self):
         """Test that property changes trigger observers."""
         vm = MyViewModel()
         vm.initialize()
-        
+
         # Observe property
         callback_called = []
-        
+
         def callback(old_value, new_value):
             callback_called.append((old_value, new_value))
-        
+
         vm.observe_property("my_property", callback)
-        
+
         # Change property
         vm.my_property = "new_value"
-        
+
         # Verify callback was called
         assert len(callback_called) == 1
         assert callback_called[0][1] == "new_value"
-        
+
         vm.cleanup()
-    
+
     def test_event_publishing(self):
         """Test that actions publish events."""
         vm = MyViewModel()
         vm.initialize()
-        
+
         # Subscribe to events
         events = []
-        
+
         def handler(event):
             events.append(event)
-        
+
         vm._event_bus.subscribe(EventType.MY_EVENT, handler)
-        
+
         # Perform action
         vm.do_something()
-        
+
         # Verify event was published
         assert len(events) == 1
         assert events[0].type == EventType.MY_EVENT
-        
+
         vm.cleanup()
 ```
 
@@ -136,14 +136,14 @@ def test_state_update():
     """Test state updates work correctly."""
     vm = MyViewModel()
     vm.initialize()
-    
+
     # Perform action that updates state
     vm.set_something("value")
-    
+
     # Verify state was updated
     state = vm._store.get_state()
     assert state.my_slice.my_field == "value"
-    
+
     vm.cleanup()
 ```
 
@@ -156,7 +156,7 @@ def test_with_clean_state():
     # Reset to defaults
     vm._store.update(theme=ThemeState())
     vm.initialize()
-    
+
     # Now test with clean state
     assert vm.get_color("bg") == "#2b2b2b"
 ```
@@ -170,19 +170,19 @@ def test_color_management():
     vm = ThemeViewModel()
     vm._store.update(theme=ThemeState())  # Clean state
     vm.initialize()
-    
+
     # Test get
     color = vm.get_color("bg")
     assert color == "#2b2b2b"
-    
+
     # Test set
     vm.set_color("bg", "#123456")
     assert vm.get_color("bg") == "#123456"
-    
+
     # Verify state updated
     state = vm._store.get_state()
     assert state.theme.colors["bg"] == "#123456"
-    
+
     vm.cleanup()
 ```
 
@@ -192,18 +192,18 @@ class MockWidget(ThemeMixin):
     def __init__(self, use_state_store=False):
         self.apply_theme_called = 0
         ThemeMixin.__init__(self, use_state_store=use_state_store)
-    
+
     def apply_theme(self):
         self.apply_theme_called += 1
 
 def test_theme_mixin_state_store_mode():
     """Test ThemeMixin in StateStore mode."""
     widget = MockWidget(use_state_store=True)
-    
+
     # Check initialization
     assert widget.theme_viewmodel is not None
     assert widget.apply_theme_called >= 1
-    
+
     # Test theme change triggers apply_theme
     initial_calls = widget.apply_theme_called
     widget.theme_viewmodel.set_color("accent", "#ff0000")
@@ -230,10 +230,10 @@ def test_execution_view_binding():
     """Test ExecutionView binds correctly to ExecutionViewModel."""
     vm = ExecutionViewModel()
     view = ExecutionView(vm)
-    
+
     # Change ViewModel property
     vm.current_step = 50
-    
+
     # Verify View updated
     assert view.step_label.text() == "50"
 ```
@@ -274,7 +274,7 @@ from gui_framework.widgets.theme_mixin import ThemeMixin
 class TestWidget(ThemeMixin):
     def __init__(self):
         ThemeMixin.__init__(self, use_state_store=False)
-    
+
     def apply_theme(self):
         print(f"Theme applied! Manager: {self.theme_manager is not None}")
 
@@ -285,7 +285,7 @@ widget = TestWidget()
 class TestWidget2(ThemeMixin):
     def __init__(self):
         ThemeMixin.__init__(self, use_state_store=True)
-    
+
     def apply_theme(self):
         if self.theme_viewmodel:
             color = self.theme_viewmodel.get_color("bg")
@@ -330,12 +330,12 @@ python -m pytest gui_tests/unit/ --cov=gui_framework --cov-report=term-missing
 ```python
 def test_observable_property():
     vm = MyViewModel()
-    
+
     observations = []
     vm.observe_property("my_prop", lambda old, new: observations.append(new))
-    
+
     vm.my_prop = "value"
-    
+
     assert observations == ["value"]
 ```
 
@@ -343,12 +343,12 @@ def test_observable_property():
 ```python
 def test_event_publishing():
     vm = MyViewModel()
-    
+
     events = []
     vm._event_bus.subscribe(EventType.MY_EVENT, lambda e: events.append(e))
-    
+
     vm.trigger_action()
-    
+
     assert len(events) == 1
     assert events[0].type == EventType.MY_EVENT
 ```
@@ -357,9 +357,9 @@ def test_event_publishing():
 ```python
 def test_state_update():
     vm = MyViewModel()
-    
+
     vm.update_something("value")
-    
+
     state = vm._store.get_state()
     assert state.my_slice.field == "value"
 ```

@@ -1,8 +1,7 @@
 from PyQt6.QtWidgets import QWidget
 
+from gui_framework.legacy import DialogController, ExamplesLoader
 from gui_framework.services.examples_repository import ExamplesRepository
-from gui_framework.legacy import DialogController
-from gui_framework.legacy import ExamplesLoader
 
 
 class DummyCanvas:

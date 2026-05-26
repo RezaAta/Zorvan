@@ -1,8 +1,7 @@
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import ExamplesLoader
-from gui_framework.legacy import GraphCanvas
+from gui_framework.legacy import ExamplesLoader, GraphCanvas
 
 
 def test_bias_and_ms_colors():

@@ -64,10 +64,7 @@ class GraphEdgeController:
         """Reset forward processing state if processor is in forward mode."""
         mw = self.main_window
         try:
-            if (
-                hasattr(mw, "graph_runner")
-                and getattr(mw, "graph_runner") is not None
-            ):
+            if hasattr(mw, "graph_runner") and getattr(mw, "graph_runner") is not None:
                 processor_type = getattr(mw, "processor_type", None)
                 runner_type = getattr(mw.graph_runner, "processor_type", None)
 

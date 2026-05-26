@@ -5,10 +5,10 @@ Provides base classes and concrete implementations for ViewModels (pure Python l
 """
 
 from .base import BaseViewModel, ObservableProperty
-from .execution_viewmodel import ExecutionViewModel, ExecutionStatus
-from .theme_viewmodel import ThemeViewModel
+from .execution_viewmodel import ExecutionStatus, ExecutionViewModel
 from .file_io_viewmodel import FileIOViewModel
-from .palette_viewmodel import PaletteViewModel, NodeInfo
+from .palette_viewmodel import NodeInfo, PaletteViewModel
+from .theme_viewmodel import ThemeViewModel
 
 __all__ = [
     "BaseViewModel",

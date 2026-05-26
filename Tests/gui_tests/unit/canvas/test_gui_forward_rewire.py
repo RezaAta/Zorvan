@@ -10,8 +10,8 @@ import sys as _sys
 import pytest as _pytest
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.Core.Graph import Graph
 from gui_framework.legacy import MainWindow
+from zorvan.Core.Graph import Graph
 from zorvan.Nodes.BufferNode import BufferNode
 from zorvan.Nodes.DataStreamNode import DataStreamNode
 from zorvan.Nodes.DisplayNode import DisplayNode

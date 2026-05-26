@@ -20,7 +20,10 @@ def run_single_threaded(task_sizes):
 
 def run_multi_threaded(task_sizes, max_workers=4):
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(compute_python_matrix_multiplication, size, i) for i, size in enumerate(task_sizes)]
+        futures = [
+            executor.submit(compute_python_matrix_multiplication, size, i)
+            for i, size in enumerate(task_sizes)
+        ]
         return [future.result() for future in futures]
 
 

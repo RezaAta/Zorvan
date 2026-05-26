@@ -14,8 +14,8 @@ except Exception:
     PYQT_AVAILABLE = False
 
 if PYQT_AVAILABLE:
-    from gui_framework.viewmodels.mlp_generator_viewmodel import MLPGeneratorViewModel
     from gui_framework.legacy import MainWindow
+    from gui_framework.viewmodels.mlp_generator_viewmodel import MLPGeneratorViewModel
 
 
 pytestmark = pytest.mark.skipif(not PYQT_AVAILABLE, reason="PyQt6 not available")

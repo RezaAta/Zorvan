@@ -6,8 +6,8 @@ Tests the pure Python logic of file I/O management without any GUI dependencies.
 
 import pytest
 
-from gui_framework.viewmodels.file_io_viewmodel import FileIOViewModel
 from gui_framework.events.bus import EventType
+from gui_framework.viewmodels.file_io_viewmodel import FileIOViewModel
 
 
 class TestFileIOViewModel:
@@ -242,7 +242,7 @@ class TestFileIOViewModel:
 
         vm.set_current_file("/path/to/file1.drawio")
         vm.set_current_file("/path/to/file2.drawio")
-        
+
         vm.clear_recent_files()
 
         assert vm.get_recent_files() == []
@@ -344,7 +344,9 @@ class TestFileIOViewModel:
 
         # Test current_file_path observable
         observations = []
-        vm.observe_property("current_file_path", lambda old, new: observations.append(new))
+        vm.observe_property(
+            "current_file_path", lambda old, new: observations.append(new)
+        )
 
         vm.set_current_file("/path/to/file.drawio")
 

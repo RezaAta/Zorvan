@@ -5,9 +5,9 @@ that import PyQt6 or reference gui_framework.legacy.
 Usage: python scripts/run_non_gui_tests.py
 """
 import os
-import sys
 import pathlib
 import re
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TESTS_DIR = ROOT / "Tests"
@@ -31,6 +31,7 @@ exclude_patterns = [
     )
 ]
 
+
 def file_is_gui(path: pathlib.Path) -> bool:
     try:
         txt = path.read_text(encoding="utf-8")
@@ -40,6 +41,7 @@ def file_is_gui(path: pathlib.Path) -> bool:
         if pat.search(txt):
             return True
     return False
+
 
 def collect_non_gui_tests():
     files = []
@@ -56,6 +58,7 @@ def collect_non_gui_tests():
             files.append(str(p))
     return sorted(files)
 
+
 def main():
     tests = collect_non_gui_tests()
     if not tests:
@@ -67,6 +70,7 @@ def main():
     # Run pytest on the collected files
     ret = pytest.main(tests)
     raise SystemExit(ret)
+
 
 if __name__ == "__main__":
     main()

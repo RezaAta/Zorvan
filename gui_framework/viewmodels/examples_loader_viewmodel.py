@@ -68,9 +68,7 @@ class ExamplesLoaderViewModel(BaseViewModel):
                 # Legacy repositories only expose list_examples(); group them under
                 # the traditional 'Prog' category used by the tests and older UI.
                 examples = self.repository.list_examples()
-                return {
-                    "Prog": [(name, desc) for name, (_, desc) in examples.items()]
-                }
+                return {"Prog": [(name, desc) for name, (_, desc) in examples.items()]}
             except Exception:
                 return {}
 

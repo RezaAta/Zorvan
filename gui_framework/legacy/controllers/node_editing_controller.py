@@ -164,8 +164,8 @@ class NodeEditingController:
         Args:
             node_item: The NodeItem to replace
         """
-        from ..node_item import NodeItem
         from .. import ReplaceNodeDialog
+        from ..node_item import NodeItem
 
         mw = self.main_window
         dlg = ReplaceNodeDialog(mw)

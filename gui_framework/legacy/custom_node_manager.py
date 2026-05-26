@@ -535,9 +535,11 @@ def get_custom_node_manager() -> CustomNodeManager:
     current_test_id = os.environ.get("PYTEST_CURRENT_TEST")
     if current_test_id:
         if _global_manager is None or _global_manager_test_id != current_test_id:
-            cache_name = "computationalgraphs_custom_nodes_" + str(
-                abs(hash(current_test_id))
-            ) + ".json"
+            cache_name = (
+                "computationalgraphs_custom_nodes_"
+                + str(abs(hash(current_test_id)))
+                + ".json"
+            )
             library_path = os.path.join(tempfile.gettempdir(), cache_name)
             _global_manager = CustomNodeManager(library_path=library_path)
             default_library_path = os.path.abspath(

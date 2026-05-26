@@ -1,9 +1,7 @@
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import MainWindow
-from gui_framework.legacy import NodeEditorDialog
-from gui_framework.legacy import NodeItem
+from gui_framework.legacy import MainWindow, NodeEditorDialog, NodeItem
 
 pytestmark = pytest.mark.skipif(
     not QApplication.instance() and QApplication([]) is None,

@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import MainWindow, get_theme_manager, ColorPreferencesDialog
+from gui_framework.legacy import ColorPreferencesDialog, MainWindow, get_theme_manager
 
 app = QApplication.instance() or QApplication([])
 get_theme_manager()  # ensure manager is initialized

@@ -23,6 +23,7 @@ BASE.mkdir(parents=True, exist_ok=True)
 
 app = QApplication.instance() or QApplication([])
 
+
 def _apply_visual_theme(app: QApplication):
     tm = get_theme_manager()
     if "Main-Dark" in tm.list_named_themes():
@@ -72,6 +73,7 @@ print("Saved MainWindow baseline to", main_path)
 
 # Plot window baseline: create simple dummy nodes and update plot
 try:
+
     class DummyNode:
         def __init__(self, name):
             self.name = name

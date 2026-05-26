@@ -11,8 +11,9 @@ from typing import TYPE_CHECKING, Optional
 from ..events.bus import Event, EventType, get_event_bus
 
 if TYPE_CHECKING:
-    from .legacy import GraphLayoutController
     from gui_framework.main_window import MainWindow
+
+    from .legacy import GraphLayoutController
 
 logger = logging.getLogger(__name__)
 

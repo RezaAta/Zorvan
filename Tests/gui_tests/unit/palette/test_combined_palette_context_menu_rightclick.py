@@ -6,8 +6,11 @@ from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QContextMenuEvent
 from PyQt6.QtWidgets import QApplication, QMenu
 
-from gui_framework.legacy import CombinedNodePalette
-from gui_framework.legacy import CustomNodeDefinition, get_custom_node_manager
+from gui_framework.legacy import (
+    CombinedNodePalette,
+    CustomNodeDefinition,
+    get_custom_node_manager,
+)
 
 
 def test_right_click_triggers_context_menu(monkeypatch):

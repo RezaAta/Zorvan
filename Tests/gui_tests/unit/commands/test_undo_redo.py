@@ -18,7 +18,6 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QApplication
 
-from zorvan.Core.Graph import Graph
 from gui_framework.legacy import (
     AddEdgeCommand,
     AddNodeCommand,
@@ -26,6 +25,7 @@ from gui_framework.legacy import (
     RemoveItemsCommand,
     ReplaceNodeCommand,
 )
+from zorvan.Core.Graph import Graph
 from zorvan.Nodes.AdditionNode import AdditionNode
 from zorvan.Nodes.ContainerNode import ContainerNode
 from zorvan.Nodes.MultiplicationNode import MultiplicationNode

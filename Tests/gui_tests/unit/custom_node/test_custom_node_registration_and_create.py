@@ -2,8 +2,12 @@ import pytest
 
 pytest.importorskip("PyQt6")
 
-from gui_framework.legacy import CustomNodeDefinition, get_custom_node_manager
-from gui_framework.legacy import create_node, is_registered
+from gui_framework.legacy import (
+    CustomNodeDefinition,
+    create_node,
+    get_custom_node_manager,
+    is_registered,
+)
 
 
 def test_custom_node_registered_and_creatable(tmp_path):

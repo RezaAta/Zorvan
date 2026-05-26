@@ -40,7 +40,11 @@ except Exception:  # pragma: no cover
     CustomNodeDialog = None
 
 try:
-    from .custom_node_manager import CustomNodeDefinition, CustomNodeManager, get_custom_node_manager
+    from .custom_node_manager import (
+        CustomNodeDefinition,
+        CustomNodeManager,
+        get_custom_node_manager,
+    )
 except Exception:  # pragma: no cover
     CustomNodeDefinition = None
     CustomNodeManager = None
@@ -78,7 +82,12 @@ except Exception:  # pragma: no cover
     get_node_categories = None
 
 try:
-    from .theme_widgets import ThemedScrollArea, ThemedLabel, ThemedPushButton, ThemedProgressBar
+    from .theme_widgets import (
+        ThemedLabel,
+        ThemedProgressBar,
+        ThemedPushButton,
+        ThemedScrollArea,
+    )
 except Exception:  # pragma: no cover
     ThemedScrollArea = None
     ThemedLabel = None
@@ -215,7 +224,8 @@ except Exception:  # pragma: no cover
     ActivationDialog = None
 
 try:
-    from .main_window import MainWindow as LegacyMainWindow, CollapsibleSection
+    from .main_window import CollapsibleSection
+    from .main_window import MainWindow as LegacyMainWindow
 except Exception:  # pragma: no cover
     LegacyMainWindow = None
     CollapsibleSection = None
@@ -242,54 +252,68 @@ except Exception:  # pragma: no cover
 theme_module = theme
 
 try:
-    from .theme import get_theme_manager, ThemeManager, _is_test_env
+    from .theme import ThemeManager, _is_test_env, get_theme_manager
 except Exception:  # pragma: no cover
     get_theme_manager = None
     ThemeManager = None
     _is_test_env = False
 
 if TYPE_CHECKING:
-    from .controllers.file_io_controller import FileIOController as _FileIOController
-    from .controllers.graph_layout_controller import GraphLayoutController as _GraphLayoutController
-    from .controllers.dialog_controller import DialogController as _DialogController
-    from .graph_runner import GraphRunner as _GraphRunner
+    from .activation_dialog import ActivationDialog as _ActivationDialog
+    from .backprop_dialog import BackpropDialog as _BackpropDialog
+    from .color_preferences import ColorPreferencesDialog as _ColorPreferencesDialog
     from .combined_node_palette import CombinedNodePalette as _CombinedNodePalette
     from .combined_node_palette import NodeItemWidget as _NodeItemWidget
-    from .combined_node_palette_adapter import CombinedNodePaletteAdapter as _CombinedNodePaletteAdapter
+    from .combined_node_palette_adapter import (
+        CombinedNodePaletteAdapter as _CombinedNodePaletteAdapter,
+    )
+    from .commands import SwallowNodeCommand as _SwallowNodeCommand
+    from .controllers import control_panel_builder as _control_panel_builder
+    from .controllers.control_panel_builder import _apply_icon as __apply_icon
+    from .controllers.control_panel_builder import (
+        _create_standard_button as __create_standard_button,
+    )
+    from .controllers.control_panel_builder import _IconHoverFilter as __IconHoverFilter
+    from .controllers.dialog_controller import DialogController as _DialogController
+    from .controllers.execution_controller import (
+        ExecutionController as _ExecutionController,
+    )
+    from .controllers.file_io_controller import FileIOController as _FileIOController
+    from .controllers.graph_builder_controller import (
+        GraphBuilderController as _GraphBuilderController,
+    )
+    from .controllers.graph_layout_controller import (
+        GraphLayoutController as _GraphLayoutController,
+    )
     from .custom_node_dialog import CustomNodeDialog as _CustomNodeDialog
+    from .custom_node_dialog_adapter import (
+        CustomNodeDialogAdapter as _CustomNodeDialogAdapter,
+    )
     from .custom_node_manager import CustomNodeDefinition as _CustomNodeDefinition
     from .custom_node_manager import CustomNodeManager as _CustomNodeManager
-    from .controllers import control_panel_builder as _control_panel_builder
-    from .controllers.control_panel_builder import _apply_icon as __apply_icon, _create_standard_button as __create_standard_button
-    from .main_window import MainWindow as _LegacyMainWindow, CollapsibleSection as _CollapsibleSection
     from .examples_loader import ExamplesLoader as _ExamplesLoader
-    from .theme import ThemeManager as _ThemeManager
-    from .theme_widgets import ThemedScrollArea as _ThemedScrollArea, ThemedLabel as _ThemedLabel, ThemedPushButton as _ThemedPushButton
-    from .graph_canvas import SubgraphControlButton as _SubgraphControlButton
-    from .replace_node_dialog import ReplaceNodeDialog as _ReplaceNodeDialog
-    from .inspector_pane import InspectorPane as _InspectorPane
-    from .node_short_names import get_short_name as _get_short_name
-    from .commands import SwallowNodeCommand as _SwallowNodeCommand
-    from .learning_rate_dialog import LearningRateDialog as _LearningRateDialog
-    from .custom_node_dialog_adapter import CustomNodeDialogAdapter as _CustomNodeDialogAdapter
-    from .combined_node_palette_adapter import CombinedNodePaletteAdapter as _CombinedNodePaletteAdapter
-    from .controllers import control_panel_builder as _control_panel_builder
-    from .controllers.control_panel_builder import _apply_icon as __apply_icon, _create_standard_button as __create_standard_button
-    from .plot_window import PlotWindow as _PlotWindow
-    from .plot_view import PlotView as _PlotView
     from .graph_canvas import GraphCanvas as _GraphCanvas
-    from .node_editor_dialog import NodeEditorDialog as _NodeEditorDialog
-    from .mlp_dialog import MLPGeneratorDialog as _MLPGeneratorDialog
-    from .node_item import NodeItem as _NodeItem
+    from .graph_canvas import SubgraphControlButton as _SubgraphControlButton
+    from .graph_runner import GraphRunner as _GraphRunner
+    from .inspector_pane import InspectorPane as _InspectorPane
     from .layouts import MLPLayoutEngine as _MLPLayoutEngine
-    from .color_preferences import ColorPreferencesDialog as _ColorPreferencesDialog
+    from .learning_rate_dialog import LearningRateDialog as _LearningRateDialog
+    from .main_window import CollapsibleSection as _CollapsibleSection
+    from .main_window import MainWindow as _LegacyMainWindow
+    from .mlp_dialog import MLPGeneratorDialog as _MLPGeneratorDialog
+    from .node_editor_dialog import NodeEditorDialog as _NodeEditorDialog
+    from .node_factory import create_node as _create_node
+    from .node_factory import is_registered as _is_registered
+    from .node_item import NodeItem as _NodeItem
+    from .node_short_names import get_short_name as _get_short_name
+    from .plot_view import PlotView as _PlotView
+    from .plot_window import PlotWindow as _PlotWindow
     from .predecessors_dialog import PredecessorsDialog as _PredecessorsDialog
-    from .controllers.graph_builder_controller import GraphBuilderController as _GraphBuilderController
-    from .controllers.control_panel_builder import _IconHoverFilter as __IconHoverFilter
-    from .node_factory import create_node as _create_node, is_registered as _is_registered
-    from .controllers.execution_controller import ExecutionController as _ExecutionController
-    from .backprop_dialog import BackpropDialog as _BackpropDialog
-    from .activation_dialog import ActivationDialog as _ActivationDialog
+    from .replace_node_dialog import ReplaceNodeDialog as _ReplaceNodeDialog
+    from .theme import ThemeManager as _ThemeManager
+    from .theme_widgets import ThemedLabel as _ThemedLabel
+    from .theme_widgets import ThemedPushButton as _ThemedPushButton
+    from .theme_widgets import ThemedScrollArea as _ThemedScrollArea
 
 
 def get_node_categories_safe() -> Dict[str, Dict]:

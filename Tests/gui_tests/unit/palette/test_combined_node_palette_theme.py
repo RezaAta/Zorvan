@@ -1,7 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from gui_framework.legacy import CombinedNodePalette
-from gui_framework.legacy import get_theme_manager
+from gui_framework.legacy import CombinedNodePalette, get_theme_manager
 
 
 def test_palette_applies_theme_colors():

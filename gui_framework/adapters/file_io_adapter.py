@@ -12,8 +12,9 @@ from ..events.bus import Event, EventType, get_event_bus
 from ..viewmodels.file_io_viewmodel import FileIOViewModel
 
 if TYPE_CHECKING:
-    from .legacy import FileIOController
     from gui_framework.main_window import MainWindow
+
+    from .legacy import FileIOController
 
 logger = logging.getLogger(__name__)
 

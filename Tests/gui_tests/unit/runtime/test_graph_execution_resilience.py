@@ -9,9 +9,9 @@ except Exception:
 
 pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
 
+from gui_framework.legacy import GraphRunner
 from gui_framework.viewmodels.node_editor_viewmodel import NodeEditorViewModel
 from zorvan.Core.Graph import Graph
-from gui_framework.legacy import GraphRunner
 from zorvan.Nodes.DataStreamNode import DataStreamNode
 
 

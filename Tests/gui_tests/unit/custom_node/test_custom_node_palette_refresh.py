@@ -4,8 +4,11 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import CombinedNodePalette
-from gui_framework.legacy import CustomNodeDefinition, get_custom_node_manager
+from gui_framework.legacy import (
+    CombinedNodePalette,
+    CustomNodeDefinition,
+    get_custom_node_manager,
+)
 
 
 def test_combined_palette_updates_on_custom_node_add():

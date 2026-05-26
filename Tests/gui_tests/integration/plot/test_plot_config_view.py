@@ -14,7 +14,10 @@ except ImportError:
     PYQT_AVAILABLE = False
 
 if PYQT_AVAILABLE:
-    from gui_framework.viewmodels.plot_config_viewmodel import NodeInfo, PlotConfigViewModel
+    from gui_framework.viewmodels.plot_config_viewmodel import (
+        NodeInfo,
+        PlotConfigViewModel,
+    )
     from gui_framework.views.plot_config_view import PlotConfigView
 
 

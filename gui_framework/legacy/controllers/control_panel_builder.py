@@ -790,6 +790,7 @@ class ControlPanelBuilder:
                 f"color: {text_color}; padding: 4px; }}"
             )
             try:
+
                 def _update_starting_nodes_label():
                     try:
                         mw.starting_nodes_label.setStyleSheet(
@@ -882,6 +883,7 @@ class ControlPanelBuilder:
                 f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
             )
             try:
+
                 def _update_stopping_nodes_list():
                     try:
                         mw.stopping_nodes_list.setStyleSheet(
@@ -970,6 +972,7 @@ class ControlPanelBuilder:
                 f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
             )
             try:
+
                 def _update_manual_sequence_list():
                     try:
                         mw.manual_sequence_list.setStyleSheet(
@@ -1088,6 +1091,7 @@ class ControlPanelBuilder:
                 f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; color: {text}; }}"
             )
             try:
+
                 def _update_forward_sequence_list():
                     try:
                         mw.forward_sequence_list.setStyleSheet(
@@ -1437,6 +1441,7 @@ class ControlPanelBuilder:
                 f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
             )
             try:
+
                 def _update_queue_list():
                     try:
                         mw.queue_list.setStyleSheet(

@@ -65,7 +65,7 @@ from gui_framework.viewmodels.base import BaseViewModel, ObservableProperty
 
 class MyViewModel(BaseViewModel):
     count = ObservableProperty("count", default=0)
-    
+
     def increment(self):
         self.count += 1
 
@@ -73,36 +73,36 @@ def test_increment():
     """Test that increment increases count."""
     vm = MyViewModel()
     assert vm.count == 0
-    
+
     vm.increment()
     assert vm.count == 1
-    
+
 def test_observable_property():
     """Test that observers are notified."""
     vm = MyViewModel()
-    
+
     changes = []
     def observer(old, new):
         changes.append((old, new))
-    
+
     vm.observe_property("count", observer)
-    
+
     vm.count = 5
     assert changes == [(0, 5)]
-    
+
 def test_event_publishing():
     """Test that events are published."""
     vm = MyViewModel()
-    
+
     events = []
     def listener(event):
         events.append(event)
-    
+
     vm._event_bus.subscribe(EventType.NODE_UPDATED, listener)
-    
+
     # Your ViewModel method that publishes events
     vm.increment()
-    
+
     assert len(events) > 0
 ```
 
@@ -156,16 +156,16 @@ def test_collapsible_section_ui(qapp):
     """Test CollapsibleSection UI integration."""
     # Create ViewModel
     vm = CollapsibleSectionViewModel(title="Test", expanded=True)
-    
+
     # Create View
     from PyQt6.QtWidgets import QLabel
     content = QLabel("Content")
     view = CollapsibleSectionView(vm, content_widget=content)
-    
+
     # Test initial state
     assert view.toggle_button.text() == "Test"
     assert content.isVisible()
-    
+
     # Toggle
     vm.toggle()
     assert not content.isVisible()
@@ -256,14 +256,14 @@ open htmlcov/index.html
 def test_observable_triggers_ui_update():
     """Test that changing a property triggers observer."""
     vm = MyViewModel()
-    
+
     observer_called = []
     def observer(old, new):
         observer_called.append(True)
-    
+
     vm.observe_property("my_property", observer)
     vm.my_property = "new_value"
-    
+
     assert len(observer_called) == 1
 ```
 
@@ -273,14 +273,14 @@ def test_observable_triggers_ui_update():
 def test_action_publishes_event():
     """Test that ViewModel action publishes correct event."""
     vm = MyViewModel()
-    
+
     events = []
     def listener(event):
         events.append(event)
-    
+
     vm._event_bus.subscribe(EventType.MY_EVENT, listener)
     vm.do_action()
-    
+
     assert len(events) == 1
     assert events[0].type == EventType.MY_EVENT
 ```
@@ -292,10 +292,10 @@ def test_action_updates_state():
     """Test that ViewModel updates central state."""
     vm = MyViewModel()
     store = get_store()
-    
+
     initial_state = store.state
     vm.do_action()
-    
+
     assert store.state != initial_state
     assert store.state.my_field == "expected_value"
 ```
@@ -310,19 +310,19 @@ def test_viewmodel_lifecycle():
             super().__init__()
             self.init_called = False
             self.cleanup_called = False
-        
+
         def initialize(self):
             self.init_called = True
-        
+
         def cleanup(self):
             self.cleanup_called = True
-    
+
     vm = TestVM()
-    
+
     # Simulate View lifecycle
     vm.initialize()
     assert vm.init_called
-    
+
     vm.cleanup()
     assert vm.cleanup_called
 ```
@@ -427,7 +427,7 @@ testpaths = gui_tests
 python_files = test_*.py
 python_classes = Test*
 python_functions = test_*
-addopts = 
+addopts =
     -v
     --tb=short
     --strict-markers
@@ -447,29 +447,29 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-    
+
     - name: Install dependencies
       run: |
         pip install pytest pytest-cov
         pip install PyQt6
-    
+
     - name: Install Xvfb (for headless GUI tests)
       run: |
         sudo apt-get update
         sudo apt-get install -y xvfb
-    
+
     - name: Run unit tests
       run: |
         python -m pytest gui_tests/unit/ -v --cov=gui_framework
-    
+
     - name: Run integration tests (headless)
       run: |
         xvfb-run python -m pytest gui_tests/integration/ -v

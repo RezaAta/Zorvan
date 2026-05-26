@@ -111,13 +111,17 @@ class GraphRunner(QObject):
         # Capture initial snapshot after graph setup
         # Flush Qt event loop to process any deferred parameter updates (singleShot)
         try:
-            from PyQt6.QtWidgets import QApplication
             import os
+
+            from PyQt6.QtWidgets import QApplication
 
             app = QApplication.instance()
             if app is not None:
                 try:
-                    if not (os.environ.get("CG_PYTEST_RUNNING") == "1" or os.environ.get("PYTEST_RUNNING") == "1"):
+                    if not (
+                        os.environ.get("CG_PYTEST_RUNNING") == "1"
+                        or os.environ.get("PYTEST_RUNNING") == "1"
+                    ):
                         app.processEvents()
                 except Exception:
                     pass

@@ -5,9 +5,9 @@ This package provides the foundational MVVM framework for the GUI,
 including state management, event handling, and base classes.
 """
 
-from .main_window import MainWindow
 from .examples_loader import ExamplesLoader
-from .theme import ThemeManager, get_theme_manager, _is_test_env
+from .main_window import MainWindow
+from .theme import ThemeManager, _is_test_env, get_theme_manager
 from .window.manager import get_window_manager
 
 __all__ = [

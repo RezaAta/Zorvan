@@ -1,7 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from gui_framework.legacy import CombinedNodePalette
-from gui_framework.legacy import get_short_name
+from gui_framework.legacy import CombinedNodePalette, get_short_name
 
 
 def test_palette_uses_short_names_and_shows_description():

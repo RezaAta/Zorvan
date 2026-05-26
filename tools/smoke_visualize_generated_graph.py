@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QApplication
 
 # Ensure project root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from gui_framework.legacy import MLPGeneratorDialog, GraphBuilderController, MainWindow
+from gui_framework.legacy import GraphBuilderController, MainWindow, MLPGeneratorDialog
 
 app = QApplication.instance() or QApplication([])
 

@@ -22,8 +22,8 @@ if parent_dir not in sys.path:
 
 from gui_framework.events.bus import EventType, get_event_bus
 from gui_framework.state.store import StateEvent, get_store
-from gui_framework.viewmodels.theme_viewmodel import ThemeViewModel
 from gui_framework.theme import get_theme_manager
+from gui_framework.viewmodels.theme_viewmodel import ThemeViewModel
 
 
 class ThemeAdapter:

@@ -9,8 +9,7 @@ pytest.importorskip("PyQt6")
 
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import ExamplesLoader
-from gui_framework.legacy import MainWindow
+from gui_framework.legacy import ExamplesLoader, MainWindow
 
 
 class VisualsRestoredTest(unittest.TestCase):

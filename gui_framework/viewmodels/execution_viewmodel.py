@@ -56,7 +56,7 @@ class ExecutionViewModel(BaseViewModel):
         self.max_steps = max_steps
         self.speed_ms = speed_ms
         self.is_max_speed = speed_ms == 0
-        
+
         # Store previous speed for toggle_max_speed restoration
         self._previous_speed_ms = speed_ms if speed_ms > 0 else 100
 
@@ -218,7 +218,7 @@ class ExecutionViewModel(BaseViewModel):
         # Store previous speed before changing (if not setting to max speed)
         if speed_ms > 0 and self.speed_ms > 0:
             self._previous_speed_ms = self.speed_ms
-        
+
         self.speed_ms = speed_ms
         self.is_max_speed = speed_ms == 0
 
@@ -304,7 +304,11 @@ class ExecutionViewModel(BaseViewModel):
     @property
     def can_step(self) -> bool:
         """Check if step action is available."""
-        return self.status in (ExecutionStatus.IDLE, ExecutionStatus.PAUSED, ExecutionStatus.COMPLETED)
+        return self.status in (
+            ExecutionStatus.IDLE,
+            ExecutionStatus.PAUSED,
+            ExecutionStatus.COMPLETED,
+        )
 
     @property
     def can_reset(self) -> bool:

@@ -1,8 +1,7 @@
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import MainWindow
+from gui_framework.legacy import MainWindow, get_theme_manager
 from gui_framework.legacy.color_preferences import ColorPreferencesDialog
-from gui_framework.legacy import get_theme_manager
 
 
 def test_speed_slider_has_track_and_updates_with_theme():

@@ -9,8 +9,9 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QApplication
 
-from .legacy import LegacyMainWindow
 from gui_framework.window.manager import get_window_manager
+
+from .legacy import LegacyMainWindow
 
 logger = logging.getLogger(__name__)
 

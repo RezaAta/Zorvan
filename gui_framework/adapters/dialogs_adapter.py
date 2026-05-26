@@ -11,8 +11,9 @@ from typing import TYPE_CHECKING, Any, Optional
 from ..events.bus import Event, EventType, get_event_bus
 
 if TYPE_CHECKING:
-    from .legacy import DialogController
     from gui_framework.main_window import MainWindow
+
+    from .legacy import DialogController
 
 logger = logging.getLogger(__name__)
 

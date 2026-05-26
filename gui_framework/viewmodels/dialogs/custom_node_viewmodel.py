@@ -211,16 +211,16 @@ class CustomNodeViewModel(BaseViewModel):
 
             if CustomNodeDefinition is not None:
                 return CustomNodeDefinition(
-                type_name=self._type_name,
-                input_count=self._input_count,
-                batch_size=self._batch_size,
-                inclusive=self._inclusive,
-                forced_batch_processing=self._forced_batch_processing,
-                valid_input_types=list(self._valid_input_types) or ["numeric"],
-                operation_code=self._operation_code,
-                description=self._description,
-                custom_properties=list(self._custom_properties),
-            )
+                    type_name=self._type_name,
+                    input_count=self._input_count,
+                    batch_size=self._batch_size,
+                    inclusive=self._inclusive,
+                    forced_batch_processing=self._forced_batch_processing,
+                    valid_input_types=list(self._valid_input_types) or ["numeric"],
+                    operation_code=self._operation_code,
+                    description=self._description,
+                    custom_properties=list(self._custom_properties),
+                )
         except Exception:
             # Return a minimal dict fallback
             return {
@@ -250,7 +250,9 @@ class CustomNodeViewModel(BaseViewModel):
         """
         definition = self.get_definition()
         try:
-            from gui_framework.legacy import get_custom_node_manager_safe as get_custom_node_manager
+            from gui_framework.legacy import (
+                get_custom_node_manager_safe as get_custom_node_manager,
+            )
 
             mgr = get_custom_node_manager()
             if mgr is not None:

@@ -1,8 +1,7 @@
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
-from gui_framework.legacy import ColorPreferencesDialog
-from gui_framework.legacy import MainWindow
+from gui_framework.legacy import ColorPreferencesDialog, MainWindow
 
 
 def test_dock_bg_applies_to_control_and_console():

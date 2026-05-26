@@ -5,8 +5,8 @@ Manages file paths, recent files, and file operation state using StateStore.
 This ViewModel is completely testable without PyQt dependencies.
 """
 
-from typing import List, Optional
 from pathlib import Path
+from typing import List, Optional
 
 from ..events.bus import Event, EventType
 from ..state.store import get_store
@@ -42,7 +42,7 @@ class FileIOViewModel(BaseViewModel):
             **kwargs: Forward compatibility for additional init args
         """
         super().__init__()
-        
+
         self.current_file_path = None
         self.recent_files = []
         self.is_modified = False
@@ -55,7 +55,7 @@ class FileIOViewModel(BaseViewModel):
         """
         # Load from state store if available
         state = self._store.get_state()
-        if state and hasattr(state, 'file_path'):
+        if state and hasattr(state, "file_path"):
             self.current_file_path = state.file_path
             # Load recent files from persistent storage could be added here
 
@@ -70,14 +70,14 @@ class FileIOViewModel(BaseViewModel):
             file_path: Path to the current file, or None if no file
         """
         self.current_file_path = file_path
-        
+
         # Update state store
         self._store.update(file_path=file_path)
-        
+
         # Add to recent files if valid
         if file_path:
             self._add_to_recent_files(file_path)
-        
+
         # Publish event
         self._event_bus.publish(
             Event(
@@ -99,10 +99,10 @@ class FileIOViewModel(BaseViewModel):
         self.current_file_path = None
         self.is_modified = False
         self.last_operation = "new"
-        
+
         # Update state store
         self._store.update(file_path=None)
-        
+
         # Publish event
         self._event_bus.publish(
             Event(type=EventType.FILE_CLOSED, payload={"operation": "new"})
@@ -117,7 +117,7 @@ class FileIOViewModel(BaseViewModel):
         self.set_current_file(file_path)
         self.is_modified = False
         self.last_operation = "open"
-        
+
         # Publish event
         self._event_bus.publish(
             Event(
@@ -135,7 +135,7 @@ class FileIOViewModel(BaseViewModel):
         self.set_current_file(file_path)
         self.is_modified = False
         self.last_operation = "save"
-        
+
         # Publish event
         self._event_bus.publish(
             Event(
@@ -152,7 +152,7 @@ class FileIOViewModel(BaseViewModel):
         """
         if not self.current_file_path:
             return "Untitled"
-        
+
         try:
             return Path(self.current_file_path).name
         except Exception:
@@ -166,7 +166,7 @@ class FileIOViewModel(BaseViewModel):
         """
         if not self.current_file_path:
             return ""
-        
+
         try:
             return Path(self.current_file_path).suffix
         except Exception:
@@ -201,18 +201,18 @@ class FileIOViewModel(BaseViewModel):
         """
         # Create new list to trigger property change
         new_recent = list(self.recent_files)
-        
+
         # Remove if already in list
         if file_path in new_recent:
             new_recent.remove(file_path)
-        
+
         # Add to front
         new_recent.insert(0, file_path)
-        
+
         # Limit to MAX_RECENT_FILES
         if len(new_recent) > self.MAX_RECENT_FILES:
-            new_recent = new_recent[:self.MAX_RECENT_FILES]
-        
+            new_recent = new_recent[: self.MAX_RECENT_FILES]
+
         # Update property
         self.recent_files = new_recent
 
