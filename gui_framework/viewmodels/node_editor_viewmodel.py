@@ -211,17 +211,11 @@ class NodeEditorViewModel(BaseViewModel):
         """Set the node's value from either a Python object or a string representation.
         If a string is provided, attempt safe literal parsing with ast.literal_eval.
 
-        Special case: an empty string is treated as a request to *clear* the user-locked
-        flag (unlock the node) while preserving the node's stored numeric value.
+        Special case: an empty string preserves the node's current value and lock state.
         """
         try:
-            # Clearing value should unlock a user-locked node without changing its
-            # stored numeric value.
+            # Empty input means keep the existing value and lock state unchanged.
             if isinstance(value, str) and value == "":
-                try:
-                    self._node.user_locked_value = False
-                except Exception:
-                    pass
                 # Keep the viewmodel in sync with the node's current value
                 self._props["value"] = getattr(self._node, "value", "")
                 self.properties_changed += 1

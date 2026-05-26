@@ -227,7 +227,7 @@ Feel free to extend the GUI with additional features or node types by:
   xvfb-run -a python -m pytest gui_tests/integration -q
   ```
 
-- A quick fast smoke test file `gui_tests/integration/test_gui_smoke.py` verifies the `MainWindow` can be constructed in offscreen mode.
+- A quick fast smoke test file `Tests/gui_tests/integration/startup/test_gui_smoke.py` verifies the `MainWindow` can be constructed in offscreen mode.
 
 3. Adding type-specific editors in `node_editor_dialog.py`
 

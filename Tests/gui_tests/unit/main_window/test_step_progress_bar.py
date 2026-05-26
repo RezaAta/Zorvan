@@ -13,6 +13,9 @@ def test_step_progress_bar_presence_and_updates():
     win.max_steps_spin.setValue(20)
     assert prog.maximum() == 20
     # Simulate step completed
+    win.graph_runner.is_running = True
+    win.graph_runner.current_step = 4
+    win.graph_runner.max_steps = 20
     win.execution_controller.on_step_completed(5)
     assert prog.value() == 5
     # The main step label should show current/max

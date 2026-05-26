@@ -35,7 +35,7 @@ class DummyCanvas:
             def label(self):
                 return None
 
-        for i, n in enumerate(ExamplesLoader()._build_addition_chain().nodes):
+        for i, n in enumerate(graph.nodes):
             self.node_items[n] = Item(i * 10.0, i * 20.0, "#123456")
 
 

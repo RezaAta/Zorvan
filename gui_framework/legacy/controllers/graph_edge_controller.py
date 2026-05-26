@@ -67,15 +67,13 @@ class GraphEdgeController:
             if (
                 hasattr(mw, "graph_runner")
                 and getattr(mw, "graph_runner") is not None
-                and hasattr(mw.graph_runner, "graph_processor")
             ):
-
                 processor_type = getattr(mw, "processor_type", None)
                 runner_type = getattr(mw.graph_runner, "processor_type", None)
 
                 if processor_type == "forward" or runner_type == "forward":
                     try:
-                        mw.graph_runner.graph_processor.reset_forward_state()
+                        mw.graph_runner.reset_processor()
                     except Exception:
                         pass
         except Exception:

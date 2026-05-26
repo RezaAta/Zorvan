@@ -20,11 +20,13 @@ def test_mvvm_dialog_saves_definition(monkeypatch):
             called["definition"] = definition
             return True
 
-    # Patch the manager factory
+    # Patch the accessor used by CustomNodeViewModel.save_definition()
     try:
-        from gui_framework.legacy import custom_node_manager as mgr_mod
+        import gui_framework.legacy as legacy_mod
 
-        monkeypatch.setattr(mgr_mod, "get_custom_node_manager", lambda: StubManager())
+        monkeypatch.setattr(
+            legacy_mod, "get_custom_node_manager_safe", lambda: StubManager()
+        )
     except Exception:
         pytest.skip("custom_node_manager not available to patch")
 

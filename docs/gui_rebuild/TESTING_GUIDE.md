@@ -44,7 +44,7 @@ gui_tests/
     ├── test_state_store.py        # State management (24 tests)
     ├── test_state_models.py       # State dataclasses (16 tests)
     ├── test_event_bus.py          # Event system (24 tests)
-    ├── test_base_viewmodel.py     # ViewModel base class (13 tests)
+    ├── viewmodels/test_base_viewmodel.py     # ViewModel base class (13 tests)
     ├── test_widget_registry.py    # Plugin system (13 tests)
     ├── test_window_manager.py     # Window lifecycle (13 tests)
     ├── test_collapsible_section_viewmodel.py  # Widget (16 tests)

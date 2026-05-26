@@ -51,7 +51,7 @@ jobs:
 
       - name: Run core regression tests
         run: |
-          pytest -q Tests/test_sequence_finder.py
+          pytest -q Tests/core
 
   gui-smoke:
     name: GUI smoke (py3.11)
@@ -107,4 +107,4 @@ jobs:
 
       - name: Run GUI smoke test
         run: |
-          xvfb-run -a pytest -q gui_tests/integration/test_gui_smoke.py --maxfail=1
+          xvfb-run -a pytest -q Tests/gui_tests/integration/startup/test_gui_smoke.py --maxfail=1

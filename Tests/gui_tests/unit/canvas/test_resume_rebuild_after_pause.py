@@ -15,7 +15,11 @@ from zorvan.Nodes.DisplayNode import DisplayNode
 
 
 def test_resume_rebuild_after_pause():
-    app = QApplication(sys.argv)
+    app = QApplication.instance()
+    created_app = False
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     window = MainWindow()
     g = window.graph
 
@@ -70,4 +74,9 @@ def test_resume_rebuild_after_pause():
 
     # Clean up
     window.pause_graph()
-    app.quit()
+    try:
+        window.close()
+    except Exception:
+        pass
+    if created_app:
+        app.quit()

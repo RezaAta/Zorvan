@@ -45,7 +45,7 @@ Required baseline files:
 ## Phase 5 — Quality Gate
 
 1. Run targeted tests first, then full suite:
-   - `pytest -q Tests/test_sequence_finder.py`
+   - `pytest -q Tests/core/graph/test_sequence_finder.py`
    - `pytest -q`
 2. Run GUI smoke test:
    - `python run_new_ui.py`

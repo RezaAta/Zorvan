@@ -67,7 +67,11 @@ def test_replace_multiple_selected_nodes(monkeypatch):
 
 
 def test_replace_single_shows_node_editor(monkeypatch):
-    app = QApplication(sys.argv)
+    app = QApplication.instance()
+    created_app = False
+    if app is None:
+        app = QApplication(sys.argv)
+        created_app = True
     mw = MainWindow()
 
     # Build graph with one addition node
@@ -109,7 +113,7 @@ def test_replace_single_shows_node_editor(monkeypatch):
             return True
 
     monkeypatch.setattr(
-        "gui_framework.legacy.NodeEditorDialog",
+        "gui_framework.legacy.node_editor_dialog.NodeEditorDialog",
         StubNodeEditorDialog,
     )
 
@@ -121,9 +125,8 @@ def test_replace_single_shows_node_editor(monkeypatch):
     )
 
     # Only quit the QApplication if this test created it
-    _app = QApplication.instance()
-    if _app is not None and _app == app:
+    if created_app:
         try:
-            _app.quit()
+            app.quit()
         except Exception:
             pass

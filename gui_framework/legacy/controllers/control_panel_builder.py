@@ -790,13 +790,17 @@ class ControlPanelBuilder:
                 f"color: {text_color}; padding: 4px; }}"
             )
             try:
-                mw._theme_manager.theme_changed.connect(
-                    lambda: mw.starting_nodes_label.setStyleSheet(
-                        f"QLabel {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; "
-                        f"border: 1px solid {mw._theme_manager.get_color('border').name()}; "
-                        f"color: {mw._theme_manager.get_color('text').name()}; padding: 4px; }}"
-                    )
-                )
+                def _update_starting_nodes_label():
+                    try:
+                        mw.starting_nodes_label.setStyleSheet(
+                            f"QLabel {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; "
+                            f"border: 1px solid {mw._theme_manager.get_color('border').name()}; "
+                            f"color: {mw._theme_manager.get_color('text').name()}; padding: 4px; }}"
+                        )
+                    except Exception:
+                        pass
+
+                mw._theme_manager.theme_changed.connect(_update_starting_nodes_label)
             except Exception:
                 pass
         except Exception:
@@ -878,11 +882,15 @@ class ControlPanelBuilder:
                 f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
             )
             try:
-                mw._theme_manager.theme_changed.connect(
-                    lambda: mw.stopping_nodes_list.setStyleSheet(
-                        f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
-                    )
-                )
+                def _update_stopping_nodes_list():
+                    try:
+                        mw.stopping_nodes_list.setStyleSheet(
+                            f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
+                        )
+                    except Exception:
+                        pass
+
+                mw._theme_manager.theme_changed.connect(_update_stopping_nodes_list)
             except Exception:
                 pass
         else:
@@ -962,11 +970,15 @@ class ControlPanelBuilder:
                 f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
             )
             try:
-                mw._theme_manager.theme_changed.connect(
-                    lambda: mw.manual_sequence_list.setStyleSheet(
-                        f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
-                    )
-                )
+                def _update_manual_sequence_list():
+                    try:
+                        mw.manual_sequence_list.setStyleSheet(
+                            f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
+                        )
+                    except Exception:
+                        pass
+
+                mw._theme_manager.theme_changed.connect(_update_manual_sequence_list)
             except Exception:
                 pass
         else:
@@ -1076,11 +1088,15 @@ class ControlPanelBuilder:
                 f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; color: {text}; }}"
             )
             try:
-                tm.theme_changed.connect(
-                    lambda: mw.forward_sequence_list.setStyleSheet(
-                        f"QListWidget {{ background-color: {tm.get_color('list_bg').name()}; border: 1px solid {tm.get_color('border').name()}; color: {tm.get_color('text_primary', '#e6e6e6').name()}; }}"
-                    )
-                )
+                def _update_forward_sequence_list():
+                    try:
+                        mw.forward_sequence_list.setStyleSheet(
+                            f"QListWidget {{ background-color: {tm.get_color('list_bg').name()}; border: 1px solid {tm.get_color('border').name()}; color: {tm.get_color('text_primary', '#e6e6e6').name()}; }}"
+                        )
+                    except Exception:
+                        pass
+
+                tm.theme_changed.connect(_update_forward_sequence_list)
             except Exception:
                 pass
         else:
@@ -1421,11 +1437,15 @@ class ControlPanelBuilder:
                 f"QListWidget {{ background-color: {list_bg}; border: 1px solid {border}; }}"
             )
             try:
-                mw._theme_manager.theme_changed.connect(
-                    lambda: mw.queue_list.setStyleSheet(
-                        f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
-                    )
-                )
+                def _update_queue_list():
+                    try:
+                        mw.queue_list.setStyleSheet(
+                            f"QListWidget {{ background-color: {mw._theme_manager.get_color('list_bg').name()}; border: 1px solid {mw._theme_manager.get_color('border').name()}; }}"
+                        )
+                    except Exception:
+                        pass
+
+                mw._theme_manager.theme_changed.connect(_update_queue_list)
             except Exception:
                 pass
         else:

@@ -180,7 +180,7 @@ gui_framework/
 ```
 gui_tests/
 └── unit/
-    ├── test_base_viewmodel.py    # 10+ test cases
+    ├── viewmodels/test_base_viewmodel.py    # 10+ test cases
     ├── test_widget_registry.py   # 8+ test cases
     └── test_window_manager.py    # 6+ test cases (mocked)
 ```

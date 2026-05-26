@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from gui_framework.legacy import ColorPreferencesDialog
 from gui_framework.legacy import CombinedNodePalette
+from gui_framework.legacy.color_preferences import ColorPreferencesDialog
 
 
 def test_dock_bg_preference_updates_palette_body():

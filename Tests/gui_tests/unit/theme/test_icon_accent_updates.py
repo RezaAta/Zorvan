@@ -3,8 +3,8 @@ from PyQt6.QtWidgets import QApplication, QPushButton
 
 print("TEST_IMPORT: test_icon_accent_updates import start")
 
-from gui_framework.legacy import ColorPreferencesDialog
 from gui_framework.legacy import _apply_icon
+from gui_framework.legacy.color_preferences import ColorPreferencesDialog
 
 
 def _icon_color_hex(btn: QPushButton) -> str:

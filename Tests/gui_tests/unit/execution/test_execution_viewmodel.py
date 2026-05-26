@@ -8,6 +8,15 @@ import pytest
 
 from gui_framework.viewmodels.execution_viewmodel import ExecutionViewModel, ExecutionStatus
 from gui_framework.events.bus import Event, EventType
+from gui_framework.events import bus as event_bus_module
+from gui_framework.events.bus import get_event_bus
+
+
+@pytest.fixture(autouse=True)
+def _clean_execution_events():
+    event_bus_module._bus = event_bus_module.EventBus()
+    yield
+    event_bus_module._bus = event_bus_module.EventBus()
 
 
 class TestExecutionViewModel:

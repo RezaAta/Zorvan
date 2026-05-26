@@ -97,7 +97,8 @@ def test_gui_rewire_buffer_after_replace():
     assert buff.buffer[-1] in (5, 6, 7)
 
     # Clean up
-    app.quit()
+    if need_created:
+        app.quit()
 
 
 def test_predecessors_dialog_disconnect():
@@ -167,7 +168,8 @@ def test_predecessors_dialog_updates_on_external_delete():
     # Dialog should have updated automatically
     assert disp not in buff.predecessors
     assert dlg.list_widget.count() == 0
-    app.quit()
+    if need_created:
+        app.quit()
 
 
 def test_predecessors_dialog_disconnect():
@@ -240,7 +242,8 @@ def test_rebuild_graph_syncs_canvas_and_graph():
     window.canvas.remove_selected_items()
     assert ds not in buff.predecessors
 
-    app.quit()
+    if need_created:
+        app.quit()
 
 
 def test_graph_canvas_replace_node_item():
@@ -275,7 +278,8 @@ def test_graph_canvas_replace_node_item():
     # Predecessor relationships should remain
     assert ds in new_node.predecessors
     assert any(pred is new_node for pred in mul.predecessors)
-    app.quit()
+    if need_created:
+        app.quit()
 
 
 def test_replace_dialog_search_does_not_crash():
@@ -291,4 +295,5 @@ def test_replace_dialog_search_does_not_crash():
     dlg.search_bar.setText("mul")
     # Ensure selected_type remains None if nothing selected
     assert dlg.selected_type() is None
-    app.quit()
+    if need_created:
+        app.quit()

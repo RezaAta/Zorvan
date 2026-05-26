@@ -622,7 +622,7 @@ ComputationalGraphs/
 │       ├── test_state_store.py
 │       ├── test_state_models.py
 │       ├── test_event_bus.py
-│       ├── test_base_viewmodel.py
+│       ├── viewmodels/test_base_viewmodel.py
 │       ├── test_widget_registry.py
 │       ├── test_window_manager.py
 │       ├── test_collapsible_section_viewmodel.py

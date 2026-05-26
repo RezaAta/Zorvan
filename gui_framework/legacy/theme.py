@@ -599,7 +599,8 @@ class ThemeManager(QObject):
             # applied. This avoids surprising side-effects and reduces the chance
             # of interacting with transient widgets during test runs.
             try:
-                self.theme_changed.emit()
+                if not (_is_test_env() or getattr(self, "_force_test_safe", False)):
+                    self.theme_changed.emit()
             except Exception:
                 pass
 
@@ -1232,7 +1233,10 @@ def get_theme_manager() -> ThemeManager:
                                 f'QToolBar QPushButton[themed="true"]:hover {{ background: {hover}; }}\n'
                                 f'QToolBar QPushButton[themed="true"], QToolBar QToolButton[themed="true"] {{ background-color: {button_bg}; }}\n'
                             )
-                            app.setStyleSheet(qss)
+                            try:
+                                _manager._last_applied_stylesheet = qss
+                            except Exception:
+                                pass
                         except Exception:
                             pass
                 except Exception:

@@ -165,7 +165,7 @@ class NodeEditingController:
             node_item: The NodeItem to replace
         """
         from ..node_item import NodeItem
-        from ..replace_node_dialog import ReplaceNodeDialog
+        from .. import ReplaceNodeDialog
 
         mw = self.main_window
         dlg = ReplaceNodeDialog(mw)
@@ -218,7 +218,7 @@ class NodeEditingController:
             scene_pos: QPointF scene position where node should be placed
             start_node_items: list of NodeItem that initiated the connection
         """
-        from ..replace_node_dialog import ReplaceNodeDialog
+        from .. import ReplaceNodeDialog
 
         mw = self.main_window
         dlg = ReplaceNodeDialog(mw)

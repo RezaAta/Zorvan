@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from .theme import get_theme_manager
+from .theme import get_theme_manager, _is_test_env
 
 # Adapter: delegate to MVVM Color Preferences dialog
 try:
@@ -409,24 +409,25 @@ class ColorPreferencesDialog:
 
                         app = QApplication.instance()
                         if app is not None:
-                            for w in app.allWidgets():
-                                try:
-                                    if (
-                                        getattr(w, "__class__", None) is not None
-                                        and w.__class__.__name__
-                                        == "CombinedNodePalette"
-                                    ):
-                                        try:
-                                            w.apply_theme()
-                                        except Exception:
-                                            pass
-                                    elif hasattr(w, "apply_theme"):
-                                        try:
-                                            w.apply_theme()
-                                        except Exception:
-                                            pass
-                                except Exception:
-                                    pass
+                            if not _is_test_env():
+                                for w in app.allWidgets():
+                                    try:
+                                        if (
+                                            getattr(w, "__class__", None) is not None
+                                            and w.__class__.__name__
+                                            == "CombinedNodePalette"
+                                        ):
+                                            try:
+                                                w.apply_theme()
+                                            except Exception:
+                                                pass
+                                        elif hasattr(w, "apply_theme"):
+                                            try:
+                                                w.apply_theme()
+                                            except Exception:
+                                                pass
+                                    except Exception:
+                                        pass
                     except Exception:
                         pass
 

@@ -16,8 +16,20 @@ from zorvan.Nodes.DisplayNode import DisplayNode
 class ManualUITest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Create a Qt application once for tests
-        cls.app = QApplication(sys.argv)
+        # Reuse the shared QApplication created by the test session when available.
+        cls._created_app = False
+        cls.app = QApplication.instance()
+        if cls.app is None:
+            cls.app = QApplication(sys.argv)
+            cls._created_app = True
+
+    @classmethod
+    def tearDownClass(cls):
+        try:
+            if getattr(cls, "_created_app", False) and cls.app is not None:
+                cls.app.quit()
+        except Exception:
+            pass
 
     def test_console_hidden_by_default(self):
         win = MainWindow()

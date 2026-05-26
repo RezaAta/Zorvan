@@ -216,7 +216,7 @@ python -m pytest gui_tests/unit/test_event_bus.py -v  # 24 tests
 
 **Base Classes:**
 ```bash
-python -m pytest gui_tests/unit/test_base_viewmodel.py -v  # 13 tests
+python -m pytest gui_tests/unit/viewmodels/test_base_viewmodel.py -v  # 13 tests
 python -m pytest gui_tests/unit/test_widget_registry.py -v  # 13 tests
 python -m pytest gui_tests/unit/test_window_manager.py -v  # 13 tests
 ```

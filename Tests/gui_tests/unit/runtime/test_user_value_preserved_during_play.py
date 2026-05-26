@@ -34,7 +34,8 @@ def test_user_value_preserved_while_playing(qtbot):
 
     # During play, value must remain 42 and display must show 42
     assert node.value == 42
-    assert node_item.value_label.toPlainText().strip() in ("42", "42.00")
+    live_item = canvas.node_items.get(node, node_item)
+    assert live_item.value_label.toPlainText().strip() in ("42", "42.00")
 
     # Cleanup
     mw.execution_controller.pause()

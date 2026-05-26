@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from gui_framework.legacy import ColorPreferencesDialog
 from gui_framework.legacy import CombinedNodePalette
 from gui_framework.legacy import get_theme_manager
+from gui_framework.legacy.color_preferences import ColorPreferencesDialog
 
 
 def test_list_bg_preference_updates_palette():
