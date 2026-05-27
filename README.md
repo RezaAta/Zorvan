@@ -11,6 +11,18 @@ Zorvan is a repository for implementing computational graph architectures and ex
 python run_new_ui.py
 ```
 
+```powershell
+# Build a Windows standalone executable locally
+.\scripts\build_exe.ps1
+```
+
+To use the Zorvan icon in the built application, place `zorvan.ico` into the `assets/` folder.
+If the file exists, the build script will use it for both the executable icon and the app window icon.
+
+### GitHub release automation
+A Windows executable can also be produced by GitHub Actions when a tag matching `v*` is pushed.
+The workflow is defined in `.github/workflows/build_windows_exe.yml`, and it uploads `dist\ZorvanNewUI.exe` as an artifact.
+
 ## � Example Usage Scripts
 The `zorvan/Examples/` folder contains user-facing demo scripts, not automated tests. Run them from the repository root so that `zorvan` is on `PYTHONPATH`, for example:
 

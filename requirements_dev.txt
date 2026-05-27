@@ -7,3 +7,4 @@ pytest
 pytest-qt
 codecov
 coverage
+pyinstaller>=5.0

@@ -15,9 +15,11 @@ new UI. It provides some convenience options useful during Phase-5 manual QA.
 
 import argparse
 import logging
+import os
 import sys
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
 from gui_framework.main_window import MainWindow
@@ -39,6 +41,13 @@ def main(argv=None):
         logging.basicConfig(level=logging.DEBUG)
         logging.getLogger().debug("Debug logging enabled")
 
+    def resource_path(relative_path: str) -> str:
+        if getattr(sys, "frozen", False):
+            base_path = getattr(sys, "_MEIPASS", os.path.dirname(__file__))
+        else:
+            base_path = os.path.dirname(__file__)
+        return os.path.join(base_path, relative_path)
+
     # High DPI handling
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
@@ -47,6 +56,13 @@ def main(argv=None):
     app = QApplication(sys.argv)
     app.setApplicationName("Computational Graphs Editor (New UI)")
     app.setOrganizationName("ComputationalGraphs")
+
+    icon_path = resource_path(os.path.join("assets", "zorvan.ico"))
+    if os.path.exists(icon_path):
+        try:
+            app.setWindowIcon(QIcon(icon_path))
+        except Exception:
+            pass
 
     # Apply theme if available
     try:
