@@ -77,22 +77,35 @@ except Exception:  # pragma: no cover
     _create_standard_button = None
 
 try:
+    from .controllers.control_panel_builder import _ICON_REAPPLY_HANDLERS
+except Exception:  # pragma: no cover
+    _ICON_REAPPLY_HANDLERS = None
+
+try:
     from .node_registry import get_node_categories
 except Exception:  # pragma: no cover
     get_node_categories = None
 
 try:
     from .theme_widgets import (
+        ThemedCheckBox,
+        ThemedComboBox,
         ThemedLabel,
         ThemedProgressBar,
         ThemedPushButton,
         ThemedScrollArea,
+        ThemedSlider,
+        ThemedSpinBox,
     )
 except Exception:  # pragma: no cover
+    ThemedCheckBox = None
+    ThemedComboBox = None
     ThemedScrollArea = None
     ThemedLabel = None
     ThemedPushButton = None
     ThemedProgressBar = None
+    ThemedSlider = None
+    ThemedSpinBox = None
 
 try:
     from .graph_canvas import SubgraphControlButton
@@ -183,9 +196,14 @@ except Exception:  # pragma: no cover
     MLPLayoutEngine = None
 
 try:
-    from .color_preferences import ColorPreferencesDialog
+    import importlib
+
+    _cp = importlib.import_module(".color_preferences", __package__)
+    _cp_cls = getattr(_cp, "ColorPreferencesDialog", None)
+    if _cp_cls is not None:
+        ColorPreferencesDialog = _cp_cls
 except Exception:  # pragma: no cover
-    ColorPreferencesDialog = None
+    pass
 
 try:
     from .predecessors_dialog import PredecessorsDialog
@@ -332,3 +350,18 @@ def get_custom_node_manager_safe():
         except Exception:
             pass
     return None
+
+
+def __getattr__(name: str):
+    if name == "ColorPreferencesDialog":
+        try:
+            import importlib
+
+            _cp = importlib.import_module(".color_preferences", __package__)
+            _cp_cls = getattr(_cp, "ColorPreferencesDialog", None)
+            if _cp_cls is not None:
+                globals()[name] = _cp_cls
+                return _cp_cls
+        except Exception:
+            pass
+    raise AttributeError(f"module {__name__} has no attribute {name}")

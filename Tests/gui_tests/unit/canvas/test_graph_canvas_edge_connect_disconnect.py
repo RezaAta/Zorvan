@@ -53,6 +53,18 @@ def test_graph_canvas_connect_disconnect():
     assert ds in buff.predecessors
 
     # Clean up
+    try:
+        canvas.close()
+    except Exception:
+        pass
+    try:
+        canvas.deleteLater()
+    except Exception:
+        pass
+    try:
+        app.processEvents()
+    except Exception:
+        pass
     if need_created:
         app.quit()
 
@@ -95,6 +107,18 @@ def test_gui_rewire_buffer_after_replace():
     assert buff.buffer[-1] in (5, 6, 7)
 
     # Clean up
+    try:
+        canvas.close()
+    except Exception:
+        pass
+    try:
+        canvas.deleteLater()
+    except Exception:
+        pass
+    try:
+        app.processEvents()
+    except Exception:
+        pass
     if need_created:
         app.quit()
 
@@ -126,12 +150,21 @@ def test_predecessors_dialog_disconnect():
     from gui_framework.legacy import PredecessorsDialog
 
     dlg = PredecessorsDialog(buff_item, window.canvas)
-    dlg.disconnect_pred(disp)
-    # Pred list must update
-    assert disp not in buff.predecessors
-
-    if need_created:
-        app.quit()
+    try:
+        dlg.disconnect_pred(disp)
+        # Pred list must update
+        assert disp not in buff.predecessors
+    finally:
+        try:
+            dlg.close()
+        except Exception:
+            pass
+        try:
+            window.close()
+        except Exception:
+            pass
+        if need_created:
+            app.quit()
 
 
 def test_predecessors_dialog_updates_on_external_delete():
@@ -156,18 +189,28 @@ def test_predecessors_dialog_updates_on_external_delete():
     from gui_framework.legacy import PredecessorsDialog
 
     dlg = PredecessorsDialog(buff_item, window.canvas)
-    # Initially, should have one predecessor
-    assert dlg.list_widget.count() == 1
+    try:
+        # Initially, should have one predecessor
+        assert dlg.list_widget.count() == 1
 
-    # Now remove edge via canvas remove method (simulate Delete)
-    edge.setSelected(True)
-    window.canvas.remove_selected_items()
+        # Now remove edge via canvas remove method (simulate Delete)
+        edge.setSelected(True)
+        window.canvas.remove_selected_items()
 
-    # Dialog should have updated automatically
-    assert disp not in buff.predecessors
-    assert dlg.list_widget.count() == 0
-    if need_created:
-        app.quit()
+        # Dialog should have updated automatically
+        assert disp not in buff.predecessors
+        assert dlg.list_widget.count() == 0
+    finally:
+        try:
+            dlg.close()
+        except Exception:
+            pass
+        try:
+            window.close()
+        except Exception:
+            pass
+        if need_created:
+            app.quit()
 
 
 def test_predecessors_dialog_disconnect():
@@ -198,11 +241,16 @@ def test_predecessors_dialog_disconnect():
     from gui_framework.legacy import PredecessorsDialog
 
     dlg = PredecessorsDialog(buff_item, canvas)
-    dlg.disconnect_pred(disp)
-    assert disp not in buff.predecessors
-
-    if need_created:
-        app.quit()
+    try:
+        dlg.disconnect_pred(disp)
+        assert disp not in buff.predecessors
+    finally:
+        try:
+            dlg.close()
+        except Exception:
+            pass
+        if need_created:
+            app.quit()
 
 
 def test_rebuild_graph_syncs_canvas_and_graph():
@@ -240,6 +288,14 @@ def test_rebuild_graph_syncs_canvas_and_graph():
     window.canvas.remove_selected_items()
     assert ds not in buff.predecessors
 
+    try:
+        window.close()
+    except Exception:
+        pass
+    try:
+        app.processEvents()
+    except Exception:
+        pass
     if need_created:
         app.quit()
 
@@ -276,6 +332,14 @@ def test_graph_canvas_replace_node_item():
     # Predecessor relationships should remain
     assert ds in new_node.predecessors
     assert any(pred is new_node for pred in mul.predecessors)
+    try:
+        canvas.close()
+    except Exception:
+        pass
+    try:
+        canvas.deleteLater()
+    except Exception:
+        pass
     if need_created:
         app.quit()
 
@@ -289,9 +353,15 @@ def test_replace_dialog_search_does_not_crash():
     app = _app
     # Construct dialog and simulate typing
     dlg = ReplaceNodeDialog()
-    # Set a search text to activate filtering
-    dlg.search_bar.setText("mul")
-    # Ensure selected_type remains None if nothing selected
-    assert dlg.selected_type() is None
-    if need_created:
-        app.quit()
+    try:
+        # Set a search text to activate filtering
+        dlg.search_bar.setText("mul")
+        # Ensure selected_type remains None if nothing selected
+        assert dlg.selected_type() is None
+    finally:
+        try:
+            dlg.close()
+        except Exception:
+            pass
+        if need_created:
+            app.quit()

@@ -12,6 +12,10 @@ try:
     @pytest.fixture(scope="session", autouse=True)
     def _global_qapp():
         app = QApplication.instance() or QApplication([])
+        try:
+            app.setQuitOnLastWindowClosed(False)
+        except Exception:
+            pass
         # Ensure a ThemeManager exists and applies a minimal stylesheet in test
         # mode so tests that check app.styleSheet() observe expected rules.
         try:

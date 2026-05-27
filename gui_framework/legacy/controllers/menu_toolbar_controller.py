@@ -253,6 +253,12 @@ class MenuToolbarController:
                     mw.toolbar_add_to_plot_btn.setProperty("themed", True)
                 except Exception:
                     pass
+                try:
+                    mw.toolbar_add_to_plot_btn.setToolTip(
+                        "Add currently selected nodes to the plot window"
+                    )
+                except Exception:
+                    pass
             except Exception:
                 pass
             return

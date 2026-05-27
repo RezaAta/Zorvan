@@ -5,7 +5,7 @@ Usage:
     python run_new_ui.py [--example <name>] [--maximize] [--debug]
 
 Options:
-    --example <name>   Auto-load an example with the given name (matches Examples loader)
+    --example <name>   Auto-load an example by name
     --maximize         Start the main window maximized
     --debug            Enable debug logging to the console
 

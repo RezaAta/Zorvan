@@ -283,6 +283,15 @@ class NodeEditingController:
             pass
 
         try:
+            # Ensure the canvas connection mode is reset after a direct drop handler
+            # invocation, even if the signal was emitted outside the normal
+            # mouse-release path.
+            if hasattr(canvas, "_finalize_connection_operation"):
+                canvas._finalize_connection_operation()
+        except Exception:
+            pass
+
+        try:
             mw.status_bar.showMessage(f"Created {unique_name} and connected")
         except Exception:
             pass

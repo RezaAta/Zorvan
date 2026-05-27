@@ -13,16 +13,11 @@ from gui_framework.viewmodels.dialogs.activation_viewmodel import ActivationView
 from gui_framework.views.dialogs.activation_dialog import ActivationDialog
 
 
-@pytest.fixture(scope="module")
-def qapp():
-    app = QApplication.instance() or QApplication([])
-    yield app
-
-
-def test_activation_dialog_populates_and_selects(qapp):
+def test_activation_dialog_populates_and_selects(qtbot):
     vm = ActivationViewModel(available=["Sigmoid", "ReLU"], selected="Sigmoid")
     vm.initialize()
     dlg = ActivationDialog(vm)
+    qtbot.addWidget(dlg)
 
     # initial state
     assert dlg.list_widget.count() == 2

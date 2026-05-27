@@ -13,13 +13,9 @@ from zorvan.Nodes.AdditionNode import AdditionNode
 from zorvan.Nodes.MultiplicationNode import MultiplicationNode
 
 
-def test_create_node_and_connect_on_drop(monkeypatch):
-    created_app = False
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-        created_app = True
+def test_create_node_and_connect_on_drop(monkeypatch, qtbot):
     mw = MainWindow()
+    qtbot.addWidget(mw)
 
     # Build graph with one addition node
     g = mw.graph
@@ -74,17 +70,11 @@ def test_create_node_and_connect_on_drop(monkeypatch):
         mw.close()
     except Exception:
         pass
-    if created_app:
-        app.quit()
 
 
-def test_drop_create_cancelled_does_not_create(monkeypatch):
-    created_app = False
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-        created_app = True
+def test_drop_create_cancelled_does_not_create(monkeypatch, qtbot):
     mw = MainWindow()
+    qtbot.addWidget(mw)
 
     g = mw.graph
     n1 = AdditionNode(name="add1")
@@ -117,17 +107,11 @@ def test_drop_create_cancelled_does_not_create(monkeypatch):
         mw.close()
     except Exception:
         pass
-    if created_app:
-        app.quit()
 
 
-def test_create_node_and_connect_from_selected_multiple_nodes(monkeypatch):
-    created_app = False
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-        created_app = True
+def test_create_node_and_connect_from_selected_multiple_nodes(monkeypatch, qtbot):
     mw = MainWindow()
+    qtbot.addWidget(mw)
 
     # Build graph with two addition nodes
     g = mw.graph
@@ -184,5 +168,3 @@ def test_create_node_and_connect_from_selected_multiple_nodes(monkeypatch):
         mw.close()
     except Exception:
         pass
-    if created_app:
-        app.quit()

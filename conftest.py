@@ -69,6 +69,10 @@ def pytest_sessionstart(session):
 
             try:
                 app = QApplication.instance() or QApplication([])
+                try:
+                    app.setQuitOnLastWindowClosed(False)
+                except Exception:
+                    pass
                 # Keep a Python-side reference to prevent premature GC of the
                 # wrapper object which may result in a brief None value from
                 # QApplication.instance() in later code paths.

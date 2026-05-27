@@ -1334,26 +1334,34 @@ class GraphCanvas(QGraphicsView):
                 except Exception:
                     pass
 
-            # Clean up
-            if self.temp_connection_lines:
-                for line in self.temp_connection_lines:
-                    try:
-                        self.scene.removeItem(line)
-                    except Exception:
-                        pass
-                self.temp_connection_lines = []
-
-            # Re-enable movement on the source node(s) and remove their connection highlight
-            for n in self.connection_start_nodes:
-                n.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-                n.set_connection_highlight(False)
-
-            self.connection_mode = False
-            self.connection_start_nodes = []
-            self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+            self._finalize_connection_operation()
             return
 
         super().mouseReleaseEvent(event)
+
+    def _finalize_connection_operation(self):
+        """Reset canvas state after a connection operation completes."""
+        if self.temp_connection_lines:
+            for line in self.temp_connection_lines:
+                try:
+                    self.scene.removeItem(line)
+                except Exception:
+                    pass
+            self.temp_connection_lines = []
+
+        for n in list(self.connection_start_nodes):
+            try:
+                n.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+                n.set_connection_highlight(False)
+            except Exception:
+                pass
+
+        self.connection_mode = False
+        self.connection_start_nodes = []
+        try:
+            self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        except Exception:
+            pass
 
     # (Spacebar panning feature removed) - keyboard events not used for panning.
 
@@ -2701,3 +2709,26 @@ class GraphCanvas(QGraphicsView):
         # Mark that replacement was already done by replace_node_item
         cmd.mark_already_performed()
         undo_stack.push(cmd)
+
+    def closeEvent(self, event):
+        """Clean up theme manager signal connections and scene items on close."""
+        try:
+            from .theme import get_theme_manager
+
+            tm = get_theme_manager()
+            try:
+                tm.theme_changed.disconnect(self._on_theme_changed)
+            except Exception:
+                pass
+        except Exception:
+            pass
+        try:
+            if self.scene() is not None:
+                self.scene().clear()
+        except Exception:
+            pass
+        try:
+            self.setScene(None)
+        except Exception:
+            pass
+        super().closeEvent(event)

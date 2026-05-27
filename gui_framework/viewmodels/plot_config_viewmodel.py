@@ -40,11 +40,11 @@ class PlotConfigViewModel(BaseViewModel):
     selection_changed = ObservableProperty("selection_changed", default=0)  # Counter
     filter_changed = ObservableProperty("filter_changed", default=0)  # Counter
 
-    def __init__(self, max_iterations: int = 1000000):
+    def __init__(self, max_iterations: int = 100):
         """Initialize PlotConfigViewModel.
 
         Args:
-            max_iterations: Default maximum data points to store (default: 1M, effectively unlimited)
+            max_iterations: Default maximum data points to store (default: 100)
         """
         super().__init__()
 

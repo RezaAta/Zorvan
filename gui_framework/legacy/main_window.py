@@ -164,6 +164,20 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        try:
+            import os
+
+            is_test_env = (
+                os.environ.get("CG_PYTEST_RUNNING") == "1"
+                or os.environ.get("PYTEST_RUNNING") == "1"
+            )
+            if not is_test_env:
+                self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+            if is_test_env:
+                QApplication.setQuitOnLastWindowClosed(False)
+        except Exception:
+            pass
+
         # Set a consistent application font for UI (adjustable via Preferences)
         try:
             from PyQt6.QtGui import QFont
@@ -306,10 +320,21 @@ class MainWindow(QMainWindow):
             from .theme import get_theme_manager
 
             tm = get_theme_manager()
-            try:
-                # Defer actual application until after initialization to avoid
-                # interacting with widgets that are still being constructed.
+            import os
+
+            is_test_env = (
+                os.environ.get("CG_PYTEST_RUNNING") == "1"
+                or os.environ.get("PYTEST_RUNNING") == "1"
+            )
+            if is_test_env:
                 try:
+                    tm.apply_theme()
+                except Exception:
+                    pass
+            else:
+                try:
+                    # Defer actual application until after initialization to avoid
+                    # interacting with widgets that are still being constructed.
                     from PyQt6.QtCore import QTimer
 
                     QTimer.singleShot(0, tm.apply_theme)
@@ -319,8 +344,6 @@ class MainWindow(QMainWindow):
                         tm.apply_theme()
                     except Exception:
                         pass
-            except Exception:
-                pass
         except Exception:
             pass
 
@@ -379,6 +402,28 @@ class MainWindow(QMainWindow):
         # === MVVM Integration - Phase 2 ===
         # Connect adapter signals AFTER init_ui() so all widgets exist
         self._connect_mvvm_adapters()
+
+    def closeEvent(self, event):
+        """Ensure background processing and scene resources are cleaned up."""
+        try:
+            if hasattr(self, "graph_runner") and self.graph_runner is not None:
+                try:
+                    self.graph_runner.stop()
+                except Exception:
+                    pass
+                try:
+                    self.graph_runner.clear_queue()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Avoid explicit scene/item cleanup here. Let Qt destroy the window
+        # and its child widgets naturally to prevent native crashes in pytest.
+        # Do not detach the central canvas widget from its parent, because
+        # leaving the canvas without a parent can cause invalid Qt cleanup
+        # ordering during subsequent event processing.
+        super().closeEvent(event)
 
     def _create_mvvm_adapters(self):
         """Phase 1: Create MVVM adapters and their ViewModels.

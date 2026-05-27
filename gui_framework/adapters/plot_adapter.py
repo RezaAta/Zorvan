@@ -104,20 +104,21 @@ class PlotAdapter:
             max_iter = config_vm.get_max_iterations()
 
             if selected_nodes:
-                self._create_plot_window(selected_nodes)
+                self._create_plot_window(selected_nodes, max_iterations=max_iter)
                 return True
 
         return False
 
-    def _create_plot_window(self, node_names: List[str]):
+    def _create_plot_window(self, node_names: List[str], max_iterations: int = 1000000):
         """
         Create the plot window with selected nodes.
 
         Args:
             node_names: List of node names to plot
+            max_iterations: Maximum number of data points to retain per node
         """
-        # Create plot ViewModel with default buffer size (user can change in plot window)
-        self.plot_viewmodel = PlotViewModel(backend=self.backend)
+        # Create plot ViewModel with configurable buffer size from legacy plumbing
+        self.plot_viewmodel = PlotViewModel(buffer_size=max_iterations, backend=self.backend)
         self.plot_viewmodel.set_nodes(node_names)
 
         # Create plot View

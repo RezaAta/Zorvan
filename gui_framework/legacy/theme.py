@@ -599,8 +599,7 @@ class ThemeManager(QObject):
             # applied. This avoids surprising side-effects and reduces the chance
             # of interacting with transient widgets during test runs.
             try:
-                if not (_is_test_env() or getattr(self, "_force_test_safe", False)):
-                    self.theme_changed.emit()
+                self.theme_changed.emit()
             except Exception:
                 pass
 
@@ -823,14 +822,31 @@ class ThemeManager(QObject):
                     # safely set the stylesheet string and emit the theme_changed signal
                     # so observers update their local state without iterating widgets.
                     if is_test:
-                        # In test mode we avoid calling QApplication.setStyleSheet()
-                        # because even minimal stylesheet application can cause native
-                        # crashes in pytest/pytestqt environments on Windows.
                         try:
                             self._last_applied_stylesheet = s
                         except Exception:
                             pass
-                        return False
+                        try:
+                            if app is None:
+                                app = QApplication.instance()
+                            if app is not None:
+                                app.setStyleSheet(s)
+                                try:
+                                    app.setFont(self.get_font("ui"))
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        try:
+                            self.theme_changed.emit()
+                        except Exception:
+                            pass
+                        try:
+                            if app is not None:
+                                app.processEvents()
+                        except Exception:
+                            pass
+                        return True
 
                     # For normal (non-test) runs, perform a deferred application of
                     # the stylesheet and font to reduce the chance of stepping on
@@ -996,6 +1012,21 @@ class ThemeManager(QObject):
                     # In test environments, avoid deep UI manipulations and simply
                     # notify observers and return early.
                     if _is_test_env():
+                        try:
+                            self._last_applied_stylesheet = s
+                        except Exception:
+                            pass
+                        try:
+                            if app is None:
+                                app = QApplication.instance()
+                            if app is not None:
+                                app.setStyleSheet(s)
+                                try:
+                                    app.setFont(self.get_font("ui"))
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
                         try:
                             self.theme_changed.emit()
                         except Exception:

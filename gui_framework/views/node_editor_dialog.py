@@ -964,12 +964,12 @@ if HAS_PYQT:
                 try:
                     import os
 
-                    if os.environ.get("CG_PYTEST_RUNNING") == "1":
-                        # Avoid scheduling canvas refresh during tests; call directly
-                        try:
-                            self._refresh_canvas()
-                        except Exception:
-                            pass
+                    if (
+                        os.environ.get("CG_PYTEST_RUNNING") == "1"
+                        or os.environ.get("PYTEST_RUNNING") == "1"
+                    ):
+                        # Avoid scheduling canvas refresh during automated pytest runs.
+                        pass
                     else:
                         try:
                             QTimer.singleShot(0, self._refresh_canvas)

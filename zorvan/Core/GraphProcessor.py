@@ -172,7 +172,15 @@ class GraphProcessor:
                 # controller pause (cooperative)
                 if getattr(controller_obj, "pause_event", None) is not None:
                     while controller_obj.pause_event.is_set():
+                        if getattr(controller_obj, "stop_event", None) is not None and controller_obj.stop_event.is_set():
+                            break
                         time.sleep(0.01)
+
+                if (
+                    getattr(controller_obj, "stop_event", None) is not None
+                    and controller_obj.stop_event.is_set()
+                ):
+                    break
 
                 # Phase 1: UpdateInputs for nodes that need it.
                 # Collect futures and wait for completion to avoid races where
@@ -235,7 +243,12 @@ class GraphProcessor:
                 break
             if getattr(controller_obj, "pause_event", None) is not None:
                 while controller_obj.pause_event.is_set():
+                    if getattr(controller_obj, "stop_event", None) is not None and controller_obj.stop_event.is_set():
+                        break
                     time.sleep(0.01)
+
+            if getattr(controller_obj, "stop_event", None) is not None and controller_obj.stop_event.is_set():
+                break
 
             for node in self.graph.nodes:
                 if not getattr(node, "midCalculation", False):

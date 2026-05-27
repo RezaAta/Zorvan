@@ -548,8 +548,12 @@ class GraphRunner(QObject):
                         and not controller.stop_event.is_set()
                     ):
                         while controller.pause_event.is_set():
+                            if getattr(controller, "stop_event", None) is not None and controller.stop_event.is_set():
+                                break
                             time.sleep(0.01)
 
+                        if getattr(controller, "stop_event", None) is not None and controller.stop_event.is_set():
+                            break
                         # Get current step in the sequence
                         step_nodes = sequence[self._forward_step_index]
 
@@ -751,7 +755,12 @@ class GraphRunner(QObject):
                     ):
                         # Respect pause
                         while controller.pause_event.is_set():
+                            if getattr(controller, "stop_event", None) is not None and controller.stop_event.is_set():
+                                break
                             time.sleep(0.01)
+
+                        if getattr(controller, "stop_event", None) is not None and controller.stop_event.is_set():
+                            break
 
                         # Clear processed nodes at the start of each iteration (when cycling back to step 0)
                         if self._forward_step_index == 0 and iterations_run > 0:
@@ -825,7 +834,12 @@ class GraphRunner(QObject):
                     ):
                         # Respect pause
                         while controller.pause_event.is_set():
+                            if getattr(controller, "stop_event", None) is not None and controller.stop_event.is_set():
+                                break
                             time.sleep(0.01)
+
+                        if getattr(controller, "stop_event", None) is not None and controller.stop_event.is_set():
+                            break
 
                         # Check if we're at cycle start and clear for visual reset
                         at_cycle_start = (
@@ -1068,6 +1082,11 @@ class GraphRunner(QObject):
                     self._exec_controller.stop()
                 elif hasattr(self._exec_controller, "stop_event"):
                     self._exec_controller.stop_event.set()
+            except Exception:
+                pass
+            try:
+                if hasattr(self._exec_controller, "pause_event"):
+                    self._exec_controller.pause_event.clear()
             except Exception:
                 pass
 

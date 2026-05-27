@@ -52,11 +52,32 @@ def test_multi_connection_basic(qtbot=None):
         Qt.KeyboardModifier.NoModifier,
         target_view_pos,
     )
+    try:
+        app = QApplication.instance()
+        if app is not None:
+            app.processEvents()
+    except Exception:
+        pass
 
     # All selected source nodes should have created edges to target
     # There should be 2 edges: from n1 and n2 to target
     edges_count = len(canvas.edge_items)
     assert edges_count >= 2, f"Expected at least 2 edges, got {edges_count}"
+
+    try:
+        canvas.close()
+    except Exception:
+        pass
+    try:
+        canvas.deleteLater()
+    except Exception:
+        pass
+    try:
+        app = QApplication.instance()
+        if app is not None:
+            app.processEvents()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
