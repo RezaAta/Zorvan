@@ -57,12 +57,19 @@ def main(argv=None):
     app.setApplicationName("Computational Graphs Editor (New UI)")
     app.setOrganizationName("ComputationalGraphs")
 
-    icon_path = resource_path(os.path.join("assets", "zorvan.ico"))
-    if os.path.exists(icon_path):
-        try:
-            app.setWindowIcon(QIcon(icon_path))
-        except Exception:
-            pass
+    # Prefer the ICO artifact, but fall back to PNG if needed.
+    icon_candidates = [
+        resource_path(os.path.join("assets", "zorvan.ico")),
+        resource_path(os.path.join("assets", "ZorvanIcon.png")),
+        resource_path(os.path.join("assets", "ZorvanLogoTransparent.png")),
+    ]
+    for icon_path in icon_candidates:
+        if os.path.exists(icon_path):
+            try:
+                app.setWindowIcon(QIcon(icon_path))
+                break
+            except Exception:
+                continue
 
     # Apply theme if available
     try:
@@ -73,8 +80,6 @@ def main(argv=None):
     except Exception:
         # Fallback to the old stylesheet on failure
         try:
-            import os
-
             style_path = os.path.join(
                 os.path.dirname(__file__), "ComputationalGraphs", "GUI", "styles.qss"
             )

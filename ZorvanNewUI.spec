@@ -9,7 +9,7 @@ a = Analysis(
     ['run_new_ui.py'],
     pathex=[],
     binaries=[],
-    datas=[('gui_framework\\legacy\\styles_template.qss', 'gui_framework\\legacy'), ('gui_framework\\legacy\\styles.qss', 'gui_framework\\legacy'), ('custom_nodes.json', '.')],
+    datas=[('gui_framework\\legacy\\styles_template.qss', 'gui_framework\\legacy'), ('gui_framework\\legacy\\styles.qss', 'gui_framework\\legacy'), ('custom_nodes.json', '.'), ('assets\\\\zorvan.ico', 'assets')],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
@@ -39,4 +39,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=['C:\\My Stuff\\Uni & Research\\Zorvan Public Repo\\Zorvan\\assets\\zorvan.ico'],
 )
