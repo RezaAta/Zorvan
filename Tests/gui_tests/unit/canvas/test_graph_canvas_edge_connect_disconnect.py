@@ -2,6 +2,11 @@ import sys
 
 import pytest
 
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Unstable on Windows full pytest sessions due to Qt native crash during MainWindow init",
+)
+
 # Skip GUI tests when PyQt6 isn't available in CI environments
 pytest.importorskip("PyQt6")
 

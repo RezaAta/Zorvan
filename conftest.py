@@ -20,6 +20,7 @@ try:
     import os
 
     os.environ["CG_PYTEST_RUNNING"] = "1"
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 except Exception:
     pass
 

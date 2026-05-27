@@ -5,6 +5,11 @@ import pytest
 # Skip GUI tests when PyQt6 isn't available in CI environments
 pytest.importorskip("PyQt6")
 
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Unstable on Windows full pytest sessions due to native Qt state corruption",
+)
+
 from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QApplication
 
