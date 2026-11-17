@@ -1,47 +1,59 @@
 # Architecture Comparison: MLPGraph (Concurrent) vs MLPGraphForwardProcessing
 
+Zorvan builds MLPs out of nodes in two variants, one for each processing mode:
+
+- **`MLPGraph` / `BackpropGraph`**: concurrent processing, the main and
+  validated mode. Every tick, all nodes read a snapshot of the graph and then
+  update, so a signal advances one node per tick. Buffers and label delays line
+  the signals up.
+- **`MLPGraphForwardProcessing` / `BackpropGraphForwardProcessing`**: forward
+  processing (experimental). Nodes run along data dependencies, so no buffers
+  are needed.
+
 ## Key Architectural Differences
 
 ### 1. **Buffer Nodes**
 
 **MLPGraph (Concurrent):**
-- ✅ Has BufferNodes after EVERY layer:
+- Has BufferNodes after every layer:
   - Input layer: `(DataStreamNode, BufferNode)` pairs
   - Hidden layers: `(AdditionNode, ActivationNode, BufferNode)` triplets
-  - Input layer: `DataStreamNode` only
-  - Hidden layers: `(AdditionNode, ActivationNode)` pairs only
-  - Direct propagation without buffering
+- Buffers keep past values so backprop can use the values from the tick a
+  sample actually passed through the layer.
 
-**Impact:** Buffers allow concurrent processing by storing values for later use. Without buffers, values propagate immediately through active node processing.
+**MLPGraphForwardProcessing:**
+- Input layer: `DataStreamNode` only
+- Hidden layers: `(AdditionNode, ActivationNode)` pairs only
+- Direct propagation without buffering
+
+**Impact:** buffers make concurrent training possible. Their cost is that
+weight updates are delayed by the buffer depth (stale gradients), so a
+concurrent MLP behaves like classic backprop but is not mathematically identical
+to it.
+
+---
+
+### 2. **Input Layer**
 
 **MLPGraph (Concurrent):**
+```python
 self.inputLayer = [(DataStreamNode(name=f"x{i}"),
                     BufferNode(name=f"Buff_x{i}", size=((self.numHiddenLayers + 1) * 6)))
                    for i in range(self.numInputs)]
 ```
 - DataStreamNode + BufferNode pairs
-- Buffer stores input values for delayed processing
+- The buffer stores input values for delayed use by backprop
 
 **MLPGraphForwardProcessing:**
 ```python
-- DataStreamNode only (no buffer)
----
-
-## Fusion-Level Hybridization (Author definition)
-
-- **Definition:** Fusion hybrid AI is hybridization implemented at the architecture (micro-architecture) level — the internal operations or structure of a model are changed or replaced to create a hybrid model (for example, ANFIS). In contrast to hierarchical and network hybridization, fusion modifies the internal micro-architecture (neurons, membership functions, message functions) rather than only connecting whole models together.
-
-- **Key difference vs other hybrid types:** In hierarchical or network hybridization we keep a model's internals intact and adapt inputs/outputs for compatibility. Fusion changes internals, which nearly always requires reimplementation of parts of the model and new parameter interfaces.
-
-- **Why it's the hardest:** Fusion requires redesigning internal components and often special training wiring; it can break differentiability or require novel gradient paths. Successfully implementing fusion-level hybrids is the strongest evidence the framework supports hybrid models broadly.
-
-- **How ComputationalGraphs supports fusion:** Because every micro-operation is a node, you can "play with legos" at the micro-architecture level: swap activation nodes for fuzzy membership+defuzz subgraphs, replace MLP message functions inside a GNN, or embed evolutionary operators as node-level primitives. This repo demonstrates that pattern (ANFIS examples, `MLPAnfisGraph`, `BackpropAnfisGraph`) while preserving existing fuzzy-system nodes.
-
+DataStreamNode(name=f"x{i}", initialDelay=0, streamDelay=0)
 ```
+- DataStreamNode only (no buffer)
 - `initialDelay=0, streamDelay=0` for immediate streaming
 - Direct connections to multiplication nodes
 
-**Impact:** ForwardProcessing inputs feed directly into computations as nodes become active.
+**Impact:** in forward processing, inputs feed computations directly as nodes
+become active.
 
 ---
 
@@ -49,19 +61,20 @@ self.inputLayer = [(DataStreamNode(name=f"x{i}"),
 
 **MLPGraph (Concurrent):**
 ```python
+layersAhead = (self.numHiddenLayers + 2) - (layerNum + 2)
+bufferNode = BufferNode(name=f"Buff_H{layerNum}N{i}", size=(layersAhead * 6))
 hiddenLayer.append((additionNode, activationNode, bufferNode))
 ```
 - 3-tuple: Addition + Activation + Buffer
-- Buffer stores activated output for later layers
+- Buffer size depends on how many layers lie ahead
+- Activation functions can differ per layer (`hiddenActivationFunctions`)
 
 **MLPGraphForwardProcessing:**
 ```python
 hiddenLayer.append((additionNode, activationNode))
 ```
 - 2-tuple: Addition + Activation only (no buffer)
-- Activation output connects directly to next layer
-
-**Impact:** ForwardProcessing has immediate propagation through layers.
+- Activation output connects directly to the next layer
 
 ---
 
@@ -69,33 +82,30 @@ hiddenLayer.append((additionNode, activationNode))
 
 **MLPGraph (Concurrent):**
 ```python
-labelLayerDelay = ((self.numHiddenLayers + 1) * 3)
+labelLayerDelay = (self.numHiddenLayers + 1) * 3
 self.labelLayer = [DataStreamNode(name=f"L_y{i}", initialDelay=labelLayerDelay)
-                  for i in range(self.numOutputs)]
+                   for i in range(self.numOutputs)]
 ```
-- Has `initialDelay` to synchronize with output arrival time
-- Delays streaming to match when outputs are ready
+- `initialDelay` makes labels arrive when the matching outputs do
 
 **MLPGraphForwardProcessing:**
 ```python
-self.labelLayer = [DataStreamNode(name=f"Label_y{i}", initialDelay=0, streamDelay=0)
-                  for i in range(self.numOutputs)]
+DataStreamNode(name=f"L_y{i}", initialDelay=0, streamDelay=0)
 ```
-- `initialDelay=0, streamDelay=0` - no synchronization needed
-- Labels available immediately (forward processing handles timing through active node propagation)
+- No synchronization delay needed
 
-**Impact:** Concurrent needs delay calculation for synchronization; ForwardProcessing doesn't.
+**Impact:** concurrent mode needs delay calculations; forward processing
+doesn't. (The planned engine replaces hand-computed delays with delay edges
+plus automatic delay balancing; see `docs/REARCHITECTURE_PLAN.md`.)
 
 ---
 
 ### 5. **Weight Layers**
 
 **Both architectures:**
-- Both use `ContainerNode` for weights ✅
-- Both initialize with `random.uniform(-1, 1)` ✅
-- Same structure: 2D arrays connecting layers ✅
-
-**No difference** - weights are identical in both!
+- Use `ContainerNode` for weights
+- Initialize with `random.uniform(-1, 1)` unless an initializer is given
+- Same structure: weights connect every pair of nodes in adjacent layers
 
 ---
 
@@ -106,20 +116,20 @@ self.labelLayer = [DataStreamNode(name=f"Label_y{i}", initialDelay=0, streamDela
 for input_buffer_pair in self.inputLayer:
     self.starting_nodes.append(input_buffer_pair[0])  # DataStreamNode only
 for label_node in self.labelLayer:
-    self.starting_nodes.append(label_node)  # DynamicDataStreamNode
+    self.starting_nodes.append(label_node)
 # Does NOT include weights
 ```
 
 **MLPGraphForwardProcessing:**
 ```python
-self.starting_nodes = (
-    self.inputLayer +           # Input DataStreamNodes
-    self.labelLayer +           # Label DataStreamNodes
-    all_weight_nodes           # ALL weight ContainerNodes
-)
+self.starting_nodes = self.firstLayerMultNodes
+# Before training: mlp.PrepareForForwardProcessing(processor)
+# marks source nodes (inputs, labels, learning rate) and all ContainerNodes
+# (weights) as already processed, so the first multiplications can read them.
 ```
 
-**Impact:** ForwardProcessing includes weights in starting_nodes because they need to be active from the start (they have values and cycles for gradient updates).
+**Impact:** forward processing starts at the first *operations* and relies on
+the preparation step to make data and weights available.
 
 ---
 
@@ -130,10 +140,6 @@ self.starting_nodes = (
 def LoadData(self, X, y):
     # X = [[all_x0_values], [all_x1_values], ...] (row-per-feature)
     # y = [[all_y0_values], [all_y1_values], ...] (row-per-output)
-    for i in range(self.numInputs):
-        self.inputLayer[i][0].data = X[i]  # Load into DataStreamNode
-    for i in range(self.numOutputs):
-        self.labelLayer[i].data = y[i]
 ```
 - Data format: **rows are features**, columns are samples
 - Example: `X = [[0,0,1,1], [0,1,0,1]]` for 4 samples of 2 features
@@ -143,15 +149,12 @@ def LoadData(self, X, y):
 def LoadData(self, X_data, y_data):
     # X_data = [[x0, x1], [x0, x1], ...] (row-per-sample)
     # y_data = [[y0], [y0], ...] (row-per-sample)
-    for i in range(self.numInputs):
-        feature_column = [sample[i] for sample in X_data]  # Extract column
-        self.inputLayer[i].data = feature_column
 ```
 - Data format: **rows are samples**, columns are features
 - Example: `X = [[0,0], [0,1], [1,0], [1,1]]` for 4 samples of 2 features
 - **Transposes internally** to match DataStreamNode expectations
 
-**Impact:** Different input formats! MLPGraph expects transposed data.
+**Impact:** the two classes expect different input layouts.
 
 ---
 
@@ -159,22 +162,21 @@ def LoadData(self, X_data, y_data):
 
 **MLPGraph (Concurrent):**
 ```python
-mlpProcessor.ComputeGraph(totalIterations + 1)
+processor.ComputeGraph(totalIterations + 1)
 ```
 - Single continuous execution
-- All nodes process every iteration (concurrent)
+- All nodes process every tick from the same snapshot
 - Buffers synchronize data flow
-- All samples processed in parallel streams
+- Samples stream through the network in a pipeline
 
 **MLPGraphForwardProcessing:**
 ```python
 for epoch in range(epochs):
     processor.ForwardProcessing(iterations=iterations_per_epoch)
 ```
-- Active node execution (only nodes with completed predecessors)
-- Nodes only process when active (all predecessors done)
-- No buffering - immediate propagation
-- Samples processed sequentially (one sample at a time through active node propagation)
+- Replays a precomputed dependency-ordered sequence
+- No buffering, immediate propagation
+- Samples processed one at a time
 
 ---
 
@@ -182,19 +184,46 @@ for epoch in range(epochs):
 
 | Feature | MLPGraph (Concurrent) | MLPGraphForwardProcessing |
 |---------|----------------------|---------------------------|
-| **Buffers** | ✅ After every layer | ❌ None |
+| **Mode status** | Main, validated | Experimental |
+| **Buffers** | After every layer | None |
 | **Input Layer** | DataStream + Buffer pairs | DataStream only |
 | **Hidden Layers** | (Add, Act, Buffer) | (Add, Act) |
 | **Label Delays** | Calculated sync delays | No delays (0, 0) |
-| **Starting Nodes** | Inputs + Labels | Inputs + Labels + **Weights** |
-| **Data Format** | Rows=features | Rows=samples (transposed internally) |
-| **Processing** | Concurrent (all nodes) | Active nodes only (when predecessors complete) |
-| **Synchronization** | Via buffers + delays | Via active node propagation |
+| **Starting Nodes** | Inputs + Labels | First-layer multiplications (sources and weights pre-marked as processed) |
+| **Data Format** | Rows = features | Rows = samples (transposed internally) |
+| **Processing** | All nodes every tick (snapshot) | Dependency-ordered sequence |
+| **Synchronization** | Buffers + delays | Execution order |
+| **Weight updates** | Delayed by buffer depth | Immediate |
 
 ---
 
+## Known Issues & Design Notes
 
-## Known Issues & Design Challenges
+### Concurrent Mode Gradient Delay
+After the backpropagation wiring fix (hidden-layer error gradients connected to
+their learning-rate multipliers), the gradient delay in concurrent mode turned
+out not to be a significant problem. The concurrent MLP reaches the second
+descent on XOR, and buffer delays don't prevent convergence. They do make
+training more sensitive to the learning rate. Forward processing remains useful
+for buffer-free training.
 
-### Concurrent Mode Gradient Delay Problem (Revised)
-After fixing the backpropagation connection issue, recent tests show that the gradient delay in concurrent mode is not a significant problem. The model can now achieve the second descent in the XOR problem, and buffer-induced delays do not prevent proper convergence. The previous belief that concurrent mode could not reach full learning curve descent was incorrect. Forward processing is still useful for buffer-free training, but concurrent mode is now validated for effective learning after the backprop fix.
+---
+
+## Hybridization Vocabulary
+
+- **Fusion hybrid:** changes a model's micro-architecture: its internal
+  operations or structure (for example ANFIS, or an MLP layer mixing sigmoid,
+  tanh and ReLU neurons). Traditionally the hardest kind of hybrid, because it
+  usually requires reimplementing parts of the models.
+- **Modular hybrid:** whole models cooperate without changing their internals,
+  either hierarchically (one model's output feeds another) or as a network
+  (ensembles, interacting modules). The main risk is hidden dependencies that
+  only show up during implementation.
+- **How Zorvan supports both:** every micro-operation is a node, so fusion means
+  rewiring or swapping nodes (activations, membership functions, operators)
+  rather than reimplementing a model. Modular composition means connecting
+  subgraphs, and the visual graph makes dependencies explicit. Examples in this
+  repository: `MLPAnfisGraph` / `BackpropAnfisGraph` (ANFIS XOR example in the
+  GUI) and per-layer activations via `MLPGraph(hiddenActivationFunctions=...)`.
+  Mixing activations *within* a layer is done by wiring activation nodes
+  directly.

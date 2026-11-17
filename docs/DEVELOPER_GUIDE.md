@@ -1,6 +1,6 @@
 # Developer Guide
 
-This guide provides a concise overview for contributors and agents working on this repository. It complements `CONTRIBUTING.md` and `AGENT_POLICY.md`.
+This guide provides a concise overview for contributors and agents working on this repository. It complements `CONTRIBUTING.md` and `AGENTS.md` (rules for AI agents).
 
 ## Key Practices
 
@@ -58,17 +58,17 @@ pre-commit run --all-files
 
 ## Quick Workflow
 
-1. Branch from `main` (or `PyQTUI` if that's your working branch).
+1. Branch from `main`.
 2. Create failing tests demonstrating the desired behavior.
 3. Implement minimal changes to satisfy tests.
 4. Run tests and `pre-commit` hooks locally.
 5. Use `git cz` to create structured commits; split logical changes into separate commits.
-5. Push the branch and ensure local CI/test smoke-runs succeed; since this repository is maintained in a solo-developer mode, opening a PR is optional and not required for day-to-day fixes—commit directly after tests and documentation are updated.
+6. Push the branch and ensure local CI/test smoke-runs succeed; since this repository is maintained in a solo-developer mode, opening a PR is optional and not required for day-to-day fixes—commit directly after tests and documentation are updated.
 
 ### Experiments vs Tests
 
-- **Tests:** short, deterministic, and automated assertions that verify program behavior. Place tests under `Tests/` or `zorvan/Tests/` and run them with `pytest`.
-- **Experiments:** long-running or exploratory scripts used for scientific comparisons, plotting, or benchmarking. Place experiments under `Experiments/` (or `Examples/` when tightly coupled to an example). Prefer prefixing such scripts with `exp_` (e.g., `exp_my_experiment.py`) to make them easy to find and to avoid pytest collection. Experiments are not part of the automated `pytest` run by default; see `EXPERIMENTS.md` for conventions.
+- **Tests:** short, deterministic, and automated assertions that verify program behavior. Place tests under `Tests/core/` (engine) or `Tests/gui_tests/` (GUI) and run them with `pytest`.
+- **Experiments:** long-running or exploratory scripts used for scientific comparisons, plotting, or benchmarking. Place experiments under a top-level `Experiments/` folder (create it when needed; it isn't part of the public tree yet), or `zorvan/Examples/` when tightly coupled to an example. Prefer prefixing such scripts with `exp_` (e.g., `exp_my_experiment.py`) to make them easy to find and to avoid pytest collection. Experiments are not part of the automated `pytest` run by default; see `EXPERIMENTS.md` for conventions.
 
 ## Test Templates
 
@@ -78,7 +78,7 @@ See `Tests/templates/` for test template skeletons.
 
 This repository supports a solo-developer workflow focused on rapid iteration for bug fixes and migration work. The updated policy is:
 
-- The **new UI replaces the legacy UI** and we prioritize restoring feature parity and fixing regressions over adding new features.
+- The PyQt editor (`run_new_ui.py`, MVVM layer over `gui_framework/legacy/`) is the current UI. A new TypeScript UI is planned (`docs/REARCHITECTURE_PLAN.md`, Phase 5), so prefer fixes over large new PyQt features.
 - For small fixes (bugs, docs, tests), you may commit directly to the primary working branch after verifying tests and updating docs — **PRs are optional and not required** for solo work.
 - For larger, risky refactors or experimental work, create a topic branch with a descriptive name and keep changes small and well-tested; when ready, merge into the main branch following your normal commit hygiene.
 - Keep commits focused and small; squash or rebase large topic branches before merging to keep history readable.

@@ -1,6 +1,6 @@
 # GUI Test Suite
 
-This directory contains the GUI-oriented pytest suite for the ComputationalGraphs project.
+This directory contains the GUI-oriented pytest suite for the Zorvan project.
 
 ## Structure
 

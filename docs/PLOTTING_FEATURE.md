@@ -8,7 +8,7 @@ Added a real-time plotting feature to the Computational Graphs GUI that allows u
 ## Features Implemented
 
 ### 1. Plot Configuration Dialog (`PlotConfigDialog`)
-- **Location**: `ComputationalGraphs/GUI/plot_window.py`
+- **Location**: `gui_framework/legacy/plot_window.py`
 - **Functionality**:
   - Displays list of all nodes in the graph
   - **Phase 2: Graph/Subgraph Filter** - Filter nodes by "All Nodes", "Mother Graph Only", or specific subgraphs
@@ -17,7 +17,7 @@ Added a real-time plotting feature to the Computational Graphs GUI that allows u
   - OK/Cancel buttons
 
 ### 2. Plot Window (`PlotWindow` / `PlotWindowPG`)
-- **Location**: `ComputationalGraphs/GUI/plot_window.py` (matplotlib), `plot_window_pyqtgraph.py` (pyqtgraph)
+- **Location**: `gui_framework/legacy/plot_window.py` (matplotlib), `plot_window_pyqtgraph.py` (pyqtgraph)
 - **Functionality**:
   - **PyQtGraph (primary)**: Hardware-accelerated, real-time plotting with OpenGL support
   - **Matplotlib (fallback)**: Traditional plotting with mplcursors hover support
@@ -115,10 +115,10 @@ pw = create_plot_window(nodes, max_iterations, parent, backend='auto')
 - **Expected**: Loss decreasing, output converging
 - **Max iterations**: 1000-5000
 
-### Fuzzy System
-- **Plot**: Temperature input/output nodes
-- **Expected**: Smooth transitions between states
-- **Max iterations**: 50-100
+### Fuzzy System (ANFIS XOR)
+- **Plot**: Output and error/MSE nodes
+- **Expected**: Error decreasing as the consequent parameters train
+- **Max iterations**: 200-1000
 
 ## Technical Details
 
@@ -136,7 +136,7 @@ pw = create_plot_window(nodes, max_iterations, parent, backend='auto')
 
 ### File Structure
 ```
-ComputationalGraphs/GUI/
+gui_framework/legacy/
 ├── main_window.py         (Modified: added plot button & integration)
 ├── plot_window.py         (New: PlotConfigDialog & PlotWindow classes)
 └── graph_runner.py        (Unchanged: already emits step_completed signal)
@@ -144,19 +144,9 @@ ComputationalGraphs/GUI/
 
 ## Testing
 
-### Test Script
-Created `test_plot.py` for quick testing:
-- Automatically loads EA example
-- Prints usage instructions
-- Ready for interactive testing
+Automated plot tests live in `Tests/gui_tests/unit/plot/` and `Tests/gui_tests/integration/plot/`.
 
-### Run Test
-```bash
-# from repository root
-python test_plot.py
-```
-
-Or use the regular GUI:
+For interactive testing, launch the GUI and load an example (the EA examples are a good fit):
 ```bash
 python run_new_ui.py
 ```

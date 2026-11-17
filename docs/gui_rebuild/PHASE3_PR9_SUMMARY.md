@@ -1,5 +1,7 @@
 # Phase 3 PR #9: Theme Manager Migration - Completion Summary
 
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+
 **Status**: ✅ COMPLETE
 **Date Completed**: 2025-12-19
 **Duration**: 1 day (estimated 1-2 days)

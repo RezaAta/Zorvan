@@ -1,5 +1,7 @@
 # Developer Quickstart Guide - GUI Rebuild
 
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+
 ## Overview
 
 This guide helps developers get started with the new MVVM GUI architecture. Whether you're contributing to the migration or building new widgets, this document provides practical examples and best practices.
@@ -10,7 +12,7 @@ This guide helps developers get started with the new MVVM GUI architecture. Whet
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/ORG_OR_USER/zorvan.git
+git clone <your Zorvan repository URL>
 cd zorvan
 
 # 2. Create virtual environment (recommended)
@@ -51,7 +53,7 @@ pytest
 # Run specific test categories
 pytest gui_tests/unit/                    # Unit tests (no GUI)
 pytest gui_tests/integration/             # Integration tests (headless)
-pytest zorvan/Tests/MLPTests/  # Core MLP tests
+pytest Tests/core/mlp/  # Core MLP tests
 
 # Run with coverage
 pytest --cov=gui_framework --cov-report=html

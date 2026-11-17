@@ -1,5 +1,7 @@
 # Target GUI Architecture Design
 
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+
 ## Executive Summary
 
 This document defines the target MVVM (Model-View-ViewModel) architecture for the rebuilt ComputationalGraphs GUI. The design prioritizes:

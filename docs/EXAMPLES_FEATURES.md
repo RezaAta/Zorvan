@@ -1,7 +1,9 @@
 # Examples and Automation Features - Implementation Summary
 
 ## Overview
-Successfully added Examples menu and MLP/Backpropagation automation tools to your ComputationalGraphs GUI.
+The Examples menu and the MLP/backpropagation automation tools of the Zorvan GUI.
+
+> The GUI modules described here live in `gui_framework/legacy/` (`examples_loader.py`, `mlp_dialog.py`, `backprop_dialog.py`, `main_window.py`) and are reached from the MVVM layer through adapters in `gui_framework/adapters/`.
 
 > Note: The files in `zorvan/Examples/` are user-facing usage examples and demos, not part of the automated test suite.
 
@@ -13,25 +15,18 @@ Successfully added Examples menu and MLP/Backpropagation automation tools to you
 - Layout persistence: Examples can now save & restore GUI layouts (node positions, colors, sizes, and labels) using `ExamplesRepository`. The GUI provides a "Save Current Layout" action in the Examples menu to persist the current canvas positions for the last loaded example. Layouts are stored in `.examples_layouts.json` by default and are used automatically when loading examples to restore visuals.
 - **Purpose**: Manages example graph templates
 - **Features**:
-  - Organized categories: Basic, Neural Networks, Fuzzy Systems, Evolutionary Algorithms
-  - 7 example graphs ready to load
+  - Organized categories: Basic, Neural Networks (Concurrent / Forward / Manual), Fuzzy Systems, Evolutionary Algorithms
   - Easy to extend with more examples
 
 **Available Examples:**
-- **Basic**:
-  - Fibonacci Sequence (recursive computation)
-  - Simple Addition Chain (sequential operations)
+(as defined in `gui_framework/legacy/examples_loader.py`)
 
-- **Neural Networks**:
-  - XOR Problem (2-2-1 with backpropagation)
-  - Simple MLP (1-1-1 minimal network)
-  - Iris Classification (4-5-3-3 multi-class)
-
-- **Fuzzy Systems**:
-  - Temperature Control (fan speed control)
-
-- **Evolutionary Algorithms**:
-  - De Jong Sphere Function (genetic optimization)
+- **Basic**: Fibonacci Sequence, Simple Addition Chain, Fully Connected Addition (3 nodes)
+- **Neural Networks – Concurrent**: XOR Problem (2-2-1), Simple MLP (1-1-1), Iris Classification (4-5-3-3)
+- **Neural Networks – Forward** (experimental mode): XOR Problem (2-2-1), Simple MLP (1-1-1), XOR with bias
+- **Neural Networks – Manual** (experimental mode): XOR Problem (2-2-1)
+- **Fuzzy Systems**: ANFIS XOR (Concurrent)
+- **Evolutionary Algorithms**: De Jong Sphere Function, De Jong with Elitism
 
 ### 2. `mlp_dialog.py`
 - **Purpose**: Interactive MLP generator
@@ -71,7 +66,7 @@ File
 │   │   ├── Simple MLP (1-1-1)
 │   │   └── Iris Classification (4-5-3-3)
 │   ├── Fuzzy Systems >
-│   │   └── Temperature Control (Fan Speed)
+│   │   └── ANFIS XOR (Concurrent GUI)
 │   └── Evolutionary Algorithms >
 │       └── De Jong Sphere Function
 ├── ──────────

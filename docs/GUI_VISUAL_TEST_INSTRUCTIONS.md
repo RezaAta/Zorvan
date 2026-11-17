@@ -1,8 +1,10 @@
 # GUI Visual Test Instructions for Forward Processing XOR
 
+> Forward processing is an experimental mode; concurrent processing is the main, validated mode.
+
 ## What We Fixed
 
-The GUI's `graph_runner.py` now automatically calls two preparation methods when using forward processing:
+The GUI's `gui_framework/legacy/graph_runner.py` automatically calls two preparation methods when using forward processing:
 
 1. **`mark_source_nodes_as_processed()`** - Marks nodes with NO predecessors as 'processed':
    - Input DataStreamNodes (x0, x1)
@@ -29,7 +31,7 @@ python run_new_ui.py
 ```
 
 ### Step 2: Load the XOR Example
-1. Go to menu: **Examples → Neural Networks → XOR Problem (2-2-1)**
+1. Go to menu: **Examples → Neural Networks - Forward → XOR Problem (2-2-1) - Forward**
 2. This loads an MLP with:
    - 2 inputs (x0, x1)
    - 2 hidden neurons with sigmoid activation

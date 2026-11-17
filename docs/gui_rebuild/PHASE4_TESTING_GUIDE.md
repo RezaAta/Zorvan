@@ -1,5 +1,7 @@
 # Phase 4 Canvas Migration - Complete Testing Guide
 
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+
 ## Overview
 
 This guide explains how to test the complete Canvas Migration implementation (Stages 1-3). The implementation includes rendering, interaction, and undo/redo commands.

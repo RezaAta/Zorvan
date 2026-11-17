@@ -1,5 +1,7 @@
 # GUI Rebuild Project - Phase 0 Summary
 
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+
 ## Project Status: Phase 0 Complete ✅
 
 This document provides an executive summary of the GUI rebuild project after completing Phase 0 (Discovery & Planning).

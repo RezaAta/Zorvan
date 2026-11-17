@@ -1,4 +1,4 @@
-# ComputationalGraphs Visual Editor
+# Zorvan Visual Editor
 
 A PyQt6-based graphical interface for creating, editing, and running computational graphs.
 
@@ -18,8 +18,8 @@ python run_new_ui.py
 
 ### Theming & Styling 🔧
 
-- The GUI uses a singleton `ThemeManager` (see `ComputationalGraphs/GUI/theme.py`) to store colors, fonts and stylesheet fragments.
-- Widgets that should react to theme changes should inherit from `ThemeMixin` (`ComputationalGraphs/GUI/theme_utils.py`). `ThemeMixin` subscribes to `theme_changed` and calls an `apply_theme()` method which the widget implements to reapply colors/fonts/styles. This centralizes theme logic, avoids inline `setStyleSheet` duplication, and simplifies testing.
+- The GUI uses a singleton `ThemeManager` (see `gui_framework/legacy/theme.py`) to store colors, fonts and stylesheet fragments.
+- Widgets that should react to theme changes should inherit from `ThemeMixin` (`gui_framework/legacy/theme_utils.py`; an MVVM-friendly variant lives in `gui_framework/widgets/theme_mixin.py`). `ThemeMixin` subscribes to `theme_changed` and calls an `apply_theme()` method which the widget implements to reapply colors/fonts/styles. This centralizes theme logic, avoids inline `setStyleSheet` duplication, and simplifies testing.
 
 
 ### 1. **Node Palette (Left Panel)**
@@ -88,6 +88,20 @@ Interactive workspace for building your computational graph:
 #### View Menu
 - Toggle visibility of Node Palette and Control Panel
 
+### 5. **Processing Modes**
+Choose the processor type in the control panel:
+- **Concurrent** (main mode): each step, every node reads a snapshot of the graph and then updates; a signal moves one node per step.
+- **Forward Processing** (experimental): runs nodes along data dependencies from the configured starting nodes; stopping nodes cut the sequence.
+- **Manual Processing** (experimental): runs a hand-picked node sequence.
+
+### 6. **Graph Simplification**
+Large graphs can be viewed at coarser granularity without changing results:
+- **Compress Selection** (node context menu): collapse a chain into a compressed node; **Decompress Node** reverses it.
+- **Abstract**: group parallel nodes that share the same inputs and outputs into an abstract node; expanding restores them.
+- **Simplify Step / Expand Step** (control panel): apply or undo one step of the automatic simplification algorithm.
+
+Compressed and abstract nodes behave exactly like the nodes they contain, tick for tick. They are a view, not a different computation.
+
 ## Keyboard Shortcuts
 
 - `Ctrl+N` - New graph
@@ -143,7 +157,7 @@ Interactive workspace for building your computational graph:
 - **Start Simple**: Begin with a DataStreamNode → AdditionNode connection to understand the flow
 - **Use Display Nodes**: Add DisplayNode to print values to console during execution
 - **Organize with Layouts**: Use auto-layout buttons to clean up messy graphs
-- **Save Often**: Use File → Save (when implemented) to preserve your work
+- **Save Often**: Use File → Save (`.cgjson` / `.cgz`) to preserve your work
 - **Experiment**: Try different node combinations to build complex computational pipelines
 
 ## Node Categories Explained
@@ -174,11 +188,23 @@ Support genetic algorithm implementations:
 - **CrossoverNode**: Genetic crossover operation
 - **MutationNode**: Genetic mutation operation
 
+### Fuzzy Logic Nodes
+Build fuzzy inference systems:
+- **PiecewiseLinearNode**: Piecewise linear membership function
+- **GaussianMembershipNode**: Gaussian membership (inputs: value, center, sigma, in that order)
+- **MinNode / MaxNode**: Fuzzy AND / OR
+
+### Structure Nodes
+- **ContainerNode**: Holds a value that accumulates updates (e.g. trainable weights)
+- **CompressedNode / AbstractNode**: Complex nodes created by simplification
+
+Note: node inputs are **ordered** by the order connections were made. For nodes where position matters (e.g. GaussianMembership, Subtraction, Division), connect inputs in the expected order.
+
 ## Troubleshooting
 
 **GUI doesn't start**:
 - Ensure PyQt6 is installed: `pip install PyQt6`
-- Check Python version (3.8+ recommended)
+- Check Python version (3.10 or 3.11 are tested in CI)
 
 **Nodes don't connect**:
 - Make sure you're dragging from output port (bottom) to input port (top)
@@ -192,47 +218,41 @@ Support genetic algorithm implementations:
 **Layout algorithms don't work**:
 - Install networkx: `pip install networkx`
 
-## Future Enhancements
+## Feature Status
 
-- [ ] Save/Load graph to/from JSON or Python files
-- [ ] Undo/Redo functionality
- - [x] Copy/Paste nodes
-- [ ] Node grouping/subgraphs
+- [x] Save/Load graphs (`.cgjson` / `.cgz`)
+- [x] Undo/Redo for core canvas edits
+- [x] Copy/Paste nodes
+- [x] Node grouping (compression, abstraction, subgraphs)
+- [x] Real-time plotting of node values
+- [x] Custom node creation interface
 - [ ] Breakpoints for debugging
 - [ ] Export graph as image
-- [ ] Real-time plotting of node values
-- [ ] Custom node creation interface
+
+The next major UI is planned as a TypeScript/WebGL editor with a Tauri desktop app (see `docs/REARCHITECTURE_PLAN.md`, Phase 5). The PyQt editor remains the supported UI until that reaches feature parity.
 
 ## Contributing
 
-The project follows a focused rebuild policy prioritizing feature parity and stability over new features. The **new UI replaces the legacy GUI** — the legacy UI is deprecated and will be removed once parity is verified.
+- Prefer fixes and parity work over large new PyQt features (the UI will be replaced; see above).
+- To add node types or editors:
+  1. Add the node type to `gui_framework/legacy/node_registry.py`.
+  2. Make sure the canvas can instantiate it (`gui_framework/legacy/graph_canvas.py`, drop handling).
+  3. Add type-specific editors in the node editor dialog (`gui_framework/views/node_editor_dialog.py`).
+- Include tests and doc updates with every change (`CONTRIBUTING.md`).
 
-**Development workflow (solo-developer mode):**
-- This repository is currently maintained by a single developer; the workflow is simplified: commit directly to the main branch after verifying the local test suite and updating relevant documentation. There is no requirement to open PRs for personal branches during this period. Ensure changes include tests and documentation updates where applicable.
+## Headless GUI tests (CI)
 
-**Fixes-first policy:**
-- Do not add new features until all critical feature parity items (preferences, examples loader, icons, inspector, plotting dialogs, and layout behavior) are restored and tested.
-
-Feel free to extend the GUI with additional features or node types by:
-1. Adding node types to `node_registry.py`
-2. Implementing instantiation in `graph_canvas.py` dropEvent
-## Headless GUI tests (CI)  ✅
-
-- The CI now runs the GUI test job on pull requests and main branches using the `gui-tests` job in `.github/workflows/ci.yml`.
-- The job uses an offscreen Qt platform; to run GUI tests locally in headless mode:
+- CI runs a GUI smoke job (`gui-smoke` in `.github/workflows/ci.yml`) with an offscreen Qt platform under Xvfb. Some Windows-unstable GUI tests are currently skipped.
+- To run GUI tests headless locally:
 
   ```bash
-  # Linux: install Xvfb then:
+  # Linux: install Xvfb, then
   export QT_QPA_PLATFORM=offscreen
-  xvfb-run -a python -m pytest gui_tests/integration -q
+  xvfb-run -a python -m pytest Tests/gui_tests/integration -q
   ```
 
-- A quick fast smoke test file `Tests/gui_tests/integration/startup/test_gui_smoke.py` verifies the `MainWindow` can be constructed in offscreen mode.
-
-3. Adding type-specific editors in `node_editor_dialog.py`
+- `Tests/gui_tests/integration/startup/test_gui_smoke.py` checks that the `MainWindow` can be constructed in offscreen mode.
 
 ---
 
-**Version**: 1.0
-**Author**: ComputationalGraphs Project
-**License**: [Your License]
+**License**: MIT (see `LICENSE`)
