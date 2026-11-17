@@ -96,52 +96,42 @@ class AbstractNode(Node):
 
     def ProcessBatch(self, *inputs):
         """
-        Process all contained nodes in parallel.
+        Phase 2 of a processing tick: process every internal node.
 
-        Since nodes in an AbstractNode are disjoint (not connected to each other),
-        they can be processed simultaneously.
+        Inputs were already captured from the tick snapshot in UpdateInputs()
+        (Phase 1); internal nodes must NOT re-read them here, otherwise they
+        would see values already updated in this tick and the result would
+        depend on processing order. Internal nodes are processed sequentially:
+        they are independent, so order does not matter, and avoiding a thread
+        pool per node per tick keeps runs deterministic and cheaper.
         """
         if not self.nodes:
             return
 
-        with ThreadPoolExecutor() as executor:
+        for node in self.nodes:
+            if hasattr(node, "ProcessBatch"):
+                node.ProcessBatch()
 
-            def batch_process_node(node):
-                if hasattr(node, "UpdateInputs"):
-                    node.UpdateInputs()
-                if hasattr(node, "ProcessBatch"):
-                    node.ProcessBatch()
-                return node.value
-
-            futures = [executor.submit(batch_process_node, node) for node in self.nodes]
-            results = [future.result() for future in futures]
-
-        self.value = results
+        self.value = [node.value for node in self.nodes]
 
     def UpdateInputs(self):
         """
-        Update inputs for all internal nodes from the AbstractNode's predecessors.
+        Phase 1 of a processing tick: snapshot inputs for every internal node.
 
-        Since all internal nodes share the same predecessors, we collect inputs
-        at the AbstractNode level and propagate to each internal node.
+        Each internal node gathers from its own predecessors (the shared
+        external predecessors). Nodes that are mid-calculation are skipped,
+        mirroring the processors' rule for top-level nodes.
         """
         # Collect inputs at the AbstractNode level
         self.inputs = [
             pred.value for pred in self.predecessors if hasattr(pred, "value")
         ]
 
-        # Propagate inputs to all internal nodes in parallel
-        # Each internal node will gather from its own predecessors (which may be
-        # the original external predecessors before abstraction)
-        if self.nodes:
-            with ThreadPoolExecutor() as executor:
-                futures = [
-                    executor.submit(node.UpdateInputs)
-                    for node in self.nodes
-                    if hasattr(node, "UpdateInputs")
-                ]
-                for future in futures:
-                    future.result()
+        for node in self.nodes:
+            if getattr(node, "midCalculation", False):
+                continue
+            if hasattr(node, "UpdateInputs"):
+                node.UpdateInputs()
 
     # --- Methods for managing internal nodes ---
 

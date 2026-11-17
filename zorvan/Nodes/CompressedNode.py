@@ -6,7 +6,11 @@ class CompressedNode(Node):
     """
     A CompressedNode combines sequentially connected nodes into a single node.
 
-    When processed, it executes its contained nodes in order (first to last).
+    Under the graph processors (UpdateInputs + ProcessBatch per tick), a
+    compressed chain behaves exactly like the uncompressed nodes: each internal
+    node advances one tick at a time from the tick snapshot. Calling
+    Operation() directly instead evaluates the whole chain in one shot (a
+    "merged" evaluation), which does NOT preserve per-tick timing.
     The compressed node's value is the value of the last node in the chain.
 
     Connection routing:
@@ -96,45 +100,38 @@ class CompressedNode(Node):
 
     def ProcessBatch(self, *inputs):
         """
-        Process all contained nodes sequentially (not in parallel).
+        Phase 2 of a processing tick: process every internal node.
 
-        Since nodes in a compressed chain depend on each other,
-        they must be processed in order. Each node's UpdateInputs is called
-        before its ProcessBatch to ensure proper input gathering.
-
-        Note: Internal nodes are processed with forcedBatchProcessing=True
-        temporarily to ensure all inputs are consumed in one pass.
+        Inputs were already captured from the tick snapshot in UpdateInputs()
+        (Phase 1), so internal nodes must NOT re-read their inputs here.
+        This keeps the chain's per-tick latency identical to the uncompressed
+        graph (compression is a view, not a change of semantics), and makes
+        the result independent of processing order.
         """
         if not self.nodes:
             return
 
         for node in self.nodes:
-            # UpdateInputs gathers values from predecessors
-            if hasattr(node, "UpdateInputs"):
-                node.UpdateInputs()
-            # ProcessBatch calls Operation with the gathered inputs
-            # Temporarily enable forcedBatchProcessing to consume all inputs
             if hasattr(node, "ProcessBatch"):
-                original_forced = getattr(node, "forcedBatchProcessing", False)
-                node.forcedBatchProcessing = True
                 node.ProcessBatch()
-                node.forcedBatchProcessing = original_forced
 
         # Update the CompressedNode's value from the last node
-        self.value = self.nodes[-1].value if self.nodes else 0
+        self.value = self.nodes[-1].value
 
     def UpdateInputs(self):
         """
-        Update inputs for the first node only.
+        Phase 1 of a processing tick: snapshot inputs for every internal node.
 
-        The first node gathers inputs from the CompressedNode's predecessors.
-        Internal nodes will gather inputs from their internal predecessors
-        during the Operation phase.
+        The first node reads the chain's external predecessors; each later node
+        reads the previous node's value from the *previous* tick, exactly as it
+        would in the uncompressed graph. Nodes that are mid-calculation are
+        skipped, mirroring the processors' rule for top-level nodes.
         """
-        if self.nodes and hasattr(self.nodes[0], "UpdateInputs"):
-            # First node uses CompressedNode's predecessors as input source
-            # Internal predecessor links are preserved, so just update it
-            self.nodes[0].UpdateInputs()
+        for node in self.nodes:
+            if getattr(node, "midCalculation", False):
+                continue
+            if hasattr(node, "UpdateInputs"):
+                node.UpdateInputs()
 
         # Also collect inputs at the CompressedNode level
         self.inputs = [
