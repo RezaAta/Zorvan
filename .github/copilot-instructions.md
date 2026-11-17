@@ -5,7 +5,8 @@ repository map, execution semantics, conventions. Read it before making changes.
 The essentials:
 
 - **Ask before any git write**: no branches, commits, pushes, tags, merges or
-  rebases without the maintainer's explicit approval for that specific action.
+  rebases without the maintainer's explicit approval. Propose the whole batch
+  (commits, branch, push) at once; one approval covers that proposal.
 - **Test first**; every behavioural change needs a test and a doc update.
   Fast check: `python -m pytest -q Tests/core`.
 - **Preserve concurrent-processing semantics**: snapshot inputs in Phase 1,

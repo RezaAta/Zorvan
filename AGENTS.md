@@ -8,9 +8,11 @@ repository. Human contributors: see `CONTRIBUTING.md` and
 
 1. **Ask before any git write.** Don't create branches (or worktrees used as
    branches), commit, push, tag, merge, rebase or rewrite history without the
-   maintainer's explicit approval **for that specific action**. Approval for one
-   commit doesn't cover the next. When work is ready, propose the commit(s): the
-   message and the files. Read-only git (`status`, `diff`, `log`, `show`) is fine.
+   maintainer's explicit approval. Ask **once per batch**: when work is ready,
+   propose everything together (each commit's message and scope, any branch,
+   whether to push), and one approval covers that whole proposal. Work done
+   afterwards needs a new proposal. Read-only git (`status`, `diff`, `log`,
+   `show`) is fine.
 2. **Test first.** Write a failing test, make it pass, then refactor. Every
    behavioural change needs a test; every user-visible change needs a doc update
    (and an entry under "Unreleased" in `CHANGELOG.md`).
