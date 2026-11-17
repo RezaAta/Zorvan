@@ -11,7 +11,7 @@ from gui_framework.legacy import ExamplesLoader, GraphCanvas
 
 app = QApplication([])
 loader = ExamplesLoader()
-g = loader._build_piecewise_mlp2_concurrent()
+g = loader._build_iris_mlp_concurrent()
 canvas = GraphCanvas(None)
 canvas.graph = g
 for idx, n in enumerate(g.nodes):

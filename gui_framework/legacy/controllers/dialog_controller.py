@@ -296,7 +296,7 @@ class DialogController:
             # Check if this is an MLP example and apply MLP layout automatically
             is_mlp_example = any(
                 keyword in name.lower()
-                for keyword in ["mlp", "xor", "iris", "diabetes", "piecewise", "neural"]
+                for keyword in ["mlp", "xor", "iris", "neural"]
             )
             if is_mlp_example:
                 try:

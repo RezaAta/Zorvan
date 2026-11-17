@@ -46,23 +46,17 @@ def test_cgjson_save_load_basic():
 
 
 def test_cgjson_save_load_numpy_attrs():
-    loader = ExamplesLoader()
-    # Use piecewise node from fuzzy systems
-    ex = loader.categories["fuzzy_systems"].examples[0][2]()
-    # Find any PiecewiseLinearNode and set numpy arrays explicitly
-    found = False
-    for n in ex.nodes:
-        if (
-            type(getattr(n, "__class__", None)).__name__ == "PiecewiseLinearNode"
-            or n.__class__.__name__ == "PiecewiseLinearNode"
-        ):
-            n.xs = np.array([0.0, 25.0, 50.0])
-            n.mus = np.array([0.0, 0.5, 1.0])
-            found = True
-            break
-    if not found:
-        # fallback to simple graph
-        ex = loader.categories["basic"].examples[0][2]()
+    from zorvan.Nodes.DisplayNode import DisplayNode
+    from zorvan.Nodes.PiecewiseLinearNode import PiecewiseLinearNode
+
+    # Small fuzzy-style graph: input -> piecewise membership with numpy arrays
+    ex = Graph()
+    inp = DisplayNode(name="input", value=10.0)
+    member = PiecewiseLinearNode(name="member")
+    member.xs = np.array([0.0, 25.0, 50.0])
+    member.mus = np.array([0.0, 0.5, 1.0])
+    ex.AddNode(inp, member)
+    ex.ConnectPreNode(member, inp)
 
     tmpf = tempfile.NamedTemporaryFile(delete=False, suffix=".cgjson")
     tmpname = tmpf.name

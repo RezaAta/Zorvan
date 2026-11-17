@@ -13,7 +13,7 @@ app = QApplication(sys.argv)
 loader = ExamplesLoader()
 # Large example builder
 try:
-    g = loader._build_piecewise_mlp2_concurrent()
+    g = loader._build_iris_mlp_concurrent()
 except Exception:
     g = loader.categories["basic"].examples[0][2]()
 

@@ -1,9 +1,41 @@
-from gui_framework.legacy import ExamplesLoader, MLPLayoutEngine
+from gui_framework.legacy import MLPLayoutEngine
+
+
+def _build_concurrent_mlp_with_bias():
+    """Concurrent 2-input MLP (2 hidden ReLU layers, bias on) with backprop and MSE nodes."""
+    from zorvan.Core.BackpropGraph import BackpropGraph
+    from zorvan.Core.Graph import Graph
+    from zorvan.Core.MLPGraph import MLPGraph
+    from zorvan.Nodes.LinearNode import LinearNode
+    from zorvan.Nodes.ReLUNode import ReLUNode
+
+    X = [[0.0, 0.0, 1.0, 1.0], [0.0, 1.0, 0.0, 1.0]]
+    y = [[0.0, 1.0, 1.0, 0.0]]
+    mlp = MLPGraph(
+        numInputs=2,
+        numOutputs=1,
+        numHiddenLayers=2,
+        hiddenLayerSizes=[3, 4],
+        activationFunction=ReLUNode,
+        outputLayerType=LinearNode,
+        add_bias=True,
+    )
+    mlp.BuildMLP()
+    mlp.LoadData(X, y)
+    backprop = BackpropGraph(mlp, learningRate=0.01)
+    backprop.BuildBackprop()
+    mlp.CreateErrorBuffers(bufferSize=100, mse_buffer_size=len(X[0]))
+
+    g = Graph()
+    for n in list(mlp.nodes) + list(backprop.nodes) + mlp.errorBuffers + mlp.mseNodes:
+        if n not in g.nodes:
+            g.AddNode(n)
+    g.UpdateAdjacencyMatrix()
+    return g
 
 
 def test_bias_and_db_placement():
-    loader = ExamplesLoader()
-    g = loader._build_piecewise_mlp2_concurrent()
+    g = _build_concurrent_mlp_with_bias()
     engine = MLPLayoutEngine(g.nodes, grid_size=10)
     pos = engine.layout()
 
