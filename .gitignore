@@ -387,3 +387,7 @@ ComputationalGraph
 
 # Release-export hygiene
 artifacts/
+
+# AI agent local files (shared config .claude/settings.json and CLAUDE.md are tracked)
+.claude/settings.local.json
+CLAUDE.local.md
