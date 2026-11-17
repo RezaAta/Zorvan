@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["main", "master", "MVVM-UI-Migration"]
+    branches: ["main", "master", "MVVM-UI-Migration", "rearchitecture"]
   pull_request:
-    branches: ["main", "master"]
+    branches: ["main", "master", "rearchitecture"]
   workflow_dispatch:
 
 jobs:
