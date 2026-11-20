@@ -239,14 +239,6 @@ class Graph:
     def __repr__(self):
         return f"Graph with {len(self.nodes)} nodes."
 
-    def AbstractNodes(self, nodes):
-        """
-        Create an AbstractNode from a set of nodes.
-        """
-        abstract = AbstractNode("", nodes)
-        self.ReplaceNode(abstract, *nodes)
-        return abstract
-
     def ReplaceNode(self, newNode, *oldNode):
         # Add new node; transfer attributes and connections from oldNode
         self.AddNode(newNode)

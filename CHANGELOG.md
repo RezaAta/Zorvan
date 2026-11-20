@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-- Fix (core): `CompressedNode` and `AbstractNode` now follow snapshot semantics under all processors. They gather their internal nodes' inputs in Phase 1 and only compute in Phase 2, so compressing or abstracting nodes no longer changes per-tick results or makes them depend on processing order. `CompressedNode` no longer forces batch processing on its internal nodes, and `AbstractNode` processes internal nodes sequentially instead of in a per-tick thread pool. Covered by `Tests/core/graph/test_complex_node_snapshot_semantics.py`.
+- Docs: added the accepted Phase 0 processing semantics, Python node catalog, and versioned IR proposal, with `.cgjson` mapping notes and documentation for the Windows GUI-test skips.
+- Tooling: added a Python-reference conformance trace recorder and generated cases for 43 built-in node kinds, all 13 GUI examples, and standalone ANFIS XOR; removed the duplicate `Graph.AbstractNodes` definition and two explicitly dead files.
+- Benchmarks: added an initial XOR MLP comparison and graph/hidden-width scaling runs; documented workload differences and the unverified historical 3.91× figure.
+- Refactor: moved the Python implementation, GUI and tests into `reference/`, renamed its import package to `zorvan_reference`, and updated packaging, CI, launch and release paths.
+- Fix (core): `CompressedNode` and `AbstractNode` now follow snapshot semantics under all processors. They gather their internal nodes' inputs in Phase 1 and only compute in Phase 2, so compressing or abstracting nodes no longer changes per-tick results or makes them depend on processing order. `CompressedNode` no longer forces batch processing on its internal nodes, and `AbstractNode` processes internal nodes sequentially instead of in a per-tick thread pool. Covered by `reference/Tests/core/graph/test_complex_node_snapshot_semantics.py`.
 - GUI: removed research-specific demo examples from the Examples menu; a curated example set will replace them. Tests that used them as fixtures now build neutral graphs.
 - Docs: added `docs/REARCHITECTURE_PLAN.md` (roadmap toward a Rust engine with TypeScript/Tauri clients, execution-semantics refinements, decision log).
 - Docs: refreshed the README, agent instructions, contributor guides and GUI docs (current paths, processing-mode status, removed references to missing scripts), rewrote `docs/ARCHITECTURE_COMPARISON.md`, and marked `docs/gui_rebuild/` as an archived record.
