@@ -1,0 +1,16 @@
+{
+  "iterations": 5000,
+  "architecture": [
+    2,
+    4,
+    1
+  ],
+  "examples_per_iteration": 1,
+  "reference_seconds": 1.267456300000049,
+  "numpy_seconds": 0.13089469999977155,
+  "reference_over_numpy": 9.683022307261188,
+  "python": "3.11.9",
+  "numpy": "2.0.2",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "processor_nodes": 95
+}

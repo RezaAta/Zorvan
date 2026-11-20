@@ -1,0 +1,100 @@
+{
+  "benchmark": "identity chain runtime only",
+  "graph_construction": "excluded; dense Graph adjacency is quadratic",
+  "results": [
+    {
+      "nodes": 100,
+      "ticks": 3,
+      "reference_seconds": 0.000430199999755132,
+      "numpy_seconds": 1.359999987471383e-05,
+      "reference_over_numpy": 31.632353214575616
+    },
+    {
+      "nodes": 1000,
+      "ticks": 3,
+      "reference_seconds": 0.003454399999100133,
+      "numpy_seconds": 1.5199999324977398e-05,
+      "reference_over_numpy": 227.26316792815183
+    },
+    {
+      "nodes": 10000,
+      "ticks": 3,
+      "reference_seconds": 0.041132000000288826,
+      "numpy_seconds": 8.889999844541308e-05,
+      "reference_over_numpy": 462.67717344837695
+    },
+    {
+      "nodes": 100000,
+      "ticks": 3,
+      "reference_seconds": 0.4291054000004806,
+      "numpy_seconds": 0.0005811999999423278,
+      "reference_over_numpy": 738.3093600190305
+    }
+  ],
+  "width_scaling": [
+    {
+      "hidden_width": 2,
+      "nodes": 20,
+      "ticks": 4,
+      "reference_seconds": 0.00024000000121304765,
+      "numpy_seconds": 9.229999886883888e-05,
+      "reference_over_numpy": 2.600216729732521
+    },
+    {
+      "hidden_width": 4,
+      "nodes": 36,
+      "ticks": 5,
+      "reference_seconds": 0.0002899999999499414,
+      "numpy_seconds": 2.970000059576705e-05,
+      "reference_over_numpy": 9.764309566757154
+    },
+    {
+      "hidden_width": 8,
+      "nodes": 68,
+      "ticks": 7,
+      "reference_seconds": 0.0007325000005948823,
+      "numpy_seconds": 3.9999998989515007e-05,
+      "reference_over_numpy": 18.31250047748473
+    },
+    {
+      "hidden_width": 16,
+      "nodes": 132,
+      "ticks": 11,
+      "reference_seconds": 0.00231540000095265,
+      "numpy_seconds": 6.369999937305693e-05,
+      "reference_over_numpy": 36.34850900692458
+    },
+    {
+      "hidden_width": 32,
+      "nodes": 260,
+      "ticks": 19,
+      "reference_seconds": 0.008259800000814721,
+      "numpy_seconds": 0.00021770000057586003,
+      "reference_over_numpy": 37.94120339442305
+    },
+    {
+      "hidden_width": 64,
+      "nodes": 516,
+      "ticks": 35,
+      "reference_seconds": 0.030660999998872285,
+      "numpy_seconds": 0.0003797000008489704,
+      "reference_over_numpy": 80.75059238956393
+    },
+    {
+      "hidden_width": 128,
+      "nodes": 1028,
+      "ticks": 67,
+      "reference_seconds": 0.12238360000083048,
+      "numpy_seconds": 0.0004644999989977805,
+      "reference_over_numpy": 263.4738434120325
+    },
+    {
+      "hidden_width": 256,
+      "nodes": 2052,
+      "ticks": 131,
+      "reference_seconds": 0.4901295999989088,
+      "numpy_seconds": 0.0013742999999521999,
+      "reference_over_numpy": 356.6394528239513
+    }
+  ]
+}
