@@ -1,6 +1,6 @@
 # Phase 4 Canvas Migration - Stage 1 Complete
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 ## Summary
 
@@ -9,7 +9,7 @@ Stage 1 (Rendering) of the Canvas Migration is complete. This stage focused on c
 ## What Was Built
 
 ### 1. CanvasViewModel (333 LOC)
-**File:** `gui_framework/viewmodels/canvas_viewmodel.py`
+**File:** `reference/gui_framework/viewmodels/canvas_viewmodel.py`
 
 Pure Python logic for managing canvas rendering state:
 - **Graph Loading**: Load nodes and edges from ComputationalGraph
@@ -27,7 +27,7 @@ Pure Python logic for managing canvas rendering state:
 - `CanvasViewModel`: Main view-model with all logic
 
 ### 2. CanvasView (423 LOC)
-**File:** `gui_framework/views/canvas_view.py`
+**File:** `reference/gui_framework/views/canvas_view.py`
 
 PyQt6 view for displaying the canvas:
 - **QGraphicsScene Integration**: Scene-based rendering
@@ -196,8 +196,8 @@ When all stages are complete, integration will involve:
 
 | File | LOC | Purpose | Status |
 |------|-----|---------|--------|
-| `gui_framework/viewmodels/canvas_viewmodel.py` | 333 | ViewModel logic | ✅ Complete |
-| `gui_framework/views/canvas_view.py` | 423 | View rendering | ✅ Complete |
+| `reference/gui_framework/viewmodels/canvas_viewmodel.py` | 333 | ViewModel logic | ✅ Complete |
+| `reference/gui_framework/views/canvas_view.py` | 423 | View rendering | ✅ Complete |
 | `gui_tests/unit/test_canvas_viewmodel.py` | 399 | Unit tests | ✅ 34/34 passing |
 | `gui_tests/integration/test_canvas_rendering.py` | 282 | Integration tests | ⚠️ 15 created, need libs |
 | `Examples/exp_canvas_view.py` | 141 | Manual test app | ✅ Complete |

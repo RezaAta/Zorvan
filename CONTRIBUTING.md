@@ -43,10 +43,10 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt -r requirements_dev.txt
 pip install -e .
-pytest -q Tests/core   # core suite; add requirements_gui.txt for the GUI tests
+pytest -q reference/Tests/core   # core suite; add requirements_gui.txt for the GUI tests
 ```
 
-- Use the test templates in `Tests/templates/` to scaffold new tests.
+- Use the test templates in `reference/Tests/templates/` to scaffold new tests.
 
 ### Experiments
 
@@ -62,7 +62,7 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-Lint checks are currently advisory in CI (they report but don't block). The core test suite (`Tests/core`) must pass. New code under the planned Rust engine and TypeScript UI will have blocking lint gates (see `docs/REARCHITECTURE_PLAN.md`).
+Lint checks are currently advisory in CI (they report but don't block). The core test suite (`reference/Tests/core`) must pass. New code under the planned Rust engine and TypeScript UI will have blocking lint gates (see `docs/REARCHITECTURE_PLAN.md`).
 
 ## Pull Requests
 

@@ -1,6 +1,6 @@
 # Developer Quickstart Guide - GUI Rebuild
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 ## Overview
 
@@ -53,7 +53,7 @@ pytest
 # Run specific test categories
 pytest gui_tests/unit/                    # Unit tests (no GUI)
 pytest gui_tests/integration/             # Integration tests (headless)
-pytest Tests/core/mlp/  # Core MLP tests
+pytest reference/Tests/core/mlp/  # Core MLP tests
 
 # Run with coverage
 pytest --cov=gui_framework --cov-report=html
@@ -83,7 +83,7 @@ User Action → View → ViewModel → State Store → Event Bus
 
 ```
 ComputationalGraphs/
-├── gui_framework/              # NEW: MVVM framework
+├── reference/gui_framework/              # NEW: MVVM framework
 │   ├── state/                 # State management
 │   │   ├── store.py          # StateStore singleton
 │   │   └── models.py         # State dataclasses
@@ -123,7 +123,7 @@ ComputationalGraphs/
 #### Step 1: Create ViewModel (Pure Python)
 
 ```python
-# gui_framework/viewmodels/counter_vm.py
+# reference/gui_framework/viewmodels/counter_vm.py
 
 from gui_framework.viewmodels.base import BaseViewModel, ObservableProperty
 from gui_framework.events.bus import get_event_bus, Event, EventType
@@ -240,7 +240,7 @@ def test_counter_reset():
 #### Step 3: Create View (PyQt6 UI)
 
 ```python
-# gui_framework/views/counter_view.py
+# reference/gui_framework/views/counter_view.py
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore import Qt
@@ -319,7 +319,7 @@ class CounterView(BaseView):
 #### Step 4: Register Widget
 
 ```python
-# gui_framework/registry/widget_registry.py (add to existing)
+# reference/gui_framework/registry/widget_registry.py (add to existing)
 
 from gui_framework.viewmodels.counter_vm import CounterViewModel
 from gui_framework.views.counter_view import CounterView
@@ -853,14 +853,14 @@ pytest gui_tests/integration/ -v -s
 pytest --cov=gui_framework --cov-report=html
 
 # Format code
-black gui_framework/
-isort gui_framework/
+black reference/gui_framework/
+isort reference/gui_framework/
 
 # Type check
-mypy gui_framework/
+mypy reference/gui_framework/
 
 # Lint
-ruff gui_framework/
+ruff reference/gui_framework/
 ```
 
 ## Summary

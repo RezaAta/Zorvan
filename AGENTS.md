@@ -37,13 +37,13 @@ the current Python code as the behavioural reference) is in
 
 ```powershell
 .\scripts\bootstrap.ps1 -InstallGui        # install deps (+ GUI deps)
-python -m pytest -q Tests/core              # core suite: fast, run on every change
-$env:QT_QPA_PLATFORM="offscreen"; python -m pytest -q Tests/gui_tests/unit/<area>   # GUI tests by area
-python -m ruff check zorvan gui_framework Tests   # lint (advisory in CI)
+python -m pytest -q reference/Tests/core              # core suite: fast, run on every change
+$env:QT_QPA_PLATFORM="offscreen"; python -m pytest -q reference/Tests/gui_tests/unit/<area>   # GUI tests by area
+python -m ruff check reference/zorvan_reference reference/gui_framework reference/Tests   # lint (advisory in CI)
 python -m black --check . ; python -m isort --check-only .   # formatting
 .\scripts\run_checks.ps1                    # core tests; -All for full suite, -Precommit for hooks
 python run_new_ui.py                        # launch the editor
-python zorvan/Examples/FibonacciExample.py  # quick sanity script
+python reference/zorvan_reference/Examples/FibonacciExample.py  # quick sanity script
 ```
 
 Use `python -m <tool>`: the tool executables may not be on PATH.
@@ -54,25 +54,25 @@ Use `python -m <tool>`: the tool executables may not be on PATH.
 - The full GUI suite can crash natively inside Qt (access violation); this
   happens on a clean checkout too.
 
-Run `Tests/core` plus the GUI test directories related to your change, not the
-whole GUI suite. CI runs `Tests/core` on Python 3.10/3.11 plus a GUI smoke test.
+Run `reference/Tests/core` plus the GUI test directories related to your change, not the
+whole GUI suite. CI runs `reference/Tests/core` on Python 3.10/3.11 plus a GUI smoke test.
 
 ## Repository map
 
-- `zorvan/Core/`: `Graph.py` (structure, topology types, compression and
+- `reference/zorvan_reference/Core/`: `Graph.py` (structure, topology types, compression and
   abstraction, simplification, cycles), `GraphProcessor.py` (concurrent, forward
   and manual processing), MLP/backprop/ANFIS graph builders, `CGJsonIO.py`
   (`.cgjson`/`.cgz` persistence; Draw.io export is deprecated).
-- `zorvan/Nodes/`: node types. Base classes: `Node`, `BasicNode`; complex nodes:
+- `reference/zorvan_reference/Nodes/`: node types. Base classes: `Node`, `BasicNode`; complex nodes:
   `CompressedNode`, `AbstractNode`.
-- `zorvan/Examples/`: runnable demo scripts (not tests).
-- `gui_framework/`: PyQt6 editor. Entry point `run_new_ui.py` →
-  `gui_framework/main_window.py`. MVVM layer: `viewmodels/`, `views/`,
+- `reference/zorvan_reference/Examples/`: runnable demo scripts (not tests).
+- `reference/gui_framework/`: PyQt6 editor. Entry point `run_new_ui.py` →
+  `reference/gui_framework/main_window.py`. MVVM layer: `viewmodels/`, `views/`,
   `adapters/`, `state/`, `events/`, `commands/`. Most widgets (canvas, node
   registry, examples loader, plots, controllers) live in
-  `gui_framework/legacy/`.
-- `Tests/core/` (engine) and `Tests/gui_tests/{unit,integration}/` (GUI, by
-  feature area). Templates in `Tests/templates/`.
+  `reference/gui_framework/legacy/`.
+- `reference/Tests/core/` (engine) and `reference/Tests/gui_tests/{unit,integration}/` (GUI, by
+  feature area). Templates in `reference/Tests/templates/`.
 - `tools/`: one-off debug and repro scripts (run with the repo root on
   `PYTHONPATH`).
 - `docs/`: guides; `docs/gui_rebuild/` is an archived record.
@@ -92,7 +92,7 @@ whole GUI suite. CI runs `Tests/core` on Python 3.10/3.11 plus a GUI smoke test.
   value plus a self-loop; prefer `t` over private counters; avoid global random
   state.
 - **Complex nodes are views.** Compressing or abstracting must not change
-  per-tick values (`Tests/core/graph/test_complex_node_snapshot_semantics.py`).
+  per-tick values (`reference/Tests/core/graph/test_complex_node_snapshot_semantics.py`).
 - **Simplification** never splits nodes on cycles (`simplify_fully` only
   splits on acyclic graphs).
 
@@ -109,9 +109,9 @@ whole GUI suite. CI runs `Tests/core` on Python 3.10/3.11 plus a GUI smoke test.
   training (the GUI does this automatically).
 - Each node outputs one value (a value may be any data: number, list, ...).
 - `GraphProcessor` stays single-threaded below 1000 nodes (the GIL dominates).
-- New node type: class in `zorvan/Nodes/` (implement `Operation` and
+- New node type: class in `reference/zorvan_reference/Nodes/` (implement `Operation` and
   `IsValidInput`), a derivative node if differentiable, register it in
-  `gui_framework/legacy/node_registry.py`, add tests in `Tests/core/nodes/`.
+  `reference/gui_framework/legacy/node_registry.py`, add tests in `reference/Tests/core/nodes/`.
 - Experiments and benchmarks are not tests: name them `exp_*.py`
   (`docs/EXPERIMENTS.md`).
 - Line length 88; black + isort (profile black); ruff rules E, F, W, C.

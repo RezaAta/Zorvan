@@ -1,6 +1,6 @@
 # GUI Rebuild Project - Phase 0 Summary
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 ## Project Status: Phase 0 Complete ✅
 
@@ -189,24 +189,24 @@ Only   Testable   Observable   Loose Coupling
 ### Immediate Actions (Week 1)
 
 #### PR #2: State Store
-- Create `gui_framework/state/` module
+- Create `reference/gui_framework/state/` module
 - Implement `StateStore` with immutable state
 - Implement state dataclasses (`AppState`, `ExecutionState`, `CanvasState`)
 - Write 15+ unit tests
 - Documentation for state management
 
 #### PR #3: Event Bus
-- Create `gui_framework/events/` module
+- Create `reference/gui_framework/events/` module
 - Implement `EventBus` with pub/sub
 - Define `EventType` enum
 - Write 12+ unit tests
 - Documentation for event system
 
 #### PR #4: Base Classes & Registry
-- Create `gui_framework/viewmodels/base.py`
-- Create `gui_framework/views/base.py`
-- Create `gui_framework/registry/widget_registry.py`
-- Create `gui_framework/window/manager.py`
+- Create `reference/gui_framework/viewmodels/base.py`
+- Create `reference/gui_framework/views/base.py`
+- Create `reference/gui_framework/registry/widget_registry.py`
+- Create `reference/gui_framework/window/manager.py`
 - Write 24+ unit tests
 - Documentation for framework API
 

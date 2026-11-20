@@ -8,7 +8,7 @@ Added a real-time plotting feature to the Computational Graphs GUI that allows u
 ## Features Implemented
 
 ### 1. Plot Configuration Dialog (`PlotConfigDialog`)
-- **Location**: `gui_framework/legacy/plot_window.py`
+- **Location**: `reference/gui_framework/legacy/plot_window.py`
 - **Functionality**:
   - Displays list of all nodes in the graph
   - **Phase 2: Graph/Subgraph Filter** - Filter nodes by "All Nodes", "Mother Graph Only", or specific subgraphs
@@ -17,7 +17,7 @@ Added a real-time plotting feature to the Computational Graphs GUI that allows u
   - OK/Cancel buttons
 
 ### 2. Plot Window (`PlotWindow` / `PlotWindowPG`)
-- **Location**: `gui_framework/legacy/plot_window.py` (matplotlib), `plot_window_pyqtgraph.py` (pyqtgraph)
+- **Location**: `reference/gui_framework/legacy/plot_window.py` (matplotlib), `plot_window_pyqtgraph.py` (pyqtgraph)
 - **Functionality**:
   - **PyQtGraph (primary)**: Hardware-accelerated, real-time plotting with OpenGL support
   - **Matplotlib (fallback)**: Traditional plotting with mplcursors hover support
@@ -136,7 +136,7 @@ pw = create_plot_window(nodes, max_iterations, parent, backend='auto')
 
 ### File Structure
 ```
-gui_framework/legacy/
+reference/gui_framework/legacy/
 ├── main_window.py         (Modified: added plot button & integration)
 ├── plot_window.py         (New: PlotConfigDialog & PlotWindow classes)
 └── graph_runner.py        (Unchanged: already emits step_completed signal)
@@ -144,7 +144,7 @@ gui_framework/legacy/
 
 ## Testing
 
-Automated plot tests live in `Tests/gui_tests/unit/plot/` and `Tests/gui_tests/integration/plot/`.
+Automated plot tests live in `reference/Tests/gui_tests/unit/plot/` and `reference/Tests/gui_tests/integration/plot/`.
 
 For interactive testing, launch the GUI and load an example (the EA examples are a good fit):
 ```bash

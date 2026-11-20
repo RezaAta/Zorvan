@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QApplication
 
 # Ensure the package imports work - we run from repo root
 from gui_framework.legacy import PlotWindow
-from zorvan.Nodes.DataStreamNode import DataStreamNode
+from zorvan_reference.Nodes.DataStreamNode import DataStreamNode
 
 
 def print_labels(pw):

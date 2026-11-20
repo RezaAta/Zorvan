@@ -1,24 +1,24 @@
 #!/usr/bin/env python
-"""Run non-GUI tests by scanning the Tests/ tree and excluding files
+"""Run non-GUI tests by scanning the reference/Tests/ tree and excluding files
 that import PyQt6 or reference gui_framework.legacy.
 
 Usage: python scripts/run_non_gui_tests.py
 """
-import os
 import pathlib
 import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-TESTS_DIR = ROOT / "Tests"
-GUI_FRAMEWORK_DIR = ROOT / "gui_framework"
+REFERENCE_ROOT = ROOT / "reference"
+TESTS_DIR = REFERENCE_ROOT / "Tests"
+GUI_FRAMEWORK_DIR = REFERENCE_ROOT / "gui_framework"
 
-# Ensure repo root is on sys.path so imports like `zorvan` resolve
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+# Ensure the frozen reference package and GUI imports resolve.
+if str(REFERENCE_ROOT) not in sys.path:
+    sys.path.insert(0, str(REFERENCE_ROOT))
 
 if not TESTS_DIR.exists():
-    print("Tests/ directory not found; exiting.")
+    print("reference/Tests/ directory not found; exiting.")
     sys.exit(1)
 
 exclude_patterns = [

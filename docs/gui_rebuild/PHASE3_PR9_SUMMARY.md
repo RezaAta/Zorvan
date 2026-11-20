@@ -1,6 +1,6 @@
 # Phase 3 PR #9: Theme Manager Migration - Completion Summary
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 **Status**: ✅ COMPLETE
 **Date Completed**: 2025-12-19
@@ -14,7 +14,7 @@ Phase 3 PR #9 successfully delivered a complete theme management system that bri
 ## Deliverables Completed
 
 ### 1. ThemeViewModel ✅
-**File**: `gui_framework/viewmodels/theme_viewmodel.py` (216 lines)
+**File**: `reference/gui_framework/viewmodels/theme_viewmodel.py` (216 lines)
 **Tests**: 19 tests, all passing
 
 **Features:**
@@ -40,7 +40,7 @@ Phase 3 PR #9 successfully delivered a complete theme management system that bri
 - Event-driven for decoupled communication
 
 ### 2. ThemeMixin ✅
-**File**: `gui_framework/widgets/theme_mixin.py` (187 lines)
+**File**: `reference/gui_framework/widgets/theme_mixin.py` (187 lines)
 **Tests**: 15 tests, all passing
 
 **Features:**
@@ -82,7 +82,7 @@ class MyWidget(QWidget, ThemeMixin):
 - Maintains backward compatibility
 
 ### 3. ThemeAdapter ✅
-**File**: `gui_framework/adapters/theme_adapter.py` (198 lines)
+**File**: `reference/gui_framework/adapters/theme_adapter.py` (198 lines)
 **Tests**: Validated through integration test
 
 **Features:**
@@ -212,10 +212,10 @@ tm = adapter.theme_manager
 
 ### Files Created/Modified
 **Created:**
-- `gui_framework/viewmodels/theme_viewmodel.py`
-- `gui_framework/widgets/theme_mixin.py`
-- `gui_framework/adapters/theme_adapter.py`
-- `gui_framework/adapters/__init__.py`
+- `reference/gui_framework/viewmodels/theme_viewmodel.py`
+- `reference/gui_framework/widgets/theme_mixin.py`
+- `reference/gui_framework/adapters/theme_adapter.py`
+- `reference/gui_framework/adapters/__init__.py`
 - `gui_tests/unit/test_theme_viewmodel.py`
 - `gui_tests/unit/test_theme_mixin.py`
 - `docs/gui_rebuild/TESTING_GUIDELINES.md`

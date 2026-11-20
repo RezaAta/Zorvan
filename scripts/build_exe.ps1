@@ -29,13 +29,14 @@ if (-not $pythonCmd) {
 
 $pyInstallerArgs = @(
     "-m", "PyInstaller",
+    "--paths", "reference",
     "--noconfirm",
     "--clean",
     "--windowed",
     "--onefile",
     "--name", $Name,
-    "--add-data", 'gui_framework\legacy\styles_template.qss;gui_framework\legacy',
-    "--add-data", 'gui_framework\legacy\styles.qss;gui_framework\legacy',
+    "--add-data", 'reference\gui_framework\legacy\styles_template.qss;reference\gui_framework\legacy',
+    "--add-data", 'reference\gui_framework\legacy\styles.qss;reference\gui_framework\legacy',
     "--add-data", 'custom_nodes.json;.'
 )
 
@@ -50,9 +51,9 @@ if (Test-Path $iconPath) {
     Write-Host "WARNING: assets\zorvan.ico not found. Building without the custom application icon."
 }
 
-# Collect node modules that are imported dynamically from the zorvan.Nodes package.
+# Collect node modules that are imported dynamically from the reference package.
 $pyInstallerArgs += "--collect-submodules"
-$pyInstallerArgs += "zorvan.Nodes"
+$pyInstallerArgs += "zorvan_reference.Nodes"
 $pyInstallerArgs += "run_new_ui.py"
 
 Write-Host "Running PyInstaller..."

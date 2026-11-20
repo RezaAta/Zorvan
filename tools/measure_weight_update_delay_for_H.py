@@ -1,11 +1,11 @@
 import numpy as np
 
-from zorvan.Core.BackpropGraph import BackpropGraph
-from zorvan.Core.Graph import Graph
-from zorvan.Core.GraphProcessor import GraphProcessor
-from zorvan.Core.MLPGraph import MLPGraph
-from zorvan.Nodes.LinearNode import LinearNode
-from zorvan.Nodes.SigmoidNode import SigmoidNode
+from zorvan_reference.Core.BackpropGraph import BackpropGraph
+from zorvan_reference.Core.Graph import Graph
+from zorvan_reference.Core.GraphProcessor import GraphProcessor
+from zorvan_reference.Core.MLPGraph import MLPGraph
+from zorvan_reference.Nodes.LinearNode import LinearNode
+from zorvan_reference.Nodes.SigmoidNode import SigmoidNode
 
 
 def theoretical_delays(numHiddenLayers):

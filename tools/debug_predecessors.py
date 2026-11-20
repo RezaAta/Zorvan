@@ -3,8 +3,8 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 from gui_framework.legacy import MainWindow, PredecessorsDialog
-from zorvan.Nodes.BufferNode import BufferNode
-from zorvan.Nodes.DisplayNode import DisplayNode
+from zorvan_reference.Nodes.BufferNode import BufferNode
+from zorvan_reference.Nodes.DisplayNode import DisplayNode
 
 app = QApplication(sys.argv)
 window = MainWindow()

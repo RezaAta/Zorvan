@@ -3,9 +3,9 @@
 ## Overview
 The Examples menu and the MLP/backpropagation automation tools of the Zorvan GUI.
 
-> The GUI modules described here live in `gui_framework/legacy/` (`examples_loader.py`, `mlp_dialog.py`, `backprop_dialog.py`, `main_window.py`) and are reached from the MVVM layer through adapters in `gui_framework/adapters/`.
+> The GUI modules described here live in `reference/gui_framework/legacy/` (`examples_loader.py`, `mlp_dialog.py`, `backprop_dialog.py`, `main_window.py`) and are reached from the MVVM layer through adapters in `reference/gui_framework/adapters/`.
 
-> Note: The files in `zorvan/Examples/` are user-facing usage examples and demos, not part of the automated test suite.
+> Note: The files in `reference/zorvan_reference/Examples/` are user-facing usage examples and demos, not part of the automated test suite.
 
 
 ## New Files Created
@@ -19,7 +19,7 @@ The Examples menu and the MLP/backpropagation automation tools of the Zorvan GUI
   - Easy to extend with more examples
 
 **Available Examples:**
-(as defined in `gui_framework/legacy/examples_loader.py`)
+(as defined in `reference/gui_framework/legacy/examples_loader.py`)
 
 - **Basic**: Fibonacci Sequence, Simple Addition Chain, Fully Connected Addition (3 nodes)
 - **Neural Networks – Concurrent**: XOR Problem (2-2-1), Simple MLP (1-1-1), Iris Classification (4-5-3-3)
@@ -277,10 +277,10 @@ Key points:
 
 Example:
 ```python
-from zorvan.Core.Graph import Graph
-from zorvan.Core.GraphProcessor import GraphProcessor
-from zorvan.Nodes.DataStreamNode import DataStreamNode
-from zorvan.Nodes.AdditionNode import AdditionNode
+from zorvan_reference.Core.Graph import Graph
+from zorvan_reference.Core.GraphProcessor import GraphProcessor
+from zorvan_reference.Nodes.DataStreamNode import DataStreamNode
+from zorvan_reference.Nodes.AdditionNode import AdditionNode
 
 graph = Graph()
 a = DataStreamNode('a', data=[1,2,3])

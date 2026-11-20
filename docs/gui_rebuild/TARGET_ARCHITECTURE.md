@@ -1,6 +1,6 @@
 # Target GUI Architecture Design
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 ## Executive Summary
 
@@ -104,7 +104,7 @@ The current GUI uses a controller pattern, which is already better than monolith
 **Design**: Inspired by Redux/Vuex patterns.
 
 ```python
-# gui_framework/state/store.py
+# reference/gui_framework/state/store.py
 
 from dataclasses import dataclass, field
 from typing import Dict, Any, Callable, List
@@ -227,7 +227,7 @@ def get_store() -> StateStore:
 **Purpose**: Decouple components through publish-subscribe pattern.
 
 ```python
-# gui_framework/events/bus.py
+# reference/gui_framework/events/bus.py
 
 from typing import Callable, Dict, List, Any
 from enum import Enum
@@ -310,7 +310,7 @@ def get_event_bus() -> EventBus:
 **Purpose**: Base class for all view-models with common patterns.
 
 ```python
-# gui_framework/viewmodels/base.py
+# reference/gui_framework/viewmodels/base.py
 
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List
@@ -411,7 +411,7 @@ class CanvasViewModel(BaseViewModel):
 **Purpose**: Connect PyQt6 views to pure Python view-models.
 
 ```python
-# gui_framework/views/base.py
+# reference/gui_framework/views/base.py
 
 from abc import ABC, abstractmethod
 from PyQt6.QtWidgets import QWidget
@@ -479,7 +479,7 @@ class CanvasView(BaseView):
 **Purpose**: Extensible plugin system for registering new widgets.
 
 ```python
-# gui_framework/registry/widget_registry.py
+# reference/gui_framework/registry/widget_registry.py
 
 from typing import Dict, Type, Callable
 from gui_framework.viewmodels.base import BaseViewModel
@@ -544,7 +544,7 @@ def get_widget_registry() -> WidgetRegistry:
 **Purpose**: Manage top-level windows and application lifecycle.
 
 ```python
-# gui_framework/window/manager.py
+# reference/gui_framework/window/manager.py
 
 from typing import Dict, Optional
 from PyQt6.QtWidgets import QMainWindow, QApplication
@@ -612,10 +612,10 @@ def get_window_manager(app: QApplication = None) -> WindowManager:
 **Solution**: Worker thread pattern with Qt signals.
 
 ```python
-# gui_framework/execution/worker.py
+# reference/gui_framework/execution/worker.py
 
 from PyQt6.QtCore import QThread, pyqtSignal
-from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan_reference.Core.GraphProcessor import GraphProcessor
 
 class ExecutionWorker(QThread):
     """
@@ -671,7 +671,7 @@ class ExecutionWorker(QThread):
 
 ```
 ComputationalGraphs/
-├── gui_framework/              # New MVVM framework
+├── reference/gui_framework/              # New MVVM framework
 │   ├── __init__.py
 │   ├── state/                  # State management
 │   │   ├── __init__.py
@@ -725,14 +725,14 @@ ComputationalGraphs/
 │   └── smoke/                  # Smoke tests
 │       └── test_app_launch.py
 │
-└── Tests/                      # Existing tests (keep)
+└── reference/Tests/                      # Existing tests (keep)
     └── ...
 ```
 
 ## Migration Strategy
 
 ### Phase 1: Foundation (Week 1)
-1. Create `gui_framework/` module structure
+1. Create `reference/gui_framework/` module structure
 2. Implement StateStore with tests
 3. Implement EventBus with tests
 4. Implement base ViewModel and View classes
@@ -791,7 +791,7 @@ ComputationalGraphs/
 Existing code that depends on old GUI APIs will use adapters:
 
 ```python
-# gui_framework/adapters/legacy_adapter.py
+# reference/gui_framework/adapters/legacy_adapter.py
 
 from gui_framework.legacy import MainWindow as OldMainWindow
 from gui_framework.window.manager import get_window_manager
@@ -983,7 +983,7 @@ jobs:
 ### Profiling
 
 ```python
-# gui_framework/profiling/profiler.py
+# reference/gui_framework/profiling/profiler.py
 
 import cProfile
 import pstats
@@ -1043,7 +1043,7 @@ class AccessibleView(BaseView):
 Use Sphinx with autodoc:
 
 ```python
-# gui_framework/viewmodels/canvas_vm.py
+# reference/gui_framework/viewmodels/canvas_vm.py
 
 class CanvasViewModel(BaseViewModel):
     """

@@ -1,6 +1,6 @@
 # Phase 4 Stage 2 Complete - Canvas Interaction
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 **Status**: ✅ COMPLETE
 **Date Completed**: 2025-12-19
@@ -150,12 +150,12 @@ All existing tests continue to pass:
 ### Changes Summary
 
 **Modified Files**:
-- `gui_framework/views/canvas_view.py` (+9 lines)
+- `reference/gui_framework/views/canvas_view.py` (+9 lines)
   - Added selection change signal connection
   - Added `_on_selection_changed` handler
   - Updated class documentation
 
-- `gui_framework/viewmodels/canvas_viewmodel.py` (+8 lines)
+- `reference/gui_framework/viewmodels/canvas_viewmodel.py` (+8 lines)
   - Added `select_all_nodes()` method
 
 **New Files**:

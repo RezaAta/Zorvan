@@ -3,10 +3,10 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 from gui_framework.legacy import GraphCanvas
-from zorvan.Core.Graph import Graph
-from zorvan.Nodes.BufferNode import BufferNode
-from zorvan.Nodes.DataStreamNode import DataStreamNode
-from zorvan.Nodes.DisplayNode import DisplayNode
+from zorvan_reference.Core.Graph import Graph
+from zorvan_reference.Nodes.BufferNode import BufferNode
+from zorvan_reference.Nodes.DataStreamNode import DataStreamNode
+from zorvan_reference.Nodes.DisplayNode import DisplayNode
 
 app = QApplication(sys.argv)
 

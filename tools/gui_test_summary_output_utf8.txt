@@ -19,7 +19,7 @@ try:
 except Exception:
     PYQT = False
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
-from zorvan.GUI.activation_dialog import ActivationDialog
+from zorvan_reference.GUI.activation_dialog import ActivationDialog
 tests: test_activation_adapter_constructs_and_returns_selection
 
 test_activation_view.py
@@ -55,7 +55,7 @@ try:
 except Exception:
     PYQT = False
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter test")
-from zorvan.Core.MLPGraph import MLPGraph
+from zorvan_reference.Core.MLPGraph import MLPGraph
 tests: test_backprop_adapter_constructs_and_generates
 
 test_backprop_config_view.py
@@ -98,8 +98,8 @@ test_backprop_viewmodel.py
 --- top lines ---
 import pytest
 from gui_framework.viewmodels.dialogs.backprop_viewmodel import BackpropViewModel
-from zorvan.Core.MLPGraph import MLPGraph
-from zorvan.Nodes.SigmoidNode import SigmoidNode
+from zorvan_reference.Core.MLPGraph import MLPGraph
+from zorvan_reference.Nodes.SigmoidNode import SigmoidNode
 def test_backprop_viewmodel_add_remove():
     mlp = MLPGraph(
         numInputs=2,
@@ -209,7 +209,7 @@ import pytest
 from gui_framework.viewmodels.dialogs.color_preferences_viewmodel import (
     ColorPreferencesViewModel,
 )
-from zorvan.GUI.theme import get_theme_manager
+from zorvan_reference.GUI.theme import get_theme_manager
 def test_set_color_and_apply(tmp_path):
     tm = get_theme_manager()
     vm = ColorPreferencesViewModel()
@@ -224,7 +224,7 @@ try:
 except Exception:
     PYQT = False
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
-from zorvan.GUI.combined_node_palette_adapter import CombinedNodePaletteAdapter
+from zorvan_reference.GUI.combined_node_palette_adapter import CombinedNodePaletteAdapter
 tests: test_combined_palette_adapter_constructs
 
 test_combined_node_palette_view.py
@@ -258,8 +258,8 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QContextMenuEvent
 from PyQt6.QtWidgets import QApplication, QMenu
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
+from zorvan_reference.GUI.combined_node_palette import CombinedNodePalette
+from zorvan_reference.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
 def test_right_click_triggers_context_menu(monkeypatch):
 tests: test_right_click_triggers_context_menu
 
@@ -268,8 +268,8 @@ test_combined_palette_custom_context_menu.py
 import pytest
 pytest.importorskip("PyQt6")
 from PyQt6.QtWidgets import QApplication
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
+from zorvan_reference.GUI.combined_node_palette import CombinedNodePalette
+from zorvan_reference.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
 def test_custom_node_delete_via_palette(monkeypatch):
     app = QApplication.instance() or QApplication([])
     mgr = get_custom_node_manager()
@@ -284,7 +284,7 @@ try:
 except Exception:
     PYQT = False
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter test")
-from zorvan.GUI.custom_node_dialog_adapter import CustomNodeDialogAdapter
+from zorvan_reference.GUI.custom_node_dialog_adapter import CustomNodeDialogAdapter
 classes: DummyDef
 tests: test_adapter_constructs_and_execs
 
@@ -295,8 +295,8 @@ pytest.importorskip("PyQt6")
 from PyQt6.QtWidgets import QApplication
 from gui_framework.viewmodels.dialogs.custom_node_viewmodel import CustomNodeViewModel
 from gui_framework.views.dialogs.custom_node_dialog import CustomNodeDialog
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
-from zorvan.GUI.custom_node_manager import get_custom_node_manager
+from zorvan_reference.GUI.combined_node_palette import CombinedNodePalette
+from zorvan_reference.GUI.custom_node_manager import get_custom_node_manager
 def test_dialog_save_updates_palette():
 tests: test_dialog_save_updates_palette
 
@@ -304,7 +304,7 @@ test_custom_node_manager_indentation.py
 --- top lines ---
 import pytest
 pytest.importorskip("PyQt6")
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+from zorvan_reference.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
 def test_operation_code_with_leading_blank_and_tabs_is_valid():
     mgr = CustomNodeManager(library_path=None)
     code = "\n\treturn input1 + input2"
@@ -316,7 +316,7 @@ test_custom_node_manager_save_failure.py
 --- top lines ---
 import pytest
 pytest.importorskip("PyQt6")
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+from zorvan_reference.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
 def test_add_definition_raises_if_save_fails(monkeypatch, tmp_path):
     lib_file = tmp_path / "custom_nodes_fail.json"
     mgr = CustomNodeManager(library_path=str(lib_file))
@@ -341,8 +341,8 @@ test_custom_node_palette_refresh.py
 import pytest
 pytest.importorskip("PyQt6")
 from PyQt6.QtWidgets import QApplication
-from zorvan.GUI.combined_node_palette import CombinedNodePalette
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
+from zorvan_reference.GUI.combined_node_palette import CombinedNodePalette
+from zorvan_reference.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
 def test_combined_palette_updates_on_custom_node_add():
     app = QApplication.instance() or QApplication([])
     mgr = get_custom_node_manager()
@@ -355,7 +355,7 @@ import tempfile
 from pathlib import Path
 import pytest
 pytest.importorskip("PyQt6")
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+from zorvan_reference.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
 def test_add_definition_persists_to_library(tmp_path):
     lib_file = tmp_path / "custom_nodes_test.json"
 tests: test_add_definition_persists_to_library, test_load_library_reads_definitions
@@ -364,8 +364,8 @@ test_custom_node_registration_and_create.py
 --- top lines ---
 import pytest
 pytest.importorskip("PyQt6")
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
-from zorvan.GUI.node_factory import create_node, is_registered
+from zorvan_reference.GUI.custom_node_manager import CustomNodeDefinition, get_custom_node_manager
+from zorvan_reference.GUI.node_factory import create_node, is_registered
 def test_custom_node_registered_and_creatable(tmp_path):
     mgr = get_custom_node_manager()
     # Ensure clean state
@@ -378,7 +378,7 @@ import json
 from pathlib import Path
 import pytest
 pytest.importorskip("PyQt6")
-from zorvan.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
+from zorvan_reference.GUI.custom_node_manager import CustomNodeDefinition, CustomNodeManager
 def test_remove_definition_persists(tmp_path):
     lib_file = tmp_path / "custom_nodes_rm.json"
     mgr = CustomNodeManager(library_path=str(lib_file))
@@ -414,8 +414,8 @@ test_dialog_controller_examples.py
 --- top lines ---
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QMenu
-from zorvan.Core.Graph import Graph
-from zorvan.GUI.controllers.dialog_controller import DialogController
+from zorvan_reference.Core.Graph import Graph
+from zorvan_reference.GUI.controllers.dialog_controller import DialogController
 class DummyMainWindow(QObject):
     def __init__(self, repo):
         super().__init__()
@@ -464,7 +464,7 @@ test_examples_repository_layout.py
 --- top lines ---
 import json
 from gui_framework.services.examples_repository import ExamplesRepository
-from zorvan.GUI.examples_loader import ExamplesLoader
+from zorvan_reference.GUI.examples_loader import ExamplesLoader
 def test_save_and_load_layout(tmp_path):
     fp = tmp_path / "layouts.json"
     repo = ExamplesRepository(storage_path=str(fp))
@@ -474,7 +474,7 @@ tests: test_save_and_load_layout, test_apply_layout_to_graph_via_dialog_controll
 
 test_execution_controller.py
 --- top lines ---
-from zorvan.GUI.controllers.execution_controller import ExecutionController
+from zorvan_reference.GUI.controllers.execution_controller import ExecutionController
 class DummyLabel:
     def __init__(self, text=""):
         self.text = text
@@ -512,8 +512,8 @@ classes: TestExecutionViewModel
 test_file_io_controller.py
 --- top lines ---
 from unittest.mock import MagicMock
-from zorvan.Core.Graph import Graph
-from zorvan.GUI.controllers.file_io_controller import FileIOController
+from zorvan_reference.Core.Graph import Graph
+from zorvan_reference.GUI.controllers.file_io_controller import FileIOController
 class DummyCanvas:
     def __init__(self):
         self.scene = MagicMock()
@@ -631,7 +631,7 @@ try:
 except Exception:
     PYQT = False
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
-from zorvan.GUI.learning_rate_dialog import LearningRateDialog
+from zorvan_reference.GUI.learning_rate_dialog import LearningRateDialog
 classes: DummyNode
 tests: test_learning_rate_adapter_constructs_and_applies
 
@@ -664,7 +664,7 @@ test_main_window_custom_node_button.py
 import pytest
 pytest.importorskip("PyQt6")
 from PyQt6.QtWidgets import QApplication
-from zorvan.GUI.main_window import MainWindow
+from zorvan_reference.GUI.main_window import MainWindow
 def test_main_window_create_opens_custom_dialog(monkeypatch):
     app = QApplication.instance() or QApplication([])
     mw = MainWindow()
@@ -680,7 +680,7 @@ try:
 except Exception:
     PYQT = False
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter tests")
-from zorvan.GUI.mlp_dialog import MLPGeneratorDialog
+from zorvan_reference.GUI.mlp_dialog import MLPGeneratorDialog
 tests: test_mlp_dialog_adapter_constructs_and_generates
 
 test_mlp_generator_viewmodel.py
@@ -849,13 +849,13 @@ tests: test_load_and_edit_node_properties
 test_node_factory_additions.py
 --- top lines ---
 def test_elitism_node_registered_and_creatable():
-    from zorvan.GUI.node_factory import create_node, is_registered
+    from zorvan_reference.GUI.node_factory import create_node, is_registered
     assert is_registered("ElitismNode") is True
     n = create_node("ElitismNode", name_hint="test")
     assert n is not None
     assert getattr(n, "name", "").startswith("Elitism")
 def test_linear_derivative_name_not_duplicated():
-    from zorvan.GUI.node_factory import create_node
+    from zorvan_reference.GUI.node_factory import create_node
 tests: test_elitism_node_registered_and_creatable, test_linear_derivative_name_not_duplicated, test_elitism_factory_name_sanitized, test_elitism_factory_name_with_prefix_hint
 
 test_node_properties_dialog.py
@@ -978,7 +978,7 @@ except Exception:
     HAS_PYQT = False
 import pytest
 pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
-from zorvan.GUI.theme import get_theme_manager
+from zorvan_reference.GUI.theme import get_theme_manager
 tests: test_progress_bar_uses_accent_color
 
 test_replace_node_adapter.py
@@ -990,7 +990,7 @@ try:
 except Exception:
     PYQT = False
 pytestmark = pytest.mark.skipif(not PYQT, reason="PyQt6 required for adapter test")
-from zorvan.GUI.replace_node_dialog import ReplaceNodeDialog
+from zorvan_reference.GUI.replace_node_dialog import ReplaceNodeDialog
 tests: test_replace_node_adapter_constructs_and_execs
 
 test_replace_node_view.py
@@ -1021,8 +1021,8 @@ test_save_layout_action.py
 --- top lines ---
 from PyQt6.QtWidgets import QWidget
 from gui_framework.services.examples_repository import ExamplesRepository
-from zorvan.GUI.controllers.dialog_controller import DialogController
-from zorvan.GUI.examples_loader import ExamplesLoader
+from zorvan_reference.GUI.controllers.dialog_controller import DialogController
+from zorvan_reference.GUI.examples_loader import ExamplesLoader
 class DummyCanvas:
     def __init__(self, graph):
         self.scene = type("S", (), {"clear": lambda self: None})()
@@ -1070,7 +1070,7 @@ classes: TestStateStore, TestGetStore, TestStateEventNotifications
 test_subgraph_icons.py
 --- top lines ---
 from PyQt6.QtWidgets import QApplication
-from zorvan.GUI.graph_canvas import SubgraphControlButton
+from zorvan_reference.GUI.graph_canvas import SubgraphControlButton
 def test_subgraph_control_button_initializes_with_fa_or_text():
     # Ensure a QApplication exists (tests may run headless but creating an app is safe)
     app = QApplication.instance() or QApplication([])
@@ -1093,7 +1093,7 @@ classes: MockWidget, TestThemeMixinLegacyMode, TestThemeMixinStateStoreMode, Tes
 
 test_theme_named_crud.py
 --- top lines ---
-from zorvan.GUI.theme import get_theme_manager
+from zorvan_reference.GUI.theme import get_theme_manager
 def test_theme_named_crud(tmp_path):
     tm = get_theme_manager()
     name = "__test_theme__"
@@ -1105,7 +1105,7 @@ tests: test_theme_named_crud, test_theme_get_selected_none
 
 test_theme_selected_persistence.py
 --- top lines ---
-from zorvan.GUI.theme import ThemeManager, get_theme_manager
+from zorvan_reference.GUI.theme import ThemeManager, get_theme_manager
 def test_selected_theme_persistence():
     tm = get_theme_manager()
     name = "__selected_persist__"
@@ -1130,7 +1130,7 @@ classes: TestThemeViewModel
 test_toolbar_stylesheet_applies.py
 --- top lines ---
 from PyQt6.QtWidgets import QApplication
-from zorvan.GUI.theme import get_theme_manager
+from zorvan_reference.GUI.theme import get_theme_manager
 def test_toolbar_text_color_in_stylesheet():
     app = QApplication.instance() or QApplication([])
     tm = get_theme_manager()
@@ -1155,9 +1155,9 @@ test_value_persistence_on_run.py
 --- top lines ---
 import pytest
 from PyQt6.QtWidgets import QApplication
-from zorvan.GUI.main_window import MainWindow
-from zorvan.GUI.node_editor_dialog import NodeEditorDialog
-from zorvan.GUI.node_item import NodeItem
+from zorvan_reference.GUI.main_window import MainWindow
+from zorvan_reference.GUI.node_editor_dialog import NodeEditorDialog
+from zorvan_reference.GUI.node_item import NodeItem
 pytestmark = pytest.mark.skipif(
     not QApplication.instance() and QApplication([]) is None,
     reason="PyQt6 required for this test",
@@ -1286,7 +1286,7 @@ try:
 except Exception:
     HAS_PYQT = False
 pytestmark = pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 required")
-from zorvan.GUI.main_window import MainWindow
+from zorvan_reference.GUI.main_window import MainWindow
 tests: test_inspector_panel_updates_on_selection
 
 test_mainwindow_examples_load.py
@@ -1297,7 +1297,7 @@ try:
     HAS_PYQT = True
 except Exception:
     HAS_PYQT = False
-from zorvan.GUI.main_window import MainWindow
+from zorvan_reference.GUI.main_window import MainWindow
 @pytest.mark.skipif(not HAS_PYQT, reason="PyQt6 not installed")
 tests: test_mainwindow_loads_example_and_visualizes
 
@@ -1318,7 +1318,7 @@ test_new_graph_dialog_integration.py
 import pytest
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
-from zorvan.GUI.main_window import MainWindow
+from zorvan_reference.GUI.main_window import MainWindow
 try:
     from gui_framework.views.dialogs.new_graph_dialog import NewGraphDialog
     PYQT = True
@@ -1330,8 +1330,8 @@ test_node_inspector_integration.py
 import pytest
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
-from zorvan.GUI.main_window import MainWindow
-from zorvan.Nodes.Node import Node
+from zorvan_reference.GUI.main_window import MainWindow
+from zorvan_reference.Nodes.Node import Node
 try:
     from gui_framework.views.dialogs.node_properties_dialog import NodePropertiesDialog
     PYQT = True

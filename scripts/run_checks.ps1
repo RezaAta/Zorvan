@@ -1,5 +1,5 @@
 # PowerShell script to run local checks.
-#   .\scripts\run_checks.ps1             core tests (Tests/core) - fast, safe default
+#   .\scripts\run_checks.ps1             core tests (reference/Tests/core) - fast, safe default
 #   .\scripts\run_checks.ps1 -All        full pytest suite (GUI tests may hang/crash on Windows without a display)
 #   .\scripts\run_checks.ps1 -Precommit  pre-commit hooks on all files
 #   .\scripts\run_checks.ps1 -Format     apply black + isort
@@ -28,5 +28,5 @@ if ($All) {
 }
 elseif ($Tests -or (-not $Precommit -and -not $Format)) {
     Write-Output "Running core tests..."
-    python -m pytest -q Tests/core
+    python -m pytest -q reference/Tests/core
 }

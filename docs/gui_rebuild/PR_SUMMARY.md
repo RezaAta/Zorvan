@@ -1,6 +1,6 @@
 # Phase 0-3: GUI Rebuild - Complete Summary
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 ## Executive Summary
 
@@ -552,7 +552,7 @@ Per user request to "continue with migration and implementations":
 ## Impact Assessment
 
 ### On Existing GUI: ZERO ✅
-- New `gui_framework/` package completely separate
+- New `reference/gui_framework/` package completely separate
 - No modifications to existing `GUI/` code
 - No breaking changes
 - Existing GUI fully functional
@@ -599,7 +599,7 @@ Per user request to "continue with migration and implementations":
 
 ```
 ComputationalGraphs/
-├── gui_framework/                    # NEW - MVVM framework
+├── reference/gui_framework/                    # NEW - MVVM framework
 │   ├── state/
 │   │   ├── models.py                # Immutable state dataclasses
 │   │   └── store.py                 # StateStore with history

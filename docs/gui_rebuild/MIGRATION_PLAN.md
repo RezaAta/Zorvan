@@ -1,6 +1,6 @@
 # GUI Migration Plan
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 ## Overview
 
@@ -59,7 +59,7 @@ Build the foundational MVVM infrastructure without touching existing GUI.
 
 **Files to Create**:
 ```
-gui_framework/
+reference/gui_framework/
 ├── __init__.py
 ├── state/
 │   ├── __init__.py
@@ -68,7 +68,7 @@ gui_framework/
 ```
 
 **Implementation**:
-1. Create `gui_framework/` package
+1. Create `reference/gui_framework/` package
 2. Implement `StateStore` with:
    - Immutable state (dataclasses)
    - Subscription mechanism
@@ -101,7 +101,7 @@ gui_tests/
 - [ ] All tests pass
 - [ ] Code coverage >80%
 
-**Rollback**: Simply delete `gui_framework/` directory (no dependencies yet)
+**Rollback**: Simply delete `reference/gui_framework/` directory (no dependencies yet)
 
 ---
 
@@ -111,7 +111,7 @@ gui_tests/
 
 **Files to Create**:
 ```
-gui_framework/
+reference/gui_framework/
 └── events/
     ├── __init__.py
     └── bus.py            # EventBus implementation
@@ -147,7 +147,7 @@ gui_tests/
 - [ ] All tests pass
 - [ ] Code coverage >80%
 
-**Rollback**: Delete `gui_framework/events/` (no dependencies on other code)
+**Rollback**: Delete `reference/gui_framework/events/` (no dependencies on other code)
 
 ---
 
@@ -157,7 +157,7 @@ gui_tests/
 
 **Files to Create**:
 ```
-gui_framework/
+reference/gui_framework/
 ├── viewmodels/
 │   ├── __init__.py
 │   └── base.py           # BaseViewModel
@@ -239,13 +239,13 @@ Demonstrate the new pattern with a real widget, integrated with existing GUI via
 
 **Files to Create**:
 ```
-gui_framework/
+reference/gui_framework/
 ├── viewmodels/
 │   └── collapsible_section_vm.py
 └── views/
     └── collapsible_section_view.py
 
-gui_framework/adapters/
+reference/gui_framework/adapters/
 ├── __init__.py
 └── legacy_widgets.py              # Adapter for old code
 ```
@@ -311,7 +311,7 @@ USE_NEW_COLLAPSIBLE_SECTION = False  # Toggle for testing
 
 **Files to Create**:
 ```
-gui_framework/
+reference/gui_framework/
 ├── viewmodels/
 │   └── console_vm.py
 └── views/
@@ -378,7 +378,7 @@ Migrate high-value, moderate-complexity widgets that don't depend on canvas.
 
 **Files to Create**:
 ```
-gui_framework/
+reference/gui_framework/
 ├── viewmodels/
 │   ├── execution_vm.py
 │   └── execution_settings_vm.py
@@ -433,7 +433,7 @@ gui_tests/
 
 **Files to Create**:
 ```
-gui_framework/
+reference/gui_framework/
 ├── viewmodels/
 │   └── palette_vm.py
 └── views/
@@ -479,7 +479,7 @@ gui_tests/
 
 **Files to Modify**:
 ```
-gui_framework/state/models.py              # Add ThemeState
+reference/gui_framework/state/models.py              # Add ThemeState
 ComputationalGraphs/GUI/theme.py           # Migrate to StateStore
 ComputationalGraphs/GUI/theme_utils.py     # Update to use StateStore
 ```
@@ -516,7 +516,7 @@ gui_tests/
 
 **Files to Create**:
 ```
-gui_framework/
+reference/gui_framework/
 ├── viewmodels/
 │   └── file_io_vm.py
 └── views/
@@ -580,7 +580,7 @@ Migrate the largest and most complex component: the graph canvas.
 
 **Files to Create**:
 ```
-gui_framework/
+reference/gui_framework/
 ├── viewmodels/
 │   ├── canvas_vm.py
 │   └── canvas_scene_vm.py
@@ -633,8 +633,8 @@ gui_tests/
 
 **Files to Modify**:
 ```
-gui_framework/viewmodels/canvas_vm.py      # Add interaction logic
-gui_framework/views/canvas_view.py         # Add event handlers
+reference/gui_framework/viewmodels/canvas_vm.py      # Add interaction logic
+reference/gui_framework/views/canvas_view.py         # Add event handlers
 ```
 
 **Files to Migrate** (Phase 4b - Interaction):
@@ -677,7 +677,7 @@ gui_tests/
 
 **Files to Create**:
 ```
-gui_framework/
+reference/gui_framework/
 └── commands/
     ├── __init__.py
     ├── base_command.py

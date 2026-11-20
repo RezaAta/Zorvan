@@ -1,7 +1,7 @@
 import pathlib
 import re
 
-base = pathlib.Path("Tests/gui_tests")
+base = pathlib.Path("reference/Tests/gui_tests")
 for sub in ["unit", "integration"]:
     p = base / sub
     print(f"=== {sub} ===")

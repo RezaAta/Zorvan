@@ -1,6 +1,6 @@
 # GUI Rebuild Session Summary
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 **Date**: 2025-12-19
 **Branch**: `copilot/rebuild-ui-and-migration-process`
@@ -51,7 +51,7 @@ Continue the GUI rebuild and migration process for the ComputationalGraphs proje
 ## Files Modified
 
 ### Code Changes
-1. `gui_framework/viewmodels/execution_viewmodel.py`
+1. `reference/gui_framework/viewmodels/execution_viewmodel.py`
    - Added `_previous_speed_ms` field in `__init__`
    - Updated `set_speed()` to store previous speed
    - Updated `toggle_max_speed()` to restore previous speed

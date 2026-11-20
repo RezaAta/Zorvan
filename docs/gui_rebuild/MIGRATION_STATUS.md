@@ -1,6 +1,6 @@
 # GUI Migration Status
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 Last Updated: 2026-01-06
 
@@ -418,7 +418,7 @@ The GUI rebuild from controller pattern to MVVM with Event Bus is **nearly compl
 - [Phase 0 Summary](PHASE0_SUMMARY.md)
 
 ### Code
-- Framework: `gui_framework/`
+- Framework: `reference/gui_framework/`
 - Tests: `gui_tests/unit/`
 - Demo: `demo_new_gui.py`
 

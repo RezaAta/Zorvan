@@ -16,7 +16,7 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11"]
     env:
-      PYTHONPATH: ${{ github.workspace }}
+      PYTHONPATH: ${{ github.workspace }}/reference
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -51,14 +51,14 @@ jobs:
 
       - name: Run core regression tests
         run: |
-          pytest -q Tests/core
+          pytest -q reference/Tests/core
 
   gui-smoke:
     name: GUI smoke (py3.11)
     runs-on: ubuntu-latest
     needs: core
     env:
-      PYTHONPATH: ${{ github.workspace }}
+      PYTHONPATH: ${{ github.workspace }}/reference
       QT_QPA_PLATFORM: offscreen
     steps:
       - name: Checkout repo
@@ -107,4 +107,4 @@ jobs:
 
       - name: Run GUI smoke test
         run: |
-          xvfb-run -a pytest -q Tests/gui_tests/integration/startup/test_gui_smoke.py --maxfail=1
+          xvfb-run -a pytest -q reference/Tests/gui_tests/integration/startup/test_gui_smoke.py --maxfail=1

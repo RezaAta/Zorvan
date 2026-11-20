@@ -1,5 +1,5 @@
 from gui_framework.legacy import ExamplesLoader
-from zorvan.Core.GraphProcessor import GraphProcessor
+from zorvan_reference.Core.GraphProcessor import GraphProcessor
 
 if __name__ == "__main__":
     loader = ExamplesLoader()

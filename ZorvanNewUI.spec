@@ -2,14 +2,14 @@
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = []
-hiddenimports += collect_submodules('zorvan.Nodes')
+hiddenimports += collect_submodules('zorvan_reference.Nodes')
 
 
 a = Analysis(
     ['run_new_ui.py'],
-    pathex=[],
+    pathex=['reference'],
     binaries=[],
-    datas=[('gui_framework\\legacy\\styles_template.qss', 'gui_framework\\legacy'), ('gui_framework\\legacy\\styles.qss', 'gui_framework\\legacy'), ('custom_nodes.json', '.'), ('assets\\\\zorvan.ico', 'assets')],
+    datas=[('reference\\gui_framework\\legacy\\styles_template.qss', 'reference\\gui_framework\\legacy'), ('reference\\gui_framework\\legacy\\styles.qss', 'reference\\gui_framework\\legacy'), ('custom_nodes.json', '.'), ('assets\\\\zorvan.ico', 'assets')],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},

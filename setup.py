@@ -20,12 +20,13 @@ install_requires = read_requirements()
 
 
 setup(
-    name="zorvan",
+    name="zorvan-reference",
     version="0.1.0",
-    packages=find_packages(),
+    packages=find_packages(where="reference"),
+    package_dir={"": "reference"},
     description="A Python framework for building and running computational graphs.",
     author="Zorvan contributors",
-    url="https://github.com/ORG_OR_USER/zorvan",
+    url="https://github.com/RezaAta/Zorvan",
     python_requires=">=3.8",
     install_requires=install_requires,
     include_package_data=True,

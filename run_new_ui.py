@@ -27,7 +27,7 @@ from gui_framework.window.manager import get_window_manager
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Run the ComputationalGraphs New UI")
+    parser = argparse.ArgumentParser(description="Run the Zorvan New UI")
     parser.add_argument(
         "--example", type=str, help="Name of example to auto-load", default=None
     )

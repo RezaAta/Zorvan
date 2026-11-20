@@ -1,6 +1,6 @@
 # GUI Rebuild Testing Instructions
 
-> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `zorvan/Core` / `zorvan/Nodes`.
+> **Archived record.** This document belongs to the PyQt GUI migration to MVVM. The PyQt editor is still the current UI, but its successor is planned in [`docs/REARCHITECTURE_PLAN.md`](../REARCHITECTURE_PLAN.md) (Phase 5). Paths written as `ComputationalGraphs/...` predate the package rename: `ComputationalGraphs/GUI/` is now `reference/gui_framework/legacy/`, and `ComputationalGraphs/Core` / `Nodes` are now `reference/zorvan_reference/Core` / `reference/zorvan_reference/Nodes`.
 
 ## Quick Start - Test the New MVVM Framework
 
@@ -247,7 +247,7 @@ python -m pytest gui_tests/unit/ --cov=gui_framework --cov-report=html
 
 #### Framework Structure
 ```
-gui_framework/
+reference/gui_framework/
 ├── __init__.py                         # Package initialization
 ├── state/
 │   ├── __init__.py                     # State exports
@@ -280,7 +280,7 @@ gui_framework/
 
 **Check ViewModel (Pure Python):**
 ```python
-# gui_framework/viewmodels/execution_viewmodel.py
+# reference/gui_framework/viewmodels/execution_viewmodel.py
 class ExecutionViewModel(BaseViewModel):
     # ✅ Uses ObservableProperty
     status = ObservableProperty("status", default=ExecutionStatus.IDLE)
@@ -296,7 +296,7 @@ class ExecutionViewModel(BaseViewModel):
 
 **Check View (Thin UI):**
 ```python
-# gui_framework/views/execution_view.py
+# reference/gui_framework/views/execution_view.py
 class ExecutionView(BaseView):
     # ✅ Inherits from BaseView
 

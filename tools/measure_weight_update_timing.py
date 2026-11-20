@@ -1,12 +1,12 @@
 import numpy as np
 
-from zorvan.Core.BackpropGraph import BackpropGraph
-from zorvan.Core.GraphProcessor import GraphProcessor
-from zorvan.Core.MLPGraph import MLPGraph
-from zorvan.Nodes.LinearNode import LinearNode
+from zorvan_reference.Core.BackpropGraph import BackpropGraph
+from zorvan_reference.Core.GraphProcessor import GraphProcessor
+from zorvan_reference.Core.MLPGraph import MLPGraph
+from zorvan_reference.Nodes.LinearNode import LinearNode
 
 # Build a minimal MLPGraph with H=1
-from zorvan.Nodes.SigmoidNode import SigmoidNode
+from zorvan_reference.Nodes.SigmoidNode import SigmoidNode
 
 mlp = MLPGraph(
     numInputs=2,
@@ -20,7 +20,7 @@ mlp.BuildMLP()
 bp = BackpropGraph(mlp, learningRate=0.1)
 bp.BuildBackprop()
 # Combine
-from zorvan.Core.Graph import Graph
+from zorvan_reference.Core.Graph import Graph
 
 full = Graph()
 for node in mlp.nodes:

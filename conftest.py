@@ -4,6 +4,10 @@ import importlib
 import sys
 from pathlib import Path
 
+REFERENCE_ROOT = Path(__file__).resolve().parent / "reference"
+if str(REFERENCE_ROOT) not in sys.path:
+    sys.path.insert(0, str(REFERENCE_ROOT))
+
 import pytest
 
 try:
@@ -31,7 +35,7 @@ def pytest_ignore_collect(path, config):
     if path_obj.suffix != ".py":
         return False
     # pytest collection patterns include `test_*.py` and `*_test.py`.
-    # Support both conventions (prefix or suffix) and also files in `Tests/`.
+    # Support both conventions (prefix or suffix) and also files in `reference/Tests/`.
     if not (path_obj.name.startswith("test") or path_obj.name.endswith("_test.py")):
         return False
     # If PyQt6 installed, don't ignore
@@ -59,7 +63,7 @@ _QAPP = None
 
 def pytest_sessionstart(session):
     # Ensure a QApplication exists and the ThemeManager applies a minimal
-    # stylesheet early for *all* tests (including Tests/*) so tests that
+    # stylesheet early for *all* tests (including reference/Tests/*) so tests that
     # assert on app.styleSheet() will observe expected selectors. Create
     # the application only if PyQt6 is available and an instance doesn't
     # already exist.

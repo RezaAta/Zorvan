@@ -24,8 +24,8 @@ complete:
   and the argparse description in `run_new_ui.py` ("Computational Graphs
   Editor"), and the header comment in `requirements_gui.txt`.
 - Re-enable or document the skipped Windows GUI tests (commit `ff02e307`).
-- Remove dead files: `zorvan/Core/GraphProcessor_optimized_broken.py`,
-  `gui_framework/adapters/__init___new.py`.
+- Remove dead files: `reference/zorvan_reference/Core/GraphProcessor_optimized_broken.py`,
+  `reference/gui_framework/adapters/__init___new.py`.
 
 These overlap with Phase 0 of `docs/REARCHITECTURE_PLAN.md`; do them there if
 that phase starts first.

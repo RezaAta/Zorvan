@@ -64,12 +64,12 @@ python run_new_ui.py --example "<example name>" --maximize --debug
 
 ### Example scripts
 
-`zorvan/Examples/` contains demo scripts (not automated tests). They adjust
+`reference/zorvan_reference/Examples/` contains demo scripts (not automated tests). They adjust
 `sys.path` themselves, so they run from any directory:
 
 ```powershell
-python zorvan/Examples/FibonacciExample.py
-python zorvan/Examples/ANFIS_XOR_Train_Concurrent.py
+python reference/zorvan_reference/Examples/FibonacciExample.py
+python reference/zorvan_reference/Examples/ANFIS_XOR_Train_Concurrent.py
 ```
 
 ### Windows executable

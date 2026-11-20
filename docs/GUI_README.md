@@ -18,8 +18,8 @@ python run_new_ui.py
 
 ### Theming & Styling 🔧
 
-- The GUI uses a singleton `ThemeManager` (see `gui_framework/legacy/theme.py`) to store colors, fonts and stylesheet fragments.
-- Widgets that should react to theme changes should inherit from `ThemeMixin` (`gui_framework/legacy/theme_utils.py`; an MVVM-friendly variant lives in `gui_framework/widgets/theme_mixin.py`). `ThemeMixin` subscribes to `theme_changed` and calls an `apply_theme()` method which the widget implements to reapply colors/fonts/styles. This centralizes theme logic, avoids inline `setStyleSheet` duplication, and simplifies testing.
+- The GUI uses a singleton `ThemeManager` (see `reference/gui_framework/legacy/theme.py`) to store colors, fonts and stylesheet fragments.
+- Widgets that should react to theme changes should inherit from `ThemeMixin` (`reference/gui_framework/legacy/theme_utils.py`; an MVVM-friendly variant lives in `reference/gui_framework/widgets/theme_mixin.py`). `ThemeMixin` subscribes to `theme_changed` and calls an `apply_theme()` method which the widget implements to reapply colors/fonts/styles. This centralizes theme logic, avoids inline `setStyleSheet` duplication, and simplifies testing.
 
 
 ### 1. **Node Palette (Left Panel)**
@@ -235,9 +235,9 @@ The next major UI is planned as a TypeScript/WebGL editor with a Tauri desktop a
 
 - Prefer fixes and parity work over large new PyQt features (the UI will be replaced; see above).
 - To add node types or editors:
-  1. Add the node type to `gui_framework/legacy/node_registry.py`.
-  2. Make sure the canvas can instantiate it (`gui_framework/legacy/graph_canvas.py`, drop handling).
-  3. Add type-specific editors in the node editor dialog (`gui_framework/views/node_editor_dialog.py`).
+  1. Add the node type to `reference/gui_framework/legacy/node_registry.py`.
+  2. Make sure the canvas can instantiate it (`reference/gui_framework/legacy/graph_canvas.py`, drop handling).
+  3. Add type-specific editors in the node editor dialog (`reference/gui_framework/views/node_editor_dialog.py`).
 - Include tests and doc updates with every change (`CONTRIBUTING.md`).
 
 ## Headless GUI tests (CI)
@@ -248,10 +248,10 @@ The next major UI is planned as a TypeScript/WebGL editor with a Tauri desktop a
   ```bash
   # Linux: install Xvfb, then
   export QT_QPA_PLATFORM=offscreen
-  xvfb-run -a python -m pytest Tests/gui_tests/integration -q
+  xvfb-run -a python -m pytest reference/Tests/gui_tests/integration -q
   ```
 
-- `Tests/gui_tests/integration/startup/test_gui_smoke.py` checks that the `MainWindow` can be constructed in offscreen mode.
+- `reference/Tests/gui_tests/integration/startup/test_gui_smoke.py` checks that the `MainWindow` can be constructed in offscreen mode.
 
 ---
 

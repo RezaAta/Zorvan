@@ -1,6 +1,6 @@
 # Plotting Feature UX Improvements - Implementation Summary
 
-> Historical implementation note. Paths were updated to the current layout (`gui_framework/legacy/`); quoted line numbers may have drifted.
+> Historical implementation note. Paths were updated to the current layout (`reference/gui_framework/legacy/`); quoted line numbers may have drifted.
 
 ## Overview
 Implemented comprehensive UX improvements to the plotting feature based on user feedback.
@@ -15,7 +15,7 @@ Implemented comprehensive UX improvements to the plotting feature based on user 
 - Nodes are now selected via checkboxes only, preventing the cramping behavior
 - List displays cleanly from the start
 
-**File**: `gui_framework/legacy/plot_window.py`
+**File**: `reference/gui_framework/legacy/plot_window.py`
 ```python
 # Before: self.node_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
 # After:  self.node_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
@@ -43,7 +43,7 @@ Implemented comprehensive UX improvements to the plotting feature based on user 
 2. Click "➕ Add Selected to Plot"
 3. Node appears in plot immediately
 
-**File**: `gui_framework/legacy/main_window.py`
+**File**: `reference/gui_framework/legacy/main_window.py`
 ```python
 def add_selected_to_plot(self):
     """Add currently selected node(s) in the canvas to the plot window."""
@@ -66,7 +66,7 @@ def add_selected_to_plot(self):
 - Button: "Remove Selected" - removes node from dropdown
 - Auto-updates legend (removes if no nodes left)
 
-**File**: `gui_framework/legacy/plot_window.py`
+**File**: `reference/gui_framework/legacy/plot_window.py`
 ```python
 def remove_selected_node(self):
     """Remove the selected node from the plot."""
@@ -86,8 +86,8 @@ def add_node(self, node):
 - Threading combo now enabled by default
 
 **Files**:
-- `gui_framework/legacy/main_window.py`: Line 97
-- `gui_framework/legacy/graph_runner.py`: Line 30
+- `reference/gui_framework/legacy/main_window.py`: Line 97
+- `reference/gui_framework/legacy/graph_runner.py`: Line 30
 
 **Before**: Forward Processing (index 0)
 **After**: Concurrent (index 1)
@@ -105,7 +105,7 @@ def add_node(self, node):
 
 **Benefit**: User sets max iterations once (in control panel) and it applies everywhere.
 
-**File**: `gui_framework/legacy/main_window.py`
+**File**: `reference/gui_framework/legacy/main_window.py`
 ```python
 # Get max iterations from the control panel
 default_max_iter = self.max_steps_spin.value()
