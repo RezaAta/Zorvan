@@ -3,7 +3,7 @@ pre-commit
 black
 isort
 ruff
-pytest<10
+pytest<9
 pytest-qt
 codecov
 coverage
