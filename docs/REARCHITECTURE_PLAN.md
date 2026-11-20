@@ -246,7 +246,7 @@ Exit criteria
 - [x] SEMANTICS.md, NODE_CATALOG.md and IR.md reviewed and accepted.
 - [x] ≥ 1 conformance case per node kind, plus the end-to-end cases above, generated from the reference.
 - [x] Baseline benchmark numbers recorded in `benchmarks/BASELINE.md`.
-- [ ] Reference test suite passes from its new location in CI.
+- [x] Reference test suite passes from its new location in CI.
 
 ### Phase 1 — Rust engine core (concurrent processing) · **L**
 
@@ -458,7 +458,7 @@ Exit criteria
 
 | Phase | Status |
 |-------|--------|
-| 0 Freeze and specify | In progress (specs accepted; restructure, cleanup, conformance seeds, and benchmarks done; CI confirmation and baseline tag remain) |
+| 0 Freeze and specify | Complete (specs accepted; restructure, cleanup, conformance seeds, and benchmarks done; CI green; baseline tag `v0.1.0-python` created locally) |
 | 1 Rust engine core | Not started |
 | 2 Python SDK | Not started |
 | 3 Compiler and performance | Not started |
