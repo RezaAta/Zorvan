@@ -67,18 +67,18 @@ pre-commit run --all-files
 
 ### Experiments vs Tests
 
-- **Tests:** short, deterministic, and automated assertions that verify program behavior. Place tests under `Tests/core/` (engine) or `Tests/gui_tests/` (GUI) and run them with `pytest`.
-- **Experiments:** long-running or exploratory scripts used for scientific comparisons, plotting, or benchmarking. Place experiments under a top-level `Experiments/` folder (create it when needed; it isn't part of the public tree yet), or `zorvan/Examples/` when tightly coupled to an example. Prefer prefixing such scripts with `exp_` (e.g., `exp_my_experiment.py`) to make them easy to find and to avoid pytest collection. Experiments are not part of the automated `pytest` run by default; see `EXPERIMENTS.md` for conventions.
+- **Tests:** short, deterministic, and automated assertions that verify program behavior. Place tests under `reference/Tests/core/` (engine) or `reference/Tests/gui_tests/` (GUI) and run them with `pytest`.
+- **Experiments:** long-running or exploratory scripts used for scientific comparisons, plotting, or benchmarking. Place experiments under a top-level `Experiments/` folder (create it when needed; it isn't part of the public tree yet), or `reference/zorvan_reference/Examples/` when tightly coupled to an example. Prefer prefixing such scripts with `exp_` (e.g., `exp_my_experiment.py`) to make them easy to find and to avoid pytest collection. Experiments are not part of the automated `pytest` run by default; see `EXPERIMENTS.md` for conventions.
 
 ## Test Templates
 
-See `Tests/templates/` for test template skeletons.
+See `reference/Tests/templates/` for test template skeletons.
 
 ## Solo Developer Branching Guidance
 
 This repository supports a solo-developer workflow focused on rapid iteration for bug fixes and migration work. The updated policy is:
 
-- The PyQt editor (`run_new_ui.py`, MVVM layer over `gui_framework/legacy/`) is the current UI. A new TypeScript UI is planned (`docs/REARCHITECTURE_PLAN.md`, Phase 5), so prefer fixes over large new PyQt features.
+- The PyQt editor (`run_new_ui.py`, MVVM layer over `reference/gui_framework/legacy/`) is the current UI. A new TypeScript UI is planned (`docs/REARCHITECTURE_PLAN.md`, Phase 5), so prefer fixes over large new PyQt features.
 - For small fixes (bugs, docs, tests), you may commit directly to the primary working branch after verifying tests and updating docs — **PRs are optional and not required** for solo work.
 - For larger, risky refactors or experimental work, create a topic branch with a descriptive name and keep changes small and well-tested; when ready, merge into the main branch following your normal commit hygiene.
 - Keep commits focused and small; squash or rebase large topic branches before merging to keep history readable.
@@ -89,3 +89,11 @@ This gives you the convenience of a single-developer workflow where speed and st
 ## CI and Checks
 
 CI is advisory by default; keep an eye on the CI checks and address issues proactively. Critical checks (tests) may become required later. The CI workflow reports linting, commit checks, and tests on PRs.
+# Windows GUI test note
+
+The GUI suite contains Windows-specific skips for the main-window startup
+smoke test and the `unit/canvas` directory. These were added in commit
+`ff02e307` after native Qt crashes during full-suite runs; the canvas directory
+also has a Windows collection hook that skips its tests. Other GUI test areas
+remain individually runnable. Do not remove these skips until the affected
+tests pass reliably in the supported Windows CI environment.

@@ -112,7 +112,7 @@ whole-model level without reimplementing them, and understand models visually.
      its whole chain in one tick, and both complex node kinds re-read internal
      inputs during Phase 2 (order-dependent). They now gather all internal
      inputs in Phase 1 and only compute in Phase 2. Trace equivalence is
-     covered by `Tests/core/graph/test_complex_node_snapshot_semantics.py`.
+     covered by `reference/Tests/core/graph/test_complex_node_snapshot_semantics.py`.
 8. **Simplification must terminate.** Probe results (2026-11-17):
    - If splitting is allowed on a graph with a single loop, the algorithm
      never ends. Example: `s->x, x->x, x->y`. Each split leaves `x` still a
@@ -222,7 +222,7 @@ previous phase's exit criteria are met, except where noted as parallelisable.
 **Goal:** turn the current Python code into a precisely specified, testable oracle.
 
 Tasks
-1. Tag the current state: `v0.1.0-python` (plus a `python-legacy` branch for hotfixes).
+1. Tag the current state: `v0.1.0-python`. The maintainer has designated `main` as the Python backup branch; do not create a separate `python-legacy` branch.
 2. Fix only the rough edges that affect *correctness of the reference*:
    - Duplicate `Graph.AbstractNodes` definition (Graph.py ~L242 and ~L1168).
    - Delete `GraphProcessor_optimized_broken.py` and `adapters/__init___new.py`.
@@ -238,14 +238,14 @@ Tasks
 4. Write `docs/spec/NODE_CATALOG.md`: every node kind, its inputs (ordered), its parameters, its state, its operation and its valid input types.
 5. Write `docs/spec/IR.md`: the new graph format (model spec separated from view spec), versioning rules and the `.cgjson` → IR mapping.
 6. Build the **conformance recorder**: a script that runs a graph on the Python reference and writes `conformance/<case>/{graph.json, inputs.json, trace.json}` (per-tick values of every node, with float tolerance rules).
-   Seed cases: the `Tests/core` scenarios, Fibonacci, the examples loader graphs, MLP (forward and training), ANFIS XOR, an EA run with a fixed seed, each node kind on its own.
+   Seed cases: the `reference/Tests/core` scenarios, Fibonacci, the examples loader graphs, MLP (forward and training), ANFIS XOR, an EA run with a fixed seed, each node kind on its own.
 7. Build `benchmarks/` and record the **baseline**. Reproduce the existing measurement: an XOR MLP for 5,000 epochs, concurrent Zorvan vs an equivalent NumPy MLP, which measured 3.91× slower. Add a **scaling** benchmark (hidden width 2 → 256, graph size 10² → 10⁵ nodes), because the XOR result alone doesn't show how the gap grows with size.
 8. Restructure into the monorepo layout: move Python code to `reference/` and rename the package `zorvan` → `zorvan_reference` (mechanical rename, like the earlier `ComputationalGraphs` → `zorvan` one). Keep CI green.
 
 Exit criteria
-- [ ] SEMANTICS.md, NODE_CATALOG.md and IR.md reviewed and accepted.
-- [ ] ≥ 1 conformance case per node kind, plus the end-to-end cases above, generated from the reference.
-- [ ] Baseline benchmark numbers recorded in `benchmarks/BASELINE.md`.
+- [x] SEMANTICS.md, NODE_CATALOG.md and IR.md reviewed and accepted.
+- [x] ≥ 1 conformance case per node kind, plus the end-to-end cases above, generated from the reference.
+- [x] Baseline benchmark numbers recorded in `benchmarks/BASELINE.md`.
 - [ ] Reference test suite passes from its new location in CI.
 
 ### Phase 1 — Rust engine core (concurrent processing) · **L**
@@ -452,12 +452,13 @@ Exit criteria
 | 2026-11-17 | Nodes stay `F(Input, t) → y` and are not state machines; memory lives in the value plus a self-loop; batching state belongs to the processor | Author's conceptual preference; keeps the baseline simple |
 | 2026-11-17 | Complex nodes are views over the flat graph; "Merge" (one-tick chain) is a separate deliberate operation | Granularity switches must never change results |
 | 2026-11-17 | Never split nodes that lie on a cycle | A self-loop makes unrestricted splitting run forever |
+| 2026-11-20 | Keep `main` as the Python backup while rearchitecture work proceeds on its own branch; no separate `python-legacy` branch | Maintainer direction |
 
 ## 8. Status
 
 | Phase | Status |
 |-------|--------|
-| 0 Freeze and specify | Not started |
+| 0 Freeze and specify | In progress (specs accepted; restructure, cleanup, conformance seeds, and benchmarks done; CI confirmation and baseline tag remain) |
 | 1 Rust engine core | Not started |
 | 2 Python SDK | Not started |
 | 3 Compiler and performance | Not started |
