@@ -1,0 +1,202 @@
+{
+  "metadata": {
+    "format": "CGJSON",
+    "version": 1
+  },
+  "nodes": [
+    {
+      "id": "a",
+      "type": "ListNode",
+      "name": "source",
+      "attrs": {
+        "name": "source",
+        "value": 2.0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": true,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "allowNone": false,
+        "id": "a"
+      }
+    },
+    {
+      "id": "A1",
+      "type": "AbstractNode",
+      "name": "abstract",
+      "attrs": {
+        "name": "abstract",
+        "value": [
+          0,
+          0
+        ],
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "computationType": "complex",
+        "id": "A1"
+      },
+      "internal_nodes": [
+        {
+          "id": null,
+          "type": "LinearNode",
+          "name": "member_a",
+          "attrs": {
+            "name": "member_a",
+            "value": 0,
+            "midCalculation": false,
+            "midCalculationValue": 0,
+            "batchSize": 1,
+            "inclusive": false,
+            "forcedBatchProcessing": false,
+            "topology_type": null,
+            "sub_graph_id": null,
+            "inputCount": 1,
+            "computationType": "basic",
+            "derivative": "<class 'zorvan_reference.Nodes.LinearNodeDerivative.LinearNodeDerivative'>"
+          },
+          "predecessor_ids": [
+            "a"
+          ]
+        },
+        {
+          "id": null,
+          "type": "LinearNode",
+          "name": "member_b",
+          "attrs": {
+            "name": "member_b",
+            "value": 0,
+            "midCalculation": false,
+            "midCalculationValue": 0,
+            "batchSize": 1,
+            "inclusive": false,
+            "forcedBatchProcessing": false,
+            "topology_type": null,
+            "sub_graph_id": null,
+            "inputCount": 1,
+            "computationType": "basic",
+            "derivative": "<class 'zorvan_reference.Nodes.LinearNodeDerivative.LinearNodeDerivative'>"
+          },
+          "predecessor_ids": [
+            "a"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b",
+      "type": "ListNode",
+      "name": "source",
+      "attrs": {
+        "name": "source",
+        "value": 2.0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": true,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "allowNone": false,
+        "id": "b"
+      }
+    },
+    {
+      "id": "C1",
+      "type": "CompressedNode",
+      "name": "compressed",
+      "attrs": {
+        "value": 0.0,
+        "name": "compressed",
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "computationType": "complex",
+        "id": "C1"
+      },
+      "internal_nodes": [
+        {
+          "id": "internal_first",
+          "type": "LinearNode",
+          "name": "first",
+          "attrs": {
+            "name": "first",
+            "value": 0,
+            "midCalculation": false,
+            "midCalculationValue": 0,
+            "batchSize": 1,
+            "inclusive": false,
+            "forcedBatchProcessing": false,
+            "topology_type": null,
+            "sub_graph_id": null,
+            "inputCount": 1,
+            "computationType": "basic",
+            "derivative": "<class 'zorvan_reference.Nodes.LinearNodeDerivative.LinearNodeDerivative'>",
+            "id": "internal_first"
+          },
+          "predecessor_ids": [
+            "b"
+          ]
+        },
+        {
+          "id": "internal_last",
+          "type": "SigmoidNode",
+          "name": "last",
+          "attrs": {
+            "name": "last",
+            "value": 0,
+            "midCalculation": false,
+            "midCalculationValue": 0,
+            "batchSize": 1,
+            "inclusive": false,
+            "forcedBatchProcessing": false,
+            "topology_type": null,
+            "sub_graph_id": null,
+            "inputCount": 1,
+            "computationType": "basic",
+            "derivative": "<class 'zorvan_reference.Nodes.SigmoidDerivativeNode.SigmoidDerivativeNode'>",
+            "id": "internal_last"
+          },
+          "predecessor_ids": [
+            "internal_first"
+          ]
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "a",
+      "target": "A1"
+    },
+    {
+      "source": "b",
+      "target": "C1"
+    }
+  ],
+  "graph": {
+    "starting_nodes": [],
+    "stopping_nodes": [],
+    "manual_processing_sequence": null,
+    "graph_id": "8f8ca6675b6c4e219210782e77d8bf7c",
+    "graph_name": "AbstractNode",
+    "graph_color": "#4ECDC4",
+    "is_mother_graph": false,
+    "sub_graphs": []
+  },
+  "custom_nodes": []
+}

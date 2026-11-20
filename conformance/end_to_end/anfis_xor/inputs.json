@@ -1,0 +1,48 @@
+{
+  "ticks": 24,
+  "processor": "concurrent",
+  "max_workers": 1,
+  "random_seed": 1729,
+  "events": [
+    {
+      "tick": 1,
+      "node_id": "a",
+      "value": 0.0
+    },
+    {
+      "tick": 1,
+      "node_id": "b",
+      "value": 0.0
+    },
+    {
+      "tick": 7,
+      "node_id": "a",
+      "value": 0.0
+    },
+    {
+      "tick": 7,
+      "node_id": "b",
+      "value": 1.0
+    },
+    {
+      "tick": 13,
+      "node_id": "a",
+      "value": 1.0
+    },
+    {
+      "tick": 13,
+      "node_id": "b",
+      "value": 0.0
+    },
+    {
+      "tick": 19,
+      "node_id": "a",
+      "value": 1.0
+    },
+    {
+      "tick": 19,
+      "node_id": "b",
+      "value": 1.0
+    }
+  ]
+}

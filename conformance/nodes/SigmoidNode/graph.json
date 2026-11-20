@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "format": "CGJSON",
+    "version": 1
+  },
+  "nodes": [
+    {
+      "id": "a",
+      "type": "SigmoidNode",
+      "name": "SigmoidNode",
+      "attrs": {
+        "name": "SigmoidNode",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 1,
+        "computationType": "basic",
+        "derivative": "<class 'zorvan_reference.Nodes.SigmoidDerivativeNode.SigmoidDerivativeNode'>",
+        "id": "a"
+      }
+    },
+    {
+      "id": "b",
+      "type": "ListNode",
+      "name": "source_0",
+      "attrs": {
+        "name": "source_0",
+        "value": 2.0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": true,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "allowNone": false,
+        "id": "b"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "b",
+      "target": "a"
+    }
+  ],
+  "graph": {
+    "starting_nodes": [],
+    "stopping_nodes": [],
+    "manual_processing_sequence": null,
+    "graph_id": "94d76a04619341b4b44a68724ec29bf6",
+    "graph_name": "SigmoidNode",
+    "graph_color": "#4ECDC4",
+    "is_mother_graph": false,
+    "sub_graphs": []
+  },
+  "custom_nodes": []
+}

@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "format": "CGJSON",
+    "version": 1
+  },
+  "nodes": [
+    {
+      "id": "a",
+      "type": "DisplayNode",
+      "name": "A",
+      "attrs": {
+        "name": "A",
+        "value": 1,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 1,
+        "computationType": "basic",
+        "id": "a"
+      }
+    },
+    {
+      "id": "b",
+      "type": "DisplayNode",
+      "name": "B",
+      "attrs": {
+        "name": "B",
+        "value": 2,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 1,
+        "computationType": "basic",
+        "id": "b"
+      }
+    },
+    {
+      "id": "c",
+      "type": "DisplayNode",
+      "name": "C",
+      "attrs": {
+        "name": "C",
+        "value": 3,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 1,
+        "computationType": "basic",
+        "id": "c"
+      }
+    },
+    {
+      "id": "d",
+      "type": "AdditionNode",
+      "name": "A+B",
+      "attrs": {
+        "name": "A+B",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "d"
+      }
+    },
+    {
+      "id": "e",
+      "type": "AdditionNode",
+      "name": "(A+B)+C",
+      "attrs": {
+        "name": "(A+B)+C",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "e"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "a",
+      "target": "d"
+    },
+    {
+      "source": "b",
+      "target": "d"
+    },
+    {
+      "source": "d",
+      "target": "e"
+    },
+    {
+      "source": "c",
+      "target": "e"
+    }
+  ],
+  "graph": {
+    "starting_nodes": [],
+    "stopping_nodes": [],
+    "manual_processing_sequence": null,
+    "graph_id": "5d1d147ea68f410997ddfba5a34119a1",
+    "graph_name": "Default Graph",
+    "graph_color": "#4ECDC4",
+    "is_mother_graph": false,
+    "sub_graphs": []
+  },
+  "custom_nodes": []
+}

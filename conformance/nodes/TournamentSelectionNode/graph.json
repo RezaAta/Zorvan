@@ -1,0 +1,95 @@
+{
+  "metadata": {
+    "format": "CGJSON",
+    "version": 1
+  },
+  "nodes": [
+    {
+      "id": "a",
+      "type": "TournamentSelectionNode",
+      "name": "TournamentSelectionNode",
+      "attrs": {
+        "name": "TournamentSelectionNode",
+        "value": null,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "tournamentSize": 1,
+        "candidates": [],
+        "fitnesses": [],
+        "iteration": 0,
+        "id": "a"
+      }
+    },
+    {
+      "id": "b",
+      "type": "ListNode",
+      "name": "source_0",
+      "attrs": {
+        "name": "source_0",
+        "value": [
+          1.0,
+          2.0
+        ],
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": true,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "allowNone": false,
+        "id": "b"
+      }
+    },
+    {
+      "id": "c",
+      "type": "ListNode",
+      "name": "source_1",
+      "attrs": {
+        "name": "source_1",
+        "value": 0.25,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": true,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "allowNone": false,
+        "id": "c"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "b",
+      "target": "a"
+    },
+    {
+      "source": "c",
+      "target": "a"
+    }
+  ],
+  "graph": {
+    "starting_nodes": [],
+    "stopping_nodes": [],
+    "manual_processing_sequence": null,
+    "graph_id": "b78bcd9305c146629155802fa4a28eab",
+    "graph_name": "TournamentSelectionNode",
+    "graph_color": "#4ECDC4",
+    "is_mother_graph": false,
+    "sub_graphs": []
+  },
+  "custom_nodes": []
+}

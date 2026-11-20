@@ -1,0 +1,67 @@
+{
+  "metadata": {
+    "format": "CGJSON",
+    "version": 1
+  },
+  "nodes": [
+    {
+      "id": "a",
+      "type": "GaussianNode",
+      "name": "GaussianNode",
+      "attrs": {
+        "name": "GaussianNode",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 1,
+        "computationType": "fuzzification",
+        "mean": 0.0,
+        "sigma": 1.0,
+        "amplitude": 1.0,
+        "id": "a"
+      }
+    },
+    {
+      "id": "b",
+      "type": "ListNode",
+      "name": "source_0",
+      "attrs": {
+        "name": "source_0",
+        "value": 2.0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": true,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "allowNone": false,
+        "id": "b"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "b",
+      "target": "a"
+    }
+  ],
+  "graph": {
+    "starting_nodes": [],
+    "stopping_nodes": [],
+    "manual_processing_sequence": null,
+    "graph_id": "cafc4463c35341a0ac71f290d24b54f1",
+    "graph_name": "GaussianNode",
+    "graph_color": "#4ECDC4",
+    "is_mother_graph": false,
+    "sub_graphs": []
+  },
+  "custom_nodes": []
+}

@@ -1,0 +1,70 @@
+{
+  "metadata": {
+    "format": "CGJSON",
+    "version": 1
+  },
+  "nodes": [
+    {
+      "id": "a",
+      "type": "DynamicDataStreamNode",
+      "name": "DynamicDataStreamNode",
+      "attrs": {
+        "name": "DynamicDataStreamNode",
+        "value": null,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "initialDelay": 0,
+        "streamDelay": 0,
+        "iteration": 0,
+        "lastStream": 0,
+        "data": [],
+        "streamIndex": 0,
+        "id": "a"
+      }
+    },
+    {
+      "id": "b",
+      "type": "ListNode",
+      "name": "source_0",
+      "attrs": {
+        "name": "source_0",
+        "value": 2.0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": true,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "allowNone": false,
+        "id": "b"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "b",
+      "target": "a"
+    }
+  ],
+  "graph": {
+    "starting_nodes": [],
+    "stopping_nodes": [],
+    "manual_processing_sequence": null,
+    "graph_id": "caa5e02895f3425aba71e14bbc24fe3e",
+    "graph_name": "DynamicDataStreamNode",
+    "graph_color": "#4ECDC4",
+    "is_mother_graph": false,
+    "sub_graphs": []
+  },
+  "custom_nodes": []
+}

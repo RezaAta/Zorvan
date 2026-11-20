@@ -1,0 +1,114 @@
+{
+  "metadata": {
+    "format": "CGJSON",
+    "version": 1
+  },
+  "nodes": [
+    {
+      "id": "a",
+      "type": "AdditionNode",
+      "name": "A",
+      "attrs": {
+        "name": "A",
+        "value": 1,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "gui_pos": [
+          200,
+          100
+        ],
+        "id": "a"
+      }
+    },
+    {
+      "id": "b",
+      "type": "AdditionNode",
+      "name": "B",
+      "attrs": {
+        "name": "B",
+        "value": 1,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "gui_pos": [
+          100,
+          250
+        ],
+        "id": "b"
+      }
+    },
+    {
+      "id": "c",
+      "type": "AdditionNode",
+      "name": "C",
+      "attrs": {
+        "name": "C",
+        "value": 1,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "gui_pos": [
+          300,
+          250
+        ],
+        "id": "c"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "b",
+      "target": "a"
+    },
+    {
+      "source": "c",
+      "target": "a"
+    },
+    {
+      "source": "a",
+      "target": "b"
+    },
+    {
+      "source": "c",
+      "target": "b"
+    },
+    {
+      "source": "a",
+      "target": "c"
+    },
+    {
+      "source": "b",
+      "target": "c"
+    }
+  ],
+  "graph": {
+    "starting_nodes": [],
+    "stopping_nodes": [],
+    "manual_processing_sequence": null,
+    "graph_id": "2f6e393f9dae409cb2c4426efd7f07e5",
+    "graph_name": "Default Graph",
+    "graph_color": "#4ECDC4",
+    "is_mother_graph": false,
+    "sub_graphs": []
+  },
+  "custom_nodes": []
+}

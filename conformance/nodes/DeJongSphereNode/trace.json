@@ -1,0 +1,20 @@
+{
+  "trace_version": 1,
+  "processor": "concurrent",
+  "tolerance": {
+    "absolute": 1e-09,
+    "relative": 1e-07
+  },
+  "ticks": [
+    {
+      "tick": 1,
+      "values": {
+        "a": 5.0,
+        "b": [
+          1.0,
+          2.0
+        ]
+      }
+    }
+  ]
+}

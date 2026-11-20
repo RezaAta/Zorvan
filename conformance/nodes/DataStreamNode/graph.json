@@ -1,0 +1,48 @@
+{
+  "metadata": {
+    "format": "CGJSON",
+    "version": 1
+  },
+  "nodes": [
+    {
+      "id": "a",
+      "type": "DataStreamNode",
+      "name": "DataStreamNode",
+      "attrs": {
+        "name": "DataStreamNode",
+        "value": 1.0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "initialDelay": 0,
+        "streamDelay": 0,
+        "iteration": 0,
+        "lastStream": 0,
+        "data": [
+          1.0,
+          2.0
+        ],
+        "streamIndex": 0,
+        "id": "a"
+      }
+    }
+  ],
+  "edges": [],
+  "graph": {
+    "starting_nodes": [],
+    "stopping_nodes": [],
+    "manual_processing_sequence": null,
+    "graph_id": "f4a4f626a06c4dc5a615d659beec64f5",
+    "graph_name": "DataStreamNode",
+    "graph_color": "#4ECDC4",
+    "is_mother_graph": false,
+    "sub_graphs": []
+  },
+  "custom_nodes": []
+}

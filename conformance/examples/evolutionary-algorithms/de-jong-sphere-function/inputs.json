@@ -1,0 +1,6 @@
+{
+  "ticks": 5,
+  "processor": "concurrent",
+  "max_workers": 1,
+  "random_seed": 1729
+}

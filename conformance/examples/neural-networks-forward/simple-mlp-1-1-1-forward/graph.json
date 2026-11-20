@@ -1,0 +1,657 @@
+{
+  "metadata": {
+    "format": "CGJSON",
+    "version": 1
+  },
+  "nodes": [
+    {
+      "id": "a",
+      "type": "DataStreamNode",
+      "name": "x0",
+      "attrs": {
+        "name": "x0",
+        "value": 0.0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "initialDelay": 0,
+        "streamDelay": 0,
+        "iteration": 0,
+        "lastStream": 0,
+        "data": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "streamIndex": 0,
+        "id": "a"
+      }
+    },
+    {
+      "id": "b",
+      "type": "AdditionNode",
+      "name": "Add_L0N0",
+      "attrs": {
+        "name": "Add_L0N0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": true,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "b"
+      }
+    },
+    {
+      "id": "c",
+      "type": "SigmoidNode",
+      "name": "Act_L0N0",
+      "attrs": {
+        "name": "Act_L0N0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 1,
+        "computationType": "basic",
+        "derivative": "<class 'zorvan_reference.Nodes.SigmoidDerivativeNode.SigmoidDerivativeNode'>",
+        "id": "c"
+      }
+    },
+    {
+      "id": "d",
+      "type": "AdditionNode",
+      "name": "Add_y0",
+      "attrs": {
+        "name": "Add_y0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": true,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "d"
+      }
+    },
+    {
+      "id": "e",
+      "type": "LinearNode",
+      "name": "y0",
+      "attrs": {
+        "name": "y0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 1,
+        "computationType": "basic",
+        "derivative": "<class 'zorvan_reference.Nodes.LinearNodeDerivative.LinearNodeDerivative'>",
+        "id": "e"
+      }
+    },
+    {
+      "id": "f",
+      "type": "InitializableContainerNode",
+      "name": "W_x0H0N0",
+      "attrs": {
+        "name": "W_x0H0N0",
+        "value": 0.9927447535655338,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "Incremental": false,
+        "init_low": -1.0,
+        "init_high": 1.0,
+        "init_mean": 0.0,
+        "init_std": 1.0,
+        "init_method": "uniform",
+        "initializer": null,
+        "id": "f"
+      }
+    },
+    {
+      "id": "g",
+      "type": "InitializableContainerNode",
+      "name": "W_H0N0y0",
+      "attrs": {
+        "name": "W_H0N0y0",
+        "value": 0.7696401930596293,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "Incremental": false,
+        "init_low": -1.0,
+        "init_high": 1.0,
+        "init_mean": 0.0,
+        "init_std": 1.0,
+        "init_method": "uniform",
+        "initializer": null,
+        "id": "g"
+      }
+    },
+    {
+      "id": "h",
+      "type": "InitializableContainerNode",
+      "name": "B_H0N0",
+      "attrs": {
+        "name": "B_H0N0",
+        "value": 0.0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "Incremental": false,
+        "init_low": -1.0,
+        "init_high": 1.0,
+        "init_mean": 0.0,
+        "init_std": 1.0,
+        "init_method": "uniform",
+        "initializer": null,
+        "id": "h"
+      }
+    },
+    {
+      "id": "i",
+      "type": "InitializableContainerNode",
+      "name": "B_y0",
+      "attrs": {
+        "name": "B_y0",
+        "value": 0.0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "Incremental": false,
+        "init_low": -1.0,
+        "init_high": 1.0,
+        "init_mean": 0.0,
+        "init_std": 1.0,
+        "init_method": "uniform",
+        "initializer": null,
+        "id": "i"
+      }
+    },
+    {
+      "id": "j",
+      "type": "DataStreamNode",
+      "name": "L_y0",
+      "attrs": {
+        "name": "L_y0",
+        "value": 0.0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 0,
+        "computationType": "basic",
+        "initialDelay": 0,
+        "streamDelay": 0,
+        "iteration": 0,
+        "lastStream": 0,
+        "data": [
+          0.0,
+          0.25,
+          0.5,
+          0.75,
+          1.0
+        ],
+        "streamIndex": 0,
+        "id": "j"
+      }
+    },
+    {
+      "id": "k",
+      "type": "SubtractionNode",
+      "name": "Error_y0",
+      "attrs": {
+        "name": "Error_y0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "k"
+      }
+    },
+    {
+      "id": "l",
+      "type": "MultiplicationNode",
+      "name": "Mul_x0H0",
+      "attrs": {
+        "name": "Mul_x0H0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "l"
+      }
+    },
+    {
+      "id": "m",
+      "type": "MultiplicationNode",
+      "name": "Mul_H0N0y0",
+      "attrs": {
+        "name": "Mul_H0N0y0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "m"
+      }
+    },
+    {
+      "id": "n",
+      "type": "DisplayNode",
+      "name": "LearningRate",
+      "attrs": {
+        "name": "LearningRate",
+        "value": 0.5,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 1,
+        "computationType": "basic",
+        "id": "n"
+      }
+    },
+    {
+      "id": "o",
+      "type": "LinearNodeDerivative",
+      "name": "D_y0",
+      "attrs": {
+        "name": "D_y0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 1,
+        "computationType": "basic",
+        "id": "o"
+      }
+    },
+    {
+      "id": "p",
+      "type": "MultiplicationNode",
+      "name": "EG_y0",
+      "attrs": {
+        "name": "EG_y0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "p"
+      }
+    },
+    {
+      "id": "q",
+      "type": "MultiplicationNode",
+      "name": "LRMult_y0",
+      "attrs": {
+        "name": "LRMult_y0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "q"
+      }
+    },
+    {
+      "id": "r",
+      "type": "MultiplicationNode",
+      "name": "WG_H0N0W0",
+      "attrs": {
+        "name": "WG_H0N0W0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "r"
+      }
+    },
+    {
+      "id": "s",
+      "type": "SigmoidDerivativeNode",
+      "name": "D_H0N0",
+      "attrs": {
+        "name": "D_H0N0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 1,
+        "inclusive": false,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 1,
+        "computationType": "basic",
+        "id": "s"
+      }
+    },
+    {
+      "id": "t",
+      "type": "MultiplicationNode",
+      "name": "EG_H0N0",
+      "attrs": {
+        "name": "EG_H0N0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "t"
+      }
+    },
+    {
+      "id": "u",
+      "type": "AdditionNode",
+      "name": "WGS_H0N0",
+      "attrs": {
+        "name": "WGS_H0N0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": true,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "u"
+      }
+    },
+    {
+      "id": "v",
+      "type": "MultiplicationNode",
+      "name": "LRMult_H0N0",
+      "attrs": {
+        "name": "LRMult_H0N0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "v"
+      }
+    },
+    {
+      "id": "w",
+      "type": "MultiplicationNode",
+      "name": "dW_H0N0y0",
+      "attrs": {
+        "name": "dW_H0N0y0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "w"
+      }
+    },
+    {
+      "id": "x",
+      "type": "MultiplicationNode",
+      "name": "dW_x0H0N0",
+      "attrs": {
+        "name": "dW_x0H0N0",
+        "value": 0,
+        "midCalculation": false,
+        "midCalculationValue": 0,
+        "batchSize": 2,
+        "inclusive": true,
+        "forcedBatchProcessing": false,
+        "topology_type": null,
+        "sub_graph_id": null,
+        "inputCount": 2,
+        "computationType": "basic",
+        "id": "x"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "l",
+      "target": "b"
+    },
+    {
+      "source": "b",
+      "target": "c"
+    },
+    {
+      "source": "m",
+      "target": "d"
+    },
+    {
+      "source": "d",
+      "target": "e"
+    },
+    {
+      "source": "x",
+      "target": "f"
+    },
+    {
+      "source": "w",
+      "target": "g"
+    },
+    {
+      "source": "v",
+      "target": "h"
+    },
+    {
+      "source": "q",
+      "target": "i"
+    },
+    {
+      "source": "e",
+      "target": "k"
+    },
+    {
+      "source": "j",
+      "target": "k"
+    },
+    {
+      "source": "a",
+      "target": "l"
+    },
+    {
+      "source": "f",
+      "target": "l"
+    },
+    {
+      "source": "c",
+      "target": "m"
+    },
+    {
+      "source": "g",
+      "target": "m"
+    },
+    {
+      "source": "e",
+      "target": "o"
+    },
+    {
+      "source": "k",
+      "target": "p"
+    },
+    {
+      "source": "o",
+      "target": "p"
+    },
+    {
+      "source": "n",
+      "target": "q"
+    },
+    {
+      "source": "p",
+      "target": "q"
+    },
+    {
+      "source": "g",
+      "target": "r"
+    },
+    {
+      "source": "p",
+      "target": "r"
+    },
+    {
+      "source": "c",
+      "target": "s"
+    },
+    {
+      "source": "s",
+      "target": "t"
+    },
+    {
+      "source": "u",
+      "target": "t"
+    },
+    {
+      "source": "r",
+      "target": "u"
+    },
+    {
+      "source": "n",
+      "target": "v"
+    },
+    {
+      "source": "t",
+      "target": "v"
+    },
+    {
+      "source": "q",
+      "target": "w"
+    },
+    {
+      "source": "c",
+      "target": "w"
+    },
+    {
+      "source": "v",
+      "target": "x"
+    },
+    {
+      "source": "a",
+      "target": "x"
+    }
+  ],
+  "graph": {
+    "starting_nodes": [
+      "l"
+    ],
+    "stopping_nodes": [],
+    "manual_processing_sequence": null,
+    "graph_id": "81a2eded243744a19d550870edeabf6e",
+    "graph_name": "Default Graph",
+    "graph_color": "#4ECDC4",
+    "is_mother_graph": false,
+    "sub_graphs": []
+  },
+  "custom_nodes": []
+}

@@ -1,0 +1,60 @@
+{
+  "trace_version": 1,
+  "processor": "concurrent",
+  "tolerance": {
+    "absolute": 1e-09,
+    "relative": 1e-07
+  },
+  "ticks": [
+    {
+      "tick": 1,
+      "values": {
+        "a": 1,
+        "b": 2,
+        "c": 3,
+        "d": 3,
+        "e": 3
+      }
+    },
+    {
+      "tick": 2,
+      "values": {
+        "a": 1,
+        "b": 2,
+        "c": 3,
+        "d": 3,
+        "e": 6
+      }
+    },
+    {
+      "tick": 3,
+      "values": {
+        "a": 1,
+        "b": 2,
+        "c": 3,
+        "d": 3,
+        "e": 6
+      }
+    },
+    {
+      "tick": 4,
+      "values": {
+        "a": 1,
+        "b": 2,
+        "c": 3,
+        "d": 3,
+        "e": 6
+      }
+    },
+    {
+      "tick": 5,
+      "values": {
+        "a": 1,
+        "b": 2,
+        "c": 3,
+        "d": 3,
+        "e": 6
+      }
+    }
+  ]
+}

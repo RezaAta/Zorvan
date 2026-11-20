@@ -1,0 +1,5 @@
+{
+  "ticks": 2,
+  "max_workers": 1,
+  "random_seed": 1729
+}
