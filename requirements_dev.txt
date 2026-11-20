@@ -4,7 +4,6 @@ black
 isort
 ruff
 pytest<9
-pytest-qt
 codecov
 coverage
 pyinstaller>=5.0
